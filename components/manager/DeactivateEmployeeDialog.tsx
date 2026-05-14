@@ -1,0 +1,123 @@
+"use client"
+
+import { useState } from "react"
+import { AlertTriangle, Calendar, Clock } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import type { Employee } from "@/types"
+
+export interface UpcomingShift {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  jobRole: string
+}
+
+interface DeactivateEmployeeDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  employee: Employee
+  upcomingShifts: UpcomingShift[]
+  onConfirm: (deleteShifts: boolean) => void
+}
+
+function fmtDate(date: string) {
+  return new Date(date + "T12:00:00").toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  })
+}
+
+export function DeactivateEmployeeDialog({
+  open,
+  onOpenChange,
+  employee,
+  upcomingShifts,
+  onConfirm,
+}: DeactivateEmployeeDialogProps) {
+  const [deleteShifts, setDeleteShifts] = useState(false)
+
+  const handleConfirm = () => {
+    onConfirm(deleteShifts)
+    onOpenChange(false)
+  }
+
+  const handleCancel = () => {
+    setDeleteShifts(false)
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleCancel() }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Deactivate {employee.name}?</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex items-start gap-3 py-1">
+          <div className="mt-0.5 size-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="size-4 text-amber-500" />
+          </div>
+          <p className="text-sm text-gray-600">
+            {employee.name} will be hidden from the schedule and cannot be assigned new shifts.
+          </p>
+        </div>
+
+        {upcomingShifts.length > 0 && (
+          <div className="rounded-lg border border-gray-200 overflow-hidden">
+            <label className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-200 bg-white">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-gray-300 accent-red-600"
+                checked={deleteShifts}
+                onChange={(e) => setDeleteShifts(e.target.checked)}
+              />
+              <span className="text-sm font-medium text-gray-800">
+                Also delete {upcomingShifts.length} upcoming shift{upcomingShifts.length !== 1 ? "s" : ""}
+              </span>
+            </label>
+            <ul className="divide-y divide-gray-100 bg-gray-50">
+              {upcomingShifts.map((shift) => (
+                <li
+                  key={shift.id}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 text-sm transition-opacity",
+                    deleteShifts ? "opacity-40" : "opacity-100"
+                  )}
+                >
+                  <span className="flex items-center gap-1.5 text-gray-700">
+                    <Calendar className="size-3 shrink-0 text-gray-400" />
+                    {fmtDate(shift.date)}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="size-3 text-gray-400" />
+                    {shift.startTime}–{shift.endTime}
+                    <span className="ml-1 text-gray-400 font-medium">{shift.jobRole}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleConfirm}>
+            Deactivate
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
