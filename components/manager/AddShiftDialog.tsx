@@ -22,7 +22,7 @@ import {
 import { TimePicker } from "@/components/manager/TimePicker"
 import { formatTime, formatDayLabel } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
-import { getTemplates, addTemplate } from "@/lib/templateStore"
+import { getTemplates, addTemplate, updateTemplate } from "@/lib/templateStore"
 import { toast } from "sonner"
 import type { Employee, JobRole, ShiftTemplate } from "@/types"
 
@@ -69,6 +69,7 @@ export function AddShiftDialog({
 
   // Template state
   const [templates, setTemplates] = useState<ShiftTemplate[]>([])
+  const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [templateName, setTemplateName] = useState("")
 
@@ -81,6 +82,7 @@ export function AddShiftDialog({
       setBreakMinutes("30")
       setNotes("")
       setShowNotes(false)
+      setAppliedTemplateId(null)
       setSavingTemplate(false)
       setTemplateName("")
       setTemplates(getTemplates())
@@ -110,6 +112,23 @@ export function AddShiftDialog({
     setEndTime(tmpl.endTime)
     setBreakMinutes(String(tmpl.breakMinutes))
     if (tmpl.jobRole) setSelectedRole(tmpl.jobRole)
+    setAppliedTemplateId(tmpl.id)
+  }
+
+  const handleUpdateTemplate = () => {
+    if (!appliedTemplateId) return
+    const tmpl = templates.find((t) => t.id === appliedTemplateId)
+    if (!tmpl) return
+    const colorTag = jobRoles.find((r) => r.name === selectedRole)?.color ?? null
+    updateTemplate(appliedTemplateId, {
+      startTime,
+      endTime,
+      breakMinutes: parseInt(breakMinutes, 10) || 0,
+      jobRole: selectedRole,
+      colorTag,
+    })
+    setTemplates(getTemplates())
+    toast.success(`Template "${tmpl.name}" updated`)
   }
 
   const handleSaveTemplate = () => {
@@ -158,17 +177,27 @@ export function AddShiftDialog({
         {/* Template row */}
         <div className="space-y-2 -mt-1">
           <div className="flex flex-wrap gap-1.5">
-            {templates.map((tmpl) => (
-              <button
-                key={tmpl.id}
-                type="button"
-                onClick={() => applyTemplate(tmpl)}
-                className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
-              >
-                <span className="font-medium">{tmpl.name}</span>
-                <span className="text-gray-400">{formatTime(tmpl.startTime)}–{formatTime(tmpl.endTime)}</span>
-              </button>
-            ))}
+            {templates.map((tmpl) => {
+              const isActive = tmpl.id === appliedTemplateId
+              return (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  onClick={() => applyTemplate(tmpl)}
+                  className={cn(
+                    "inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors",
+                    isActive
+                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                      : "border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700"
+                  )}
+                >
+                  <span className="font-medium">{tmpl.name}</span>
+                  <span className={isActive ? "text-blue-400" : "text-gray-400"}>
+                    {formatTime(tmpl.startTime)}–{formatTime(tmpl.endTime)}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
           {savingTemplate ? (
@@ -192,13 +221,24 @@ export function AddShiftDialog({
               </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setSavingTemplate(true)}
-              className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
-            >
-              + Save current as template
-            </button>
+            <div className="flex items-center gap-3">
+              {appliedTemplateId && (
+                <button
+                  type="button"
+                  onClick={handleUpdateTemplate}
+                  className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                >
+                  Update "{templates.find((t) => t.id === appliedTemplateId)?.name}"
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSavingTemplate(true)}
+                className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                + Save as new template
+              </button>
+            </div>
           )}
         </div>
 

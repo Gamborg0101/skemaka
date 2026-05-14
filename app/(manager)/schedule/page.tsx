@@ -9,133 +9,48 @@ import { getOrgSettings } from "@/lib/orgSettings"
 import { getMondayOfWeek, addDays, formatDayLabel } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { toast } from "sonner"
-import type { Schedule, Shift } from "@/types"
+import type { Shift } from "@/types"
 import { MOCK_JOB_ROLES } from "@/lib/mockData"
 import { getEmployees } from "@/lib/employeeStore"
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// TODO: fetch from /api/organizations/[orgId]/schedules?weekStart=...
-// TODO: fetch from /api/organizations/[orgId]/employees
-
-
-function buildMockSchedule(weekStart: string): Schedule {
-  const shifts: Shift[] = [
-    {
-      id: "shift-1",
-      scheduleId: "sched-1",
-      organizationId: "org-1",
-      employeeId: "emp-1",
-      date: weekStart,
-      startTime: "08:00",
-      endTime: "16:00",
-      breakMinutes: 30,
-      jobRole: "Barista",
-      notes: null,
-      colorTag: "blue",
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-01-01T00:00:00Z",
-    },
-    {
-      id: "shift-2",
-      scheduleId: "sched-1",
-      organizationId: "org-1",
-      employeeId: "emp-2",
-      date: weekStart,
-      startTime: "10:00",
-      endTime: "18:00",
-      breakMinutes: 30,
-      jobRole: "Server",
-      notes: null,
-      colorTag: "green",
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-01-01T00:00:00Z",
-    },
-    {
-      id: "shift-3",
-      scheduleId: "sched-1",
-      organizationId: "org-1",
-      employeeId: "emp-1",
-      date: addDays(weekStart, 1),
-      startTime: "09:00",
-      endTime: "17:00",
-      breakMinutes: 30,
-      jobRole: "Barista",
-      notes: null,
-      colorTag: "blue",
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-01-01T00:00:00Z",
-    },
-    {
-      id: "shift-4",
-      scheduleId: "sched-1",
-      organizationId: "org-1",
-      employeeId: "emp-3",
-      date: addDays(weekStart, 2),
-      startTime: "07:00",
-      endTime: "14:00",
-      breakMinutes: 0,
-      jobRole: "Kitchen",
-      notes: "Prep shift",
-      colorTag: "orange",
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-01-01T00:00:00Z",
-    },
-    {
-      id: "shift-5",
-      scheduleId: "sched-1",
-      organizationId: "org-1",
-      employeeId: "emp-4",
-      date: addDays(weekStart, 4),
-      startTime: "12:00",
-      endTime: "20:00",
-      breakMinutes: 30,
-      jobRole: "Barista",
-      notes: null,
-      colorTag: "blue",
-      createdAt: "2025-01-01T00:00:00Z",
-      updatedAt: "2025-01-01T00:00:00Z",
-    },
-  ]
-
-  return {
-    id: "sched-1",
-    organizationId: "org-1",
-    weekStart,
-    isDuplicate: false,
-    sourceScheduleId: null,
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-    shifts,
-  }
-}
-
+import { getSchedule, mutateSchedule } from "@/lib/scheduleStore"
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-
 
 export default function SchedulePage() {
   const [weekStart, setWeekStart] = useState<string>(
     getMondayOfWeek(new Date())
   )
-  const [schedule, setSchedule] = useState<Schedule>(() =>
-    buildMockSchedule(getMondayOfWeek(new Date()))
+  const [schedule, setSchedule] = useState(() =>
+    getSchedule(getMondayOfWeek(new Date()))
   )
   const [viewMode, setViewMode] = useState<"week" | "timeline">("week")
   const [selectedDay, setSelectedDay] = useState<string>(
     new Date().toISOString().split("T")[0]
   )
+
+  // Write to the store AND update local state in one call
+  const mutate = useCallback((updater: (prev: typeof schedule) => typeof schedule) => {
+    setSchedule((prev) => {
+      const next = updater(prev)
+      mutateSchedule(prev.weekStart, () => next)
+      return next
+    })
+  }, [])
+
+  const loadWeek = (newWeekStart: string) => {
+    setWeekStart(newWeekStart)
+    setSchedule(getSchedule(newWeekStart))
+  }
+
   const navigateWeek = (direction: -1 | 1) => {
     const newWeekStart = addDays(weekStart, direction * 7)
-    setWeekStart(newWeekStart)
-    setSchedule(buildMockSchedule(newWeekStart))
+    loadWeek(newWeekStart)
     setSelectedDay(addDays(selectedDay, direction * 7))
   }
 
   const goToToday = () => {
     const today = new Date().toISOString().split("T")[0]
-    const monday = getMondayOfWeek(new Date())
-    setWeekStart(monday)
-    setSchedule(buildMockSchedule(monday))
+    loadWeek(getMondayOfWeek(new Date()))
     setSelectedDay(today)
   }
 
@@ -144,44 +59,34 @@ export default function SchedulePage() {
       (new Date(selectedDay + "T12:00:00").getTime() - new Date(weekStart + "T12:00:00").getTime()) /
       86400000
     )
-    setWeekStart(newWeekStart)
-    setSchedule(buildMockSchedule(newWeekStart))
+    loadWeek(newWeekStart)
     setSelectedDay(addDays(newWeekStart, Math.max(0, Math.min(6, currentOffset))))
   }
 
   const jumpToDay = (day: string) => {
     const newWeekStart = getMondayOfWeek(new Date(day + "T12:00:00"))
     setSelectedDay(day)
-    if (newWeekStart !== weekStart) {
-      setWeekStart(newWeekStart)
-      setSchedule(buildMockSchedule(newWeekStart))
-    }
+    if (newWeekStart !== weekStart) loadWeek(newWeekStart)
   }
 
   const navigateDay = (direction: -1 | 1) => {
     const newDay = addDays(selectedDay, direction)
     const newWeekStart = getMondayOfWeek(new Date(newDay + "T12:00:00"))
     setSelectedDay(newDay)
-    if (newWeekStart !== weekStart) {
-      setWeekStart(newWeekStart)
-      setSchedule(buildMockSchedule(newWeekStart))
-    }
+    if (newWeekStart !== weekStart) loadWeek(newWeekStart)
   }
 
   const handleShiftMove = useCallback(
     (shiftId: string, newDate: string, newEmployeeId: string) => {
-      // TODO: PUT /api/shifts/[shiftId]
-      setSchedule((prev) => ({
+      mutate((prev) => ({
         ...prev,
         shifts: prev.shifts?.map((s) =>
-          s.id === shiftId
-            ? { ...s, date: newDate, employeeId: newEmployeeId }
-            : s
+          s.id === shiftId ? { ...s, date: newDate, employeeId: newEmployeeId } : s
         ),
       }))
       toast.success("Shift moved")
     },
-    []
+    [mutate]
   )
 
   const handleShiftCreate = useCallback(
@@ -195,8 +100,7 @@ export default function SchedulePage() {
       notes: string | null
       colorTag: string | null
     }) => {
-      // TODO: POST /api/shifts
-      setSchedule((prev) => ({
+      mutate((prev) => ({
         ...prev,
         shifts: [
           ...(prev.shifts ?? []),
@@ -212,33 +116,28 @@ export default function SchedulePage() {
       }))
       toast.success("Shift added")
     },
-    []
+    [mutate]
   )
 
   const handleShiftUpdate = useCallback((data: Partial<Shift>) => {
-    // TODO: PUT /api/shifts/[shiftId]
-    setSchedule((prev) => ({
+    mutate((prev) => ({
       ...prev,
-      shifts: prev.shifts?.map((s) =>
-        s.id === data.id ? { ...s, ...data } : s
-      ),
+      shifts: prev.shifts?.map((s) => (s.id === data.id ? { ...s, ...data } : s)),
     }))
     toast.success("Shift updated")
-  }, [])
+  }, [mutate])
 
   const handleShiftDelete = useCallback((shiftId: string) => {
-    // TODO: DELETE /api/shifts/[shiftId]
-    setSchedule((prev) => ({
+    mutate((prev) => ({
       ...prev,
       shifts: prev.shifts?.filter((s) => s.id !== shiftId),
     }))
     toast.success("Shift deleted")
-  }, [])
+  }, [mutate])
 
   const handleMarkSick = useCallback(
     (employeeId: string, date: string) => {
-      // TODO: POST /api/shifts (sick day)
-      setSchedule((prev) => ({
+      mutate((prev) => ({
         ...prev,
         shifts: [
           ...(prev.shifts ?? []),
@@ -260,11 +159,9 @@ export default function SchedulePage() {
         ],
       }))
       const employee = getEmployees().find((e) => e.id === employeeId)
-      toast.success(
-        `Sick day registered${employee ? ` for ${employee.name}` : ""}`
-      )
+      toast.success(`Sick day registered${employee ? ` for ${employee.name}` : ""}`)
     },
-    []
+    [mutate]
   )
 
   const today = new Date().toISOString().split("T")[0]

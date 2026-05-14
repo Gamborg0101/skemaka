@@ -6,40 +6,12 @@ import { Button } from "@/components/ui/button"
 import { LaborCostTable } from "@/components/manager/LaborCostTable"
 import { getMondayOfWeek, addDays, calcHours } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
-import type { WeeklyLaborCost, Shift } from "@/types"
+import { getSchedule } from "@/lib/scheduleStore"
+import type { WeeklyLaborCost } from "@/types"
 import { getEmployees } from "@/lib/employeeStore"
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// TODO: fetch from /api/organizations/[orgId]/labor-costs?weekStart=...
-
-
-function buildMockCosts(weekStart: string): WeeklyLaborCost {
-  // Each employee has a couple of shifts this week
-  type ShiftSeed = { employeeId: string; startTime: string; endTime: string; breakMinutes: number; jobRole: string }
-  const shiftSeeds: ShiftSeed[] = [
-    { employeeId: "emp-1", startTime: "08:00", endTime: "16:00", breakMinutes: 30, jobRole: "Barista" },
-    { employeeId: "emp-1", startTime: "09:00", endTime: "17:00", breakMinutes: 30, jobRole: "Barista" },
-    { employeeId: "emp-1", startTime: "08:00", endTime: "13:00", breakMinutes: 0, jobRole: "Barista" },
-    { employeeId: "emp-2", startTime: "10:00", endTime: "18:00", breakMinutes: 30, jobRole: "Server" },
-    { employeeId: "emp-2", startTime: "12:00", endTime: "20:00", breakMinutes: 30, jobRole: "Server" },
-    { employeeId: "emp-3", startTime: "07:00", endTime: "14:00", breakMinutes: 0, jobRole: "Kitchen" },
-    { employeeId: "emp-3", startTime: "07:00", endTime: "15:00", breakMinutes: 30, jobRole: "Kitchen" },
-    { employeeId: "emp-3", startTime: "07:00", endTime: "14:00", breakMinutes: 0, jobRole: "Kitchen" },
-    { employeeId: "emp-4", startTime: "12:00", endTime: "20:00", breakMinutes: 30, jobRole: "Barista" },
-    { employeeId: "emp-4", startTime: "14:00", endTime: "22:00", breakMinutes: 30, jobRole: "Barista" },
-  ]
-
-  const shifts: Shift[] = shiftSeeds.map((s, i) => ({
-    id: `shift-cost-${i}`,
-    scheduleId: "sched-1",
-    organizationId: "org-1",
-    date: weekStart,
-    notes: null,
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-    ...s,
-  }))
+function buildCosts(weekStart: string): WeeklyLaborCost {
+  const shifts = (getSchedule(weekStart).shifts ?? []).filter((s) => s.colorTag !== "sick")
 
   const entries = getEmployees().map((emp) => {
     const empShifts = shifts.filter((s) => s.employeeId === emp.id)
@@ -70,7 +42,7 @@ function buildMockCosts(weekStart: string): WeeklyLaborCost {
 export default function CostsPage() {
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
 
-  const costs = useMemo(() => buildMockCosts(weekStart), [weekStart])
+  const costs = useMemo(() => buildCosts(weekStart), [weekStart])
 
   const navigateWeek = (direction: -1 | 1) => {
     setWeekStart((prev) => addDays(prev, direction * 7))

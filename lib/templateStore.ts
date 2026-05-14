@@ -23,6 +23,10 @@ export function addTemplate(data: Omit<ShiftTemplate, "id">): ShiftTemplate {
   return tmpl
 }
 
+export function updateTemplate(id: string, patch: Partial<Omit<ShiftTemplate, "id" | "organizationId">>): void {
+  _templates = _templates.map((t) => (t.id === id ? { ...t, ...patch } : t))
+}
+
 export function removeTemplate(id: string): void {
   _templates = _templates.filter((t) => t.id !== id)
 }
