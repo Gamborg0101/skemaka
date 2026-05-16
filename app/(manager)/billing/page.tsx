@@ -1,8 +1,113 @@
 "use client"
 
-import { CreditCard, Receipt, Zap } from "lucide-react"
+import { useState } from "react"
+import { CreditCard, Receipt, Zap, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
+import { useOrg } from "@/lib/orgContext"
+import type { SubscriptionStatus } from "@/types"
+
+function StatusBanner({ status }: { status: SubscriptionStatus }) {
+  if (status === "TRIALING") {
+    return (
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+            <Zap className="size-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-blue-900">Free trial</p>
+            <p className="text-sm text-blue-700">Full access during your trial — subscribe to continue when it ends.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (status === "ACTIVE") {
+    return (
+      <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+            <CheckCircle className="size-4 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-green-900">Subscription active</p>
+            <p className="text-sm text-green-700">Your plan is active. Use the customer portal to manage payment details and invoices.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (status === "PAST_DUE") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="size-4 text-amber-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-900">Payment failed</p>
+            <p className="text-sm text-amber-700">Your last payment didn't go through. Update your payment method to keep your account active.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 mb-6">
+      <div className="flex items-center gap-3">
+        <div className="size-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+          <XCircle className="size-4 text-red-600" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-red-900">Subscription cancelled</p>
+          <p className="text-sm text-red-700">Your subscription has ended. Resubscribe to regain full access.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function BillingPage() {
+  const { org } = useOrg()
+  const [loading, setLoading] = useState<"portal" | "checkout" | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const status = org.subscriptionStatus
+  const usesPortal = status === "ACTIVE" || status === "PAST_DUE"
+
+  async function openPortal() {
+    setLoading("portal")
+    setError(null)
+    try {
+      const r = await fetch(`/api/orgs/${org.id}/billing/portal`, { method: "POST" })
+      const data = await r.json() as { url?: string; error?: string }
+      if (!r.ok || !data.url) throw new Error(data.error ?? "Failed to open billing portal")
+      window.location.href = data.url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+      setLoading(null)
+    }
+  }
+
+  async function openCheckout() {
+    setLoading("checkout")
+    setError(null)
+    try {
+      const r = await fetch(`/api/orgs/${org.id}/billing/checkout`, { method: "POST" })
+      const data = await r.json() as { url?: string; error?: string }
+      if (!r.ok || !data.url) throw new Error(data.error ?? "Failed to start checkout")
+      window.location.href = data.url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+      setLoading(null)
+    }
+  }
+
+  const primaryLabel =
+    status === "TRIALING" ? "Subscribe now" :
+    status === "ACTIVE" ? "Manage billing" :
+    status === "PAST_DUE" ? "Update payment method" :
+    "Resubscribe"
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
       <div className="mb-8">
@@ -12,44 +117,57 @@ export default function BillingPage() {
         </p>
       </div>
 
-      {/* Current plan */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-            <Zap className="size-4 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-blue-900">Free trial</p>
-            <p className="text-sm text-blue-700">Full access during early access — no card required.</p>
-          </div>
+      <StatusBanner status={status} />
+
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
-      </div>
+      )}
 
       <div className="space-y-3">
         <div className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
           <div className="mt-0.5 size-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
             <CreditCard className="size-4 text-gray-500" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Payment method</p>
-            <p className="text-sm text-gray-500 mt-0.5">Add a card to continue after your trial ends.</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Payment &amp; subscription</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {usesPortal
+                ? "Update your payment method or cancel your subscription."
+                : "Start a subscription to continue after your trial."}
+            </p>
           </div>
-          <span className="ml-auto shrink-0 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full self-center">
-            Coming soon
-          </span>
+          <button
+            onClick={usesPortal ? openPortal : openCheckout}
+            disabled={loading !== null}
+            className="shrink-0 text-sm font-medium bg-blue-600 text-white px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors self-center"
+          >
+            {loading === (usesPortal ? "portal" : "checkout") ? "Loading…" : primaryLabel}
+          </button>
         </div>
 
         <div className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
           <div className="mt-0.5 size-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
             <Receipt className="size-4 text-gray-500" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900">Invoices</p>
-            <p className="text-sm text-gray-500 mt-0.5">Download past invoices for your records.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Download past invoices from the customer portal.</p>
           </div>
-          <span className="ml-auto shrink-0 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full self-center">
-            Coming soon
-          </span>
+          {org.stripeCustomerId ? (
+            <button
+              onClick={openPortal}
+              disabled={loading !== null}
+              className="shrink-0 text-sm font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors self-center"
+            >
+              {loading === "portal" ? "Loading…" : "Open portal"}
+            </button>
+          ) : (
+            <span className="shrink-0 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full self-center">
+              No invoices yet
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -50,6 +50,12 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
+  // Public availability token pages — employees without accounts access these
+  // Match exactly /availability/[token] (one path segment after /availability/)
+  if (/^\/availability\/[^/]+$/.test(pathname)) {
+    return NextResponse.next()
+  }
+
   // Manager + shared pages — must be authenticated
   if (
     pathname.startsWith("/schedule") ||

@@ -1,5 +1,5 @@
 import type { DefaultSession } from "next-auth"
-import type { UserRole } from "./index"
+import type { UserRole, SubscriptionStatus } from "./index"
 
 declare module "next-auth" {
   interface Session {
@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string
       role: UserRole
       orgId?: string
+      subscriptionStatus?: SubscriptionStatus
     } & DefaultSession["user"]
   }
 
@@ -20,5 +21,6 @@ declare module "@auth/core/jwt" {
     id?: string
     role?: UserRole
     orgId?: string
+    subscriptionStatus?: string
   }
 }

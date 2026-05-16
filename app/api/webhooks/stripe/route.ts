@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
+import { db } from "@/lib/prisma"
+import { SubscriptionStatus } from "@/app/generated/prisma/enums"
 import type Stripe from "stripe"
+
+const STATUS_MAP: Record<string, SubscriptionStatus> = {
+  active: SubscriptionStatus.ACTIVE,
+  trialing: SubscriptionStatus.TRIALING,
+  past_due: SubscriptionStatus.PAST_DUE,
+  canceled: SubscriptionStatus.CANCELED,
+  unpaid: SubscriptionStatus.PAST_DUE,
+  paused: SubscriptionStatus.CANCELED,
+  incomplete: SubscriptionStatus.PAST_DUE,
+  incomplete_expired: SubscriptionStatus.CANCELED,
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -19,51 +32,31 @@ export async function POST(req: NextRequest) {
   }
 
   switch (event.type) {
-    case "customer.subscription.created": {
-      const subscription = event.data.object as Stripe.Subscription
-      const stripeSubscriptionId = subscription.id
-      const stripeCustomerId = subscription.customer as string
-      const status = subscription.status
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session
+      const organizationId = session.metadata?.organizationId
+      if (!organizationId || session.mode !== "subscription") break
 
-      // TODO: update Organization in DB
-      // await db.organization.update({
-      //   where: { stripeCustomerId },
-      //   data: {
-      //     stripeSubscriptionId,
-      //     subscriptionStatus: status === "trialing" ? "TRIALING" : "ACTIVE",
-      //   },
-      // })
-
-      void stripeSubscriptionId
-      void stripeCustomerId
-      void status
+      await db.organization.update({
+        where: { id: organizationId },
+        data: {
+          stripeCustomerId: session.customer as string,
+          stripeSubscriptionId: session.subscription as string,
+          subscriptionStatus: SubscriptionStatus.ACTIVE,
+        },
+      })
       break
     }
 
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription
       const stripeCustomerId = subscription.customer as string
+      const subscriptionStatus = STATUS_MAP[subscription.status] ?? SubscriptionStatus.ACTIVE
 
-      const statusMap: Record<string, string> = {
-        active: "ACTIVE",
-        trialing: "TRIALING",
-        past_due: "PAST_DUE",
-        canceled: "CANCELED",
-        unpaid: "PAST_DUE",
-        paused: "CANCELED",
-        incomplete: "PAST_DUE",
-        incomplete_expired: "CANCELED",
-      }
-      const subscriptionStatus = statusMap[subscription.status] ?? "ACTIVE"
-
-      // TODO: update Organization in DB
-      // await db.organization.update({
-      //   where: { stripeCustomerId },
-      //   data: { subscriptionStatus },
-      // })
-
-      void stripeCustomerId
-      void subscriptionStatus
+      await db.organization.updateMany({
+        where: { stripeCustomerId },
+        data: { subscriptionStatus, stripeSubscriptionId: subscription.id },
+      })
       break
     }
 
@@ -71,13 +64,10 @@ export async function POST(req: NextRequest) {
       const subscription = event.data.object as Stripe.Subscription
       const stripeCustomerId = subscription.customer as string
 
-      // TODO: update Organization in DB
-      // await db.organization.update({
-      //   where: { stripeCustomerId },
-      //   data: { subscriptionStatus: "CANCELED" },
-      // })
-
-      void stripeCustomerId
+      await db.organization.updateMany({
+        where: { stripeCustomerId },
+        data: { subscriptionStatus: SubscriptionStatus.CANCELED },
+      })
       break
     }
 
@@ -85,13 +75,10 @@ export async function POST(req: NextRequest) {
       const invoice = event.data.object as Stripe.Invoice
       const stripeCustomerId = invoice.customer as string
 
-      // TODO: update Organization in DB
-      // await db.organization.update({
-      //   where: { stripeCustomerId },
-      //   data: { subscriptionStatus: "PAST_DUE" },
-      // })
-
-      void stripeCustomerId
+      await db.organization.updateMany({
+        where: { stripeCustomerId },
+        data: { subscriptionStatus: SubscriptionStatus.PAST_DUE },
+      })
       break
     }
 
