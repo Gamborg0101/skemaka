@@ -12,10 +12,5 @@ export default async function PortalLayout({
     redirect("/login")
   }
 
-  const role = session.user?.role
-  if (role === "MANAGER" || role === "ADMIN") {
-    redirect("/schedule")
-  }
-
   return <>{children}</>
 }

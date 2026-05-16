@@ -2,23 +2,46 @@
 
 import React from "react"
 import { Plus, CalendarCheck } from "lucide-react"
-import { cn } from "@/lib/utils"
-import type { AvailabilityRequest, Employee, AvailabilitySubmission, AvailabilityDay } from "@/types"
+import type { AvailabilityRequest, Employee, AvailabilitySubmission, AvailabilityDay, Shift } from "@/types"
 import { getWeekDays, formatTime } from "@/lib/dateUtils"
 
 interface AvailabilityGridProps {
   request: AvailabilityRequest
   employees: Employee[]
-  bookedSlots: Set<string>
+  shifts: Shift[]
   onBookShift: (employeeId: string, date: string, startTime: string | null, endTime: string | null) => void
 }
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-
-function DayCell({ day, isBooked, onBook }: { day: AvailabilityDay | undefined; isBooked: boolean; onBook?: () => void }) {
-  if (!day) {
+function DayCell({
+  day,
+  existingShift,
+  noSubmission,
+  onBook,
+}: {
+  day: AvailabilityDay | undefined
+  existingShift: Shift | undefined
+  noSubmission?: boolean
+  onBook?: () => void
+}) {
+  if (existingShift) {
     return (
+      <div className="h-full min-h-12 rounded bg-blue-50 border border-blue-200 flex flex-col items-center justify-center gap-0.5 px-1">
+        <CalendarCheck className="size-3.5 text-blue-500" />
+        <span className="text-[10px] font-semibold text-blue-700 tabular-nums">
+          {formatTime(existingShift.startTime)}–{formatTime(existingShift.endTime)}
+        </span>
+      </div>
+    )
+  }
+
+  if (!day) {
+    return noSubmission ? (
+      <div className="h-full min-h-12 rounded bg-red-50 border border-red-100 flex items-center justify-center">
+        <span className="text-xs text-red-300">—</span>
+      </div>
+    ) : (
       <div className="h-full min-h-12 rounded border border-dashed border-gray-200 flex items-center justify-center">
         <span className="text-xs text-gray-300">—</span>
       </div>
@@ -33,29 +56,17 @@ function DayCell({ day, isBooked, onBook }: { day: AvailabilityDay | undefined; 
     )
   }
 
-  if (isBooked) {
-    return (
-      <div className="h-full min-h-12 rounded bg-blue-50 border border-blue-200 flex flex-col items-center justify-center gap-0.5 px-1">
-        <CalendarCheck className="size-3.5 text-blue-500" />
-        <span className="text-xs font-semibold text-blue-700">Scheduled</span>
-      </div>
-    )
-  }
-
   return (
     <button
       type="button"
       onClick={onBook}
       className="group w-full h-full min-h-12 rounded bg-green-50 border border-green-200 flex flex-col items-center justify-center gap-0.5 px-1 hover:bg-green-100 hover:border-green-400 transition-colors cursor-pointer"
     >
-      <span className="text-xs font-semibold text-green-700">Available</span>
-      {(day.preferredStart || day.preferredEnd) && (
-        <span className="text-xs text-green-600">
-          {day.preferredStart ? formatTime(day.preferredStart) : ""}
-          {day.preferredStart && day.preferredEnd && " – "}
-          {day.preferredEnd ? formatTime(day.preferredEnd) : ""}
-        </span>
-      )}
+      <span className="text-xs font-semibold text-green-700 tabular-nums">
+        {day.preferredStart && day.preferredEnd
+          ? `${formatTime(day.preferredStart)}–${formatTime(day.preferredEnd)}`
+          : "Full day"}
+      </span>
       <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
         <Plus className="size-2.5" />
         Book shift
@@ -64,7 +75,7 @@ function DayCell({ day, isBooked, onBook }: { day: AvailabilityDay | undefined; 
   )
 }
 
-export function AvailabilityGrid({ request, employees, bookedSlots, onBookShift }: AvailabilityGridProps) {
+export function AvailabilityGrid({ request, employees, shifts, onBookShift }: AvailabilityGridProps) {
   const days = getWeekDays(request.weekStart)
   const submissions: AvailabilitySubmission[] = request.submissions ?? []
 
@@ -89,22 +100,54 @@ export function AvailabilityGrid({ request, employees, bookedSlots, onBookShift 
   ): AvailabilityDay | undefined =>
     submission?.days?.find((d) => d.date === date)
 
+  const getShift = (employeeId: string, date: string): Shift | undefined =>
+    shifts.find((s) => s.employeeId === employeeId && s.date === date)
+
+  const scheduledCount = employees.filter((emp) =>
+    days.some((date) => getShift(emp.id, date))
+  ).length
+
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4 flex-wrap">
         <span className="text-sm text-gray-600">
           <span className="font-semibold text-gray-900">{submittedCount}</span>
           {" / "}
           <span className="font-semibold text-gray-900">{totalCount}</span>
-          {" employees submitted"}
+          {" submitted"}
         </span>
-        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-16">
           <div
             className="h-full bg-blue-500 rounded-full transition-all"
             style={{ width: `${totalCount > 0 ? (submittedCount / totalCount) * 100 : 0}%` }}
           />
         </div>
+        {scheduledCount > 0 && (
+          <span className="text-xs text-blue-600 font-medium">
+            {scheduledCount} scheduled this week
+          </span>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-[11px] text-gray-500">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2.5 rounded-sm bg-green-100 border border-green-300" />
+          Available
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2.5 rounded-sm bg-blue-100 border border-blue-300" />
+          Scheduled
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2.5 rounded-sm bg-gray-100 border border-gray-200" />
+          Unavailable
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2.5 rounded-sm bg-red-50 border border-red-200" />
+          Not submitted
+        </span>
       </div>
 
       {/* Grid */}
@@ -128,7 +171,7 @@ export function AvailabilityGrid({ request, employees, bookedSlots, onBookShift 
                 {DAY_NAMES[i]}
               </p>
               <p className="text-xs text-gray-400">
-                {new Date(date).toLocaleDateString("en-GB", {
+                {new Date(date + "T12:00:00").toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "short",
                 })}
@@ -142,30 +185,30 @@ export function AvailabilityGrid({ request, employees, bookedSlots, onBookShift 
             const hasSubmitted = !!submission
             return (
               <React.Fragment key={employee.id}>
-                <div
-                  className="border-b border-r border-gray-100 px-3 py-2 flex flex-col justify-center last:border-b-0"
-                >
+                <div className="border-b border-r border-gray-100 px-3 py-2 flex flex-col justify-center last:border-b-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{employee.name}</p>
                   <p className="text-xs text-gray-400 truncate">{employee.jobRole}</p>
                   {!hasSubmitted && (
                     <span className="mt-1 text-xs text-amber-600 font-medium">Not submitted</span>
                   )}
                 </div>
-                {days.map((date, di) => {
+                {days.map((date) => {
                   const dayData = getDayData(submission, date)
-                  const isBooked = bookedSlots.has(`${employee.id}:${date}`)
+                  const existingShift = getShift(employee.id, date)
                   return (
                     <div
                       key={`${employee.id}-${date}`}
-                      className={cn(
-                        "border-b border-r border-gray-100 p-1.5 last:border-r-0",
-                        di === 6 && "last:border-b-0"
-                      )}
+                      className="border-b border-r border-gray-100 p-1.5 last:border-r-0 last:border-b-0"
                     >
                       <DayCell
                         day={dayData}
-                        isBooked={isBooked}
-                        onBook={dayData?.isAvailable && !isBooked ? () => onBookShift(employee.id, date, dayData.preferredStart, dayData.preferredEnd) : undefined}
+                        existingShift={existingShift}
+                        noSubmission={!hasSubmitted}
+                        onBook={
+                          dayData?.isAvailable && !existingShift
+                            ? () => onBookShift(employee.id, date, dayData.preferredStart, dayData.preferredEnd)
+                            : undefined
+                        }
                       />
                     </div>
                   )

@@ -9,7 +9,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -22,16 +21,14 @@ import {
 import { TimePicker } from "@/components/manager/TimePicker"
 import { formatTime, formatDayLabel } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
-import { getTemplates, addTemplate, updateTemplate } from "@/lib/templateStore"
-import { toast } from "sonner"
 import type { Employee, JobRole, ShiftTemplate } from "@/types"
-
 
 interface AddShiftDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   employees: Employee[]
   jobRoles: JobRole[]
+  shiftTemplates: ShiftTemplate[]
   defaultEmployeeId?: string
   defaultDate?: string
   defaultStartTime?: string
@@ -53,6 +50,7 @@ export function AddShiftDialog({
   onOpenChange,
   employees,
   jobRoles,
+  shiftTemplates,
   defaultEmployeeId = "",
   defaultDate = "",
   defaultStartTime = "09:00",
@@ -66,14 +64,9 @@ export function AddShiftDialog({
   const [selectedRole, setSelectedRole] = useState("")
   const [notes, setNotes] = useState("")
   const [showNotes, setShowNotes] = useState(false)
-
-  // Template state
-  const [templates, setTemplates] = useState<ShiftTemplate[]>([])
   const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null)
-  const [savingTemplate, setSavingTemplate] = useState(false)
-  const [templateName, setTemplateName] = useState("")
 
-  // Sync pre-filled values and refresh templates whenever the dialog opens
+  // Sync pre-filled values whenever the dialog opens
   useEffect(() => {
     if (open) {
       setEmployeeId(defaultEmployeeId)
@@ -83,15 +76,12 @@ export function AddShiftDialog({
       setNotes("")
       setShowNotes(false)
       setAppliedTemplateId(null)
-      setSavingTemplate(false)
-      setTemplateName("")
-      setTemplates(getTemplates())
       const emp = employees.find((e) => e.id === defaultEmployeeId)
       setSelectedRole(emp?.jobRole ?? "")
     }
   }, [open, defaultEmployeeId, defaultDate, defaultStartTime, defaultEndTime, employees])
 
-  // When user switches employee, pre-fill their role
+  // When employee changes, pre-fill their role
   useEffect(() => {
     const emp = employees.find((e) => e.id === employeeId)
     setSelectedRole(emp?.jobRole ?? "")
@@ -115,41 +105,6 @@ export function AddShiftDialog({
     setAppliedTemplateId(tmpl.id)
   }
 
-  const handleUpdateTemplate = () => {
-    if (!appliedTemplateId) return
-    const tmpl = templates.find((t) => t.id === appliedTemplateId)
-    if (!tmpl) return
-    const colorTag = jobRoles.find((r) => r.name === selectedRole)?.color ?? null
-    updateTemplate(appliedTemplateId, {
-      startTime,
-      endTime,
-      breakMinutes: parseInt(breakMinutes, 10) || 0,
-      jobRole: selectedRole,
-      colorTag,
-    })
-    setTemplates(getTemplates())
-    toast.success(`Template "${tmpl.name}" updated`)
-  }
-
-  const handleSaveTemplate = () => {
-    const name = templateName.trim()
-    if (!name) return
-    const colorTag = jobRoles.find((r) => r.name === selectedRole)?.color ?? null
-    const tmpl = addTemplate({
-      organizationId: "org-1",
-      name,
-      startTime,
-      endTime,
-      breakMinutes: parseInt(breakMinutes, 10) || 0,
-      jobRole: selectedRole,
-      colorTag,
-    })
-    setTemplates((prev) => [...prev, tmpl])
-    setTemplateName("")
-    setSavingTemplate(false)
-    toast.success(`Template "${name}" saved`)
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!employeeId || !defaultDate || !startTime || !endTime) return
@@ -171,13 +126,20 @@ export function AddShiftDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Shift</DialogTitle>
+          <DialogTitle>
+            Add Shift
+            {defaultDate && (
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                {formatDayLabel(defaultDate)}
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
-        {/* Template row */}
-        <div className="space-y-2 -mt-1">
-          <div className="flex flex-wrap gap-1.5">
-            {templates.map((tmpl) => {
+        {/* Shift type presets */}
+        {shiftTemplates.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 -mt-1">
+            {shiftTemplates.map((tmpl) => {
               const isActive = tmpl.id === appliedTemplateId
               return (
                 <button
@@ -199,48 +161,7 @@ export function AddShiftDialog({
               )
             })}
           </div>
-
-          {savingTemplate ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Template name..."
-                className="h-8 text-sm"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); handleSaveTemplate() }
-                  if (e.key === "Escape") setSavingTemplate(false)
-                }}
-              />
-              <Button type="button" size="sm" onClick={handleSaveTemplate} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
-                Save
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setSavingTemplate(false)} className="shrink-0">
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {appliedTemplateId && (
-                <button
-                  type="button"
-                  onClick={handleUpdateTemplate}
-                  className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
-                >
-                  Update "{templates.find((t) => t.id === appliedTemplateId)?.name}"
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSavingTemplate(true)}
-                className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
-              >
-                + Save as new template
-              </button>
-            </div>
-          )}
-        </div>
+        )}
 
         <div className="border-t border-gray-100" />
 
@@ -267,59 +188,46 @@ export function AddShiftDialog({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Date</Label>
-            <div className="flex items-center h-9 px-3 rounded-md border border-gray-200 bg-gray-50">
-              <span className="text-sm text-gray-700">{defaultDate ? formatDayLabel(defaultDate) : "—"}</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Start time</Label>
+              <TimePicker value={startTime} onChange={setStartTime} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>End time</Label>
+              <TimePicker value={endTime} onChange={setEndTime} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="add-start">Start Time</Label>
-              <TimePicker id="add-start" value={startTime} onChange={setStartTime} />
+              <Label htmlFor="add-break">Break</Label>
+              <Select value={breakMinutes} onValueChange={(v) => { if (v) setBreakMinutes(v) }}>
+                <SelectTrigger id="add-break" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">No break</SelectItem>
+                  <SelectItem value="15">15 min</SelectItem>
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="45">45 min</SelectItem>
+                  <SelectItem value="60">60 min</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="add-end">End Time</Label>
-              <TimePicker id="add-end" value={endTime} onChange={setEndTime} />
+              <Label htmlFor="add-role">Job role</Label>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v ?? "")}>
+                <SelectTrigger id="add-role" className="w-full">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobRoles.map((r) => (
+                    <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Break</Label>
-            <div className="flex gap-1.5">
-              {[0, 15, 30, 45, 60].map((mins) => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => setBreakMinutes(String(mins))}
-                  className={cn(
-                    "flex-1 py-1.5 rounded-md text-xs font-medium border transition-colors",
-                    breakMinutes === String(mins)
-                      ? "bg-blue-50 border-blue-300 text-blue-700"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  )}
-                >
-                  {mins === 0 ? "None" : `${mins}m`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="add-role">Job Role</Label>
-            <Select value={selectedRole} onValueChange={(val) => setSelectedRole(val ?? "")}>
-              <SelectTrigger id="add-role" className="w-full">
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                {jobRoles.map((r) => (
-                  <SelectItem key={r.id} value={r.name}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {showNotes ? (
@@ -327,11 +235,10 @@ export function AddShiftDialog({
               <Label htmlFor="add-notes">Notes</Label>
               <Textarea
                 id="add-notes"
-                placeholder="Any notes for this shift..."
+                placeholder="Optional note for this shift…"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="min-h-14"
-                autoFocus
+                className="min-h-[60px]"
               />
             </div>
           ) : (
@@ -340,7 +247,7 @@ export function AddShiftDialog({
               onClick={() => setShowNotes(true)}
               className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
             >
-              + Add note
+              + Add a note
             </button>
           )}
 
@@ -348,8 +255,12 @@ export function AddShiftDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-              Add Shift
+            <Button
+              type="submit"
+              disabled={!employeeId || !defaultDate}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Add shift
             </Button>
           </DialogFooter>
         </form>

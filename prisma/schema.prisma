@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
@@ -12,9 +7,280 @@ datasource db {
   provider = "postgresql"
 }
 
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String?      @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole     @default(EMPLOYEE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  accounts      Account[]
+  employees     Employee[]
+  memberships   Membership[]
+  sessions      Session[]
+}
+
+model Organization {
+  id                      String                   @id @default(cuid())
+  name                    String
+  slug                    String                   @unique
+  stripeCustomerId        String?
+  stripeSubscriptionId    String?
+  subscriptionStatus      SubscriptionStatus       @default(TRIALING)
+  employeeCount           Int                      @default(0)
+  currency                String                   @default("EUR")
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  availabilityRequests    AvailabilityRequest[]
+  availabilitySubmissions AvailabilitySubmission[]
+  employees               Employee[]
+  jobRoles                JobRole[]
+  memberships             Membership[]
+  schedules               Schedule[]
+  schedulingEvents        SchedulingEvent[]
+  shifts                  Shift[]
+  shiftTemplates          ShiftTemplate[]
+  timeOffRequests         TimeOffRequest[]
+
+  @@index([slug])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MembershipRole
+  joinedAt       DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model TimeOffRequest {
+  id             String        @id @default(cuid())
+  organizationId String
+  employeeId     String
+  startDate      DateTime
+  endDate        DateTime
+  reason         String?
+  status         TimeOffStatus @default(PENDING)
+  reviewNote     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  employee       Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([employeeId])
+}
+
+model Employee {
+  id                      String                   @id @default(cuid())
+  organizationId          String
+  userId                  String?
+  name                    String
+  email                   String
+  phone                   String?
+  jobRole                 String
+  hourlyWage              Decimal                  @db.Decimal(10, 2)
+  notes                   String?
+  isActive                Boolean                  @default(true)
+  inviteToken             String?                  @unique
+  inviteExpiry            DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  contractedHours         Int                      @default(0)
+  employmentType          EmploymentType           @default(PART_TIME)
+  availabilitySubmissions AvailabilitySubmission[]
+  timeOffRequests         TimeOffRequest[]
+  organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                    User?                    @relation(fields: [userId], references: [id])
+  shifts                  Shift[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([userId])
+  @@index([inviteToken])
+}
+
+model Schedule {
+  id               String       @id @default(cuid())
+  organizationId   String
+  weekStart        DateTime
+  isDuplicate      Boolean      @default(false)
+  sourceScheduleId String?
+  publishedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceSchedule   Schedule?    @relation("ScheduleDuplicates", fields: [sourceScheduleId], references: [id])
+  duplicates       Schedule[]   @relation("ScheduleDuplicates")
+  shifts           Shift[]
+
+  @@index([organizationId])
+  @@index([organizationId, weekStart])
+  @@index([sourceScheduleId])
+}
+
+model Shift {
+  id             String       @id @default(cuid())
+  scheduleId     String
+  organizationId String
+  employeeId     String
+  date           DateTime
+  startTime      String
+  endTime        String
+  breakMinutes   Int          @default(0)
+  jobRole        String
+  notes          String?
+  colorTag       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule       Schedule     @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([organizationId, date])
+  @@index([employeeId, date])
+}
+
+model AvailabilityRequest {
+  id             String                    @id @default(cuid())
+  organizationId String
+  weekStart      DateTime
+  deadline       DateTime
+  status         AvailabilityRequestStatus @default(OPEN)
+  createdAt      DateTime                  @default(now())
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submissions    AvailabilitySubmission[]
+
+  @@index([organizationId])
+  @@index([organizationId, weekStart])
+  @@index([organizationId, status])
+}
+
+model AvailabilitySubmission {
+  id             String              @id @default(cuid())
+  requestId      String
+  employeeId     String
+  organizationId String
+  submittedAt    DateTime            @default(now())
+  days           AvailabilityDay[]
+  employee       Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  request        AvailabilityRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, employeeId])
+  @@index([requestId])
+  @@index([employeeId])
+  @@index([organizationId])
+}
+
+model AvailabilityDay {
+  id             String                 @id @default(cuid())
+  submissionId   String
+  date           DateTime
+  isAvailable    Boolean
+  preferredStart String?
+  preferredEnd   String?
+  submission     AvailabilitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([submissionId, date])
+}
+
+model SchedulingEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  eventType      String
+  payload        Json
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, eventType])
+  @@index([organizationId, createdAt])
+}
+
+model JobRole {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  color          String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model ShiftTemplate {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  startTime      String
+  endTime        String
+  breakMinutes   Int          @default(0)
+  jobRole        String
+  colorTag       String?
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
 
 enum UserRole {
   ADMIN
@@ -40,260 +306,13 @@ enum AvailabilityRequestStatus {
 }
 
 enum EmploymentType {
-  FULL_TIME          // 40h/week
-  REDUCED_FULL_TIME  // 32h/week (common in Scandinavia)
-  PART_TIME          // custom hours set by contractedHours field
+  FULL_TIME
+  REDUCED_FULL_TIME
+  PART_TIME
 }
 
-// ---------------------------------------------------------------------------
-// Auth.js v5 required models
-// Field names must match exactly what the Auth.js Prisma adapter expects.
-// ---------------------------------------------------------------------------
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// ---------------------------------------------------------------------------
-// Core application models
-// ---------------------------------------------------------------------------
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          UserRole  @default(EMPLOYEE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts    Account[]
-  sessions    Session[]
-  memberships Membership[]
-  employees   Employee[]
-}
-
-model Organization {
-  id                     String             @id @default(cuid())
-  name                   String
-  slug                   String             @unique
-  stripeCustomerId       String?
-  stripeSubscriptionId   String?
-  subscriptionStatus     SubscriptionStatus @default(TRIALING)
-  employeeCount          Int                @default(0)
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-
-  memberships           Membership[]
-  employees             Employee[]
-  schedules             Schedule[]
-  availabilityRequests  AvailabilityRequest[]
-  availabilitySubmissions AvailabilitySubmission[]
-  schedulingEvents      SchedulingEvent[]
-  shifts                Shift[]
-  jobRoles              JobRole[]
-
-  @@index([slug])
-  @@index([stripeCustomerId])
-  @@index([stripeSubscriptionId])
-}
-
-model Membership {
-  id             String         @id @default(cuid())
-  userId         String
-  organizationId String
-  role           MembershipRole
-  joinedAt       DateTime       @default(now())
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, organizationId])
-  @@index([userId])
-  @@index([organizationId])
-}
-
-model Employee {
-  id             String    @id @default(cuid())
-  organizationId String
-  userId         String?
-  name           String
-  email          String
-  phone          String?
-  jobRole         String
-  hourlyWage      Decimal        @db.Decimal(10, 2)
-  employmentType  EmploymentType @default(PART_TIME)
-  contractedHours Int            @default(0)
-  notes           String?        @db.Text
-  isActive        Boolean        @default(true)
-  inviteToken    String?   @unique
-  inviteExpiry   DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user                    User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  shifts                  Shift[]
-  availabilitySubmissions AvailabilitySubmission[]
-
-  @@unique([organizationId, email])
-  @@index([organizationId])
-  @@index([userId])
-  @@index([inviteToken])
-}
-
-model Schedule {
-  id               String   @id @default(cuid())
-  organizationId   String
-  weekStart        DateTime
-  isDuplicate      Boolean  @default(false)
-  sourceScheduleId String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sourceSchedule Schedule?    @relation("ScheduleDuplicates", fields: [sourceScheduleId], references: [id], onDelete: SetNull)
-  duplicates     Schedule[]   @relation("ScheduleDuplicates")
-  shifts         Shift[]
-
-  @@index([organizationId])
-  @@index([organizationId, weekStart])
-  @@index([sourceScheduleId])
-}
-
-model Shift {
-  id             String   @id @default(cuid())
-  scheduleId     String
-  organizationId String
-  employeeId     String
-  date           DateTime
-  startTime      String
-  endTime        String
-  breakMinutes   Int      @default(0)
-  jobRole        String
-  notes          String?  @db.Text
-  colorTag       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  schedule     Schedule     @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@index([scheduleId])
-  @@index([organizationId])
-  @@index([employeeId])
-  @@index([organizationId, date])
-  @@index([employeeId, date])
-}
-
-model AvailabilityRequest {
-  id             String                    @id @default(cuid())
-  organizationId String
-  weekStart      DateTime
-  deadline       DateTime
-  status         AvailabilityRequestStatus @default(OPEN)
-  createdAt      DateTime                  @default(now())
-
-  organization  Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  submissions   AvailabilitySubmission[]
-
-  @@index([organizationId])
-  @@index([organizationId, weekStart])
-}
-
-model AvailabilitySubmission {
-  id             String   @id @default(cuid())
-  requestId      String
-  employeeId     String
-  organizationId String
-  submittedAt    DateTime @default(now())
-
-  request      AvailabilityRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  employee     Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  days         AvailabilityDay[]
-
-  @@unique([requestId, employeeId])
-  @@index([requestId])
-  @@index([employeeId])
-  @@index([organizationId])
-}
-
-model AvailabilityDay {
-  id             String   @id @default(cuid())
-  submissionId   String
-  date           DateTime
-  isAvailable    Boolean
-  preferredStart String?
-  preferredEnd   String?
-
-  submission AvailabilitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
-  @@index([submissionId])
-  @@index([submissionId, date])
-}
-
-model SchedulingEvent {
-  id             String   @id @default(cuid())
-  organizationId String
-  eventType      String
-  payload        Json
-  createdAt      DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([organizationId, eventType])
-  @@index([organizationId, createdAt])
-}
-
-model JobRole {
-  id             String   @id @default(cuid())
-  organizationId String
-  name           String
-  color          String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, name])
-  @@index([organizationId])
+enum TimeOffStatus {
+  PENDING
+  APPROVED
+  DENIED
 }

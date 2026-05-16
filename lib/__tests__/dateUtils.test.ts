@@ -3,9 +3,14 @@ import {
   getMondayOfWeek,
   addDays,
   getISOWeek,
+  getISOYear,
   getMondayOfISOWeek,
+  getWeekDays,
+  formatTime,
   calcHours,
+  calcNetHours,
 } from "@/lib/dateUtils"
+import { getInitials } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
 // Source: lib/orgSettings.ts  (reset before each test to avoid cross-test bleed)
@@ -216,5 +221,147 @@ describe("orgSettings", () => {
     const hours = getOrgSettings().hours
     hours[0].openTime = "99:99"
     expect(getOrgSettings().hours[0].openTime).not.toBe("99:99")
+  })
+})
+
+// ===========================================================================
+// Tests: getISOYear
+// ===========================================================================
+
+describe("getISOYear", () => {
+  it("2016-01-01 (Fri) belongs to ISO year 2015", () => {
+    expect(getISOYear("2016-01-01")).toBe(2015)
+  })
+  it("2015-12-31 belongs to ISO year 2015", () => {
+    expect(getISOYear("2015-12-31")).toBe(2015)
+  })
+  it("2026-01-01 belongs to ISO year 2026", () => {
+    expect(getISOYear("2026-01-01")).toBe(2026)
+  })
+  it("mid-year date stays in its own Gregorian year", () => {
+    expect(getISOYear("2026-06-15")).toBe(2026)
+  })
+  it("2025-12-29 (Mon, first day of W1 2026) belongs to ISO year 2026", () => {
+    expect(getISOYear("2025-12-29")).toBe(2026)
+  })
+})
+
+// ===========================================================================
+// Tests: getWeekDays
+// ===========================================================================
+
+describe("getWeekDays", () => {
+  it("returns exactly 7 dates", () => {
+    expect(getWeekDays("2026-05-11")).toHaveLength(7)
+  })
+  it("first day is the weekStart itself", () => {
+    expect(getWeekDays("2026-05-11")[0]).toBe("2026-05-11")
+  })
+  it("last day is 6 days after weekStart (Sunday)", () => {
+    expect(getWeekDays("2026-05-11")[6]).toBe("2026-05-17")
+  })
+  it("each day is one day after the previous", () => {
+    const days = getWeekDays("2026-05-11")
+    for (let i = 1; i < days.length; i++) {
+      expect(addDays(days[i - 1], 1)).toBe(days[i])
+    }
+  })
+  it("works across a month boundary", () => {
+    const days = getWeekDays("2026-01-26")
+    expect(days[6]).toBe("2026-02-01")
+  })
+  it("works across a year boundary", () => {
+    const days = getWeekDays("2025-12-29")
+    expect(days[6]).toBe("2026-01-04")
+  })
+})
+
+// ===========================================================================
+// Tests: formatTime
+// ===========================================================================
+
+describe("formatTime", () => {
+  it("midnight: 00:00 → 12AM", () => {
+    expect(formatTime("00:00")).toBe("12AM")
+  })
+  it("noon: 12:00 → 12PM", () => {
+    expect(formatTime("12:00")).toBe("12PM")
+  })
+  it("morning whole hour: 08:00 → 8AM", () => {
+    expect(formatTime("08:00")).toBe("8AM")
+  })
+  it("afternoon whole hour: 15:00 → 3PM", () => {
+    expect(formatTime("15:00")).toBe("3PM")
+  })
+  it("morning with minutes: 07:30 → 7:30AM", () => {
+    expect(formatTime("07:30")).toBe("7:30AM")
+  })
+  it("afternoon with minutes: 13:30 → 1:30PM", () => {
+    expect(formatTime("13:30")).toBe("1:30PM")
+  })
+  it("just past midnight: 00:01 → 12:01AM", () => {
+    expect(formatTime("00:01")).toBe("12:01AM")
+  })
+  it("end of day: 23:59 → 11:59PM", () => {
+    expect(formatTime("23:59")).toBe("11:59PM")
+  })
+  it("just past noon: 12:01 → 12:01PM", () => {
+    expect(formatTime("12:01")).toBe("12:01PM")
+  })
+  it("single-digit minute is zero-padded: 14:05 → 2:05PM", () => {
+    expect(formatTime("14:05")).toBe("2:05PM")
+  })
+})
+
+// ===========================================================================
+// Tests: calcNetHours
+// ===========================================================================
+
+describe("calcNetHours", () => {
+  it("whole hours with break: 08:00–16:00 break=30 → '7h 30m'", () => {
+    expect(calcNetHours("08:00", "16:00", 30)).toBe("7h 30m")
+  })
+  it("whole hours no break: 08:00–16:00 break=0 → '8h'", () => {
+    expect(calcNetHours("08:00", "16:00", 0)).toBe("8h")
+  })
+  it("exact hours: 07:00–14:00 break=0 → '7h'", () => {
+    expect(calcNetHours("07:00", "14:00", 0)).toBe("7h")
+  })
+  it("half-hour shift: 10:00–10:30 break=0 → '0h 30m'", () => {
+    expect(calcNetHours("10:00", "10:30", 0)).toBe("0h 30m")
+  })
+  it("zero duration: 09:00–09:00 → ''", () => {
+    expect(calcNetHours("09:00", "09:00", 0)).toBe("")
+  })
+  it("break exceeds shift: 09:00–10:00 break=90 → ''", () => {
+    expect(calcNetHours("09:00", "10:00", 90)).toBe("")
+  })
+  it("long shift: 06:30–21:00 break=30 → '14h'", () => {
+    expect(calcNetHours("06:30", "21:00", 30)).toBe("14h")
+  })
+  it("non-zero start and end minutes: 08:15–16:45 break=30 → '8h'", () => {
+    expect(calcNetHours("08:15", "16:45", 30)).toBe("8h")
+  })
+})
+
+// ===========================================================================
+// Tests: getInitials
+// ===========================================================================
+
+describe("getInitials", () => {
+  it("two-part name: 'John Doe' → 'JD'", () => {
+    expect(getInitials("John Doe")).toBe("JD")
+  })
+  it("single name: 'Alice' → 'A'", () => {
+    expect(getInitials("Alice")).toBe("A")
+  })
+  it("three-part name returns only first two initials: 'John Paul Jones' → 'JP'", () => {
+    expect(getInitials("John Paul Jones")).toBe("JP")
+  })
+  it("lowercase input is uppercased: 'casper gamborg' → 'CG'", () => {
+    expect(getInitials("casper gamborg")).toBe("CG")
+  })
+  it("preserves case from input: 'Casper Gamborg' → 'CG'", () => {
+    expect(getInitials("Casper Gamborg")).toBe("CG")
   })
 })

@@ -1,81 +1,71 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import type { Schedule } from "@/types"
+import { db } from "@/lib/prisma"
+import { requireOrgMember } from "@/lib/apiGuard"
+import { serSchedule } from "@/lib/serialize"
+import { isValidDate } from "@/lib/validate"
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
 
-const mockSchedules: Schedule[] = [
-  {
-    id: "sched_mock_001",
-    organizationId: "org_mock_001",
-    weekStart: "2025-05-12",
-    isDuplicate: false,
-    sourceScheduleId: null,
-    createdAt: "2025-05-10T09:00:00.000Z",
-    updatedAt: "2025-05-10T09:00:00.000Z",
-  },
-  {
-    id: "sched_mock_002",
-    organizationId: "org_mock_001",
-    weekStart: "2025-05-05",
-    isDuplicate: false,
-    sourceScheduleId: null,
-    createdAt: "2025-05-03T09:00:00.000Z",
-    updatedAt: "2025-05-03T09:00:00.000Z",
-  },
-]
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const { orgId } = await params
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
 
-export async function GET(_req: NextRequest, { params }: RouteContext) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const weekStart = req.nextUrl.searchParams.get("weekStart")
+
+  if (weekStart) {
+    if (!isValidDate(weekStart)) {
+      return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
+    }
+    const schedule = await db.schedule.findFirst({
+      where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
+      include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+      orderBy: { createdAt: "asc" },
+    })
+    return NextResponse.json({ data: schedule ? serSchedule(schedule) : null })
   }
 
-  const { orgId } = await params
+  const schedules = await db.schedule.findMany({
+    where: { organizationId: orgId },
+    orderBy: { weekStart: "desc" },
+  })
 
-  // TODO: replace with DB query
-  // const schedules = await db.schedule.findMany({
-  //   where: { organizationId: orgId },
-  //   orderBy: { weekStart: "desc" },
-  // })
-
-  const schedules = mockSchedules.filter((s) => s.organizationId === orgId || orgId === "org_mock_001")
-
-  return NextResponse.json({ data: schedules })
+  return NextResponse.json({ data: schedules.map(serSchedule) })
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { orgId } = await params
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
+
   const body = await req.json() as { weekStart?: string }
   const { weekStart } = body
 
   if (!weekStart) {
     return NextResponse.json({ error: "weekStart is required" }, { status: 400 })
   }
-
-  const now = new Date().toISOString()
-
-  // TODO: create Schedule in DB
-  // const schedule = await db.schedule.create({
-  //   data: { organizationId: orgId, weekStart: new Date(weekStart) },
-  // })
-
-  const mockSchedule: Schedule = {
-    id: `sched_mock_${Date.now()}`,
-    organizationId: orgId,
-    weekStart,
-    isDuplicate: false,
-    sourceScheduleId: null,
-    createdAt: now,
-    updatedAt: now,
+  if (!isValidDate(weekStart)) {
+    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
   }
 
-  return NextResponse.json({ data: mockSchedule }, { status: 201 })
+  const weekStartDate = new Date(weekStart + "T00:00:00Z")
+
+  const existing = await db.schedule.findFirst({
+    where: { organizationId: orgId, weekStart: weekStartDate },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (existing) {
+    return NextResponse.json({ data: serSchedule(existing) })
+  }
+
+  const schedule = await db.schedule.create({
+    data: { organizationId: orgId, weekStart: weekStartDate },
+    include: { shifts: true },
+  })
+
+  return NextResponse.json({ data: serSchedule(schedule) }, { status: 201 })
 }

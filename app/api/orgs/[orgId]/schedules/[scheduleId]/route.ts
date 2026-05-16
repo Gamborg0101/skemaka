@@ -1,85 +1,48 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import type { Schedule, Shift, Employee } from "@/types"
+import { db } from "@/lib/prisma"
+import { requireOrgMember } from "@/lib/apiGuard"
+import { serSchedule } from "@/lib/serialize"
+import { sendSchedulePublishedSms } from "@/lib/sms"
+import { formatWeekLabel, formatTime } from "@/lib/dateUtils"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+
+// Select employee fields needed for shift display — excludes inviteToken/inviteExpiry
+const SHIFT_EMPLOYEE_SELECT = {
+  id: true, organizationId: true, userId: true,
+  name: true, email: true, phone: true, jobRole: true,
+  hourlyWage: true, employmentType: true, contractedHours: true,
+  notes: true, isActive: true, createdAt: true, updatedAt: true,
+} as const
 
 interface RouteContext {
   params: Promise<{ orgId: string; scheduleId: string }>
 }
 
-const mockEmployee: Employee = {
-  id: "emp_mock_001",
-  organizationId: "org_mock_001",
-  userId: null,
-  name: "Alice Hansen",
-  email: "alice@example.com",
-  phone: "+45 12 34 56 78",
-  jobRole: "Barista",
-  hourlyWage: 155,
-  notes: null,
-  employmentType: "PART_TIME" as const,
-      contractedHours: 0,
-      isActive: true,
-  inviteToken: null,
-  inviteExpiry: null,
-  createdAt: "2025-01-01T08:00:00.000Z",
-  updatedAt: "2025-01-01T08:00:00.000Z",
-}
-
-const mockShifts: Shift[] = [
-  {
-    id: "shift_mock_001",
-    scheduleId: "sched_mock_001",
-    organizationId: "org_mock_001",
-    employeeId: "emp_mock_001",
-    date: "2025-05-12",
-    startTime: "08:00",
-    endTime: "16:00",
-    breakMinutes: 30,
-    jobRole: "Barista",
-    notes: null,
-    colorTag: "#3b82f6",
-    createdAt: "2025-05-10T09:00:00.000Z",
-    updatedAt: "2025-05-10T09:00:00.000Z",
-    employee: mockEmployee,
-  },
-]
-
 export async function GET(_req: NextRequest, { params }: RouteContext) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { orgId, scheduleId } = await params
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
 
-  // TODO: replace with DB query
-  // const schedule = await db.schedule.findUnique({
-  //   where: { id: scheduleId, organizationId: orgId },
-  //   include: { shifts: { include: { employee: true }, orderBy: { date: "asc" } } },
-  // })
-  // if (!schedule) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const schedule = await db.schedule.findFirst({
+    where: { id: scheduleId, organizationId: orgId },
+    include: {
+      shifts: {
+        include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      },
+    },
+  })
 
-  const mockSchedule: Schedule = {
-    id: scheduleId,
-    organizationId: orgId,
-    weekStart: "2025-05-12",
-    isDuplicate: false,
-    sourceScheduleId: null,
-    createdAt: "2025-05-10T09:00:00.000Z",
-    updatedAt: "2025-05-10T09:00:00.000Z",
-    shifts: mockShifts.filter((s) => s.scheduleId === scheduleId || scheduleId === "sched_mock_001"),
-  }
+  if (!schedule) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  return NextResponse.json({ data: mockSchedule })
+  return NextResponse.json({ data: serSchedule(schedule) })
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { orgId, scheduleId } = await params
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
+
   const body = await req.json() as { weekStart?: string }
   const { weekStart } = body
 
@@ -87,46 +50,112 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "weekStart is required" }, { status: 400 })
   }
 
-  const now = new Date().toISOString()
+  const source = await db.schedule.findFirst({
+    where: { id: scheduleId, organizationId: orgId },
+    include: { shifts: true },
+  })
 
-  // TODO: copy all shifts to new schedule, log SchedulingEvent
-  // const source = await db.schedule.findUnique({
-  //   where: { id: scheduleId, organizationId: orgId },
-  //   include: { shifts: true },
-  // })
-  // if (!source) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  // const newSchedule = await db.schedule.create({
-  //   data: { organizationId: orgId, weekStart: new Date(weekStart), isDuplicate: true, sourceScheduleId: scheduleId },
-  // })
-  // const weekDiff = new Date(weekStart).getTime() - source.weekStart.getTime()
-  // await db.shift.createMany({
-  //   data: source.shifts.map((shift) => ({
-  //     scheduleId: newSchedule.id,
-  //     organizationId: orgId,
-  //     employeeId: shift.employeeId,
-  //     date: new Date(shift.date.getTime() + weekDiff),
-  //     startTime: shift.startTime,
-  //     endTime: shift.endTime,
-  //     breakMinutes: shift.breakMinutes,
-  //     jobRole: shift.jobRole,
-  //     notes: shift.notes,
-  //     colorTag: shift.colorTag,
-  //   })),
-  // })
-  // await db.schedulingEvent.create({
-  //   data: { organizationId: orgId, eventType: "SCHEDULE_DUPLICATED",
-  //     payload: { sourceScheduleId: scheduleId, newScheduleId: newSchedule.id, weekStart } },
-  // })
+  if (!source) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const mockDuplicate: Schedule = {
-    id: `sched_mock_${Date.now()}`,
-    organizationId: orgId,
-    weekStart,
-    isDuplicate: true,
-    sourceScheduleId: scheduleId,
-    createdAt: now,
-    updatedAt: now,
+  const weekDiff = new Date(weekStart + "T00:00:00Z").getTime() - source.weekStart.getTime()
+
+  const newSchedule = await db.schedule.create({
+    data: {
+      organizationId: orgId,
+      weekStart: new Date(weekStart + "T00:00:00Z"),
+      isDuplicate: true,
+      sourceScheduleId: scheduleId,
+    },
+  })
+
+  if (source.shifts.length > 0) {
+    await db.shift.createMany({
+      data: source.shifts.map((shift) => ({
+        scheduleId: newSchedule.id,
+        organizationId: orgId,
+        employeeId: shift.employeeId,
+        date: new Date(shift.date.getTime() + weekDiff),
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        breakMinutes: shift.breakMinutes,
+        jobRole: shift.jobRole,
+        notes: shift.notes,
+        colorTag: shift.colorTag,
+      })),
+    })
   }
 
-  return NextResponse.json({ data: mockDuplicate }, { status: 201 })
+  await db.schedulingEvent.create({
+    data: {
+      organizationId: orgId,
+      eventType: "SCHEDULE_DUPLICATED",
+      payload: { sourceScheduleId: scheduleId, newScheduleId: newSchedule.id, weekStart },
+    },
+  })
+
+  const result = await db.schedule.findUnique({
+    where: { id: newSchedule.id },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+  })
+
+  return NextResponse.json({ data: serSchedule(result!) }, { status: 201 })
+}
+
+export async function PATCH(req: NextRequest, { params }: RouteContext) {
+  const { orgId, scheduleId } = await params
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
+
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
+  const body = await req.json() as { published?: boolean }
+  if (!body.published) {
+    return NextResponse.json({ error: "Only { published: true } is supported" }, { status: 400 })
+  }
+
+  const schedule = await db.schedule.findFirst({
+    where: { id: scheduleId, organizationId: orgId },
+    include: {
+      shifts: {
+        where: { colorTag: { not: "sick" } },
+        include: { employee: { select: { id: true, name: true, phone: true } } },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      },
+      organization: { select: { name: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!schedule) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (schedule.publishedAt) return NextResponse.json({ error: "Already published" }, { status: 409 })
+
+  const updated = await db.schedule.update({
+    where: { id: scheduleId },
+    data: { publishedAt: new Date() },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+  })
+
+  // Group shifts by employee and send one SMS per employee
+  const byEmployee = new Map<string, { name: string; phone: string | null; lines: string[] }>()
+  for (const shift of schedule.shifts) {
+    const emp = shift.employee
+    if (!byEmployee.has(emp.id)) {
+      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, lines: [] })
+    }
+    const entry = byEmployee.get(emp.id)!
+    const day = new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
+    entry.lines.push(`${day} ${formatTime(shift.startTime)}–${formatTime(shift.endTime)}`)
+  }
+
+  const weekLabel = formatWeekLabel(schedule.weekStart.toISOString().split("T")[0])
+  const orgName = schedule.organization.name
+
+  for (const { name, phone, lines } of byEmployee.values()) {
+    if (phone) {
+      void sendSchedulePublishedSms({ to: phone, employeeName: name.split(" ")[0], orgName, weekLabel, shiftLines: lines })
+    }
+  }
+
+  return NextResponse.json({ data: serSchedule(updated) })
 }

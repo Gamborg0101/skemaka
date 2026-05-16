@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import {
   Mail,
   Phone,
-  Euro,
   Calendar,
   AlertTriangle,
   Briefcase,
@@ -29,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getInitials } from "@/lib/utils"
+import { formatCurrency, getCurrencySymbol } from "@/lib/orgSettings"
 import { isEmploymentType } from "@/types"
 import type { Employee, EmploymentType, JobRole } from "@/types"
 
@@ -40,7 +40,6 @@ interface EmployeeDetailSheetProps {
   jobRoles: JobRole[]
   initialMode?: "view" | "edit"
 }
-
 
 function formatDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString("en-GB", {
@@ -159,7 +158,7 @@ export function EmployeeDetailSheet({
 
   if (!employee) return null
 
-  // TODO: fetch from /api/organizations/[orgId]/employees/[employeeId]/sick-days?month=current
+  // TODO: fetch from /api/orgs/[orgId]/employees/[employeeId]/sick-days?month=current
   const sickDaysThisMonth: number = 0
 
   return (
@@ -257,7 +256,7 @@ export function EmployeeDetailSheet({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-wage">Hourly Wage (&euro;)</Label>
+                <Label htmlFor="edit-wage">Hourly Wage ({getCurrencySymbol()})</Label>
                 <Input
                   id="edit-wage"
                   type="number"
@@ -271,7 +270,7 @@ export function EmployeeDetailSheet({
                 <Label htmlFor="edit-employment-type">Employment Type</Label>
                 <Select
                   value={editEmploymentType}
-                  onValueChange={(val) => { if (isEmploymentType(val)) setEditEmploymentType(val) }}
+                  onValueChange={(val) => { if (val && isEmploymentType(val)) setEditEmploymentType(val) }}
                 >
                   <SelectTrigger id="edit-employment-type" className="w-full">
                     <SelectValue />
@@ -327,8 +326,8 @@ export function EmployeeDetailSheet({
                 )}
               </InfoRow>
 
-              <InfoRow icon={Euro} label="Hourly rate">
-                <span>&euro;{employee.hourlyWage.toFixed(2)} / hour</span>
+              <InfoRow icon={Briefcase} label="Hourly rate">
+                <span>{formatCurrency(employee.hourlyWage)} / hour</span>
               </InfoRow>
 
               <InfoRow icon={Briefcase} label="Contract">
@@ -359,7 +358,7 @@ export function EmployeeDetailSheet({
               <div className="flex items-center gap-2.5 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2.5">
                 <AlertTriangle className="size-4 text-rose-400 shrink-0" />
                 <p className="text-sm text-rose-700">
-                  {/* TODO: fetch from /api/organizations/[orgId]/employees/[employeeId]/sick-days?month=current */}
+                  {/* TODO: fetch from /api/orgs/[orgId]/employees/[employeeId]/sick-days?month=current */}
                   <span className="font-medium">{sickDaysThisMonth}</span>{" "}
                   sick {sickDaysThisMonth === 1 ? "day" : "days"} this month
                 </p>

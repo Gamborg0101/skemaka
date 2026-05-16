@@ -47,8 +47,6 @@ const COLOR_TEXT: Record<string, string> = {
   sick: "text-rose-600",
 }
 
-
-
 export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,

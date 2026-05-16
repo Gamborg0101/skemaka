@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose } from "lucide-react"
+import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose, UserCircle, CalendarX2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { BugReportDialog } from "@/components/manager/BugReportDialog"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -13,16 +14,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { useOrg } from "@/lib/orgContext"
 
 const NAV_ITEMS = [
-  { label: "Schedule", href: "/schedule", icon: CalendarDays },
-  { label: "Employees", href: "/employees", icon: Users },
-  { label: "Availability", href: "/availability", icon: ClipboardList },
-  { label: "Labor Cost", href: "/costs", icon: DollarSign },
+  { label: "Schedule",     short: "Schedule", href: "/schedule",     icon: CalendarDays },
+  { label: "Employees",    short: "Staff",    href: "/employees",    icon: Users },
+  { label: "Availability", short: "Avail",    href: "/availability", icon: ClipboardList },
+  { label: "Labor Cost",   short: "Costs",    href: "/costs",        icon: DollarSign },
+  { label: "Time Off",     short: "Time Off", href: "/time-off",     icon: CalendarX2 },
+  { label: "My Shifts",    short: "Shifts",   href: "/my-shifts",    icon: UserCircle },
 ]
-
-// Mock org name — TODO: fetch from /api/organizations/current
-const MOCK_ORG_NAME = "The Daily Grind"
 
 interface ManagerSidebarProps {
   onCollapse?: () => void
@@ -31,19 +32,23 @@ interface ManagerSidebarProps {
 export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { org } = useOrg()
 
   return (
     <>
-      {/* Desktop / tablet sidebar */}
-      <aside className="hidden md:flex flex-col w-60 shrink-0 bg-gray-900">
+      {/* Sidebar: icon-only at md (768px), full at lg (1024px) */}
+      <aside className="hidden md:flex flex-col shrink-0 bg-gray-900 w-14 lg:w-60 transition-[width] duration-200">
         {/* Logo */}
-        <div className="flex h-14 items-center px-4 border-b border-white/10 gap-2">
-          <span className="text-lg font-bold tracking-tight text-white flex-1">Skemaka</span>
+        <div className="flex h-14 items-center justify-center lg:justify-start px-2 lg:px-4 border-b border-white/10 gap-2">
+          <span className="text-lg font-bold tracking-tight text-white lg:flex-1">
+            <span className="lg:hidden">S</span>
+            <span className="hidden lg:inline">Skemaka</span>
+          </span>
           {onCollapse && (
             <button
               onClick={onCollapse}
               aria-label="Collapse sidebar"
-              className="size-7 flex items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+              className="hidden lg:flex size-7 items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
             >
               <PanelLeftClose className="size-4" />
             </button>
@@ -51,37 +56,43 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5">
+        <nav className="flex-1 px-1.5 lg:px-2 py-3 space-y-0.5">
           {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/")
             return (
               <Link
                 key={href}
                 href={href}
+                title={label}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center justify-center lg:justify-start gap-3 rounded-lg px-2 lg:px-3 py-2.5 text-sm font-medium transition-colors",
                   active
                     ? "bg-white/15 text-white"
                     : "text-gray-400 hover:bg-white/8 hover:text-gray-100"
                 )}
               >
                 <Icon className={cn("size-4 shrink-0", active ? "text-white" : "text-gray-500")} />
-                {label}
+                <span className="hidden lg:block">{label}</span>
               </Link>
             )
           })}
         </nav>
 
         {/* Separator before org footer */}
-        <div className="mx-3 border-t border-white/10" />
+        <div className="mx-2 lg:mx-3 border-t border-white/10" />
+
+        {/* Bug report */}
+        <div className="px-1.5 lg:px-2 pt-2">
+          <BugReportDialog />
+        </div>
 
         {/* Org footer */}
-        <div className="p-3">
+        <div className="p-2 lg:p-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
+            <DropdownMenuTrigger className="flex w-full items-center justify-center lg:justify-start gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
               <Building2 className="size-4 shrink-0 text-gray-500" />
-              <span className="flex-1 truncate text-left font-medium text-gray-300">{MOCK_ORG_NAME}</span>
-              <Settings className="size-3.5 shrink-0 text-gray-500" />
+              <span className="hidden lg:flex flex-1 truncate text-left font-medium text-gray-300">{org.name}</span>
+              <Settings className="hidden lg:block size-3.5 shrink-0 text-gray-500" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-48">
               <DropdownMenuItem onClick={() => router.push("/settings")}>
@@ -102,23 +113,21 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
         </div>
       </aside>
 
-      {/* Tablet icon-only sidebar (md collapsed) — shown between 768px and our full sidebar breakpoint) */}
-      {/* We use a narrower variant at exactly md by overriding with a narrower class if needed */}
-      {/* Mobile: top bar */}
+      {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-200 bg-white">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+        {NAV_ITEMS.map(({ short, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/")
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium transition-colors",
+                "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition-colors min-w-0",
                 active ? "text-blue-600" : "text-gray-500"
               )}
             >
               <Icon className="size-5" />
-              {label}
+              {short}
             </Link>
           )
         })}

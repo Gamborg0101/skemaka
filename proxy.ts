@@ -50,15 +50,36 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
-  // /schedule, /employees, /availability, /costs — must be authenticated
+  // Manager + shared pages — must be authenticated
   if (
     pathname.startsWith("/schedule") ||
     pathname.startsWith("/employees") ||
     pathname.startsWith("/availability") ||
-    pathname.startsWith("/costs")
+    pathname.startsWith("/costs") ||
+    pathname.startsWith("/time-off") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/billing") ||
+    pathname.startsWith("/my-shifts")
   ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL("/login?callbackUrl=" + pathname, req.nextUrl.origin))
+    }
+    return NextResponse.next()
+  }
+
+  // /api/me/* — must be authenticated
+  if (pathname.startsWith("/api/me/")) {
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    return NextResponse.next()
+  }
+
+  // /onboarding — must be authenticated; redirect to schedule if already has an org
+  // (org check happens inside the page itself via /api/me/context)
+  if (pathname.startsWith("/onboarding")) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/login?callbackUrl=/onboarding", req.nextUrl.origin))
     }
     return NextResponse.next()
   }
@@ -78,9 +99,15 @@ export const config = {
     "/employees/:path*",
     "/availability/:path*",
     "/costs/:path*",
+    "/time-off/:path*",
+    "/settings/:path*",
+    "/billing/:path*",
+    "/my-shifts/:path*",
     "/admin/:path*",
+    "/onboarding/:path*",
     "/api/admin/:path*",
     "/api/orgs/:path*",
+    "/api/me/:path*",
     "/api/webhooks/:path*",
     "/api/availability/:path*",
   ],

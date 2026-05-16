@@ -1,169 +1,156 @@
-// TODO: fetch from /api/employee/portal (auth: magic link session)
-// TODO: fetch from /api/employee/shifts?upcoming=true
-
-import { MapPin, Clock } from "lucide-react"
-import type { Shift, Employee } from "@/types"
+import { auth } from "@/lib/auth"
+import { db } from "@/lib/prisma"
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { Clock, MapPin, Users, ArrowLeft } from "lucide-react"
 import { getMondayOfWeek, formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
+import { getInitials } from "@/lib/utils"
+import { TimeOffSection } from "./TimeOffSection"
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_EMPLOYEE: Employee = {
-  id: "emp-1",
-  organizationId: "org-1",
-  userId: null,
-  name: "Sophie Andersen",
-  email: "sophie@example.com",
-  phone: null,
-  jobRole: "Barista",
-  hourlyWage: 15.5,
-  notes: null,
-  employmentType: "PART_TIME" as const,
-      contractedHours: 0,
-      isActive: true,
-  inviteToken: null,
-  inviteExpiry: null,
-  createdAt: "2025-01-01T00:00:00Z",
-  updatedAt: "2025-01-01T00:00:00Z",
-}
-
-const MOCK_SHIFTS: Shift[] = [
-  {
-    id: "shift-1",
-    scheduleId: "sched-1",
-    organizationId: "org-1",
-    employeeId: "emp-1",
-    date: "2026-05-18",
-    startTime: "08:00",
-    endTime: "16:00",
-    breakMinutes: 30,
-    jobRole: "Barista",
-    notes: null,
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "shift-2",
-    scheduleId: "sched-1",
-    organizationId: "org-1",
-    employeeId: "emp-1",
-    date: "2026-05-19",
-    startTime: "09:00",
-    endTime: "17:00",
-    breakMinutes: 30,
-    jobRole: "Barista",
-    notes: "Opening shift",
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "shift-3",
-    scheduleId: "sched-1",
-    organizationId: "org-1",
-    employeeId: "emp-1",
-    date: "2026-05-22",
-    startTime: "08:00",
-    endTime: "13:00",
-    breakMinutes: 0,
-    jobRole: "Barista",
-    notes: null,
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "shift-4",
-    scheduleId: "sched-2",
-    organizationId: "org-1",
-    employeeId: "emp-1",
-    date: "2026-05-25",
-    startTime: "08:00",
-    endTime: "16:00",
-    breakMinutes: 30,
-    jobRole: "Barista",
-    notes: null,
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "shift-5",
-    scheduleId: "sched-2",
-    organizationId: "org-1",
-    employeeId: "emp-1",
-    date: "2026-05-27",
-    startTime: "12:00",
-    endTime: "20:00",
-    breakMinutes: 30,
-    jobRole: "Barista",
-    notes: "Closing shift",
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  },
-  {
-    id: "shift-6",
-    scheduleId: "sched-2",
-    organizationId: "org-1",
-    employeeId: "emp-1",
-    date: "2026-05-28",
-    startTime: "09:00",
-    endTime: "14:00",
-    breakMinutes: 0,
-    jobRole: "Barista",
-    notes: null,
-    colorTag: "blue",
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  },
-]
-
-const ORG_NAME = "The Daily Grind"
-const LOCATION = "Main Street Branch"
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-
-function formatShiftDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-GB", {
+function formatShiftDate(date: Date): string {
+  return date.toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "UTC",
   })
 }
 
-// Group shifts by their week
-function groupShiftsByWeek(shifts: Shift[]): Map<string, Shift[]> {
-  const map = new Map<string, Shift[]>()
-  for (const shift of shifts) {
-    const weekKey = getMondayOfWeek(new Date(shift.date + "T12:00:00"))
-    if (!map.has(weekKey)) map.set(weekKey, [])
-    map.get(weekKey)!.push(shift)
-  }
-  // Sort each group by date
-  for (const [, group] of map) {
-    group.sort((a, b) => a.date.localeCompare(b.date))
-  }
-  return map
+type DbShift = {
+  id: string; date: Date; startTime: string; endTime: string
+  breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+type Coworker = { name: string; jobRole: string }
 
-export default function EmployeePortalPage() {
-  const employee = MOCK_EMPLOYEE
-  const shifts = MOCK_SHIFTS
-  const grouped = groupShiftsByWeek(shifts)
-  const weeks = Array.from(grouped.entries()).sort(([a], [b]) =>
-    a.localeCompare(b)
+function groupByWeek(shifts: DbShift[]) {
+  const map = new Map<string, DbShift[]>()
+  for (const shift of shifts) {
+    const key = getMondayOfWeek(shift.date)
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(shift)
+  }
+  return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
+}
+
+const TAG_COLORS: Record<string, string> = {
+  blue:   "bg-blue-100 text-blue-700",
+  green:  "bg-green-100 text-green-700",
+  orange: "bg-orange-100 text-orange-700",
+  purple: "bg-purple-100 text-purple-700",
+  yellow: "bg-yellow-100 text-yellow-700",
+  gray:   "bg-gray-100 text-gray-600",
+}
+
+function avatarColor(name: string) {
+  const colors = ["bg-blue-500", "bg-emerald-500", "bg-violet-500", "bg-rose-500", "bg-amber-500", "bg-cyan-500"]
+  let hash = 0
+  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff
+  return colors[hash % colors.length]
+}
+
+export default async function EmployeePortalPage() {
+  const session = await auth()
+  if (!session?.user?.email) redirect("/login")
+
+  const isManager = session.user?.role === "MANAGER" || session.user?.role === "ADMIN"
+
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+
+  // Show from Monday of the current week so the full week is always visible
+  const dayOfWeek = today.getUTCDay()
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const currentWeekStart = new Date(today)
+  currentWeekStart.setUTCDate(today.getUTCDate() + daysToMonday)
+
+  const employee = await db.employee.findFirst({
+    where: { email: session.user.email, isActive: true },
+    include: {
+      organization: { select: { name: true } },
+      shifts: {
+        where: { date: { gte: currentWeekStart } },
+        orderBy: { date: "asc" },
+        take: 60,
+      },
+    },
+  })
+
+  if (!employee) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-2xl font-bold text-gray-900 mb-2">No employee profile</p>
+          <p className="text-sm text-gray-500">
+            Ask your manager to add you as an employee so your shifts appear here.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Fetch schedule publishedAt for each week shown
+  const weekStarts = [...new Set(employee.shifts.map((s) => getMondayOfWeek(s.date)))]
+  const schedules = weekStarts.length > 0
+    ? await db.schedule.findMany({
+        where: {
+          organizationId: employee.organizationId,
+          weekStart: { in: weekStarts.map((w) => new Date(w + "T00:00:00Z")) },
+        },
+        select: { weekStart: true, publishedAt: true },
+        orderBy: { createdAt: "asc" },
+      })
+    : []
+  const publishedWeeks = new Set(
+    schedules.filter((s) => s.publishedAt).map((s) => getMondayOfWeek(s.weekStart))
   )
+
+  // Fetch all other people working on the same dates
+  const shiftDates = employee.shifts.map((s) => s.date)
+  const coworkerShifts = shiftDates.length > 0
+    ? await db.shift.findMany({
+        where: {
+          organizationId: employee.organizationId,
+          date: { in: shiftDates },
+          employeeId: { not: employee.id },
+        },
+        select: {
+          date: true,
+          jobRole: true,
+          employee: { select: { name: true, jobRole: true } },
+        },
+      })
+    : []
+
+  // Map: dateKey → coworker list
+  const coworkersByDate = new Map<string, Coworker[]>()
+  for (const s of coworkerShifts) {
+    const key = s.date.toISOString().split("T")[0]
+    if (!coworkersByDate.has(key)) coworkersByDate.set(key, [])
+    coworkersByDate.get(key)!.push({ name: s.employee.name, jobRole: s.jobRole })
+  }
+
+  const weeks = groupByWeek(employee.shifts)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
+      {/* Back bar — only for managers */}
+      {isManager && (
+        <div className="bg-gray-900 px-4 py-2.5 flex items-center gap-2">
+          <Link
+            href="/schedule"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to dashboard
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-          {ORG_NAME}
+          {employee.organization.name}
         </p>
         <h1 className="text-2xl font-bold text-gray-900 mt-1">
           Hi {employee.name.split(" ")[0]}
@@ -182,56 +169,91 @@ export default function EmployeePortalPage() {
 
         {weeks.map(([weekStart, weekShifts]) => (
           <div key={weekStart}>
-            {/* Week label */}
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">
-              {formatWeekLabel(weekStart)}
-            </h2>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {formatWeekLabel(weekStart)}
+              </h2>
+              {publishedWeeks.has(weekStart) ? (
+                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-green-100 text-green-700">
+                  Published
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-gray-100 text-gray-400">
+                  Pending
+                </span>
+              )}
+            </div>
 
             <div className="space-y-3">
               {weekShifts.map((shift) => {
-                const hours = calcHours(
-                  shift.startTime,
-                  shift.endTime,
-                  shift.breakMinutes
-                )
+                const hours = calcHours(shift.startTime, shift.endTime, shift.breakMinutes)
+                const dateKey = shift.date.toISOString().split("T")[0]
+                const coworkers = coworkersByDate.get(dateKey) ?? []
+                const tagClass = TAG_COLORS[shift.colorTag ?? "gray"] ?? TAG_COLORS.gray
+
                 return (
                   <div
                     key={shift.id}
                     className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
                   >
-                    <div className="px-4 py-4">
-                      <p className="font-semibold text-gray-900">
-                        {formatShiftDate(shift.date)}
-                      </p>
+                    <div className="px-4 py-4 space-y-3">
+                      {/* Date + role badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-gray-900">
+                          {formatShiftDate(shift.date)}
+                        </p>
+                        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${tagClass}`}>
+                          {shift.jobRole}
+                        </span>
+                      </div>
 
-                      <div className="flex items-center gap-1.5 mt-2 text-gray-600">
+                      {/* Time */}
+                      <div className="flex items-center gap-1.5 text-gray-600">
                         <Clock className="size-4 shrink-0 text-gray-400" />
                         <span className="text-sm font-medium">
                           {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
                         </span>
                         <span className="text-sm text-gray-400">
-                          &middot; {hours}h
-                          {shift.breakMinutes > 0 &&
-                            ` (incl. ${shift.breakMinutes}m break)`}
+                          · {hours}h
+                          {shift.breakMinutes > 0 && ` (incl. ${shift.breakMinutes}m break)`}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 mt-1.5 text-gray-500">
+                      {/* Location */}
+                      <div className="flex items-center gap-1.5 text-gray-500">
                         <MapPin className="size-4 shrink-0 text-gray-400" />
-                        <span className="text-sm">{LOCATION}</span>
+                        <span className="text-sm">{employee.organization.name}</span>
                       </div>
 
+                      {/* Notes */}
                       {shift.notes && (
-                        <p className="mt-2.5 text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                        <p className="text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
                           {shift.notes}
                         </p>
                       )}
-                    </div>
 
-                    <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50">
-                      <span className="text-xs font-medium text-gray-500">
-                        {shift.jobRole}
-                      </span>
+                      {/* Co-workers */}
+                      {coworkers.length > 0 && (
+                        <div className="pt-1 border-t border-gray-100">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Users className="size-3.5 text-gray-400" />
+                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                              Working with you
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {coworkers.map((cw) => (
+                              <div key={cw.name} className="flex items-center gap-1.5">
+                                <div className={`size-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${avatarColor(cw.name)}`}>
+                                  {getInitials(cw.name)}
+                                </div>
+                                <span className="text-sm text-gray-700">{cw.name}</span>
+                                <span className="text-xs text-gray-400">· {cw.jobRole}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -239,6 +261,7 @@ export default function EmployeePortalPage() {
             </div>
           </div>
         ))}
+        <TimeOffSection orgId={employee.organizationId} />
       </div>
     </div>
   )

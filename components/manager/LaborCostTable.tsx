@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -8,18 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatCurrency } from "@/lib/orgSettings"
 import type { WeeklyLaborCost } from "@/types"
 
 interface LaborCostTableProps {
   costs: WeeklyLaborCost
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-  }).format(amount)
 }
 
 function formatHours(hours: number) {

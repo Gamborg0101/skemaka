@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useMemo, useEffect } from "react"
 import {
   DndContext,
   DragEndEvent,
@@ -12,18 +12,22 @@ import {
 } from "@dnd-kit/core"
 import { useDroppable } from "@dnd-kit/core"
 import { Plus, AlertTriangle } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ShiftCard } from "@/components/manager/ShiftCard"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
 import { SickDayDialog } from "@/components/manager/SickDayDialog"
-import type { Schedule, Shift, Employee, JobRole } from "@/types"
+import type { Schedule, Shift, Employee, JobRole, ShiftTemplate, TimeOffRequest } from "@/types"
+import { getOrgSettings } from "@/lib/orgSettings"
 
 interface WeeklyScheduleGridProps {
   schedule: Schedule
   employees: Employee[]
   jobRoles: JobRole[]
+  shiftTemplates: ShiftTemplate[]
   scheduledHoursMap: Record<string, number>
+  approvedTimeOff?: TimeOffRequest[]
   onShiftMove: (shiftId: string, newDate: string, newEmployeeId: string) => void
   onShiftCreate: (data: {
     employeeId: string
@@ -69,6 +73,8 @@ interface DroppableCellProps {
   employee: Employee
   jobRoles: JobRole[]
   isWeekend: boolean
+  isClosed: boolean
+  isTimeOff: boolean
   onAddClick: (employeeId: string, date: string) => void
   onShiftClick: (shift: Shift) => void
   onMarkSick: (employeeId: string, date: string) => void
@@ -82,6 +88,8 @@ function DroppableCell({
   employee,
   jobRoles,
   isWeekend,
+  isClosed,
+  isTimeOff,
   onAddClick,
   onShiftClick,
   onMarkSick,
@@ -90,20 +98,45 @@ function DroppableCell({
 
   const isEmpty = shifts.length === 0
 
+  if (isClosed) {
+    return (
+      <div className="relative min-h-16 border-r border-b border-gray-200 bg-gray-50/80">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300 select-none">
+            Closed
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  if (isTimeOff && isEmpty) {
+    return (
+      <div ref={setNodeRef} className="relative min-h-16 border-r border-b border-gray-200 bg-rose-50/60">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 select-none">
+            Time Off
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={setNodeRef}
-      onClick={() => onAddClick(employeeId, date)}
+      onClick={isEmpty ? () => onAddClick(employeeId, date) : undefined}
       className={cn(
-        "group relative min-h-16 p-1.5 border-r border-b border-gray-200 cursor-pointer transition-colors",
+        "group relative min-h-16 p-1.5 border-r border-b border-gray-200 transition-colors",
+        isEmpty ? "cursor-pointer" : "cursor-default",
         isOver
           ? "bg-blue-50"
           : isEmpty
           ? isWeekend ? "bg-amber-50/60 hover:bg-amber-50" : "bg-gray-50 hover:bg-gray-100"
-          : isWeekend ? "bg-amber-50/40 hover:bg-amber-50/60" : "bg-white hover:bg-gray-50"
+          : isWeekend ? "bg-amber-50/40" : "bg-white"
       )}
     >
-      <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-1">
         {shifts.map((shift) => (
           <ShiftCard
             key={shift.id}
@@ -114,9 +147,8 @@ function DroppableCell({
           />
         ))}
       </div>
-      {/* Action buttons on hover */}
-      {isEmpty ? (
-        // Empty cell: show both add and sick-day icons
+      {/* Action buttons — only shown on empty cells */}
+      {isEmpty && (
         <div className="absolute bottom-1 right-1 hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
@@ -139,18 +171,6 @@ function DroppableCell({
             <Plus className="size-3" />
           </button>
         </div>
-      ) : (
-        // Cell with shifts: only show add button
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onAddClick(employeeId, date)
-          }}
-          className="absolute bottom-1 right-1 size-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex"
-          aria-label="Add shift"
-        >
-          <Plus className="size-3" />
-        </button>
       )}
     </div>
   )
@@ -162,7 +182,9 @@ export function WeeklyScheduleGrid({
   schedule,
   employees,
   jobRoles,
+  shiftTemplates,
   scheduledHoursMap,
+  approvedTimeOff = [],
   onShiftMove,
   onShiftCreate,
   onShiftUpdate,
@@ -186,18 +208,53 @@ export function WeeklyScheduleGrid({
   }>({ open: false, shift: null })
 
   const [activeShift, setActiveShift] = useState<Shift | null>(null)
+  const [mobileDay, setMobileDay] = useState(0)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
   const days = getWeekDays(schedule.weekStart)
+
+  // Sync selected mobile day to today when week changes
+  useEffect(() => {
+    const todayISO = new Date().toISOString().split("T")[0]
+    const idx = days.findIndex((d) => toISODate(d) === todayISO)
+    setMobileDay(idx >= 0 ? idx : 0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedule.weekStart])
   const shifts = schedule.shifts ?? []
+  const closedDays = getOrgSettings().hours.map((h) => !h.isOpen) // index 0=Mon…6=Sun
+
+  const timeOffByEmployee = useMemo(() => {
+    const map = new Map<string, { start: string; end: string }[]>()
+    for (const r of approvedTimeOff) {
+      if (!map.has(r.employeeId)) map.set(r.employeeId, [])
+      map.get(r.employeeId)!.push({ start: r.startDate, end: r.endDate })
+    }
+    return map
+  }, [approvedTimeOff])
+
+  const isTimeOffDay = useCallback((employeeId: string, date: string) => {
+    const ranges = timeOffByEmployee.get(employeeId)
+    if (!ranges) return false
+    return ranges.some((r) => date >= r.start && date <= r.end)
+  }, [timeOffByEmployee])
+
+  const shiftsByCell = useMemo(() => {
+    const map = new Map<string, Shift[]>()
+    for (const s of shifts) {
+      const key = `${s.employeeId}__${s.date}`
+      const bucket = map.get(key) ?? []
+      bucket.push(s)
+      map.set(key, bucket)
+    }
+    return map
+  }, [shifts])
 
   const getShiftsForCell = useCallback(
-    (employeeId: string, date: string) =>
-      shifts.filter((s) => s.employeeId === employeeId && s.date === date),
-    [shifts]
+    (employeeId: string, date: string) => shiftsByCell.get(`${employeeId}__${date}`) ?? [],
+    [shiftsByCell]
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -213,6 +270,11 @@ export function WeeklyScheduleGrid({
 
     // Bail out if dropped back onto the same cell it came from
     if (draggedShift.employeeId === newEmployeeId && draggedShift.date === newDate) return
+
+    if (isTimeOffDay(newEmployeeId, newDate)) {
+      toast.error("This employee has approved time off on that day")
+      return
+    }
 
     onShiftMove(shiftId, newDate, newEmployeeId)
   }
@@ -242,7 +304,121 @@ export function WeeklyScheduleGrid({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="overflow-x-auto">
+        {/* ── Mobile: day picker + employee list (hidden on md+) ── */}
+        <div className="md:hidden flex flex-col">
+          {/* Day pills */}
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 flex shrink-0">
+            {days.map((day, i) => {
+              const isToday = toISODate(day) === toISODate(new Date())
+              const isWeekend = i >= 5
+              const isClosed = closedDays[i]
+              const isSelected = mobileDay === i
+              return (
+                <button
+                  key={i}
+                  onClick={() => setMobileDay(i)}
+                  className={cn(
+                    "flex-1 flex flex-col items-center py-2.5 border-b-2 transition-colors",
+                    isSelected ? "border-blue-600" : "border-transparent"
+                  )}
+                >
+                  <span className={cn(
+                    "text-[10px] font-semibold uppercase tracking-wide",
+                    isClosed ? "text-gray-300" : isWeekend ? "text-amber-500" : isSelected ? "text-blue-600" : "text-gray-500"
+                  )}>
+                    {DAY_NAMES[i]}
+                  </span>
+                  <span className={cn(
+                    "mt-0.5 size-6 flex items-center justify-center rounded-full text-xs font-bold",
+                    isToday && isSelected  && "bg-blue-600 text-white",
+                    isToday && !isSelected && "ring-2 ring-blue-400 text-blue-700",
+                    !isToday && isSelected && "bg-blue-100 text-blue-700",
+                    !isToday && !isSelected && (isClosed ? "text-gray-300" : "text-gray-700")
+                  )}>
+                    {day.getDate()}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Employee list for selected day */}
+          <div className="divide-y divide-gray-100 pb-20">
+            {employees.map((employee) => {
+              const date = toISODate(days[mobileDay])
+              const cellShifts = getShiftsForCell(employee.id, date)
+              const isClosed = closedDays[mobileDay]
+              const isTimeOff = isTimeOffDay(employee.id, date)
+              const scheduled = scheduledHoursMap[employee.id] ?? 0
+              const contracted = employee.contractedHours
+              return (
+                <div key={employee.id} className="bg-white px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{employee.name}</p>
+                      <p className="text-xs text-gray-500">{employee.jobRole}</p>
+                      {contracted > 0 && (() => {
+                        const over = scheduled - contracted
+                        if (over > 0) return (
+                          <p className="text-xs mt-0.5 text-orange-500">
+                            {scheduled.toFixed(1)}h / {contracted}h
+                            <span className="ml-1 font-semibold">(+{over.toFixed(1)}h)</span>
+                          </p>
+                        )
+                        const pct = scheduled / contracted
+                        return (
+                          <p className={`text-xs mt-0.5 ${pct >= 1 ? "text-green-600" : pct >= 0.5 ? "text-amber-500" : "text-red-500"}`}>
+                            {scheduled.toFixed(1)}h / {contracted}h
+                          </p>
+                        )
+                      })()}
+                    </div>
+                    {!isClosed && !isTimeOff && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => onMarkSick(employee.id, date)}
+                          className="size-10 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-colors"
+                          aria-label={`Mark ${employee.name} sick`}
+                        >
+                          <AlertTriangle className="size-4" />
+                        </button>
+                        <button
+                          onClick={() => openAddDialog(employee.id, date)}
+                          className="size-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                          aria-label={`Add shift for ${employee.name}`}
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {isClosed && (
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-gray-300">Closed</p>
+                  )}
+                  {isTimeOff && !isClosed && (
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-300">Time Off</p>
+                  )}
+                  {cellShifts.length > 0 && (
+                    <div className="mt-2.5 space-y-1.5">
+                      {cellShifts.map((shift) => (
+                        <ShiftCard
+                          key={shift.id}
+                          shift={shift}
+                          employee={employee}
+                          jobRoles={jobRoles}
+                          onClick={() => openEditDialog(shift)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Desktop: scrollable grid (hidden on mobile) ── */}
+        <div className="hidden md:block overflow-x-auto">
           <div
             className="grid"
             style={{ gridTemplateColumns: "180px repeat(7, minmax(120px, 1fr))" }}
@@ -256,30 +432,32 @@ export function WeeklyScheduleGrid({
             {days.map((day, i) => {
               const isToday = toISODate(day) === toISODate(new Date())
               const isWeekend = i >= 5
+              const isClosed = closedDays[i]
               return (
                 <div
                   key={i}
                   className={cn(
                     "border-b border-r border-gray-200 px-2 py-2.5 text-center",
-                    isToday ? "bg-blue-100" : isWeekend ? "bg-amber-50" : "bg-gray-100"
+                    isClosed
+                      ? "bg-gray-100"
+                      : isToday ? "bg-blue-100" : isWeekend ? "bg-amber-50" : "bg-gray-100"
                   )}
                 >
-                  <p
-                    className={cn(
-                      "text-xs font-semibold uppercase tracking-wide",
-                      isToday ? "text-blue-700" : isWeekend ? "text-amber-700" : "text-gray-600"
-                    )}
-                  >
+                  <p className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    isClosed ? "text-gray-400" : isToday ? "text-blue-700" : isWeekend ? "text-amber-700" : "text-gray-600"
+                  )}>
                     {DAY_NAMES[i]}
                   </p>
-                  <p
-                    className={cn(
-                      "text-sm font-semibold",
-                      isToday ? "text-blue-800" : isWeekend ? "text-amber-800" : "text-gray-800"
-                    )}
-                  >
+                  <p className={cn(
+                    "text-sm font-semibold",
+                    isClosed ? "text-gray-400" : isToday ? "text-blue-800" : isWeekend ? "text-amber-800" : "text-gray-800"
+                  )}>
                     {formatHeaderDate(day)}
                   </p>
+                  {isClosed && (
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Closed</p>
+                  )}
                 </div>
               )
             })}
@@ -287,32 +465,28 @@ export function WeeklyScheduleGrid({
             {/* Employee rows */}
             {employees.map((employee) => (
               <React.Fragment key={employee.id}>
-                {/* Employee name cell */}
-                <div
-                  className="sticky left-0 z-10 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 flex flex-col justify-center min-h-16"
-                >
+                <div className="sticky left-0 z-10 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 flex flex-col justify-center min-h-16">
                   <p className="text-sm font-semibold text-gray-900 truncate">{employee.name}</p>
                   <p className="text-xs text-gray-500 truncate">{employee.jobRole}</p>
                   {(() => {
                     const scheduled = scheduledHoursMap[employee.id] ?? 0
                     const contracted = employee.contractedHours
                     if (contracted === 0) return null
-                    const pct = contracted > 0 ? scheduled / contracted : 0
-                    const colorClass =
-                      pct >= 1
-                        ? "text-green-600"
-                        : pct >= 0.5
-                        ? "text-amber-500"
-                        : "text-red-500"
+                    const over = scheduled - contracted
+                    if (over > 0) return (
+                      <p className="text-xs mt-0.5 text-orange-500">
+                        {scheduled.toFixed(1)}h / {contracted}h
+                        <span className="ml-1 font-semibold">(+{over.toFixed(1)}h)</span>
+                      </p>
+                    )
+                    const pct = scheduled / contracted
                     return (
-                      <p className={`text-xs mt-0.5 ${colorClass}`}>
+                      <p className={`text-xs mt-0.5 ${pct >= 1 ? "text-green-600" : pct >= 0.5 ? "text-amber-500" : "text-red-500"}`}>
                         {scheduled.toFixed(1)}h / {contracted}h
                       </p>
                     )
                   })()}
                 </div>
-
-                {/* Day cells */}
                 {days.map((day, di) => {
                   const date = toISODate(day)
                   const cellId = `${employee.id}__${date}`
@@ -327,6 +501,8 @@ export function WeeklyScheduleGrid({
                       employee={employee}
                       jobRoles={jobRoles}
                       isWeekend={di >= 5}
+                      isClosed={closedDays[di]}
+                      isTimeOff={isTimeOffDay(employee.id, date)}
                       onAddClick={openAddDialog}
                       onShiftClick={openEditDialog}
                       onMarkSick={onMarkSick}
@@ -362,6 +538,7 @@ export function WeeklyScheduleGrid({
         onOpenChange={(open) => setAddDialog((prev) => ({ ...prev, open }))}
         employees={employees}
         jobRoles={jobRoles}
+        shiftTemplates={shiftTemplates}
         defaultEmployeeId={addDialog.employeeId}
         defaultDate={addDialog.date}
         onShiftCreate={onShiftCreate}
