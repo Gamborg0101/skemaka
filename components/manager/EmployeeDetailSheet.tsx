@@ -7,7 +7,9 @@ import {
   Calendar,
   AlertTriangle,
   Briefcase,
+  Send,
 } from "lucide-react"
+import { toast } from "sonner"
 import {
   Sheet,
   SheetContent,
@@ -38,6 +40,7 @@ interface EmployeeDetailSheetProps {
   onOpenChange: (open: boolean) => void
   onUpdate: (updated: Partial<Employee>) => void
   jobRoles: JobRole[]
+  orgId: string
   initialMode?: "view" | "edit"
 }
 
@@ -87,9 +90,27 @@ export function EmployeeDetailSheet({
   onOpenChange,
   onUpdate,
   jobRoles,
+  orgId,
   initialMode = "view",
 }: EmployeeDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(initialMode === "edit")
+  const [sendingInvite, setSendingInvite] = useState(false)
+
+  async function handleResendInvite() {
+    if (!employee) return
+    setSendingInvite(true)
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${employee.id}/invite`, {
+        method: "POST",
+      })
+      if (!r.ok) throw new Error("Failed")
+      toast.success(`Invite sent to ${employee.email}`)
+    } catch {
+      toast.error("Failed to send invite")
+    } finally {
+      setSendingInvite(false)
+    }
+  }
 
   // Edit form state
   const [editName, setEditName] = useState("")
@@ -358,11 +379,24 @@ export function EmployeeDetailSheet({
               <div className="flex items-center gap-2.5 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2.5">
                 <AlertTriangle className="size-4 text-rose-400 shrink-0" />
                 <p className="text-sm text-rose-700">
-                  {/* TODO: fetch from /api/orgs/[orgId]/employees/[employeeId]/sick-days?month=current */}
                   <span className="font-medium">{sickDaysThisMonth}</span>{" "}
                   sick {sickDaysThisMonth === 1 ? "day" : "days"} this month
                 </p>
               </div>
+
+              {/* Invite */}
+              {employee.isActive && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendInvite}
+                  disabled={sendingInvite}
+                  className="w-full gap-2"
+                >
+                  <Send className="size-3.5" />
+                  {sendingInvite ? "Sending…" : employee.userId ? "Resend invite email" : "Send invite email"}
+                </Button>
+              )}
             </div>
           )}
         </div>

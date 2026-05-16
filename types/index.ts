@@ -29,11 +29,17 @@ export function isEmploymentType(val: string): val is EmploymentType {
 
 // ─── Core entities ────────────────────────────────────────────────────────────
 
+export interface OrgScheduleSettings {
+  hours?: Array<{ isOpen: boolean; openTime: string; closeTime: string }>
+  defaultScheduleView?: "week" | "timeline"
+}
+
 export interface Organization {
   id: string
   name: string
   slug: string
   currency: string
+  settings?: OrgScheduleSettings | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   subscriptionStatus: SubscriptionStatus

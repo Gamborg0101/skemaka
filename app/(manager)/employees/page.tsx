@@ -246,6 +246,7 @@ export default function EmployeesPage() {
         onOpenChange={setSheetOpen}
         onUpdate={(updated) => { if (selectedEmployee) handleUpdate(selectedEmployee.id, updated) }}
         jobRoles={jobRoles}
+        orgId={orgId}
         initialMode={sheetMode}
       />
 

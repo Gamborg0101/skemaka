@@ -157,15 +157,35 @@ export default function SettingsPage() {
     setDirty(true)
   }
 
-  function handleSaveHours() {
-    updateOrgSettings({ hours })
-    setDirty(false)
-    toast.success("Store hours saved")
+  const [savingHours, setSavingHours] = useState(false)
+
+  async function handleSaveHours() {
+    setSavingHours(true)
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hours }),
+      })
+      if (!r.ok) throw new Error("Failed to save")
+      updateOrgSettings({ hours })
+      setDirty(false)
+      toast.success("Store hours saved")
+    } catch {
+      toast.error("Failed to save store hours")
+    } finally {
+      setSavingHours(false)
+    }
   }
 
   function handleSetDefaultView(view: "week" | "timeline") {
     setDefaultScheduleView(view)
     updateOrgSettings({ defaultScheduleView: view })
+    void fetch(`/api/orgs/${orgId}/settings`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ defaultScheduleView: view }),
+    })
     toast.success(`Default schedule view set to ${view === "week" ? "Week" : "Timeline"}`)
   }
 
@@ -382,11 +402,11 @@ export default function SettingsPage() {
           </p>
           <Button
             onClick={handleSaveHours}
-            disabled={!dirty}
+            disabled={!dirty || savingHours}
             className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 shrink-0"
             size="sm"
           >
-            Save
+            {savingHours ? "Saving…" : "Save"}
           </Button>
         </div>
       </SettingsSection>
