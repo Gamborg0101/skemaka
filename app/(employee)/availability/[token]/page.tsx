@@ -1,48 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { CheckCircle } from "lucide-react"
+import { useState, useEffect, use } from "react"
+import { CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import type { AvailabilityRequest, Employee } from "@/types"
 import { getWeekDays } from "@/lib/dateUtils"
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// TODO: fetch from /api/availability/[token] (public endpoint, no auth required)
-
-const MOCK_EMPLOYEE: Employee = {
-  id: "emp-1",
-  organizationId: "org-1",
-  userId: null,
-  name: "Sophie Andersen",
-  email: "sophie@example.com",
-  phone: null,
-  jobRole: "Barista",
-  hourlyWage: 15.5,
-  notes: null,
-  employmentType: "PART_TIME" as const,
-  contractedHours: 0,
-  isActive: true,
-  inviteToken: "mock-token",
-  inviteExpiry: null,
-  createdAt: "2025-01-01T00:00:00Z",
-  updatedAt: "2025-01-01T00:00:00Z",
-}
-
-const MOCK_REQUEST: AvailabilityRequest = {
-  id: "req-1",
-  organizationId: "org-1",
-  weekStart: "2026-05-18",
-  deadline: "2026-05-15T23:59:59Z",
-  status: "OPEN",
-  createdAt: "2026-05-12T10:00:00Z",
-}
-
-const ORG_NAME = "The Daily Grind"
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 type DayAvailability = {
   date: string
@@ -73,39 +38,53 @@ function formatDateShort(dateStr: string): string {
   })
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+interface PageProps {
+  params: Promise<{ token: string }>
+}
 
-export default function AvailabilityTokenPage() {
-  const employee = MOCK_EMPLOYEE
-  const request = MOCK_REQUEST
+export default function AvailabilityTokenPage({ params }: PageProps) {
+  const { token } = use(params)
 
-  const days = getWeekDays(request.weekStart)
-
-  const [availability, setAvailability] = useState<DayAvailability[]>(
-    days.map((date) => ({
-      date,
-      isAvailable: false,
-      preferredStart: "",
-      preferredEnd: "",
-    }))
-  )
-
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [employee, setEmployee] = useState<Employee | null>(null)
+  const [request, setRequest] = useState<AvailabilityRequest | null>(null)
+  const [orgName, setOrgName] = useState("")
+  const [availability, setAvailability] = useState<DayAvailability[]>([])
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    fetch(`/api/availability/${token}`)
+      .then(async (r) => {
+        if (!r.ok) { setNotFound(true); return }
+        const json = await r.json() as {
+          data: { employee: Employee; request: AvailabilityRequest; orgName: string }
+        }
+        const { employee: emp, request: req, orgName: name } = json.data
+        setEmployee(emp)
+        setRequest(req)
+        setOrgName(name)
+        setAvailability(
+          getWeekDays(req.weekStart).map((date) => ({
+            date,
+            isAvailable: false,
+            preferredStart: "",
+            preferredEnd: "",
+          }))
+        )
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false))
+  }, [token])
+
   const toggleAvailable = (date: string) => {
     setAvailability((prev) =>
-      prev.map((d) =>
-        d.date === date ? { ...d, isAvailable: !d.isAvailable } : d
-      )
+      prev.map((d) => (d.date === date ? { ...d, isAvailable: !d.isAvailable } : d))
     )
   }
 
-  const updateTime = (
-    date: string,
-    field: "preferredStart" | "preferredEnd",
-    value: string
-  ) => {
+  const updateTime = (date: string, field: "preferredStart" | "preferredEnd", value: string) => {
     setAvailability((prev) =>
       prev.map((d) => (d.date === date ? { ...d, [field]: value } : d))
     )
@@ -113,11 +92,44 @@ export default function AvailabilityTokenPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: POST /api/availability/[token]/submit
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setSubmitting(false)
-    setSubmitted(true)
+    try {
+      const r = await fetch(`/api/availability/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days: availability }),
+      })
+      if (r.ok || r.status === 201) {
+        setSubmitted(true)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="size-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+      </div>
+    )
+  }
+
+  if (notFound || !employee || !request) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-sm text-center">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-gray-100">
+            <AlertCircle className="size-8 text-gray-400" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900">Link not found</h1>
+          <p className="mt-2 text-gray-500">
+            This link may have expired or there&apos;s no open availability request right now.
+            Ask your manager to resend the invite.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (submitted) {
@@ -131,7 +143,7 @@ export default function AvailabilityTokenPage() {
           <p className="mt-2 text-gray-500">
             Your availability has been submitted. Your manager will build the schedule and let you know your shifts.
           </p>
-          <p className="mt-6 text-sm text-gray-400">{ORG_NAME}</p>
+          <p className="mt-6 text-sm text-gray-400">{orgName}</p>
         </div>
       </div>
     )
@@ -145,10 +157,9 @@ export default function AvailabilityTokenPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
-      {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-          {ORG_NAME}
+          {orgName}
         </p>
         <h1 className="text-xl font-bold text-gray-900 mt-0.5">
           Hi {employee.name.split(" ")[0]},
@@ -168,7 +179,6 @@ export default function AvailabilityTokenPage() {
               day.isAvailable ? "border-blue-500" : "border-gray-200"
             )}
           >
-            {/* Day header — tap to toggle */}
             <button
               type="button"
               onClick={() => toggleAvailable(day.date)}
@@ -187,7 +197,6 @@ export default function AvailabilityTokenPage() {
                 >
                   {day.isAvailable ? "Available" : "Not Available"}
                 </span>
-                {/* Toggle pill */}
                 <div
                   className={cn(
                     "relative h-6 w-11 rounded-full transition-colors",
@@ -204,7 +213,6 @@ export default function AvailabilityTokenPage() {
               </div>
             </button>
 
-            {/* Time inputs — shown when available */}
             {day.isAvailable && (
               <div className="border-t border-gray-100 px-4 py-4 grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -215,9 +223,7 @@ export default function AvailabilityTokenPage() {
                     id={`start-${day.date}`}
                     type="time"
                     value={day.preferredStart}
-                    onChange={(e) =>
-                      updateTime(day.date, "preferredStart", e.target.value)
-                    }
+                    onChange={(e) => updateTime(day.date, "preferredStart", e.target.value)}
                     className="h-11 text-base"
                   />
                 </div>
@@ -229,9 +235,7 @@ export default function AvailabilityTokenPage() {
                     id={`end-${day.date}`}
                     type="time"
                     value={day.preferredEnd}
-                    onChange={(e) =>
-                      updateTime(day.date, "preferredEnd", e.target.value)
-                    }
+                    onChange={(e) => updateTime(day.date, "preferredEnd", e.target.value)}
                     className="h-11 text-base"
                   />
                 </div>
@@ -240,7 +244,6 @@ export default function AvailabilityTokenPage() {
           </div>
         ))}
 
-        {/* Submit */}
         <div className="pt-3">
           <Button
             type="submit"

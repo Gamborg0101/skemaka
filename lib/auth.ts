@@ -4,7 +4,7 @@ import Resend from "next-auth/providers/resend"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { db } from "@/lib/prisma"
 import { authConfig } from "@/auth.config"
-import type { UserRole } from "@/types"
+import type { UserRole, SubscriptionStatus } from "@/types"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -26,10 +26,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // a DB lookup on every request.
         const membership = await db.membership.findFirst({
           where: { userId: user.id!, role: "MANAGER" },
-          select: { organizationId: true },
+          include: { organization: { select: { subscriptionStatus: true } } },
           orderBy: { joinedAt: "asc" },
         })
         token.orgId = membership?.organizationId
+        token.subscriptionStatus = membership?.organization.subscriptionStatus
       }
       if (token.email === process.env.ADMIN_EMAIL) {
         token.role = "ADMIN"
@@ -42,6 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
         session.user.orgId = token.orgId
+        session.user.subscriptionStatus = token.subscriptionStatus as SubscriptionStatus | undefined
       }
       return session
     },
