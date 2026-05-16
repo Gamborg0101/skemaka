@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { requireOrgMember } from "@/lib/apiGuard"
 
@@ -9,16 +8,12 @@ interface RouteContext {
 
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {
   const { orgId, userId } = await params
-
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Only admins can revoke manager access" }, { status: 403 })
-  }
   const guard = await requireOrgMember(orgId)
   if ("error" in guard) return guard.error
+
+  if (userId === guard.userId) {
+    return NextResponse.json({ error: "You cannot remove your own access" }, { status: 409 })
+  }
 
   const target = await db.user.findUnique({ where: { id: userId } })
   if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 })

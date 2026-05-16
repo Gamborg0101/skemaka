@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { requireOrgMember } from "@/lib/apiGuard"
 
@@ -31,14 +30,6 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
-
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Only admins can grant manager access" }, { status: 403 })
-  }
   const guard = await requireOrgMember(orgId)
   if ("error" in guard) return guard.error
 
@@ -55,7 +46,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       { status: 404 }
     )
   }
-  if (target.id === session.user.id) {
+  if (target.id === guard.userId) {
     return NextResponse.json({ error: "You already have manager access." }, { status: 409 })
   }
 

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { Organization, JobRole, ShiftTemplate } from "@/types"
-import { updateOrgSettings } from "@/lib/orgSettings"
+import { updateOrgSettings, type DayHours } from "@/lib/orgSettings"
 
 interface OrgContextValue {
   orgId: string
@@ -56,7 +56,14 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             setOrg(data.data.org)
             setJobRoles(data.data.jobRoles)
             setShiftTemplates(data.data.shiftTemplates)
-            updateOrgSettings({ currency: data.data.org.currency })
+            const { org } = data.data
+            updateOrgSettings({
+              currency: org.currency,
+              ...(org.settings?.hours ? { hours: org.settings.hours as DayHours[] } : {}),
+              ...(org.settings?.defaultScheduleView
+                ? { defaultScheduleView: org.settings.defaultScheduleView }
+                : {}),
+            })
             setState("ready")
           } else {
             setState("onboarding")

@@ -80,6 +80,7 @@ export function serSchedule(s: {
 
 export function serOrg(o: {
   id: string; name: string; slug: string; currency: string
+  settings?: unknown
   stripeCustomerId: string | null; stripeSubscriptionId: string | null
   subscriptionStatus: string; employeeCount: number
   createdAt: Date; updatedAt: Date
@@ -89,6 +90,7 @@ export function serOrg(o: {
     name: o.name,
     slug: o.slug,
     currency: o.currency,
+    settings: (o.settings as Organization["settings"]) ?? null,
     stripeCustomerId: o.stripeCustomerId,
     stripeSubscriptionId: o.stripeSubscriptionId,
     subscriptionStatus: o.subscriptionStatus as Organization["subscriptionStatus"],
