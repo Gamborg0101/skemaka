@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { rateLimitRequest } from "@/lib/upstash"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import type { Employee, AvailabilityRequest } from "@/types"
 
 interface RouteContext {
@@ -50,8 +50,8 @@ async function validateToken(token: string): Promise<TokenValidationResponse | n
     hourlyWage: 155,
     notes: null,
     employmentType: "PART_TIME" as const,
-      contractedHours: 0,
-      isActive: true,
+    contractedHours: 0,
+    isActive: true,
     inviteToken: token,
     inviteExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     createdAt: "2025-01-01T08:00:00.000Z",
@@ -83,7 +83,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   // Rate limit this public endpoint first — it is the most exposed surface.
-  const { success } = await rateLimitRequest(req.headers.get("x-forwarded-for") ?? "anonymous")
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
   if (!success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }

@@ -7,7 +7,10 @@ declare global {
 }
 
 function createPrismaClient(): PrismaClient {
-  const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL ?? "" })
+  const adapter = new PrismaNeon({
+    connectionString: process.env.DATABASE_URL ?? "",
+    connectionTimeoutMillis: 30_000,
+  })
   return new PrismaClient({ adapter })
 }
 

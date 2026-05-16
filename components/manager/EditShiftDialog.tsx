@@ -23,7 +23,6 @@ import { TimePicker } from "@/components/manager/TimePicker"
 import { DateStepper } from "@/components/manager/DateStepper"
 import type { Shift, JobRole } from "@/types"
 
-
 interface EditShiftDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void

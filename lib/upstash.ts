@@ -32,6 +32,17 @@ export const ratelimit = new Proxy({} as Ratelimit, {
   },
 })
 
+// Prefer x-real-ip (set by Vercel, cannot be forged by clients) over
+// x-forwarded-for (can be sent by the client and is attacker-controlled on
+// non-Vercel deployments). Falls back to "anonymous" when neither is present.
+export function getClientIp(headers: Headers): string {
+  return (
+    headers.get("x-real-ip") ??
+    headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    "anonymous"
+  )
+}
+
 export async function rateLimitRequest(identifier: string): Promise<{ success: boolean }> {
   const instance = getRatelimit()
 

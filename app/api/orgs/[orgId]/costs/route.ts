@@ -1,140 +1,91 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { db } from "@/lib/prisma"
+import { requireOrgMember } from "@/lib/apiGuard"
+import { serEmployee, serShift } from "@/lib/serialize"
 import { calcHours } from "@/lib/dateUtils"
-import type { WeeklyLaborCost, LaborCostEntry, Employee, Shift } from "@/types"
+import type { WeeklyLaborCost, LaborCostEntry } from "@/types"
+
+const SHIFT_EMPLOYEE_SELECT = {
+  id: true, organizationId: true, userId: true,
+  name: true, email: true, phone: true, jobRole: true,
+  hourlyWage: true, employmentType: true, contractedHours: true,
+  notes: true, isActive: true, createdAt: true, updatedAt: true,
+} as const
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { orgId } = await params
-  const weekStart = req.nextUrl.searchParams.get("weekStart")
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
 
+  const weekStart = req.nextUrl.searchParams.get("weekStart")
   if (!weekStart) {
     return NextResponse.json({ error: "weekStart query param is required" }, { status: 400 })
   }
 
-  // TODO: replace with DB query
-  // const schedule = await db.schedule.findFirst({
-  //   where: { organizationId: orgId, weekStart: new Date(weekStart) },
-  //   include: { shifts: { include: { employee: true } } },
-  // })
-  // const entries = Object.values(
-  //   (schedule?.shifts ?? []).reduce<Record<string, LaborCostEntry>>((acc, shift) => {
-  //     const hours = calcHours(shift.startTime, shift.endTime, shift.breakMinutes)
-  //     const wage = Number(shift.employee.hourlyWage)
-  //     if (!acc[shift.employeeId]) {
-  //       acc[shift.employeeId] = { employee: shift.employee, totalHours: 0, totalCost: 0, shifts: [] }
-  //     }
-  //     acc[shift.employeeId].totalHours += hours
-  //     acc[shift.employeeId].totalCost += hours * wage
-  //     acc[shift.employeeId].shifts.push(shift)
-  //     return acc
-  //   }, {})
-  // )
-
-  const mockEmployee1: Employee = {
-    id: "emp_mock_001",
-    organizationId: orgId,
-    userId: null,
-    name: "Alice Hansen",
-    email: "alice@example.com",
-    phone: "+45 12 34 56 78",
-    jobRole: "Barista",
-    hourlyWage: 155,
-    notes: null,
-    employmentType: "PART_TIME" as const,
-      contractedHours: 0,
-      isActive: true,
-    inviteToken: null,
-    inviteExpiry: null,
-    createdAt: "2025-01-01T08:00:00.000Z",
-    updatedAt: "2025-01-01T08:00:00.000Z",
-  }
-
-  const mockEmployee2: Employee = {
-    id: "emp_mock_002",
-    organizationId: orgId,
-    userId: null,
-    name: "Bob Eriksen",
-    email: "bob@example.com",
-    phone: null,
-    jobRole: "Cashier",
-    hourlyWage: 145,
-    notes: null,
-    employmentType: "PART_TIME" as const,
-      contractedHours: 0,
-      isActive: true,
-    inviteToken: null,
-    inviteExpiry: null,
-    createdAt: "2025-01-02T08:00:00.000Z",
-    updatedAt: "2025-01-02T08:00:00.000Z",
-  }
-
-  const mockShift1: Shift = {
-    id: "shift_mock_001",
-    scheduleId: "sched_mock_001",
-    organizationId: orgId,
-    employeeId: "emp_mock_001",
-    date: weekStart,
-    startTime: "08:00",
-    endTime: "16:00",
-    breakMinutes: 30,
-    jobRole: "Barista",
-    notes: null,
-    colorTag: "#3b82f6",
-    createdAt: "2025-05-10T09:00:00.000Z",
-    updatedAt: "2025-05-10T09:00:00.000Z",
-  }
-
-  const mockShift2: Shift = {
-    id: "shift_mock_002",
-    scheduleId: "sched_mock_001",
-    organizationId: orgId,
-    employeeId: "emp_mock_002",
-    date: weekStart,
-    startTime: "10:00",
-    endTime: "18:00",
-    breakMinutes: 30,
-    jobRole: "Cashier",
-    notes: null,
-    colorTag: "#10b981",
-    createdAt: "2025-05-10T09:00:00.000Z",
-    updatedAt: "2025-05-10T09:00:00.000Z",
-  }
-
-  const hours1 = calcHours(mockShift1.startTime, mockShift1.endTime, mockShift1.breakMinutes)
-  const hours2 = calcHours(mockShift2.startTime, mockShift2.endTime, mockShift2.breakMinutes)
-
-  const entries: LaborCostEntry[] = [
-    {
-      employee: mockEmployee1,
-      totalHours: hours1,
-      totalCost: hours1 * mockEmployee1.hourlyWage,
-      shifts: [mockShift1],
+  const schedule = await db.schedule.findFirst({
+    where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
+    include: {
+      shifts: {
+        where: { colorTag: { not: "sick" } },
+        include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      },
     },
-    {
-      employee: mockEmployee2,
-      totalHours: hours2,
-      totalCost: hours2 * mockEmployee2.hourlyWage,
-      shifts: [mockShift2],
-    },
-  ]
+    orderBy: { createdAt: "asc" },
+  })
 
-  const totalHours = entries.reduce((sum, e) => sum + e.totalHours, 0)
-  const totalCost = entries.reduce((sum, e) => sum + e.totalCost, 0)
+  const shifts = schedule?.shifts ?? []
+  const employeeMap = new Map<string, LaborCostEntry>()
 
+  for (const shift of shifts) {
+    const hours = calcHours(shift.startTime, shift.endTime, shift.breakMinutes)
+    const emp = serEmployee(shift.employee)
+
+    if (!employeeMap.has(shift.employeeId)) {
+      employeeMap.set(shift.employeeId, { employee: emp, totalHours: 0, totalCost: 0, shifts: [] })
+    }
+
+    const entry = employeeMap.get(shift.employeeId)!
+    entry.totalHours = Math.round((entry.totalHours + hours) * 100) / 100
+    entry.totalCost = Math.round((entry.totalCost + hours * emp.hourlyWage) * 100) / 100
+    entry.shifts.push(serShift(shift))
+  }
+
+  const entries = Array.from(employeeMap.values())
   const result: WeeklyLaborCost = {
     weekStart,
-    totalHours,
-    totalCost,
+    totalHours: Math.round(entries.reduce((s, e) => s + e.totalHours, 0) * 100) / 100,
+    totalCost: Math.round(entries.reduce((s, e) => s + e.totalCost, 0) * 100) / 100,
     entries,
+  }
+
+  if (req.nextUrl.searchParams.get("format") === "csv") {
+    const org = await db.organization.findUnique({ where: { id: orgId }, select: { currency: true } })
+    const currency = org?.currency ?? "EUR"
+    const rows = [
+      ["Employee", "Job Role", "Employment Type", "Contracted Hours", "Scheduled Hours", "Days Worked", `Hourly Wage (${currency})`, `Total Pay (${currency})`],
+      ...entries.map((e) => [
+        e.employee.name,
+        e.employee.jobRole,
+        e.employee.employmentType,
+        e.employee.contractedHours,
+        e.totalHours,
+        new Set(e.shifts.map((s) => s.date)).size,
+        e.employee.hourlyWage,
+        e.totalCost,
+      ]),
+    ]
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="payroll-${weekStart}.csv"`,
+      },
+    })
   }
 
   return NextResponse.json({ data: result })

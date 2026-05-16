@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
 import type { AvailabilityRequest, Employee } from "@/types"
 import { getWeekDays } from "@/lib/dateUtils"
 
@@ -24,8 +23,8 @@ const MOCK_EMPLOYEE: Employee = {
   hourlyWage: 15.5,
   notes: null,
   employmentType: "PART_TIME" as const,
-      contractedHours: 0,
-      isActive: true,
+  contractedHours: 0,
+  isActive: true,
   inviteToken: "mock-token",
   inviteExpiry: null,
   createdAt: "2025-01-01T00:00:00Z",
@@ -61,7 +60,6 @@ const DAY_LABELS: Record<number, string> = {
   5: "Friday",
   6: "Saturday",
 }
-
 
 function getDayLabel(dateStr: string): string {
   const d = new Date(dateStr)

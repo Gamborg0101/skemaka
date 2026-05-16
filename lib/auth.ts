@@ -22,15 +22,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = user.role ?? "EMPLOYEE"
+        // Cache the user's MANAGER org in the JWT so requireOrgMember skips
+        // a DB lookup on every request.
+        const membership = await db.membership.findFirst({
+          where: { userId: user.id!, role: "MANAGER" },
+          select: { organizationId: true },
+          orderBy: { joinedAt: "asc" },
+        })
+        token.orgId = membership?.organizationId
       }
-      // Re-check ADMIN on every callback (sign-in and refresh) so the role is
-      // never silently lost if the token is re-issued without a user object.
       if (token.email === process.env.ADMIN_EMAIL) {
         token.role = "ADMIN"
-        // TODO: persist ADMIN role to DB: db.user.update({ where: { id: user?.id ?? token.sub! }, data: { role: "ADMIN" } })
       }
-      // Guarantee role is always present — fallback for tokens issued before
-      // this field existed, or if the if (user) branch was somehow skipped.
       token.role ??= "EMPLOYEE"
       return token
     },
@@ -38,6 +41,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
+        session.user.orgId = token.orgId
       }
       return session
     },

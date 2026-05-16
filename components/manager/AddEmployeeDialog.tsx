@@ -20,8 +20,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getCurrencySymbol } from "@/lib/orgSettings"
 import { isEmploymentType } from "@/types"
 import type { JobRole, EmploymentType } from "@/types"
+import { parsePhoneNumberWithError, ParseError } from "libphonenumber-js"
+
+function formatPhoneNumber(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return trimmed
+
+  // For bare digits with no country code, assume Danish (+45)
+  const digits = trimmed.replace(/\D/g, "")
+  const input = trimmed.startsWith("+") ? trimmed : `+45${digits}`
+
+  try {
+    const parsed = parsePhoneNumberWithError(input)
+    if (parsed.isValid()) return parsed.formatInternational()
+  } catch (e) {
+    if (!(e instanceof ParseError)) throw e
+  }
+
+  return trimmed
+}
 
 interface AddEmployeeDialogProps {
   open: boolean
@@ -30,7 +50,7 @@ interface AddEmployeeDialogProps {
   onEmployeeAdd: (data: {
     name: string
     email: string
-    phone: string | null
+    phone: string
     jobRole: string
     hourlyWage: number
     employmentType: EmploymentType
@@ -65,18 +85,25 @@ export function AddEmployeeDialog({
     setNotes("")
   }
 
+  const resolvedContractedHours = (): number => {
+    if (employmentType === "FULL_TIME") return 40
+    if (employmentType === "REDUCED_FULL_TIME") return 32
+    return parseInt(contractedHours, 10) || 0
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !email || !jobRole || !hourlyWage) return
+    const partTimeHoursOk = employmentType !== "PART_TIME" || !!contractedHours
+    if (!name || !email || !phone || !jobRole || !hourlyWage || !partTimeHoursOk) return
 
     onEmployeeAdd({
       name: name.trim(),
       email: email.trim(),
-      phone: phone.trim() || null,
+      phone: phone.trim(),
       jobRole: jobRole.trim(),
       hourlyWage: parseFloat(hourlyWage),
       employmentType,
-      contractedHours: parseInt(contractedHours, 10) || 0,
+      contractedHours: resolvedContractedHours(),
       notes: notes.trim() || null,
     })
 
@@ -124,13 +151,15 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-phone">Phone (optional)</Label>
+            <Label htmlFor="emp-phone">Phone</Label>
             <Input
               id="emp-phone"
               type="tel"
               placeholder="+45 12 34 56 78"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              onBlur={(e) => setPhone(formatPhoneNumber(e.target.value))}
+              required
             />
           </div>
 
@@ -151,7 +180,7 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-wage">Hourly Wage (&euro;)</Label>
+            <Label htmlFor="emp-wage">Hourly Wage ({getCurrencySymbol()})</Label>
             <Input
               id="emp-wage"
               type="number"
@@ -166,7 +195,7 @@ export function AddEmployeeDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="emp-employment-type">Employment Type</Label>
-            <Select value={employmentType} onValueChange={(val) => { if (isEmploymentType(val)) setEmploymentType(val) }}>
+            <Select value={employmentType} onValueChange={(val) => { if (val && isEmploymentType(val)) setEmploymentType(val) }}>
               <SelectTrigger id="emp-employment-type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -184,11 +213,12 @@ export function AddEmployeeDialog({
               <Input
                 id="emp-contracted-hours"
                 type="number"
-                min="0"
-                max="40"
+                min="1"
+                max="39"
                 placeholder="20"
                 value={contractedHours}
                 onChange={(e) => setContractedHours(e.target.value)}
+                required
               />
             </div>
           )}

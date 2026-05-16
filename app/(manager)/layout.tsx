@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { ManagerShell } from "@/components/manager/ManagerShell"
+import { OrgProvider } from "@/lib/orgContext"
 
 export default async function ManagerLayout({
   children,
@@ -18,5 +19,9 @@ export default async function ManagerLayout({
     redirect("/portal")
   }
 
-  return <ManagerShell>{children}</ManagerShell>
+  return (
+    <OrgProvider>
+      <ManagerShell>{children}</ManagerShell>
+    </OrgProvider>
+  )
 }
