@@ -19,7 +19,10 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     orderBy: { weekStart: "desc" },
   })
 
-  return NextResponse.json({ data: requests.map(serAvailabilityRequest) })
+  return NextResponse.json(
+    { data: requests.map(serAvailabilityRequest) },
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {

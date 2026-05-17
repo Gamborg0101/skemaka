@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma"
 import { requireOrgMember } from "@/lib/apiGuard"
 import { serSchedule } from "@/lib/serialize"
 import { isValidDate } from "@/lib/validate"
+import { Prisma } from "@/app/generated/prisma/client"
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
@@ -24,7 +25,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
       orderBy: { createdAt: "asc" },
     })
-    return NextResponse.json({ data: schedule ? serSchedule(schedule) : null })
+    return NextResponse.json(
+      { data: schedule ? serSchedule(schedule) : null },
+      { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=120" } }
+    )
   }
 
   const schedules = await db.schedule.findMany({
@@ -32,7 +36,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     orderBy: { weekStart: "desc" },
   })
 
-  return NextResponse.json({ data: schedules.map(serSchedule) })
+  return NextResponse.json(
+    { data: schedules.map(serSchedule) },
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -62,10 +69,22 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ data: serSchedule(existing) })
   }
 
-  const schedule = await db.schedule.create({
-    data: { organizationId: orgId, weekStart: weekStartDate },
-    include: { shifts: true },
-  })
-
-  return NextResponse.json({ data: serSchedule(schedule) }, { status: 201 })
+  try {
+    const schedule = await db.schedule.create({
+      data: { organizationId: orgId, weekStart: weekStartDate },
+      include: { shifts: true },
+    })
+    return NextResponse.json({ data: serSchedule(schedule) }, { status: 201 })
+  } catch (err) {
+    // Concurrent POST won the race — return the existing schedule instead of crashing.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const schedule = await db.schedule.findFirst({
+        where: { organizationId: orgId, weekStart: weekStartDate },
+        include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+        orderBy: { createdAt: "asc" },
+      })
+      return NextResponse.json({ data: serSchedule(schedule!) })
+    }
+    throw err
+  }
 }

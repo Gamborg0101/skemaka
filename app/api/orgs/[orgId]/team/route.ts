@@ -17,15 +17,18 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     orderBy: { joinedAt: "asc" },
   })
 
-  return NextResponse.json({
-    data: members.map((m) => ({
-      userId: m.userId,
-      name: m.user.name,
-      email: m.user.email,
-      role: m.user.role,
-      joinedAt: m.joinedAt.toISOString(),
-    })),
-  })
+  return NextResponse.json(
+    {
+      data: members.map((m) => ({
+        userId: m.userId,
+        name: m.user.name,
+        email: m.user.email,
+        role: m.user.role,
+        joinedAt: m.joinedAt.toISOString(),
+      })),
+    },
+    { headers: { "Cache-Control": "private, max-age=120, stale-while-revalidate=600" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {

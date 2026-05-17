@@ -55,13 +55,18 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId
     select: { id: true, hourlyWage: true },
   })
 
-  await db.$transaction(async (tx) => {
-    await tx.organization.update({ where: { id: orgId }, data: { currency: newCurrency } })
-    for (const emp of employees) {
-      const converted = Math.round(Number(emp.hourlyWage) * rate * 100) / 100
-      await tx.employee.update({ where: { id: emp.id }, data: { hourlyWage: converted } })
-    }
-  })
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.organization.update({ where: { id: orgId }, data: { currency: newCurrency } })
+      for (const emp of employees) {
+        const converted = Math.round(Number(emp.hourlyWage) * rate * 100) / 100
+        await tx.employee.update({ where: { id: emp.id }, data: { hourlyWage: converted } })
+      }
+    })
+  } catch (err) {
+    console.error("[orgs PATCH]", err)
+    return NextResponse.json({ error: "Failed to update currency" }, { status: 500 })
+  }
 
   const updated = await db.organization.findFirst({
     where: { id: orgId },

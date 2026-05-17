@@ -1,0 +1,452 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - button [ref=e1954]:
+          - img [ref=e7]
+      - navigation [ref=e10]:
+        - link [ref=e1955] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e12]
+          - text: Schedule
+        - link [ref=e1956] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e15]
+          - text: Employees
+        - link [ref=e1957] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e21]
+          - text: Availability
+        - link [ref=e1958] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e25]
+          - text: Labor Cost
+        - link [ref=e1959] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e28]
+          - text: My Shifts
+      - button [ref=e1960]:
+        - img [ref=e35]
+        - text: Report a bug
+      - button [ref=e1961]:
+        - img [ref=e46]
+        - generic [ref=e50]: The Daily Grind
+        - img [ref=e51]
+    - main [ref=e54]:
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - heading [level=1] [ref=e1962]: Schedule
+          - generic [ref=e58]:
+            - button [ref=e1963]:
+              - img [ref=e60]
+              - text: Week
+            - button [ref=e1964]:
+              - img [ref=e66]
+              - text: Timeline
+          - button [disabled]: Today
+          - button [ref=e1965]:
+            - img
+          - button [ref=e1966]:
+            - generic [ref=e663]: W20
+            - generic [ref=e664]: 11 May – 17 May
+          - button [ref=e1967]:
+            - img
+        - generic [ref=e73]:
+          - generic [ref=e1398]:
+            - generic [ref=e1399]: Employee
+            - generic [ref=e1400]:
+              - paragraph [ref=e1401]: Mon
+              - paragraph [ref=e1402]: 11 May
+            - generic [ref=e1403]:
+              - paragraph [ref=e1404]: Tue
+              - paragraph [ref=e1405]: 12 May
+            - generic [ref=e1406]:
+              - paragraph [ref=e1407]: Wed
+              - paragraph [ref=e1408]: 13 May
+            - generic [ref=e1409]:
+              - paragraph [ref=e1410]: Thu
+              - paragraph [ref=e1411]: 14 May
+            - generic [ref=e1412]:
+              - paragraph [ref=e1413]: Fri
+              - paragraph [ref=e1414]: 15 May
+            - generic [ref=e1415]:
+              - paragraph [ref=e1416]: Sat
+              - paragraph [ref=e1417]: 16 May
+            - generic [ref=e1418]:
+              - paragraph [ref=e1419]: Sun
+              - paragraph [ref=e1420]: 17 May
+              - paragraph [ref=e1421]: Closed
+            - generic [ref=e1422]:
+              - paragraph [ref=e1423]: Casper Gamborg
+              - paragraph [ref=e1424]: Shift Supervisor
+              - paragraph [ref=e1425]: 22.5h / 40h
+            - button [ref=e1968]:
+              - paragraph [ref=e1429]: Casper Gamborg
+              - paragraph [ref=e1430]: Supervisor
+              - paragraph [ref=e1431]: 10AM – 6PM · 7h 30m
+              - paragraph [ref=e1432]: 30m break
+            - generic [ref=e1434] [cursor=pointer]:
+              - button [ref=e1969]:
+                - img [ref=e1436]
+              - button [ref=e1970]:
+                - img [ref=e1439]
+            - button [ref=e1971]:
+              - paragraph [ref=e1443]: Casper Gamborg
+              - paragraph [ref=e1444]: Supervisor
+              - paragraph [ref=e1445]: 8AM – 4PM · 7h 30m
+              - paragraph [ref=e1446]: 30m break
+            - generic [ref=e1448] [cursor=pointer]:
+              - button [ref=e1972]:
+                - img [ref=e1450]
+              - button [ref=e1973]:
+                - img [ref=e1453]
+            - button [ref=e1974]:
+              - paragraph [ref=e1457]: Casper Gamborg
+              - paragraph [ref=e1458]: Supervisor
+              - paragraph [ref=e1459]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1460]: 30m break
+            - generic [ref=e1462] [cursor=pointer]:
+              - button [ref=e1975]:
+                - img [ref=e1464]
+              - button [ref=e1976]:
+                - img [ref=e1467]
+            - generic [ref=e1470]: Closed
+            - generic [ref=e1471]:
+              - paragraph [ref=e1472]: Dr. James O'Brien
+              - paragraph [ref=e1473]: Barista
+              - paragraph [ref=e1474]:
+                - text: 20.5h / 20h
+                - generic [ref=e1475]: (+0.5h)
+            - generic [ref=e1477] [cursor=pointer]:
+              - button [ref=e1977]:
+                - img [ref=e1479]
+              - button [ref=e1978]:
+                - img [ref=e1482]
+            - generic [ref=e1484] [cursor=pointer]:
+              - button [ref=e1979]:
+                - img [ref=e1486]
+              - button [ref=e1980]:
+                - img [ref=e1489]
+            - button [ref=e1981]:
+              - paragraph [ref=e1493]: Dr. James O'Brien
+              - paragraph [ref=e1494]: Barista
+              - paragraph [ref=e1495]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1496]: 30m break
+            - generic [ref=e1498] [cursor=pointer]:
+              - button [ref=e1982]:
+                - img [ref=e1500]
+              - button [ref=e1983]:
+                - img [ref=e1503]
+            - button [ref=e1984]:
+              - paragraph [ref=e1507]: Dr. James O'Brien
+              - paragraph [ref=e1508]: Barista
+              - paragraph [ref=e1509]: 2PM – 9PM · 7h
+            - button [ref=e1985]:
+              - paragraph [ref=e1513]: Dr. James O'Brien
+              - paragraph [ref=e1514]: Barista
+              - paragraph [ref=e1515]: 3PM – 9PM · 6h
+            - generic [ref=e1518]: Closed
+            - generic [ref=e1519]:
+              - paragraph [ref=e1520]: Lena Schmidt
+              - paragraph [ref=e1521]: Shift Supervisor
+              - paragraph [ref=e1522]: 28.5h / 32h
+            - button [ref=e1986]:
+              - paragraph [ref=e1526]: Lena Schmidt
+              - paragraph [ref=e1527]: Supervisor
+              - paragraph [ref=e1528]: 6:30AM – 2PM · 7h 30m
+            - generic [ref=e1530] [cursor=pointer]:
+              - button [ref=e1987]:
+                - img [ref=e1532]
+              - button [ref=e1988]:
+                - img [ref=e1535]
+            - button [ref=e1989]:
+              - paragraph [ref=e1539]: Lena Schmidt
+              - paragraph [ref=e1540]: Supervisor
+              - paragraph [ref=e1541]: 8AM – 4PM · 7h 30m
+              - paragraph [ref=e1542]: 30m break
+            - generic [ref=e1544] [cursor=pointer]:
+              - button [ref=e1990]:
+                - img [ref=e1546]
+              - button [ref=e1991]:
+                - img [ref=e1549]
+            - button [ref=e1992]:
+              - paragraph [ref=e1553]: Lena Schmidt
+              - paragraph [ref=e1554]: Supervisor
+              - paragraph [ref=e1555]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1556]: 30m break
+            - button [ref=e1993]:
+              - paragraph [ref=e1560]: Lena Schmidt
+              - paragraph [ref=e1561]: Supervisor
+              - paragraph [ref=e1562]: 7AM – 1PM · 6h
+            - generic [ref=e1565]: Closed
+            - generic [ref=e1566]:
+              - paragraph [ref=e1567]: Mia Andersen MD
+              - paragraph [ref=e1568]: Cashier
+              - paragraph [ref=e1569]:
+                - text: 28.5h / 24h
+                - generic [ref=e1570]: (+4.5h)
+            - generic [ref=e1572] [cursor=pointer]:
+              - button [ref=e1994]:
+                - img [ref=e1574]
+              - button [ref=e1995]:
+                - img [ref=e1577]
+            - button [ref=e1996]:
+              - paragraph [ref=e1581]: Mia Andersen MD
+              - paragraph [ref=e1582]: Cashier
+              - paragraph [ref=e1583]: 9AM – 5PM · 7h 30m
+              - paragraph [ref=e1584]: 30m break
+            - button [ref=e1997]:
+              - paragraph [ref=e1588]: Mia Andersen MD
+              - paragraph [ref=e1589]: Cashier
+              - paragraph [ref=e1590]: 7AM – 1PM · 6h
+            - button [ref=e1998]:
+              - paragraph [ref=e1594]: Mia Andersen MD
+              - paragraph [ref=e1595]: Cashier
+              - paragraph [ref=e1596]: 11AM – 7PM · 7h 30m
+              - paragraph [ref=e1597]: 30m break
+            - button [ref=e1999]:
+              - paragraph [ref=e1601]: Mia Andersen MD
+              - paragraph [ref=e1602]: Cashier
+              - paragraph [ref=e1603]: 11AM – 7PM · 7h 30m
+              - paragraph [ref=e1604]: 30m break
+            - generic [ref=e1606] [cursor=pointer]:
+              - button [ref=e2000]:
+                - img [ref=e1608]
+              - button [ref=e2001]:
+                - img [ref=e1611]
+            - generic [ref=e1614]: Closed
+            - generic [ref=e1615]:
+              - paragraph [ref=e1616]: Nadia Patel
+              - paragraph [ref=e1617]: Barista
+              - paragraph [ref=e1618]:
+                - text: 27.0h / 16h
+                - generic [ref=e1619]: (+11.0h)
+            - generic [ref=e1621] [cursor=pointer]:
+              - button [ref=e2002]:
+                - img [ref=e1623]
+              - button [ref=e2003]:
+                - img [ref=e1626]
+            - generic [ref=e1628] [cursor=pointer]:
+              - button [ref=e2004]:
+                - img [ref=e1630]
+              - button [ref=e2005]:
+                - img [ref=e1633]
+            - button [ref=e2006]:
+              - paragraph [ref=e1637]: Nadia Patel
+              - paragraph [ref=e1638]: Barista
+              - paragraph [ref=e1639]: 11AM – 7PM · 7h 30m
+              - paragraph [ref=e1640]: 30m break
+            - button [ref=e2007]:
+              - paragraph [ref=e1644]: Nadia Patel
+              - paragraph [ref=e1645]: Barista
+              - paragraph [ref=e1646]: 2PM – 8PM · 6h
+            - button [ref=e2008]:
+              - paragraph [ref=e1650]: Nadia Patel
+              - paragraph [ref=e1651]: Barista
+              - paragraph [ref=e1652]: 7AM – 1PM · 6h
+            - button [ref=e2009]:
+              - paragraph [ref=e1656]: Nadia Patel
+              - paragraph [ref=e1657]: Barista
+              - paragraph [ref=e1658]: 9AM – 5PM · 7h 30m
+              - paragraph [ref=e1659]: 30m break
+            - generic [ref=e1662]: Closed
+            - generic [ref=e1663]:
+              - paragraph [ref=e1664]: Sarah Chen
+              - paragraph [ref=e1665]: Barista
+              - paragraph [ref=e1666]: 37.5h / 40h
+            - button [ref=e2010]:
+              - paragraph [ref=e1670]: Sarah Chen
+              - paragraph [ref=e1671]: Barista
+              - paragraph [ref=e1672]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1673]: 30m break
+            - button [ref=e2011]:
+              - paragraph [ref=e1677]: Sarah Chen
+              - paragraph [ref=e1678]: Barista
+              - paragraph [ref=e1679]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1680]: 30m break
+            - generic [ref=e1682] [cursor=pointer]:
+              - button [ref=e2012]:
+                - img [ref=e1684]
+              - button [ref=e2013]:
+                - img [ref=e1687]
+            - button [ref=e2014]:
+              - paragraph [ref=e1691]: Sarah Chen
+              - paragraph [ref=e1692]: Barista
+              - paragraph [ref=e1693]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1694]: 30m break
+            - button [ref=e2015]:
+              - paragraph [ref=e1698]: Sarah Chen
+              - paragraph [ref=e1699]: Barista
+              - paragraph [ref=e1700]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1701]: 30m break
+            - button [ref=e2016]:
+              - paragraph [ref=e1705]: Sarah Chen
+              - paragraph [ref=e1706]: Barista
+              - paragraph [ref=e1707]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1708]: 30m break
+            - generic [ref=e1711]: Closed
+            - generic [ref=e1712]:
+              - paragraph [ref=e1713]: Tom Eriksson
+              - paragraph [ref=e1714]: Kitchen
+              - paragraph [ref=e1715]: 36.0h / 40h
+            - button [ref=e2017]:
+              - paragraph [ref=e1719]: Tom Eriksson
+              - paragraph [ref=e1720]: Kitchen
+              - paragraph [ref=e1721]: 9AM – 3PM · 6h
+            - button [ref=e2018]:
+              - paragraph [ref=e1725]: Tom Eriksson
+              - paragraph [ref=e1726]: Kitchen
+              - paragraph [ref=e1727]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1728]: 30m break
+            - generic [ref=e1730] [cursor=pointer]:
+              - button [ref=e2019]:
+                - img [ref=e1732]
+              - button [ref=e2020]:
+                - img [ref=e1735]
+            - button [ref=e2021]:
+              - paragraph [ref=e1739]: Tom Eriksson
+              - paragraph [ref=e1740]: Kitchen
+              - paragraph [ref=e1741]: 10AM – 6PM · 7h 30m
+              - paragraph [ref=e1742]: 30m break
+            - button [ref=e2022]:
+              - paragraph [ref=e1746]: Tom Eriksson
+              - paragraph [ref=e1747]: Kitchen
+              - paragraph [ref=e1748]: 8AM – 4PM · 7h 30m
+              - paragraph [ref=e1749]: 30m break
+            - button [ref=e2023]:
+              - paragraph [ref=e1753]: Tom Eriksson
+              - paragraph [ref=e1754]: Kitchen
+              - paragraph [ref=e1755]: 7AM – 3PM · 7h 30m
+              - paragraph [ref=e1756]: 30m break
+            - generic [ref=e1759]: Closed
+          - status [ref=e1760]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e443] [cursor=pointer]:
+    - img [ref=e444]
+  - alert [ref=e447]
+  - dialog "Add ShiftTuesday 12 May" [ref=e2027]:
+    - heading "Add ShiftTuesday 12 May" [level=2] [ref=e2029]
+    - generic [ref=e2030]:
+      - button "Morning 7AM–3PM" [active] [ref=e2031]:
+        - generic [ref=e2032]: Morning
+        - generic [ref=e2033]: 7AM–3PM
+      - button "Afternoon 11AM–7PM" [ref=e2034]:
+        - generic [ref=e2035]: Afternoon
+        - generic [ref=e2036]: 11AM–7PM
+      - button "Evening 3PM–9PM" [ref=e2037]:
+        - generic [ref=e2038]: Evening
+        - generic [ref=e2039]: 3PM–9PM
+      - button "Kitchen AM 7AM–2PM" [ref=e2040]:
+        - generic [ref=e2041]: Kitchen AM
+        - generic [ref=e2042]: 7AM–2PM
+      - button "Kitchen PM 1PM–9PM" [ref=e2043]:
+        - generic [ref=e2044]: Kitchen PM
+        - generic [ref=e2045]: 1PM–9PM
+      - button "Opening Shift 6:30AM–2PM" [ref=e2046]:
+        - generic [ref=e2047]: Opening Shift
+        - generic [ref=e2048]: 6:30AM–2PM
+    - generic [ref=e2050]:
+      - generic [ref=e2051]:
+        - generic [ref=e2052]: Employee
+        - combobox "Employee" [ref=e2053]:
+          - generic [ref=e2055]: Casper Gamborg
+          - img: ▼
+        - textbox [ref=e2056]: emp_casper_gamborg_001
+      - generic [ref=e2057]:
+        - generic [ref=e2058]:
+          - generic [ref=e2059]: Start time
+          - generic [ref=e2060]:
+            - generic [ref=e2061]:
+              - combobox [ref=e2062] [cursor=pointer]:
+                - option "00"
+                - option "01"
+                - option "02"
+                - option "03"
+                - option "04"
+                - option "05"
+                - option "06"
+                - option "07"
+                - option "08"
+                - option "09" [selected]
+                - option "10"
+                - option "11"
+                - option "12"
+                - option "13"
+                - option "14"
+                - option "15"
+                - option "16"
+                - option "17"
+                - option "18"
+                - option "19"
+                - option "20"
+                - option "21"
+                - option "22"
+                - option "23"
+              - generic: ▾
+            - generic [ref=e2063]: ":"
+            - generic [ref=e2064]:
+              - combobox [ref=e2065] [cursor=pointer]:
+                - option "00" [selected]
+                - option "15"
+                - option "30"
+                - option "45"
+              - generic: ▾
+        - generic [ref=e2066]:
+          - generic [ref=e2067]: End time
+          - generic [ref=e2068]:
+            - generic [ref=e2069]:
+              - combobox [ref=e2070] [cursor=pointer]:
+                - option "00"
+                - option "01"
+                - option "02"
+                - option "03"
+                - option "04"
+                - option "05"
+                - option "06"
+                - option "07"
+                - option "08"
+                - option "09"
+                - option "10"
+                - option "11"
+                - option "12"
+                - option "13"
+                - option "14"
+                - option "15"
+                - option "16"
+                - option "17" [selected]
+                - option "18"
+                - option "19"
+                - option "20"
+                - option "21"
+                - option "22"
+                - option "23"
+              - generic: ▾
+            - generic [ref=e2071]: ":"
+            - generic [ref=e2072]:
+              - combobox [ref=e2073] [cursor=pointer]:
+                - option "00" [selected]
+                - option "15"
+                - option "30"
+                - option "45"
+              - generic: ▾
+      - generic [ref=e2074]:
+        - generic [ref=e2075]:
+          - generic [ref=e2076]: Break
+          - combobox "Break" [ref=e2077]:
+            - generic [ref=e2078]: "30"
+            - img: ▼
+          - textbox [ref=e2079]: "30"
+        - generic [ref=e2080]:
+          - generic [ref=e2081]: Job role
+          - combobox "Job role" [ref=e2082]:
+            - generic [ref=e2083]: Shift Supervisor
+            - img: ▼
+          - textbox [ref=e2084]: Shift Supervisor
+      - button "+ Add a note" [ref=e2085]
+      - generic [ref=e2086]:
+        - button "Cancel" [ref=e2087]
+        - button "Add shift" [ref=e2088]
+    - button "Close" [ref=e2089]:
+      - img
+      - generic [ref=e2090]: Close

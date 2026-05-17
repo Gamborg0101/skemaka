@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback, useMemo, useEffect } from "react"
+import React, { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from "react"
 import {
   DndContext,
   DragEndEvent,
@@ -11,9 +11,10 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import { useDroppable } from "@dnd-kit/core"
-import { Plus, AlertTriangle } from "lucide-react"
+import { Plus, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { Tooltip } from "@/components/ui/tooltip"
 import { ShiftCard } from "@/components/manager/ShiftCard"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
@@ -28,6 +29,7 @@ interface WeeklyScheduleGridProps {
   shiftTemplates: ShiftTemplate[]
   scheduledHoursMap: Record<string, number>
   approvedTimeOff?: TimeOffRequest[]
+  publishedAt?: string | null
   onShiftMove: (shiftId: string, newDate: string, newEmployeeId: string) => void
   onShiftCreate: (data: {
     employeeId: string
@@ -42,6 +44,14 @@ interface WeeklyScheduleGridProps {
   onShiftUpdate: (data: Partial<Shift>) => void
   onShiftDelete: (shiftId: string) => void
   onMarkSick: (employeeId: string, date: string) => void
+}
+
+const EMPLOYEE_COL_WIDTH = 160
+
+function getVisibleDays(containerWidth: number): 3 | 5 | 7 {
+  if (containerWidth >= 1070) return 7  // 7 × 130 + 160
+  if (containerWidth >= 810)  return 5  // 5 × 130 + 160
+  return 3
 }
 
 function getWeekDays(weekStart: string): Date[] {
@@ -72,9 +82,11 @@ interface DroppableCellProps {
   shifts: Shift[]
   employee: Employee
   jobRoles: JobRole[]
+  publishedAt?: string | null
   isWeekend: boolean
   isClosed: boolean
   isTimeOff: boolean
+  isToday: boolean
   onAddClick: (employeeId: string, date: string) => void
   onShiftClick: (shift: Shift) => void
   onMarkSick: (employeeId: string, date: string) => void
@@ -87,9 +99,11 @@ function DroppableCell({
   shifts,
   employee,
   jobRoles,
+  publishedAt,
   isWeekend,
   isClosed,
   isTimeOff,
+  isToday,
   onAddClick,
   onShiftClick,
   onMarkSick,
@@ -100,7 +114,7 @@ function DroppableCell({
 
   if (isClosed) {
     return (
-      <div className="relative min-h-16 border-r border-b border-gray-200 bg-gray-50/80">
+      <div className={cn("relative min-h-16 border-r border-b border-gray-200", isToday ? "bg-blue-50/60" : "bg-gray-50/80")}>
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300 select-none">
             Closed
@@ -132,8 +146,8 @@ function DroppableCell({
         isOver
           ? "bg-blue-50"
           : isEmpty
-          ? isWeekend ? "bg-amber-50/60 hover:bg-amber-50" : "bg-gray-50 hover:bg-gray-100"
-          : isWeekend ? "bg-amber-50/40" : "bg-white"
+          ? isWeekend ? "bg-amber-50/60 hover:bg-amber-50" : isToday ? "bg-blue-50/40 hover:bg-blue-50/70" : "bg-gray-50 hover:bg-gray-100"
+          : isWeekend ? "bg-amber-50/40" : isToday ? "bg-blue-50/20" : "bg-white"
       )}
     >
       <div className="space-y-1">
@@ -143,6 +157,7 @@ function DroppableCell({
             shift={shift}
             employee={employee}
             jobRoles={jobRoles}
+            publishedAt={publishedAt}
             onClick={() => onShiftClick(shift)}
           />
         ))}
@@ -150,26 +165,30 @@ function DroppableCell({
       {/* Action buttons — only shown on empty cells */}
       {isEmpty && (
         <div className="absolute bottom-1 right-1 hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onMarkSick(employeeId, date)
-            }}
-            className="size-5 rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200 flex items-center justify-center"
-            aria-label="Mark sick"
-          >
-            <AlertTriangle className="size-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onAddClick(employeeId, date)
-            }}
-            className="size-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center"
-            aria-label="Add shift"
-          >
-            <Plus className="size-3" />
-          </button>
+          <Tooltip content="Mark as sick day" side="top">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onMarkSick(employeeId, date)
+              }}
+              className="size-5 rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200 flex items-center justify-center"
+              aria-label="Mark sick"
+            >
+              <AlertTriangle className="size-3" />
+            </button>
+          </Tooltip>
+          <Tooltip content="Add shift" side="top">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddClick(employeeId, date)
+              }}
+              className="size-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center"
+              aria-label="Add shift"
+            >
+              <Plus className="size-3" />
+            </button>
+          </Tooltip>
         </div>
       )}
     </div>
@@ -185,6 +204,7 @@ export function WeeklyScheduleGrid({
   shiftTemplates,
   scheduledHoursMap,
   approvedTimeOff = [],
+  publishedAt,
   onShiftMove,
   onShiftCreate,
   onShiftUpdate,
@@ -209,6 +229,20 @@ export function WeeklyScheduleGrid({
 
   const [activeShift, setActiveShift] = useState<Shift | null>(null)
   const [mobileDay, setMobileDay] = useState(0)
+  const [startDayOffset, setStartDayOffset] = useState(0)
+  const [containerWidth, setContainerWidth] = useState(1200)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
+    ro.observe(el)
+    setContainerWidth(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [])
+
+  const visibleDays = getVisibleDays(containerWidth)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -216,13 +250,19 @@ export function WeeklyScheduleGrid({
 
   const days = getWeekDays(schedule.weekStart)
 
-  // Sync selected mobile day to today when week changes
+  // Sync selected mobile day to today when week changes; reset desktop offset to Monday
   useEffect(() => {
     const todayISO = new Date().toISOString().split("T")[0]
     const idx = days.findIndex((d) => toISODate(d) === todayISO)
     setMobileDay(idx >= 0 ? idx : 0)
+    setStartDayOffset(0)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule.weekStart])
+
+  // Clamp offset when the number of visible columns shrinks
+  useEffect(() => {
+    setStartDayOffset((o) => Math.min(o, 7 - visibleDays))
+  }, [visibleDays])
   const shifts = schedule.shifts ?? []
   const closedDays = getOrgSettings().hours.map((h) => !h.isOpen) // index 0=Mon…6=Sun
 
@@ -360,35 +400,44 @@ export function WeeklyScheduleGrid({
                       {contracted > 0 && (() => {
                         const over = scheduled - contracted
                         if (over > 0) return (
-                          <p className="text-xs mt-0.5 text-orange-500">
-                            {scheduled.toFixed(1)}h / {contracted}h
-                            <span className="ml-1 font-semibold">(+{over.toFixed(1)}h)</span>
-                          </p>
+                          <Tooltip content={`${over.toFixed(1)}h over contracted hours this week`} side="right">
+                            <p className="text-xs mt-0.5 text-orange-500 cursor-default w-fit">
+                              {scheduled.toFixed(1)}h / {contracted}h
+                              <span className="ml-1 font-semibold">(+{over.toFixed(1)}h)</span>
+                            </p>
+                          </Tooltip>
                         )
                         const pct = scheduled / contracted
+                        const label = pct >= 1 ? "Fully scheduled this week" : `${Math.round(pct * 100)}% of contracted hours scheduled`
                         return (
-                          <p className={`text-xs mt-0.5 ${pct >= 1 ? "text-green-600" : pct >= 0.5 ? "text-amber-500" : "text-red-500"}`}>
-                            {scheduled.toFixed(1)}h / {contracted}h
-                          </p>
+                          <Tooltip content={label} side="right">
+                            <p className={`text-xs mt-0.5 cursor-default w-fit ${pct >= 1 ? "text-green-600" : pct >= 0.5 ? "text-amber-500" : "text-red-500"}`}>
+                              {scheduled.toFixed(1)}h / {contracted}h
+                            </p>
+                          </Tooltip>
                         )
                       })()}
                     </div>
                     {!isClosed && !isTimeOff && (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={() => onMarkSick(employee.id, date)}
-                          className="size-10 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-colors"
-                          aria-label={`Mark ${employee.name} sick`}
-                        >
-                          <AlertTriangle className="size-4" />
-                        </button>
-                        <button
-                          onClick={() => openAddDialog(employee.id, date)}
-                          className="size-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
-                          aria-label={`Add shift for ${employee.name}`}
-                        >
-                          <Plus className="size-4" />
-                        </button>
+                        <Tooltip content="Mark as sick day" side="top">
+                          <button
+                            onClick={() => onMarkSick(employee.id, date)}
+                            className="size-10 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-colors"
+                            aria-label={`Mark ${employee.name} sick`}
+                          >
+                            <AlertTriangle className="size-4" />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Add shift" side="top">
+                          <button
+                            onClick={() => openAddDialog(employee.id, date)}
+                            className="size-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                            aria-label={`Add shift for ${employee.name}`}
+                          >
+                            <Plus className="size-4" />
+                          </button>
+                        </Tooltip>
                       </div>
                     )}
                   </div>
@@ -406,6 +455,7 @@ export function WeeklyScheduleGrid({
                           shift={shift}
                           employee={employee}
                           jobRoles={jobRoles}
+                          publishedAt={publishedAt}
                           onClick={() => openEditDialog(shift)}
                         />
                       ))}
@@ -417,25 +467,46 @@ export function WeeklyScheduleGrid({
           </div>
         </div>
 
-        {/* ── Desktop: scrollable grid (hidden on mobile) ── */}
-        <div className="hidden md:block overflow-x-auto">
+        {/* ── Desktop: responsive grid (hidden on mobile) ── */}
+        <div ref={gridRef} className="hidden md:block">
           <div
-            className="grid"
-            style={{ gridTemplateColumns: "180px repeat(7, minmax(120px, 1fr))" }}
+            className="grid w-full"
+            style={{ gridTemplateColumns: `${EMPLOYEE_COL_WIDTH}px repeat(${visibleDays}, minmax(0, 1fr))` }}
           >
             {/* Header row */}
-            <div className="sticky left-0 z-10 bg-gray-100 border-b border-r border-gray-200 px-3 py-2.5">
+            <div className="sticky left-0 z-10 bg-gray-100 border-b border-r border-gray-200 px-3 py-2.5 flex items-center justify-between gap-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Employee
               </span>
+              {visibleDays < 7 && (
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => setStartDayOffset((o) => Math.max(0, o - 1))}
+                    disabled={startDayOffset === 0}
+                    className="size-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    aria-label="Previous days"
+                  >
+                    <ChevronLeft className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setStartDayOffset((o) => Math.min(7 - visibleDays, o + 1))}
+                    disabled={startDayOffset + visibleDays >= 7}
+                    className="size-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    aria-label="Next days"
+                  >
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
-            {days.map((day, i) => {
+            {days.slice(startDayOffset, startDayOffset + visibleDays).map((day, si) => {
+              const di = startDayOffset + si
               const isToday = toISODate(day) === toISODate(new Date())
-              const isWeekend = i >= 5
-              const isClosed = closedDays[i]
+              const isWeekend = di >= 5
+              const isClosed = closedDays[di]
               return (
                 <div
-                  key={i}
+                  key={di}
                   className={cn(
                     "border-b border-r border-gray-200 px-2 py-2.5 text-center",
                     isClosed
@@ -447,7 +518,7 @@ export function WeeklyScheduleGrid({
                     "text-xs font-semibold uppercase tracking-wide",
                     isClosed ? "text-gray-400" : isToday ? "text-blue-700" : isWeekend ? "text-amber-700" : "text-gray-600"
                   )}>
-                    {DAY_NAMES[i]}
+                    {DAY_NAMES[di]}
                   </p>
                   <p className={cn(
                     "text-sm font-semibold",
@@ -487,7 +558,8 @@ export function WeeklyScheduleGrid({
                     )
                   })()}
                 </div>
-                {days.map((day, di) => {
+                {days.slice(startDayOffset, startDayOffset + visibleDays).map((day, si) => {
+                  const di = startDayOffset + si
                   const date = toISODate(day)
                   const cellId = `${employee.id}__${date}`
                   const cellShifts = getShiftsForCell(employee.id, date)
@@ -500,9 +572,11 @@ export function WeeklyScheduleGrid({
                       shifts={cellShifts}
                       employee={employee}
                       jobRoles={jobRoles}
+                      publishedAt={publishedAt}
                       isWeekend={di >= 5}
                       isClosed={closedDays[di]}
                       isTimeOff={isTimeOffDay(employee.id, date)}
+                      isToday={toISODate(day) === toISODate(new Date())}
                       onAddClick={openAddDialog}
                       onShiftClick={openEditDialog}
                       onMarkSick={onMarkSick}
@@ -524,6 +598,7 @@ export function WeeklyScheduleGrid({
                   shift={activeShift}
                   employee={emp}
                   jobRoles={jobRoles}
+                  publishedAt={publishedAt}
                   onClick={() => {}}
                 />
               </div>

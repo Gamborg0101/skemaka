@@ -1,12 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Check, X, Trash2 } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { Check, X, Trash2, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
-import type { TimeOffRequest } from "@/types"
+import { useOptimisticList } from "@/lib/useOptimisticList"
+import type { TimeOffRequest, Schedule, Shift } from "@/types"
 import { cn } from "@/lib/utils"
+import { getMondayOfWeek, addDays, formatTime } from "@/lib/dateUtils"
 
 type Tab = "PENDING" | "APPROVED" | "DENIED"
 
@@ -24,85 +30,147 @@ function formatDateRange(start: string, end: string) {
   return `${s.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} – ${e.toLocaleDateString("en-GB", opts)}`
 }
 
+function formatDayHeading(iso: string) {
+  return new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long",
+  })
+}
+
+/** Returns the Monday ISO strings for every week that overlaps the given date range. */
+function getWeeksForRange(startDate: string, endDate: string): string[] {
+  const weeks: string[] = []
+  let monday = getMondayOfWeek(new Date(startDate + "T12:00:00"))
+  while (monday <= endDate) {
+    weeks.push(monday)
+    monday = addDays(monday, 7)
+  }
+  return weeks
+}
+
+/** Returns all ISO date strings from startDate to endDate inclusive. */
+function getDaysInRange(startDate: string, endDate: string): string[] {
+  const days: string[] = []
+  let cur = startDate
+  while (cur <= endDate) {
+    days.push(cur)
+    cur = addDays(cur, 1)
+  }
+  return days
+}
+
 export default function TimeOffPage() {
   const { orgId } = useOrg()
   const [tab, setTab] = useState<Tab>("PENDING")
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
+  const { patch: patchRequest, remove: removeRequest } = useOptimisticList(requests, setRequests)
   const [loading, setLoading] = useState(true)
   const [denyId, setDenyId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState("")
-  const [acting, setActing] = useState<string | null>(null)
+
+  // Schedule preview
+  const [viewRequest, setViewRequest] = useState<TimeOffRequest | null>(null)
+  const [previewShifts, setPreviewShifts] = useState<Shift[]>([])
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     fetch(`/api/orgs/${orgId}/time-off`)
-      .then((r) => r.json())
-      .then((d: { data?: TimeOffRequest[] }) => {
-        if (!cancelled && d.data) setRequests(d.data)
+      .then(async (r) => {
+        const d = await r.json() as { data?: TimeOffRequest[]; error?: string }
+        if (!cancelled) {
+          if (d.data) setRequests(d.data)
+          else if (!r.ok) toast.error(d.error ?? "Failed to load requests")
+        }
       })
       .catch(() => { if (!cancelled) toast.error("Failed to load requests") })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [orgId])
 
+  // Fetch shifts when a request is selected for preview
+  const fetchPreview = useCallback(async (req: TimeOffRequest) => {
+    setPreviewLoading(true)
+    setPreviewShifts([])
+    try {
+      const weeks = getWeeksForRange(req.startDate, req.endDate)
+      const allShifts = await Promise.all(
+        weeks.map(async (weekStart) => {
+          const sr = await fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
+          const sd = await sr.json() as { data: Schedule | null }
+          if (!sd.data) return []
+          const shiftsRes = await fetch(`/api/orgs/${orgId}/schedules/${sd.data.id}/shifts`)
+          const shiftsData = await shiftsRes.json() as { data: Shift[] }
+          return shiftsData.data ?? []
+        })
+      )
+      const flat = allShifts.flat()
+      setPreviewShifts(flat.filter((s) => s.date >= req.startDate && s.date <= req.endDate))
+    } catch {
+      toast.error("Failed to load schedule")
+    } finally {
+      setPreviewLoading(false)
+    }
+  }, [orgId])
+
+  useEffect(() => {
+    if (viewRequest) fetchPreview(viewRequest)
+    else setPreviewShifts([])
+  }, [viewRequest, fetchPreview])
+
   const tabs: Tab[] = ["PENDING", "APPROVED", "DENIED"]
   const filtered = requests.filter((r) => r.status === tab)
 
   async function handleApprove(id: string) {
-    setActing(id)
-    try {
+    await patchRequest(id, { status: "APPROVED" as const }, async () => {
       const res = await fetch(`/api/orgs/${orgId}/time-off/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "APPROVED" }),
       })
-      if (!res.ok) { toast.error("Failed to approve"); return }
+      if (!res.ok) { toast.error("Failed to approve"); throw new Error() }
       const data = await res.json() as { data: TimeOffRequest }
-      setRequests((prev) => prev.map((r) => (r.id === id ? data.data : r)))
       toast.success("Request approved")
-    } finally {
-      setActing(null)
-    }
+      return data.data
+    })
   }
 
   async function handleDeny(id: string) {
     if (denyId !== id) { setDenyId(id); setReviewNote(""); return }
-    setActing(id)
-    try {
+    const note = reviewNote.trim() || undefined
+    setDenyId(null)
+    await patchRequest(id, { status: "DENIED" as const }, async () => {
       const res = await fetch(`/api/orgs/${orgId}/time-off/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "DENIED", reviewNote: reviewNote.trim() || undefined }),
+        body: JSON.stringify({ status: "DENIED", reviewNote: note }),
       })
-      if (!res.ok) { toast.error("Failed to deny"); return }
+      if (!res.ok) { toast.error("Failed to deny"); throw new Error() }
       const data = await res.json() as { data: TimeOffRequest }
-      setRequests((prev) => prev.map((r) => (r.id === id ? data.data : r)))
-      setDenyId(null)
       toast.success("Request denied")
-    } finally {
-      setActing(null)
-    }
+      return data.data
+    })
   }
 
   async function handleDelete(id: string) {
-    setActing(id)
-    try {
+    await removeRequest(id, async () => {
       const res = await fetch(`/api/orgs/${orgId}/time-off/${id}`, { method: "DELETE" })
-      if (!res.ok) { toast.error("Failed to delete"); return }
-      setRequests((prev) => prev.filter((r) => r.id !== id))
+      if (!res.ok) { toast.error("Failed to delete"); throw new Error() }
       toast.success("Request deleted")
-    } finally {
-      setActing(null)
-    }
+    })
   }
 
   return (
-    <div className="px-4 md:px-6 py-6 pb-20 md:pb-6">
-      <div className="mb-6">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="hidden md:flex items-center px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+        <h1 className="text-lg font-semibold text-gray-900">Time Off</h1>
+      </div>
+      <div className="md:hidden px-4 pt-6 pb-2">
         <h1 className="text-lg font-semibold text-gray-900">Time Off</h1>
       </div>
 
+      <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit mb-6">
         {tabs.map((t) => (
@@ -126,15 +194,35 @@ export default function TimeOffPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="size-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Skeleton className="size-9 rounded-full shrink-0" />
+                  <div>
+                    <Skeleton className="h-4 w-32 mb-1.5" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <Skeleton className="h-3 w-40" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-base font-medium">No {tab.toLowerCase()} requests</p>
         </div>
       ) : (
-        <div className="space-y-3 max-w-2xl">
+        <div className="space-y-3">
           {filtered.map((r) => (
             <div key={r.id} className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-4">
               <div className="flex items-start gap-4">
@@ -165,7 +253,7 @@ export default function TimeOffPage() {
                     className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="destructive" disabled={!!acting} onClick={() => handleDeny(r.id)}>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeny(r.id)}>
                       Confirm
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setDenyId(null)}>
@@ -175,13 +263,12 @@ export default function TimeOffPage() {
                 </div>
               )}
 
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
                 {tab === "PENDING" && (
                   <>
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 text-white"
-                      disabled={!!acting}
                       onClick={() => handleApprove(r.id)}
                     >
                       <Check className="size-3.5 mr-1" />
@@ -191,7 +278,6 @@ export default function TimeOffPage() {
                       size="sm"
                       variant="outline"
                       className="border-red-200 text-red-600 hover:bg-red-50"
-                      disabled={!!acting}
                       onClick={() => handleDeny(r.id)}
                     >
                       <X className="size-3.5 mr-1" />
@@ -204,18 +290,100 @@ export default function TimeOffPage() {
                     size="sm"
                     variant="ghost"
                     className="text-gray-400 hover:text-red-500"
-                    disabled={!!acting}
                     onClick={() => handleDelete(r.id)}
                   >
                     <Trash2 className="size-3.5 mr-1" />
                     Delete
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-gray-600 ml-auto"
+                  onClick={() => setViewRequest(r)}
+                >
+                  <CalendarDays className="size-3.5 mr-1.5" />
+                  View schedule
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Schedule preview sheet */}
+      <Sheet open={!!viewRequest} onOpenChange={(open) => { if (!open) setViewRequest(null) }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="pb-2">
+            <SheetTitle>{viewRequest?.employee?.name ?? "Schedule"}</SheetTitle>
+            <SheetDescription>
+              {viewRequest ? formatDateRange(viewRequest.startDate, viewRequest.endDate) : ""}
+              {viewRequest?.reason ? ` · ${viewRequest.reason}` : ""}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="px-4 pb-6 space-y-4">
+            {previewLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i}>
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-14 w-full rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            ) : viewRequest ? (
+              getDaysInRange(viewRequest.startDate, viewRequest.endDate).map((day) => {
+                const dayShifts = previewShifts
+                  .filter((s) => s.date === day)
+                  .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+                return (
+                  <div key={day}>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      {formatDayHeading(day)}
+                    </p>
+                    {dayShifts.length === 0 ? (
+                      <p className="text-sm text-gray-400 pl-1">No shifts scheduled</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {dayShifts.map((shift) => {
+                          const isRequesting = shift.employeeId === viewRequest.employee?.id
+                          return (
+                            <div
+                              key={shift.id}
+                              className={cn(
+                                "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm border",
+                                isRequesting
+                                  ? "bg-amber-50 border-amber-200"
+                                  : "bg-gray-50 border-gray-100"
+                              )}
+                            >
+                              <div className="min-w-0">
+                                <p className={cn("font-medium truncate", isRequesting ? "text-amber-800" : "text-gray-800")}>
+                                  {shift.employee?.name ?? "Unknown"}
+                                  {isRequesting && (
+                                    <span className="ml-1.5 text-xs font-normal text-amber-600">· requesting off</span>
+                                  )}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">{shift.jobRole}</p>
+                              </div>
+                              <p className={cn("shrink-0 text-xs font-medium tabular-nums ml-3", isRequesting ? "text-amber-700" : "text-gray-600")}>
+                                {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
+                              </p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
+      </div>
     </div>
   )
 }

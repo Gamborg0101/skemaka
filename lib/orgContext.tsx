@@ -11,6 +11,8 @@ interface OrgContextValue {
   jobRoles: JobRole[]
   shiftTemplates: ShiftTemplate[]
   setShiftTemplates: React.Dispatch<React.SetStateAction<ShiftTemplate[]>>
+  timeOffEnabled: boolean
+  setTimeOffEnabled: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null)
@@ -37,6 +39,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [org, setOrg] = useState<Organization | null>(null)
   const [jobRoles, setJobRoles] = useState<JobRole[]>([])
   const [shiftTemplates, setShiftTemplates] = useState<ShiftTemplate[]>([])
+  const [timeOffEnabled, setTimeOffEnabled] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -57,8 +60,11 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             setJobRoles(data.data.jobRoles)
             setShiftTemplates(data.data.shiftTemplates)
             const { org } = data.data
+            const enabled = org.settings?.timeOffEnabled !== false
+            setTimeOffEnabled(enabled)
             updateOrgSettings({
               currency: org.currency,
+              timeOffEnabled: enabled,
               ...(org.settings?.hours ? { hours: org.settings.hours as DayHours[] } : {}),
               ...(org.settings?.defaultScheduleView
                 ? { defaultScheduleView: org.settings.defaultScheduleView }
@@ -99,7 +105,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   if (!org) return null
 
   return (
-    <OrgContext.Provider value={{ orgId: org.id, org, jobRoles, shiftTemplates, setShiftTemplates }}>
+    <OrgContext.Provider value={{ orgId: org.id, org, jobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled }}>
       {children}
     </OrgContext.Provider>
   )

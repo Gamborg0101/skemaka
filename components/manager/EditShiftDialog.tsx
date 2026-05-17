@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -47,10 +47,12 @@ export function EditShiftDialog({
   const [selectedRole, setSelectedRole] = useState(shift.jobRole)
   const [notes, setNotes] = useState(shift.notes ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const skipAutoSuggestRef = useRef(false)
 
   // Re-populate fields whenever the dialog opens for a different shift
   useEffect(() => {
     if (open) {
+      skipAutoSuggestRef.current = true
       setDate(shift.date)
       setStartTime(shift.startTime)
       setEndTime(shift.endTime)
@@ -61,8 +63,12 @@ export function EditShiftDialog({
     }
   }, [open, shift])
 
-  // Auto-suggest break based on shift duration
+  // Auto-suggest break based on shift duration (only when user changes times, not on open)
   useEffect(() => {
+    if (skipAutoSuggestRef.current) {
+      skipAutoSuggestRef.current = false
+      return
+    }
     const [sh, sm] = startTime.split(":").map(Number)
     const [eh, em] = endTime.split(":").map(Number)
     const mins = (eh * 60 + em) - (sh * 60 + sm)

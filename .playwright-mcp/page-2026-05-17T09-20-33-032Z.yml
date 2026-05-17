@@ -1,0 +1,175 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - button "Collapse sidebar" [ref=e6]:
+          - img [ref=e7]
+      - navigation [ref=e10]:
+        - link "Schedule" [ref=e11] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e12]
+          - generic [ref=e14]: Schedule
+        - link "Employees" [ref=e15] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e16]
+          - generic [ref=e21]: Employees
+        - link "Availability" [ref=e22] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e23]
+          - generic [ref=e26]: Availability
+        - link "Labor Cost" [ref=e27] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e28]
+          - generic [ref=e30]: Labor Cost
+        - link "Time Off" [ref=e31] [cursor=pointer]:
+          - /url: /time-off
+          - img [ref=e32]
+          - generic [ref=e36]: Time Off
+        - link "My Shifts" [ref=e37] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e38]
+          - generic [ref=e42]: My Shifts
+      - button "Report a bug" [ref=e45]:
+        - img [ref=e46]
+        - generic [ref=e55]: Report a bug
+      - button "The Daily Grind" [ref=e57]:
+        - img [ref=e58]
+        - generic [ref=e62]: The Daily Grind
+        - img [ref=e63]
+    - main [ref=e66]:
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - heading "Schedule" [level=1] [ref=e69]
+          - generic [ref=e70]:
+            - button "Week" [ref=e71]:
+              - img [ref=e72]
+              - text: Week
+            - button "Timeline" [active] [ref=e77]:
+              - img [ref=e78]
+              - text: Timeline
+          - button "Today"
+          - generic [ref=e576]:
+            - button "1d" [ref=e577]
+            - button "3d" [ref=e578]
+            - button "5d" [ref=e579]
+            - button "7d" [ref=e580]
+          - button "Previous day" [ref=e581]:
+            - img
+          - generic [ref=e582]: Sunday 17 May
+          - button "Next day" [ref=e583]:
+            - img
+          - button "W20" [ref=e585]:
+            - generic [ref=e586]: W20
+          - button "Publish" [ref=e210]
+        - generic [ref=e86]:
+          - generic [ref=e587]:
+            - generic [ref=e588]:
+              - paragraph [ref=e589]: Drag to schedule · weekly hours
+              - generic [ref=e590]:
+                - button "CG Casper Gamborg Shift Supervisor –18h" [ref=e591]:
+                  - generic [ref=e593]: CG
+                  - generic [ref=e594]:
+                    - paragraph [ref=e595]: Casper Gamborg
+                    - paragraph [ref=e596]: Shift Supervisor
+                  - generic [ref=e597]: –18h
+                - button "DJ Dr. James O'Brien Barista +1h" [ref=e598]:
+                  - generic [ref=e600]: DJ
+                  - generic [ref=e601]:
+                    - paragraph [ref=e602]: Dr. James O'Brien
+                    - paragraph [ref=e603]: Barista
+                  - generic [ref=e604]: +1h
+                - button "LS Lena Schmidt Shift Supervisor –4h" [ref=e605]:
+                  - generic [ref=e607]: LS
+                  - generic [ref=e608]:
+                    - paragraph [ref=e609]: Lena Schmidt
+                    - paragraph [ref=e610]: Shift Supervisor
+                  - generic [ref=e611]: –4h
+                - button "MA Mia Andersen MD Cashier +5h" [ref=e612]:
+                  - generic [ref=e614]: MA
+                  - generic [ref=e615]:
+                    - paragraph [ref=e616]: Mia Andersen MD
+                    - paragraph [ref=e617]: Cashier
+                  - generic [ref=e618]: +5h
+                - button "NP Nadia Patel Barista +11h" [ref=e619]:
+                  - generic [ref=e621]: NP
+                  - generic [ref=e622]:
+                    - paragraph [ref=e623]: Nadia Patel
+                    - paragraph [ref=e624]: Barista
+                  - generic [ref=e625]: +11h
+                - button "SC Sarah Chen Barista –3h" [ref=e626]:
+                  - generic [ref=e628]: SC
+                  - generic [ref=e629]:
+                    - paragraph [ref=e630]: Sarah Chen
+                    - paragraph [ref=e631]: Barista
+                  - generic [ref=e632]: –3h
+                - button "TE Tom Eriksson Kitchen –4h" [ref=e633]:
+                  - generic [ref=e635]: TE
+                  - generic [ref=e636]:
+                    - paragraph [ref=e637]: Tom Eriksson
+                    - paragraph [ref=e638]: Kitchen
+                  - generic [ref=e639]: –4h
+            - generic [ref=e643]:
+              - generic [ref=e644]:
+                - generic [ref=e645]:
+                  - generic [ref=e646]: Sunday 17 May
+                  - generic [ref=e647]: Today
+                - generic [ref=e648]:
+                  - generic [ref=e649]: Employee
+                  - generic [ref=e650]:
+                    - generic [ref=e652]: 06:00
+                    - generic [ref=e654]: 08:00
+                    - generic [ref=e656]: 10:00
+                    - generic [ref=e658]: 12:00
+                    - generic [ref=e660]: 14:00
+                    - generic [ref=e662]: 16:00
+                    - generic [ref=e664]: 18:00
+                    - generic [ref=e666]: 20:00
+                    - generic [ref=e668]: 22:00
+              - generic [ref=e671]:
+                - generic [ref=e672]:
+                  - paragraph [ref=e673]: Casper Gamborg
+                  - paragraph [ref=e674]: Shift Supervisor
+                - button "Add shift for Casper Gamborg" [ref=e675]:
+                  - img [ref=e676]
+              - generic [ref=e689]:
+                - generic [ref=e690]:
+                  - paragraph [ref=e691]: Dr. James O'Brien
+                  - paragraph [ref=e692]: Barista
+                - button "Add shift for Dr. James O'Brien" [ref=e693]:
+                  - img [ref=e694]
+              - generic [ref=e707]:
+                - generic [ref=e708]:
+                  - paragraph [ref=e709]: Lena Schmidt
+                  - paragraph [ref=e710]: Shift Supervisor
+                - button "Add shift for Lena Schmidt" [ref=e711]:
+                  - img [ref=e712]
+              - generic [ref=e725]:
+                - generic [ref=e726]:
+                  - paragraph [ref=e727]: Mia Andersen MD
+                  - paragraph [ref=e728]: Cashier
+                - button "Add shift for Mia Andersen MD" [ref=e729]:
+                  - img [ref=e730]
+              - generic [ref=e743]:
+                - generic [ref=e744]:
+                  - paragraph [ref=e745]: Nadia Patel
+                  - paragraph [ref=e746]: Barista
+                - button "Add shift for Nadia Patel" [ref=e747]:
+                  - img [ref=e748]
+              - generic [ref=e761]:
+                - generic [ref=e762]:
+                  - paragraph [ref=e763]: Sarah Chen
+                  - paragraph [ref=e764]: Barista
+                - button "Add shift for Sarah Chen" [ref=e765]:
+                  - img [ref=e766]
+              - generic [ref=e779]:
+                - generic [ref=e780]:
+                  - paragraph [ref=e781]: Tom Eriksson
+                  - paragraph [ref=e782]: Kitchen
+                - button "Add shift for Tom Eriksson" [ref=e783]:
+                  - img [ref=e784]
+          - status [ref=e796]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e205] [cursor=pointer]:
+    - img [ref=e206]
+  - alert [ref=e209]

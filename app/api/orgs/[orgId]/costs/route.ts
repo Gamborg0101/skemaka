@@ -4,6 +4,7 @@ import { requireOrgMember } from "@/lib/apiGuard"
 import { serEmployee, serShift } from "@/lib/serialize"
 import { calcHours } from "@/lib/dateUtils"
 import type { WeeklyLaborCost, LaborCostEntry } from "@/types"
+import { isValidDate } from "@/lib/validate"
 
 const SHIFT_EMPLOYEE_SELECT = {
   id: true, organizationId: true, userId: true,
@@ -24,6 +25,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   const weekStart = req.nextUrl.searchParams.get("weekStart")
   if (!weekStart) {
     return NextResponse.json({ error: "weekStart query param is required" }, { status: 400 })
+  }
+  if (!isValidDate(weekStart)) {
+    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
   }
 
   const schedule = await db.schedule.findFirst({
@@ -88,5 +92,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     })
   }
 
-  return NextResponse.json({ data: result })
+  return NextResponse.json(
+    { data: result },
+    { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=120" } }
+  )
 }

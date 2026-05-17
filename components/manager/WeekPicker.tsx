@@ -92,7 +92,7 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
         )}
       >
         <span className="text-sm font-bold tabular-nums">W{isoWeek}</span>
-        <span className="text-sm text-gray-500 hidden sm:block">{formatWeekLabel(weekStart)}</span>
+        {!dayMode && <span className="text-sm text-gray-500 hidden sm:block">{formatWeekLabel(weekStart)}</span>}
       </button>
 
       {/* Calendar dropdown */}

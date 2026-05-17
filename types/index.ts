@@ -32,6 +32,7 @@ export function isEmploymentType(val: string): val is EmploymentType {
 export interface OrgScheduleSettings {
   hours?: Array<{ isOpen: boolean; openTime: string; closeTime: string }>
   defaultScheduleView?: "week" | "timeline"
+  timeOffEnabled?: boolean
 }
 
 export interface Organization {

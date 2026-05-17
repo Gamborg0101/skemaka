@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/prisma"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { serEmployee, serAvailabilityRequest } from "@/lib/serialize"
+import { isValidDate, isValidTime } from "@/lib/validate"
 import type { Employee, AvailabilityRequest } from "@/types"
 
 interface RouteContext {
@@ -57,13 +58,16 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid or expired token" }, { status: 404 })
   }
 
-  return NextResponse.json({
-    data: {
-      employee: validated.employee,
-      request: validated.request,
-      orgName: validated.orgName,
+  return NextResponse.json(
+    {
+      data: {
+        employee: validated.employee,
+        request: validated.request,
+        orgName: validated.orgName,
+      },
     },
-  })
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -93,6 +97,21 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   if (!Array.isArray(days) || days.length === 0) {
     return NextResponse.json({ error: "days array is required" }, { status: 400 })
+  }
+
+  for (const day of days) {
+    if (!isValidDate(day.date)) {
+      return NextResponse.json({ error: `Invalid date: ${day.date}` }, { status: 400 })
+    }
+    if (typeof day.isAvailable !== "boolean") {
+      return NextResponse.json({ error: "isAvailable must be a boolean" }, { status: 400 })
+    }
+    if (day.preferredStart !== undefined && day.preferredStart !== null && !isValidTime(day.preferredStart)) {
+      return NextResponse.json({ error: `Invalid preferredStart: ${day.preferredStart}` }, { status: 400 })
+    }
+    if (day.preferredEnd !== undefined && day.preferredEnd !== null && !isValidTime(day.preferredEnd)) {
+      return NextResponse.json({ error: `Invalid preferredEnd: ${day.preferredEnd}` }, { status: 400 })
+    }
   }
 
   const submission = await db.availabilitySubmission.upsert({

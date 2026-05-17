@@ -5,6 +5,7 @@ import { serSchedule } from "@/lib/serialize"
 import { sendSchedulePublishedSms } from "@/lib/sms"
 import { formatWeekLabel, formatTime } from "@/lib/dateUtils"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+import { isValidDate } from "@/lib/validate"
 
 // Select employee fields needed for shift display — excludes inviteToken/inviteExpiry
 const SHIFT_EMPLOYEE_SELECT = {
@@ -35,7 +36,10 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
   if (!schedule) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  return NextResponse.json({ data: serSchedule(schedule) })
+  return NextResponse.json(
+    { data: serSchedule(schedule) },
+    { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=120" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -48,6 +52,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   if (!weekStart) {
     return NextResponse.json({ error: "weekStart is required" }, { status: 400 })
+  }
+  if (!isValidDate(weekStart)) {
+    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
   }
 
   const source = await db.schedule.findFirst({
@@ -110,7 +117,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const body = await req.json() as { published?: boolean }
-  if (!body.published) {
+  if (body.published !== true) {
     return NextResponse.json({ error: "Only { published: true } is supported" }, { status: 400 })
   }
 

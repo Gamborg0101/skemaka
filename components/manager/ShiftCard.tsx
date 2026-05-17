@@ -7,47 +7,35 @@ import { cn } from "@/lib/utils"
 import type { Shift, Employee, JobRole } from "@/types"
 import { formatTime, calcNetHours } from "@/lib/dateUtils"
 
+const COLOR_BG: Record<string, string> = {
+  blue:   "bg-blue-100",
+  green:  "bg-green-100",
+  orange: "bg-orange-100",
+  purple: "bg-purple-100",
+  yellow: "bg-yellow-100",
+  rose:   "bg-rose-100",
+  gray:   "bg-gray-100",
+}
+
+const COLOR_TEXT: Record<string, string> = {
+  blue:   "text-blue-900",
+  green:  "text-green-900",
+  orange: "text-orange-900",
+  purple: "text-purple-900",
+  yellow: "text-yellow-900",
+  rose:   "text-rose-900",
+  gray:   "text-gray-700",
+}
+
 interface ShiftCardProps {
   shift: Shift
   employee: Employee
   jobRoles: JobRole[]
+  publishedAt?: string | null
   onClick: () => void
 }
 
-const COLOR_BORDER: Record<string, string> = {
-  blue: "border-l-blue-500",
-  green: "border-l-green-500",
-  orange: "border-l-orange-500",
-  purple: "border-l-purple-500",
-  yellow: "border-l-yellow-400",
-  rose: "border-l-rose-400",
-  gray: "border-l-gray-400",
-  sick: "border-l-rose-400",
-}
-
-const COLOR_BG: Record<string, string> = {
-  blue: "bg-blue-100",
-  green: "bg-green-100",
-  orange: "bg-orange-100",
-  purple: "bg-purple-100",
-  yellow: "bg-yellow-100",
-  rose: "bg-rose-100",
-  gray: "bg-gray-100",
-  sick: "bg-rose-50",
-}
-
-const COLOR_TEXT: Record<string, string> = {
-  blue: "text-blue-900",
-  green: "text-green-900",
-  orange: "text-orange-900",
-  purple: "text-purple-900",
-  yellow: "text-yellow-900",
-  rose: "text-rose-900",
-  gray: "text-gray-700",
-  sick: "text-rose-600",
-}
-
-export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps) {
+export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: ShiftCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,
     data: { shift },
@@ -91,9 +79,11 @@ export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps
   }
 
   const tag = jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray"
-  const borderClass = COLOR_BORDER[tag] ?? "border-l-gray-400"
-  const bgClass = COLOR_BG[tag] ?? "bg-gray-100"
+  const bgClass   = COLOR_BG[tag]   ?? "bg-gray-100"
   const textClass = COLOR_TEXT[tag] ?? "text-gray-700"
+
+  const isPublished = !!publishedAt && shift.createdAt <= publishedAt
+  const borderClass = isPublished ? "border-l-green-500" : "border-l-orange-400"
 
   return (
     <div

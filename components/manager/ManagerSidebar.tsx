@@ -16,13 +16,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { useOrg } from "@/lib/orgContext"
 
-const NAV_ITEMS = [
-  { label: "Schedule",     short: "Schedule", href: "/schedule",     icon: CalendarDays },
-  { label: "Employees",    short: "Staff",    href: "/employees",    icon: Users },
-  { label: "Availability", short: "Avail",    href: "/availability", icon: ClipboardList },
-  { label: "Labor Cost",   short: "Costs",    href: "/costs",        icon: DollarSign },
-  { label: "Time Off",     short: "Time Off", href: "/time-off",     icon: CalendarX2 },
-  { label: "My Shifts",    short: "Shifts",   href: "/my-shifts",    icon: UserCircle },
+const BASE_NAV_ITEMS = [
+  { label: "Schedule",     short: "Schedule", href: "/schedule",     icon: CalendarDays, always: true },
+  { label: "Employees",    short: "Staff",    href: "/employees",    icon: Users,        always: true },
+  { label: "Availability", short: "Avail",    href: "/availability", icon: ClipboardList,always: true },
+  { label: "Labor Cost",   short: "Costs",    href: "/costs",        icon: DollarSign,   always: true },
+  { label: "Time Off",     short: "Time Off", href: "/time-off",     icon: CalendarX2,   always: false },
+  { label: "My Shifts",    short: "Shifts",   href: "/my-shifts",    icon: UserCircle,   always: true },
 ]
 
 interface ManagerSidebarProps {
@@ -32,7 +32,8 @@ interface ManagerSidebarProps {
 export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { org } = useOrg()
+  const { org, timeOffEnabled } = useOrg()
+  const navItems = BASE_NAV_ITEMS.filter((item) => item.always || timeOffEnabled)
 
   return (
     <>
@@ -57,7 +58,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
 
         {/* Nav */}
         <nav className="flex-1 px-1.5 lg:px-2 py-3 space-y-0.5">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+          {navItems.map(({ label, href, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/")
             return (
               <Link
@@ -91,7 +92,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
           <DropdownMenu>
             <DropdownMenuTrigger className="flex w-full items-center justify-center lg:justify-start gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
               <Building2 className="size-4 shrink-0 text-gray-500" />
-              <span className="hidden lg:flex flex-1 truncate text-left font-medium text-gray-300">{org.name}</span>
+              <span className="hidden lg:block flex-1 truncate text-left font-medium text-gray-300">{org.name}</span>
               <Settings className="hidden lg:block size-3.5 shrink-0 text-gray-500" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-48">
@@ -115,7 +116,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
 
       {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-200 bg-white">
-        {NAV_ITEMS.map(({ short, href, icon: Icon }) => {
+        {navItems.map(({ short, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/")
           return (
             <Link

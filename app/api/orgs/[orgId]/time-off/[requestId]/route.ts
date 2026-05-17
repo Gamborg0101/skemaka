@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/prisma"
 import { requireOrgMember } from "@/lib/apiGuard"
+import { auth } from "@/lib/auth"
 import { serTimeOffRequest } from "@/lib/serialize"
 import { sendTimeOffApprovedSms, sendTimeOffDeniedSms } from "@/lib/sms"
 
@@ -12,6 +13,12 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId, requestId } = await params
   const guard = await requireOrgMember(orgId)
   if ("error" in guard) return guard.error
+
+  const session = await auth()
+  const role = session?.user?.role
+  if (role !== "MANAGER" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const body = await req.json() as { status?: "APPROVED" | "DENIED"; reviewNote?: string }
   if (!body.status || !["APPROVED", "DENIED"].includes(body.status)) {
@@ -53,6 +60,12 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
   const { orgId, requestId } = await params
   const guard = await requireOrgMember(orgId)
   if ("error" in guard) return guard.error
+
+  const session = await auth()
+  const role = session?.user?.role
+  if (role !== "MANAGER" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const existing = await db.timeOffRequest.findFirst({
     where: { id: requestId, organizationId: orgId },

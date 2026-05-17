@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { AvailabilityRequest, Employee } from "@/types"
 import { getWeekDays } from "@/lib/dateUtils"
 
@@ -109,8 +110,31 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="size-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-gray-50 py-10 px-4">
+        <div className="mx-auto w-full max-w-lg space-y-6">
+          <div>
+            <Skeleton className="h-7 w-48 mb-1.5" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="px-4 py-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-5 rounded" />
+                  <div>
+                    <Skeleton className="h-4 w-20 mb-1" />
+                    <Skeleton className="h-3 w-14" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-20 rounded-md" />
+                  <Skeleton className="h-8 w-20 rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
       </div>
     )
   }

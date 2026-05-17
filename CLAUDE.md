@@ -78,6 +78,30 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 
 ---
 
+## Screenshots
+
+Current screenshots of the app live in `screenshots/`. Use them to understand the UI before making changes. **Always retake the relevant screenshot after UI work and verify it looks correct — never leave a stale screenshot behind.**
+
+| File | What it shows |
+|---|---|
+| `screenshots/00-login.png` | Login / marketing page |
+| `screenshots/01-schedule.png` | Schedule — week grid view |
+| `screenshots/02-employees.png` | Employees list |
+| `screenshots/03-availability.png` | Availability requests |
+| `screenshots/04-costs.png` | Labor costs |
+| `screenshots/05-time-off.png` | Time-off requests |
+| `screenshots/06-settings.png` | Settings page |
+| `screenshots/07-schedule-timeline.png` | Schedule — timeline view |
+| `screenshots/08-my-shifts.png` | My Shifts page |
+
+---
+
+## Task verification
+
+When working through a multi-step task, include verification steps in the task list — don't just mark work done, confirm it. Example: build the UI, then take a screenshot and check for layout errors before reporting back. For API changes, hit the endpoint and assert the response shape. For refactors, run the type-checker. The goal is to catch regressions before asking for feedback, not after.
+
+---
+
 ## Patterns to follow
 
 - `serXxx()` helpers in `lib/serialize.ts` must be used before returning Prisma objects in API responses (converts `Decimal` → `number`, `Date` → ISO string).

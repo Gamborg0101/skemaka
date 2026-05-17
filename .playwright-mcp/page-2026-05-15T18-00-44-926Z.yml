@@ -1,0 +1,243 @@
+- generic [ref=e1]:
+  - generic [ref=e15]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Skemaka
+        - button "Collapse sidebar" [ref=e19]:
+          - img [ref=e20]
+      - navigation [ref=e23]:
+        - link "Schedule" [ref=e24] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e25]
+          - text: Schedule
+        - link "Employees" [ref=e27] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e28]
+          - text: Employees
+        - link "Availability" [ref=e33] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e34]
+          - text: Availability
+        - link "Labor Cost" [ref=e37] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e38]
+          - text: Labor Cost
+        - link "My Shifts" [ref=e40] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e41]
+          - text: My Shifts
+      - button "Report a bug" [ref=e47]:
+        - img [ref=e48]
+        - text: Report a bug
+      - button "The Daily Grind" [ref=e58]:
+        - img [ref=e59]
+        - generic [ref=e63]: The Daily Grind
+        - img [ref=e64]
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - heading "Availability" [level=1] [ref=e72]
+              - generic [ref=e390]: Open
+            - paragraph [ref=e74]: "Deadline: Monday 25 May"
+          - button "Request sent" [disabled]:
+            - img
+            - text: Request sent
+        - generic [ref=e75]:
+          - button [ref=e76]:
+            - img
+          - generic [ref=e77]:
+            - generic [ref=e78]: Week 21
+            - text: 18 May – 24 May
+          - button [active] [ref=e79]:
+            - img
+        - generic [ref=e391]:
+          - generic [ref=e392]:
+            - generic [ref=e393]: 4 / 7 submitted
+            - generic [ref=e396]: 7 scheduled this week
+          - generic [ref=e397]:
+            - generic [ref=e398]: Available
+            - generic [ref=e400]: Scheduled
+            - generic [ref=e402]: Unavailable
+            - generic [ref=e404]: Not submitted
+          - generic [ref=e407]:
+            - generic [ref=e408]: Employee
+            - generic [ref=e409]:
+              - paragraph [ref=e410]: Mon
+              - paragraph [ref=e411]: 18 May
+            - generic [ref=e412]:
+              - paragraph [ref=e413]: Tue
+              - paragraph [ref=e414]: 19 May
+            - generic [ref=e415]:
+              - paragraph [ref=e416]: Wed
+              - paragraph [ref=e417]: 20 May
+            - generic [ref=e418]:
+              - paragraph [ref=e419]: Thu
+              - paragraph [ref=e420]: 21 May
+            - generic [ref=e421]:
+              - paragraph [ref=e422]: Fri
+              - paragraph [ref=e423]: 22 May
+            - generic [ref=e424]:
+              - paragraph [ref=e425]: Sat
+              - paragraph [ref=e426]: 23 May
+            - generic [ref=e427]:
+              - paragraph [ref=e428]: Sun
+              - paragraph [ref=e429]: 24 May
+            - generic [ref=e430]:
+              - paragraph [ref=e431]: Casper Gamborg
+              - paragraph [ref=e432]: Shift Supervisor
+              - generic [ref=e433]: Not submitted
+            - generic [ref=e435]:
+              - img [ref=e436]
+              - generic [ref=e439]: 10AM–6PM
+            - generic [ref=e442]: —
+            - generic [ref=e444]:
+              - img [ref=e445]
+              - generic [ref=e448]: 8AM–4PM
+            - generic [ref=e451]: —
+            - generic [ref=e453]:
+              - img [ref=e454]
+              - generic [ref=e457]: 7AM–3PM
+            - generic [ref=e460]: —
+            - generic [ref=e463]: —
+            - generic [ref=e464]:
+              - paragraph [ref=e465]: Dr. James O'Brien
+              - paragraph [ref=e466]: Barista
+            - button "11AM–7PM Book shift" [ref=e468] [cursor=pointer]:
+              - generic [ref=e469]: 11AM–7PM
+              - generic [ref=e470]:
+                - img [ref=e471]
+                - text: Book shift
+            - generic [ref=e474]: Unavailable
+            - generic [ref=e476]:
+              - img [ref=e477]
+              - generic [ref=e480]: 7AM–3PM
+            - button "11AM–7PM Book shift" [ref=e482] [cursor=pointer]:
+              - generic [ref=e483]: 11AM–7PM
+              - generic [ref=e484]:
+                - img [ref=e485]
+                - text: Book shift
+            - generic [ref=e487]:
+              - img [ref=e488]
+              - generic [ref=e491]: 2PM–9PM
+            - generic [ref=e493]:
+              - img [ref=e494]
+              - generic [ref=e497]: 3PM–9PM
+            - generic [ref=e500]: Unavailable
+            - generic [ref=e501]:
+              - paragraph [ref=e502]: Lena Schmidt
+              - paragraph [ref=e503]: Shift Supervisor
+            - generic [ref=e505]:
+              - img [ref=e506]
+              - generic [ref=e509]: 6:30AM–2PM
+            - button "7AM–3PM Book shift" [ref=e511] [cursor=pointer]:
+              - generic [ref=e512]: 7AM–3PM
+              - generic [ref=e513]:
+                - img [ref=e514]
+                - text: Book shift
+            - generic [ref=e516]:
+              - img [ref=e517]
+              - generic [ref=e520]: 8AM–4PM
+            - button "7AM–3PM Book shift" [ref=e522] [cursor=pointer]:
+              - generic [ref=e523]: 7AM–3PM
+              - generic [ref=e524]:
+                - img [ref=e525]
+                - text: Book shift
+            - generic [ref=e527]:
+              - img [ref=e528]
+              - generic [ref=e531]: 7AM–3PM
+            - generic [ref=e533]:
+              - img [ref=e534]
+              - generic [ref=e537]: 7AM–1PM
+            - generic [ref=e540]: Unavailable
+            - generic [ref=e541]:
+              - paragraph [ref=e542]: Mia Andersen MD
+              - paragraph [ref=e543]: Cashier
+            - button "7AM–3PM Book shift" [ref=e545] [cursor=pointer]:
+              - generic [ref=e546]: 7AM–3PM
+              - generic [ref=e547]:
+                - img [ref=e548]
+                - text: Book shift
+            - generic [ref=e550]:
+              - img [ref=e551]
+              - generic [ref=e554]: 9AM–5PM
+            - generic [ref=e556]:
+              - img [ref=e557]
+              - generic [ref=e560]: 7AM–1PM
+            - generic [ref=e562]:
+              - img [ref=e563]
+              - generic [ref=e566]: 11AM–7PM
+            - generic [ref=e568]:
+              - img [ref=e569]
+              - generic [ref=e572]: 11AM–7PM
+            - button "11AM–7PM Book shift" [ref=e574] [cursor=pointer]:
+              - generic [ref=e575]: 11AM–7PM
+              - generic [ref=e576]:
+                - img [ref=e577]
+                - text: Book shift
+            - generic [ref=e580]: Unavailable
+            - generic [ref=e581]:
+              - paragraph [ref=e582]: Nadia Patel
+              - paragraph [ref=e583]: Barista
+              - generic [ref=e584]: Not submitted
+            - generic [ref=e587]: —
+            - generic [ref=e589]:
+              - img [ref=e590]
+              - generic [ref=e593]: 11AM–7PM
+            - generic [ref=e596]: —
+            - generic [ref=e598]:
+              - img [ref=e599]
+              - generic [ref=e602]: 2PM–8PM
+            - generic [ref=e604]:
+              - img [ref=e605]
+              - generic [ref=e608]: 7AM–1PM
+            - generic [ref=e610]:
+              - img [ref=e611]
+              - generic [ref=e614]: 9AM–5PM
+            - generic [ref=e617]: —
+            - generic [ref=e618]:
+              - paragraph [ref=e619]: Sarah Chen
+              - paragraph [ref=e620]: Barista
+            - generic [ref=e622]:
+              - img [ref=e623]
+              - generic [ref=e626]: 7AM–3PM
+            - generic [ref=e628]:
+              - img [ref=e629]
+              - generic [ref=e632]: 7AM–3PM
+            - generic [ref=e635]: Unavailable
+            - generic [ref=e637]:
+              - img [ref=e638]
+              - generic [ref=e641]: 7AM–3PM
+            - generic [ref=e643]:
+              - img [ref=e644]
+              - generic [ref=e647]: 7AM–3PM
+            - generic [ref=e649]:
+              - img [ref=e650]
+              - generic [ref=e653]: 7AM–3PM
+            - generic [ref=e656]: Unavailable
+            - generic [ref=e657]:
+              - paragraph [ref=e658]: Tom Eriksson
+              - paragraph [ref=e659]: Kitchen
+              - generic [ref=e660]: Not submitted
+            - generic [ref=e662]:
+              - img [ref=e663]
+              - generic [ref=e666]: 9AM–3PM
+            - generic [ref=e668]:
+              - img [ref=e669]
+              - generic [ref=e672]: 7AM–3PM
+            - generic [ref=e675]: —
+            - generic [ref=e677]:
+              - img [ref=e678]
+              - generic [ref=e681]: 10AM–6PM
+            - generic [ref=e683]:
+              - img [ref=e684]
+              - generic [ref=e687]: 8AM–4PM
+            - generic [ref=e689]:
+              - img [ref=e690]
+              - generic [ref=e693]: 7AM–3PM
+            - generic [ref=e696]: —
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e10] [cursor=pointer]:
+    - img [ref=e11]
+  - alert [ref=e14]

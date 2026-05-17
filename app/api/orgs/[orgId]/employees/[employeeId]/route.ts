@@ -29,22 +29,43 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "contractedHours must be a non-negative integer" }, { status: 400 })
   }
 
-  const employee = await db.employee.update({
-    where: { id: employeeId },
-    data: {
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.email !== undefined && { email: body.email }),
-      ...(body.phone !== undefined && { phone: body.phone }),
-      ...(body.jobRole !== undefined && { jobRole: body.jobRole }),
-      ...(body.hourlyWage !== undefined && { hourlyWage: body.hourlyWage }),
-      ...(body.notes !== undefined && { notes: body.notes }),
-      ...(body.isActive !== undefined && { isActive: body.isActive }),
-      ...(body.employmentType !== undefined && isEmploymentType(body.employmentType) && { employmentType: body.employmentType }),
-      ...(body.contractedHours !== undefined && { contractedHours: body.contractedHours }),
-    },
-  })
+  // Determine if isActive is actually flipping so we can adjust the counter atomically.
+  const countDelta =
+    body.isActive !== undefined && body.isActive !== existing.isActive
+      ? body.isActive ? 1 : -1
+      : 0
 
-  return NextResponse.json({ data: serEmployee(employee) })
+  try {
+    const employee = await db.$transaction(async (tx) => {
+      const updated = await tx.employee.update({
+        where: { id: employeeId },
+        data: {
+          ...(body.name !== undefined && { name: body.name }),
+          ...(body.email !== undefined && { email: body.email }),
+          ...(body.phone !== undefined && { phone: body.phone }),
+          ...(body.jobRole !== undefined && { jobRole: body.jobRole }),
+          ...(body.hourlyWage !== undefined && { hourlyWage: body.hourlyWage }),
+          ...(body.notes !== undefined && { notes: body.notes }),
+          ...(body.isActive !== undefined && { isActive: body.isActive }),
+          ...(body.employmentType !== undefined && isEmploymentType(body.employmentType) && { employmentType: body.employmentType }),
+          ...(body.contractedHours !== undefined && { contractedHours: body.contractedHours }),
+        },
+      })
+      if (countDelta !== 0) {
+        await tx.organization.update({
+          where: { id: orgId },
+          data: { employeeCount: countDelta > 0 ? { increment: 1 } : { decrement: 1 } },
+        })
+      }
+      return updated
+    })
+    return NextResponse.json({ data: serEmployee(employee) })
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "Email already in use" }, { status: 409 })
+    }
+    throw err
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {

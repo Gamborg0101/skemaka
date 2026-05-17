@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { serOrg } from "@/lib/serialize"
+import { seedDefaultRoles } from "@/lib/seedDefaultRoles"
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -34,25 +35,20 @@ export async function POST(req: NextRequest) {
     slug = `${baseSlug}-${suffix++}`
   }
 
-  const org = await db.organization.create({
-    data: { name: trimmedName, slug, currency: resolvedCurrency },
-  })
+  try {
+    const org = await db.organization.create({
+      data: { name: trimmedName, slug, currency: resolvedCurrency },
+    })
 
-  await db.membership.create({
-    data: { userId: session.user.id, organizationId: org.id, role: "MANAGER" },
-  })
+    await db.membership.create({
+      data: { userId: session.user.id, organizationId: org.id, role: "MANAGER" },
+    })
 
-  // Seed default job roles so new orgs can start scheduling immediately
-  await db.jobRole.createMany({
-    data: [
-      { organizationId: org.id, name: "Waiter",     color: "blue"   },
-      { organizationId: org.id, name: "Chef",        color: "orange" },
-      { organizationId: org.id, name: "Bartender",   color: "purple" },
-      { organizationId: org.id, name: "Manager",     color: "green"  },
-      { organizationId: org.id, name: "Host",        color: "rose"   },
-      { organizationId: org.id, name: "Cashier",     color: "yellow" },
-    ],
-  })
+    await seedDefaultRoles(org.id)
 
-  return NextResponse.json({ data: serOrg(org) }, { status: 201 })
+    return NextResponse.json({ data: serOrg(org) }, { status: 201 })
+  } catch (err) {
+    console.error("[orgs POST]", err)
+    return NextResponse.json({ error: "Failed to create organization" }, { status: 500 })
+  }
 }

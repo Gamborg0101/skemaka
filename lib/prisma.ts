@@ -1,11 +1,6 @@
 import { PrismaClient } from "@/app/generated/prisma/client"
 import { PrismaNeon } from "@prisma/adapter-neon"
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined
-}
-
 function createPrismaClient(): PrismaClient {
   const adapter = new PrismaNeon({
     connectionString: process.env.DATABASE_URL ?? "",
@@ -14,6 +9,7 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter })
 }
 
-export const db = globalThis.prisma ?? createPrismaClient()
-
-if (process.env.NODE_ENV !== "production") globalThis.prisma = db
+// Neon is serverless — each query uses its own short-lived connection, so there
+// is no persistent pool to preserve. A fresh client on every hot-reload is fine
+// and avoids stale model delegates after `prisma generate`.
+export const db = createPrismaClient()

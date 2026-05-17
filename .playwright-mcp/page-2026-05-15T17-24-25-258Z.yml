@@ -1,0 +1,173 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Skemaka" [ref=e5] [cursor=pointer]:
+          - /url: /login
+        - link "← Back to sign in" [ref=e6] [cursor=pointer]:
+          - /url: /login
+    - main [ref=e7]:
+      - article [ref=e8]:
+        - heading "Privacy Policy" [level=1] [ref=e9]
+        - paragraph [ref=e10]: "Last updated: 15 May 2026"
+        - generic [ref=e11]:
+          - heading "1. Who We Are" [level=2] [ref=e12]
+          - generic [ref=e13]:
+            - paragraph [ref=e14]: Skemaka ApS ("Skemaka", "we", "us") operates the Skemaka staff-scheduling platform. We are registered in Denmark and act as the data controller for the personal data described in this policy. For data you enter about your employees, you are the controller and we act as your processor — see Section 6.
+            - paragraph [ref=e15]:
+              - text: Questions about this policy or your data can be directed to
+              - link "privacy@skemaka.com" [ref=e16] [cursor=pointer]:
+                - /url: mailto:privacy@skemaka.com
+              - text: .
+        - generic [ref=e17]:
+          - heading "2. Data We Collect" [level=2] [ref=e18]
+          - generic [ref=e19]:
+            - paragraph [ref=e20]: "We collect the following categories of personal data:"
+            - list [ref=e21]:
+              - listitem [ref=e22]:
+                - strong [ref=e23]: Account data
+                - text: — your name, email address, and profile picture, obtained from Google when you sign in via Google OAuth.
+              - listitem [ref=e24]:
+                - strong [ref=e25]: Organisation data
+                - text: — your business name and the settings you configure (store hours, currency, shift templates).
+              - listitem [ref=e26]:
+                - strong [ref=e27]: Employee data
+                - text: — names, email addresses, phone numbers, job roles, hourly wages, contracted hours, and schedules that you enter for the people you manage.
+              - listitem [ref=e28]:
+                - strong [ref=e29]: Usage data
+                - text: — pages visited, actions taken, and timestamps, collected to improve the Service and diagnose issues.
+              - listitem [ref=e30]:
+                - strong [ref=e31]: Billing data
+                - text: — payment method details and billing address, collected and stored by Stripe on our behalf. We never store full card numbers.
+        - generic [ref=e32]:
+          - heading "3. How We Use Your Data" [level=2] [ref=e33]
+          - generic [ref=e34]:
+            - paragraph [ref=e35]: "We use the data we collect to:"
+            - list [ref=e36]:
+              - listitem [ref=e37]: Provide, maintain, and improve the Service.
+              - listitem [ref=e38]: Authenticate you and keep your account secure.
+              - listitem [ref=e39]: Process subscription payments and send receipts.
+              - listitem [ref=e40]: Send transactional emails (schedule invites, availability requests, account notices).
+              - listitem [ref=e41]: Respond to support requests.
+              - listitem [ref=e42]: Comply with legal obligations.
+            - paragraph [ref=e43]: We do not sell your personal data or use it to serve third-party advertising.
+        - generic [ref=e44]:
+          - heading "4. Legal Bases for Processing (GDPR)" [level=2] [ref=e45]
+          - generic [ref=e46]:
+            - paragraph [ref=e47]: "Where the GDPR applies, we rely on the following legal bases:"
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - strong [ref=e50]: Contract
+                - text: — processing necessary to provide the Service you signed up for (account management, scheduling, billing).
+              - listitem [ref=e51]:
+                - strong [ref=e52]: Legitimate interests
+                - text: — usage analytics and security monitoring, where our interests do not override your rights.
+              - listitem [ref=e53]:
+                - strong [ref=e54]: Legal obligation
+                - text: — retaining billing records as required by tax law.
+              - listitem [ref=e55]:
+                - strong [ref=e56]: Consent
+                - text: — where we have asked for and received your consent, such as for optional marketing communications.
+        - generic [ref=e57]:
+          - heading "5. Third-Party Services" [level=2] [ref=e58]
+          - generic [ref=e59]:
+            - paragraph [ref=e60]: "We share data with the following sub-processors to operate the Service:"
+            - list [ref=e61]:
+              - listitem [ref=e62]:
+                - strong [ref=e63]: Google
+                - text: — authentication via Google OAuth. Google's
+                - link "Privacy Policy" [ref=e64] [cursor=pointer]:
+                  - /url: https://policies.google.com/privacy
+                - text: applies to data processed by Google.
+              - listitem [ref=e65]:
+                - strong [ref=e66]: Neon
+                - text: — PostgreSQL database hosting. Data is stored in the EU (eu-central-1, Frankfurt). Neon is GDPR-compliant and processes data under a DPA.
+              - listitem [ref=e67]:
+                - strong [ref=e68]: Stripe
+                - text: — payment processing. Stripe is PCI DSS Level 1 certified and GDPR-compliant. See Stripe's
+                - link "Privacy Policy" [ref=e69] [cursor=pointer]:
+                  - /url: https://stripe.com/privacy
+                - text: .
+              - listitem [ref=e70]:
+                - strong [ref=e71]: Vercel
+                - text: — application hosting and edge delivery. Data in transit passes through Vercel's infrastructure.
+            - paragraph [ref=e72]: We require all sub-processors to maintain appropriate security measures and process data only as instructed.
+        - generic [ref=e73]:
+          - heading "6. Employee Data — Controller vs. Processor" [level=2] [ref=e74]
+          - generic [ref=e75]:
+            - paragraph [ref=e76]: When you add employee records to Skemaka, you are the data controller for that personal data and you are responsible for having a lawful basis to process it (e.g. employment contract, legitimate interest). Skemaka acts as a data processor, handling that data solely to provide the scheduling features you have requested.
+            - paragraph [ref=e77]:
+              - text: A Data Processing Agreement (DPA) governing this relationship is available on request at
+              - link "privacy@skemaka.com" [ref=e78] [cursor=pointer]:
+                - /url: mailto:privacy@skemaka.com
+              - text: .
+        - generic [ref=e79]:
+          - heading "7. Data Retention" [level=2] [ref=e80]
+          - generic [ref=e81]:
+            - paragraph [ref=e82]: We retain your account and organisation data for as long as your account is active and for up to 90 days after deletion, to allow recovery if you change your mind. Billing records are retained for 5 years to comply with Danish bookkeeping law.
+            - paragraph [ref=e83]: When you delete your account, we permanently delete all associated personal data (schedules, employees, settings) within 90 days, except where retention is required by law.
+        - generic [ref=e84]:
+          - heading "8. Data Security" [level=2] [ref=e85]
+          - generic [ref=e86]:
+            - paragraph [ref=e87]: All data is encrypted in transit (TLS 1.2+) and at rest. Access to production systems is restricted to authorised personnel. We use JWT-based authentication with short-lived tokens and conduct periodic security reviews.
+            - paragraph [ref=e88]: In the event of a data breach affecting your personal data, we will notify you and the relevant supervisory authority within 72 hours where required by law.
+        - generic [ref=e89]:
+          - heading "9. Cookies" [level=2] [ref=e90]
+          - paragraph [ref=e92]: We use a single session cookie to keep you signed in. We do not use tracking, analytics, or advertising cookies. No cookie banner is shown because we only set cookies that are strictly necessary to operate the Service.
+        - generic [ref=e93]:
+          - heading "10. Your Rights" [level=2] [ref=e94]
+          - generic [ref=e95]:
+            - paragraph [ref=e96]: "Under the GDPR you have the right to:"
+            - list [ref=e97]:
+              - listitem [ref=e98]:
+                - strong [ref=e99]: Access
+                - text: — request a copy of the personal data we hold about you.
+              - listitem [ref=e100]:
+                - strong [ref=e101]: Rectification
+                - text: — ask us to correct inaccurate data.
+              - listitem [ref=e102]:
+                - strong [ref=e103]: Erasure
+                - text: — ask us to delete your data ("right to be forgotten").
+              - listitem [ref=e104]:
+                - strong [ref=e105]: Portability
+                - text: — receive your data in a structured, machine-readable format.
+              - listitem [ref=e106]:
+                - strong [ref=e107]: Restriction
+                - text: — ask us to pause processing while a dispute is resolved.
+              - listitem [ref=e108]:
+                - strong [ref=e109]: Objection
+                - text: — object to processing based on legitimate interests.
+              - listitem [ref=e110]:
+                - strong [ref=e111]: Withdraw consent
+                - text: — where processing is based on consent, withdraw it at any time.
+            - paragraph [ref=e112]:
+              - text: To exercise any of these rights, email
+              - link "privacy@skemaka.com" [ref=e113] [cursor=pointer]:
+                - /url: mailto:privacy@skemaka.com
+              - text: . We will respond within 30 days. You also have the right to lodge a complaint with the Danish Data Protection Authority (Datatilsynet) at
+              - link "datatilsynet.dk" [ref=e114] [cursor=pointer]:
+                - /url: https://www.datatilsynet.dk
+              - text: .
+        - generic [ref=e115]:
+          - heading "11. International Transfers" [level=2] [ref=e116]
+          - paragraph [ref=e118]: Your data is stored in the EU (Frankfurt). Some sub-processors may transfer data outside the EEA; where they do, we ensure appropriate safeguards are in place (e.g. EU Standard Contractual Clauses or an adequacy decision).
+        - generic [ref=e119]:
+          - heading "12. Changes to This Policy" [level=2] [ref=e120]
+          - paragraph [ref=e122]: We may update this policy from time to time. We will notify you of material changes by email or in-app notice at least 14 days before they take effect. The "Last updated" date at the top of this page reflects the most recent revision.
+        - generic [ref=e123]:
+          - heading "13. Contact" [level=2] [ref=e124]
+          - paragraph [ref=e126]:
+            - text: Skemaka ApS
+            - text: Copenhagen, Denmark
+            - link "privacy@skemaka.com" [ref=e127] [cursor=pointer]:
+              - /url: mailto:privacy@skemaka.com
+    - contentinfo [ref=e128]:
+      - generic [ref=e129]:
+        - link "Terms of Service" [ref=e130] [cursor=pointer]:
+          - /url: /terms
+        - link "Privacy Policy" [ref=e131] [cursor=pointer]:
+          - /url: /privacy
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e137] [cursor=pointer]:
+    - img [ref=e138]
+  - alert [ref=e141]

@@ -1,0 +1,678 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - button "Collapse sidebar" [ref=e6]:
+          - img [ref=e7]
+      - navigation [ref=e10]:
+        - link "Schedule" [ref=e11] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e12]
+          - generic [ref=e14]: Schedule
+        - link "Employees" [ref=e15] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e16]
+          - generic [ref=e21]: Employees
+        - link "Availability" [ref=e22] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e23]
+          - generic [ref=e26]: Availability
+        - link "Labor Cost" [ref=e27] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e28]
+          - generic [ref=e30]: Labor Cost
+        - link "Time Off" [ref=e31] [cursor=pointer]:
+          - /url: /time-off
+          - img [ref=e32]
+          - generic [ref=e36]: Time Off
+        - link "My Shifts" [ref=e37] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e38]
+          - generic [ref=e42]: My Shifts
+      - button "Report a bug" [ref=e45]:
+        - img [ref=e46]
+        - generic [ref=e55]: Report a bug
+      - button "The Daily Grind" [ref=e57]:
+        - img [ref=e58]
+        - generic [ref=e62]: The Daily Grind
+        - img [ref=e63]
+    - main [ref=e66]:
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - heading "Organization settings" [level=1] [ref=e69]
+          - paragraph [ref=e70]: Manage your workspace configuration.
+        - generic [ref=e71]:
+          - button "Store Hours Opening and closing times per day." [ref=e72]:
+            - img [ref=e74]
+            - generic [ref=e77]:
+              - paragraph [ref=e78]: Store Hours
+              - paragraph [ref=e79]: Opening and closing times per day.
+            - img [ref=e80]
+          - generic [ref=e82]:
+            - generic [ref=e83]:
+              - generic [ref=e84]:
+                - generic [ref=e85]: Monday
+                - generic [ref=e86]:
+                  - generic [ref=e87]:
+                    - generic [ref=e88]:
+                      - combobox [ref=e89] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07" [selected]
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e90]: ":"
+                    - generic [ref=e91]:
+                      - combobox [ref=e92] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                  - generic [ref=e93]: –
+                  - generic [ref=e94]:
+                    - generic [ref=e95]:
+                      - combobox [ref=e96] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21" [selected]
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e97]: ":"
+                    - generic [ref=e98]:
+                      - combobox [ref=e99] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                - button "Set closed" [ref=e100]
+              - generic [ref=e101]:
+                - generic [ref=e102]: Tuesday
+                - generic [ref=e103]:
+                  - generic [ref=e104]:
+                    - generic [ref=e105]:
+                      - combobox [ref=e106] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07" [selected]
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e107]: ":"
+                    - generic [ref=e108]:
+                      - combobox [ref=e109] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                  - generic [ref=e110]: –
+                  - generic [ref=e111]:
+                    - generic [ref=e112]:
+                      - combobox [ref=e113] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21" [selected]
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e114]: ":"
+                    - generic [ref=e115]:
+                      - combobox [ref=e116] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                - button "Set closed" [ref=e117]
+              - generic [ref=e118]:
+                - generic [ref=e119]: Wednesday
+                - generic [ref=e120]:
+                  - generic [ref=e121]:
+                    - generic [ref=e122]:
+                      - combobox [ref=e123] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07" [selected]
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e124]: ":"
+                    - generic [ref=e125]:
+                      - combobox [ref=e126] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                  - generic [ref=e127]: –
+                  - generic [ref=e128]:
+                    - generic [ref=e129]:
+                      - combobox [ref=e130] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21" [selected]
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e131]: ":"
+                    - generic [ref=e132]:
+                      - combobox [ref=e133] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                - button "Set closed" [ref=e134]
+              - generic [ref=e135]:
+                - generic [ref=e136]: Thursday
+                - generic [ref=e137]:
+                  - generic [ref=e138]:
+                    - generic [ref=e139]:
+                      - combobox [ref=e140] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07" [selected]
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e141]: ":"
+                    - generic [ref=e142]:
+                      - combobox [ref=e143] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                  - generic [ref=e144]: –
+                  - generic [ref=e145]:
+                    - generic [ref=e146]:
+                      - combobox [ref=e147] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21" [selected]
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e148]: ":"
+                    - generic [ref=e149]:
+                      - combobox [ref=e150] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                - button "Set closed" [ref=e151]
+              - generic [ref=e152]:
+                - generic [ref=e153]: Friday
+                - generic [ref=e154]:
+                  - generic [ref=e155]:
+                    - generic [ref=e156]:
+                      - combobox [ref=e157] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07" [selected]
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e158]: ":"
+                    - generic [ref=e159]:
+                      - combobox [ref=e160] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                  - generic [ref=e161]: –
+                  - generic [ref=e162]:
+                    - generic [ref=e163]:
+                      - combobox [ref=e164] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21" [selected]
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e165]: ":"
+                    - generic [ref=e166]:
+                      - combobox [ref=e167] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                - button "Set closed" [ref=e168]
+              - generic [ref=e169]:
+                - generic [ref=e170]: Saturday
+                - generic [ref=e171]:
+                  - generic [ref=e172]:
+                    - generic [ref=e173]:
+                      - combobox [ref=e174] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09" [selected]
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17"
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e175]: ":"
+                    - generic [ref=e176]:
+                      - combobox [ref=e177] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                  - generic [ref=e178]: –
+                  - generic [ref=e179]:
+                    - generic [ref=e180]:
+                      - combobox [ref=e181] [cursor=pointer]:
+                        - option "00"
+                        - option "01"
+                        - option "02"
+                        - option "03"
+                        - option "04"
+                        - option "05"
+                        - option "06"
+                        - option "07"
+                        - option "08"
+                        - option "09"
+                        - option "10"
+                        - option "11"
+                        - option "12"
+                        - option "13"
+                        - option "14"
+                        - option "15"
+                        - option "16"
+                        - option "17" [selected]
+                        - option "18"
+                        - option "19"
+                        - option "20"
+                        - option "21"
+                        - option "22"
+                        - option "23"
+                      - generic: ▾
+                    - generic [ref=e182]: ":"
+                    - generic [ref=e183]:
+                      - combobox [ref=e184] [cursor=pointer]:
+                        - option "00" [selected]
+                        - option "15"
+                        - option "30"
+                        - option "45"
+                      - generic: ▾
+                - button "Set closed" [ref=e185]
+              - generic [ref=e186]:
+                - generic [ref=e187]: Sunday
+                - generic [ref=e188]: Closed
+                - button "Set open" [ref=e189]
+            - generic [ref=e190]:
+              - paragraph [ref=e191]: The timeline shows each day's hours with a 2-hour buffer on each end.
+              - button "Save" [disabled]
+        - generic [ref=e192]:
+          - button "Shift Types Presets you can apply with one click when adding a shift." [ref=e193]:
+            - img [ref=e195]
+            - generic [ref=e197]:
+              - paragraph [ref=e198]: Shift Types
+              - paragraph [ref=e199]: Presets you can apply with one click when adding a shift.
+            - img [ref=e200]
+          - generic [ref=e203]:
+            - generic [ref=e204]:
+              - generic [ref=e205]:
+                - generic [ref=e206]: Morning7AM–3PM · 30m break
+                - button [ref=e207]:
+                  - img
+              - generic [ref=e208]:
+                - generic [ref=e209]: Afternoon11AM–7PM · 30m break
+                - button [ref=e210]:
+                  - img
+              - generic [ref=e211]:
+                - generic [ref=e212]: Evening3PM–9PM
+                - button [ref=e213]:
+                  - img
+              - generic [ref=e214]:
+                - generic [ref=e215]: Kitchen AM7AM–2PM · Kitchen
+                - button [ref=e216]:
+                  - img
+              - generic [ref=e217]:
+                - generic [ref=e218]: Kitchen PM1PM–9PM · 30m break · Kitchen
+                - button [ref=e219]:
+                  - img
+              - generic [ref=e220]:
+                - generic [ref=e221]: Opening Shift6:30AM–2PM · Supervisor
+                - button [ref=e222]:
+                  - img
+            - button "Add shift type" [ref=e223]:
+              - img
+              - text: Add shift type
+        - generic [ref=e224]:
+          - button "Team Access People who can manage schedules and employees." [ref=e225]:
+            - img [ref=e227]
+            - generic [ref=e230]:
+              - paragraph [ref=e231]: Team Access
+              - paragraph [ref=e232]: People who can manage schedules and employees.
+            - img [ref=e233]
+          - generic [ref=e237]:
+            - generic [ref=e238]:
+              - textbox "colleague@email.com" [ref=e239]
+              - button "Grant access" [disabled]:
+                - img
+                - text: Grant access
+            - paragraph [ref=e240]: They must already have an account. Access lets them view and edit the schedule.
+        - generic [ref=e241]:
+          - button "Schedule View Default view when opening the schedule." [ref=e242]:
+            - img [ref=e244]
+            - generic [ref=e246]:
+              - paragraph [ref=e247]: Schedule View
+              - paragraph [ref=e248]: Default view when opening the schedule.
+            - img [ref=e249]
+          - generic [ref=e251]:
+            - generic [ref=e252]:
+              - button "Week" [ref=e253]:
+                - img [ref=e254]
+                - text: Week
+              - button "Timeline" [ref=e259]:
+                - img [ref=e260]
+                - text: Timeline
+            - paragraph [ref=e261]: You can still switch views on the schedule page at any time.
+        - generic [ref=e262]:
+          - button "Currency Currency shown on wages and labor costs." [ref=e263]:
+            - img [ref=e265]
+            - generic [ref=e268]:
+              - paragraph [ref=e269]: Currency
+              - paragraph [ref=e270]: Currency shown on wages and labor costs.
+            - img [ref=e271]
+          - generic [ref=e274]:
+            - button "EUR Euro" [ref=e275]:
+              - generic [ref=e276]: EUR
+              - text: Euro
+            - button "USD US Dollar" [ref=e277]:
+              - generic [ref=e278]: USD
+              - text: US Dollar
+            - button "GBP British Pound" [ref=e279]:
+              - generic [ref=e280]: GBP
+              - text: British Pound
+            - button "DKK Danish Krone" [ref=e281]:
+              - generic [ref=e282]: DKK
+              - text: Danish Krone
+            - button "SEK Swedish Krona" [ref=e283]:
+              - generic [ref=e284]: SEK
+              - text: Swedish Krona
+            - button "NOK Norwegian Krone" [ref=e285]:
+              - generic [ref=e286]: NOK
+              - text: Norwegian Krone
+            - button "CHF Swiss Franc" [ref=e287]:
+              - generic [ref=e288]: CHF
+              - text: Swiss Franc
+            - button "AUD Australian Dollar" [ref=e289]:
+              - generic [ref=e290]: AUD
+              - text: Australian Dollar
+            - button "CAD Canadian Dollar" [ref=e291]:
+              - generic [ref=e292]: CAD
+              - text: Canadian Dollar
+            - button "JPY Japanese Yen" [ref=e293]:
+              - generic [ref=e294]: JPY
+              - text: Japanese Yen
+        - generic [ref=e295]:
+          - button "Data Retention Remove old schedules and availability data to keep the database lean." [ref=e296]:
+            - img [ref=e298]
+            - generic [ref=e301]:
+              - paragraph [ref=e302]: Data Retention
+              - paragraph [ref=e303]: Remove old schedules and availability data to keep the database lean.
+            - img [ref=e304]
+          - generic [ref=e307]:
+            - list [ref=e308]:
+              - listitem [ref=e309]: Schedules & shifts older than 12 months
+              - listitem [ref=e311]: Availability requests older than 6 months
+              - listitem [ref=e313]: Scheduling events older than 3 months
+              - listitem [ref=e315]: Expired sessions (cleaned automatically)
+            - paragraph [ref=e317]: Cleanup also runs automatically every Sunday at 03:00 UTC.
+            - button "Preview cleanup" [ref=e319]
+        - generic [ref=e320]:
+          - button "Features Turn optional features on or off for your workspace." [ref=e321]:
+            - img [ref=e323]
+            - generic [ref=e326]:
+              - paragraph [ref=e327]: Features
+              - paragraph [ref=e328]: Turn optional features on or off for your workspace.
+            - img [ref=e329]
+          - generic [ref=e333]:
+            - generic [ref=e334]:
+              - img [ref=e335]
+              - generic [ref=e339]:
+                - paragraph [ref=e340]: Time Off Requests
+                - paragraph [ref=e341]: Let employees submit time off requests for you to approve or deny.
+            - switch [checked] [ref=e342]
+        - generic [ref=e344]:
+          - generic [ref=e345]:
+            - img [ref=e347]
+            - generic [ref=e351]:
+              - paragraph [ref=e352]: Organization
+              - paragraph [ref=e353]: Name, logo, and contact details for your business.
+            - generic [ref=e354]: Coming soon
+          - generic [ref=e355]:
+            - img [ref=e357]
+            - generic [ref=e362]:
+              - paragraph [ref=e363]: Roles & Permissions
+              - paragraph [ref=e364]: Define job roles and what managers can do.
+            - generic [ref=e365]: Coming soon
+          - generic [ref=e366]:
+            - img [ref=e368]
+            - generic [ref=e371]:
+              - paragraph [ref=e372]: Locale & Time Zone
+              - paragraph [ref=e373]: Set the time zone and week start day for your schedules.
+            - generic [ref=e374]: Coming soon
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e380] [cursor=pointer]:
+    - img [ref=e381]
+  - alert [ref=e384]

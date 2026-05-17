@@ -149,12 +149,20 @@ async function main() {
   const w_p4 = addDays(w0,  28)
   const w_next = w_p1  // alias used by the availability request
 
+  // Time-off request IDs
+  const TOR = {
+    lenaApproved:   "tor_lena_approved_001",
+    tomDenied:      "tor_tom_denied_001",
+    jamesPending:   "tor_james_pending_001",
+    nadiaPending:   "tor_nadia_pending_001",
+  }
+
   // Availability deadline: next Sunday 23:59 UTC
   const availDeadline = addDays(w_next, 6)
   availDeadline.setUTCHours(23, 59, 0, 0)
 
   // ── 1. Organization ────────────────────────────────────────────────────────
-  console.log("1/9  Seeding organization…")
+  console.log("1/10 Seeding organization…")
 
   await db.organization.upsert({
     where: { slug: "the-daily-grind" },
@@ -173,7 +181,7 @@ async function main() {
   })
 
   // ── 2. Manager user + membership ──────────────────────────────────────────
-  console.log("2/9  Seeding manager user…")
+  console.log("2/10 Seeding manager user…")
 
   // A generic "system manager" account — not tied to a real person
   await db.user.upsert({
@@ -199,7 +207,7 @@ async function main() {
   })
 
   // ── 3. Job roles ──────────────────────────────────────────────────────────
-  console.log("3/9  Seeding job roles…")
+  console.log("3/10 Seeding job roles…")
 
   const JOB_ROLES = [
     { id: IDS.roleBarista,    name: "Barista",    color: "blue"   },
@@ -218,7 +226,7 @@ async function main() {
   }
 
   // ── 4. Shift templates ────────────────────────────────────────────────────
-  console.log("4/9  Seeding shift templates…")
+  console.log("4/10 Seeding shift templates…")
 
   const SHIFT_TEMPLATES = [
     { id: IDS.tmplMorning,   name: "Morning",       startTime: "07:00", endTime: "15:00", breakMinutes: 30, jobRole: "",          colorTag: null,     sortOrder: 0 },
@@ -238,7 +246,7 @@ async function main() {
   }
 
   // ── 5. Employees + user accounts ──────────────────────────────────────────
-  console.log("5/9  Seeding employees + user accounts…")
+  console.log("5/10 Seeding employees + user accounts…")
 
   // Casper is the real admin — keep every field literal and stable
   const CASPER = {
@@ -400,7 +408,7 @@ async function main() {
   }
 
   // ── 6. Schedules ──────────────────────────────────────────────────────────
-  console.log("6/9  Seeding schedules…")
+  console.log("6/10 Seeding schedules…")
 
   const SCHEDULES = [
     { id: IDS.schedW4,  weekStart: w4   },
@@ -423,7 +431,7 @@ async function main() {
   }
 
   // ── 7. Shifts ─────────────────────────────────────────────────────────────
-  console.log("7/9  Seeding shifts…")
+  console.log("7/10 Seeding shifts…")
 
   // Realistic shift notes for a coffee shop — drawn deterministically via faker
   const shiftNotes = {
@@ -806,7 +814,7 @@ async function main() {
   }
 
   // ── 8. Availability request + submissions ─────────────────────────────────
-  console.log("8/9  Seeding availability…")
+  console.log("8/10 Seeding availability…")
 
   await db.availabilityRequest.upsert({
     where:  { id: IDS.availReq },
@@ -891,8 +899,77 @@ async function main() {
     })
   }
 
-  // ── 9. Link ADMIN_EMAIL to the seeded org ─────────────────────────────────
-  console.log("9/9  Linking admin account…")
+  // ── 9. Time-off requests ──────────────────────────────────────────────────
+  console.log("9/10 Seeding time-off requests…")
+
+  const timeOffRequests = [
+    // Lena: 2 weeks ago, Mon–Tue — APPROVED (holiday)
+    {
+      id: TOR.lenaApproved,
+      employeeId: IDS.empLena,
+      startDate: addDays(w2, 0),
+      endDate:   addDays(w2, 1),
+      reason:    "Annual leave",
+      status:    "APPROVED" as const,
+      reviewNote: null,
+    },
+    // Tom: last week Friday — DENIED (too short notice)
+    {
+      id: TOR.tomDenied,
+      employeeId: IDS.empTom,
+      startDate: addDays(w1, 4),
+      endDate:   addDays(w1, 4),
+      reason:    "Personal errand",
+      status:    "DENIED" as const,
+      reviewNote: "Too short notice — please request at least 1 week ahead.",
+    },
+    // James: next week Wed–Fri — PENDING
+    {
+      id: TOR.jamesPending,
+      employeeId: IDS.empJames,
+      startDate: addDays(w_p1, 2),
+      endDate:   addDays(w_p1, 4),
+      reason:    "Family trip",
+      status:    "PENDING" as const,
+      reviewNote: null,
+    },
+    // Nadia: two weeks from now Mon–Tue — PENDING
+    {
+      id: TOR.nadiaPending,
+      employeeId: IDS.empNadia,
+      startDate: addDays(w_p2, 0),
+      endDate:   addDays(w_p2, 1),
+      reason:    "Medical appointments",
+      status:    "PENDING" as const,
+      reviewNote: null,
+    },
+  ]
+
+  for (const r of timeOffRequests) {
+    await db.timeOffRequest.upsert({
+      where: { id: r.id },
+      create: {
+        id:             r.id,
+        organizationId: IDS.org,
+        employeeId:     r.employeeId,
+        startDate:      r.startDate,
+        endDate:        r.endDate,
+        reason:         r.reason,
+        status:         r.status,
+        reviewNote:     r.reviewNote,
+      },
+      update: {
+        startDate:  r.startDate,
+        endDate:    r.endDate,
+        status:     r.status,
+        reviewNote: r.reviewNote,
+      },
+    })
+    console.log(`     → ${r.id} (${r.status})`)
+  }
+
+  // ── 10. Link ADMIN_EMAIL to the seeded org ────────────────────────────────
+  console.log("10/10 Linking admin account…")
 
   const adminEmail = process.env.ADMIN_EMAIL
   if (adminEmail) {

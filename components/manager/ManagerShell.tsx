@@ -3,15 +3,18 @@
 import { useState } from "react"
 import { PanelLeftOpen } from "lucide-react"
 import { ManagerSidebar } from "@/components/manager/ManagerSidebar"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 export function ManagerShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true)
 
   return (
+    <TooltipProvider>
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {open && <ManagerSidebar onCollapse={() => setOpen(false)} />}
 
-      <main className="flex-1 overflow-y-auto relative">
+      <main className="flex-1 overflow-y-auto relative bg-white">
         {!open && (
           <button
             onClick={() => setOpen(true)}
@@ -21,8 +24,11 @@ export function ManagerShell({ children }: { children: React.ReactNode }) {
             <PanelLeftOpen className="size-4" />
           </button>
         )}
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
+    </TooltipProvider>
   )
 }
