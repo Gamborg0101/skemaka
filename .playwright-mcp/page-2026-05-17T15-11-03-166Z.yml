@@ -1,0 +1,128 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - navigation [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - link "Sign in →" [ref=e6] [cursor=pointer]:
+          - /url: /login
+      - generic [ref=e7]:
+        - generic [ref=e10]: 14-day free trial · No credit card required
+        - heading "Staff scheduling, done right." [level=1] [ref=e11]:
+          - text: Staff scheduling,
+          - text: done right.
+        - paragraph [ref=e12]: Build weekly rosters, track labour costs, and collect availability — all in one place. Built for restaurants and hospitality.
+        - generic [ref=e13]:
+          - link "Start free trial" [ref=e14] [cursor=pointer]:
+            - /url: /login
+          - paragraph [ref=e15]: Cancel anytime
+      - generic [ref=e17]:
+        - generic [ref=e20]: Week 20 · Live schedule
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]:
+              - paragraph [ref=e24]: Casper G.
+              - paragraph [ref=e25]: Supervisor
+            - generic [ref=e28]: 10:00–18:00
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - paragraph [ref=e31]: Sarah C.
+              - paragraph [ref=e32]: Barista
+            - generic [ref=e35]: 7:00–15:00
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - paragraph [ref=e38]: Tom E.
+              - paragraph [ref=e39]: Kitchen
+            - generic [ref=e42]: 9:00–15:00
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - paragraph [ref=e45]: Mia A.
+              - paragraph [ref=e46]: Cashier
+            - generic [ref=e49]: 11:00–19:00
+        - generic [ref=e50]:
+          - generic [ref=e51]: 06:00
+          - generic [ref=e52]: 09:00
+          - generic [ref=e53]: 12:00
+          - generic [ref=e54]: 15:00
+          - generic [ref=e55]: 18:00
+          - generic [ref=e56]: 21:00
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - heading "Everything you need to run a tight schedule" [level=2] [ref=e59]
+        - paragraph [ref=e60]: One tool for the full scheduling workflow — from availability collection to payroll export.
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - img [ref=e64]
+          - heading "Drag-and-drop scheduling" [level=3] [ref=e66]
+          - paragraph [ref=e67]: Build the week's roster in minutes. Move shifts, fill gaps, and publish with one click.
+        - generic [ref=e68]:
+          - img [ref=e70]
+          - heading "Live labour costs" [level=3] [ref=e72]
+          - paragraph [ref=e73]: Wage spend updates as you place each shift — no spreadsheet required.
+        - generic [ref=e74]:
+          - img [ref=e76]
+          - heading "Availability requests" [level=3] [ref=e79]
+          - paragraph [ref=e80]: Collect availability from staff before each week and schedule around it.
+        - generic [ref=e81]:
+          - img [ref=e83]
+          - heading "Employee portal" [level=3] [ref=e88]
+          - paragraph [ref=e89]: Every team member sees their own shifts and coworkers on any device.
+        - generic [ref=e90]:
+          - img [ref=e92]
+          - heading "Time-off management" [level=3] [ref=e94]
+          - paragraph [ref=e95]: Staff submit requests. Approve or deny in one place — blocked from scheduling automatically.
+        - generic [ref=e96]:
+          - img [ref=e98]
+          - heading "Cost & payroll exports" [level=3] [ref=e101]
+          - paragraph [ref=e102]: Export weekly labour costs to CSV for payroll. Filter by role or employee.
+    - generic [ref=e104]:
+      - generic [ref=e105]:
+        - heading "Simple, transparent pricing" [level=2] [ref=e106]
+        - paragraph [ref=e107]: One plan. Everything included. Cancel anytime.
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - paragraph [ref=e110]: All-inclusive
+          - generic [ref=e111]:
+            - generic [ref=e112]: €49
+            - generic [ref=e113]: /month
+          - paragraph [ref=e114]: 14 days free, then €49/mo
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - img [ref=e117]
+            - generic [ref=e119]: Unlimited employees
+          - generic [ref=e120]:
+            - img [ref=e121]
+            - generic [ref=e123]: Drag-and-drop weekly scheduling
+          - generic [ref=e124]:
+            - img [ref=e125]
+            - generic [ref=e127]: Live labour cost tracking
+          - generic [ref=e128]:
+            - img [ref=e129]
+            - generic [ref=e131]: Availability & time-off requests
+          - generic [ref=e132]:
+            - img [ref=e133]
+            - generic [ref=e135]: Employee shift portal
+          - generic [ref=e136]:
+            - img [ref=e137]
+            - generic [ref=e139]: Payroll & cost CSV exports
+          - generic [ref=e140]:
+            - img [ref=e141]
+            - generic [ref=e143]: Schedule publishing
+          - generic [ref=e144]:
+            - img [ref=e145]
+            - generic [ref=e147]: Priority support
+        - generic [ref=e148]:
+          - link "Start 14-day free trial" [ref=e149] [cursor=pointer]:
+            - /url: /login
+          - paragraph [ref=e150]: No credit card required
+    - contentinfo [ref=e151]:
+      - generic [ref=e152]:
+        - generic [ref=e153]: Skemaka
+        - navigation [ref=e154]:
+          - link "Terms" [ref=e155] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy" [ref=e156] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=e157]: © 2026 Skemaka ApS
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e163] [cursor=pointer]:
+    - img [ref=e164]

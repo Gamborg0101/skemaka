@@ -29,8 +29,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           include: { organization: { select: { subscriptionStatus: true } } },
           orderBy: { joinedAt: "asc" },
         })
-        token.orgId = membership?.organizationId
-        token.subscriptionStatus = membership?.organization.subscriptionStatus
+        if (membership) {
+          // Use the membership role rather than the User model's role field —
+          // the User model defaults to EMPLOYEE even after org creation.
+          token.role = "MANAGER"
+          token.orgId = membership.organizationId
+          token.subscriptionStatus = membership.organization.subscriptionStatus
+        }
       }
       if (token.email === process.env.ADMIN_EMAIL) {
         token.role = "ADMIN"

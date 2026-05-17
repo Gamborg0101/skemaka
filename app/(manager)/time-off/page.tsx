@@ -17,9 +17,9 @@ import { getMondayOfWeek, addDays, formatTime } from "@/lib/dateUtils"
 type Tab = "PENDING" | "APPROVED" | "DENIED"
 
 const STATUS_STYLE: Record<Tab, string> = {
-  PENDING:  "bg-amber-100 text-amber-700",
-  APPROVED: "bg-green-100 text-green-700",
-  DENIED:   "bg-red-100 text-red-700",
+  PENDING:  "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300",
+  APPROVED: "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300",
+  DENIED:   "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300",
 }
 
 function formatDateRange(start: string, end: string) {
@@ -163,29 +163,29 @@ export default function TimeOffPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="hidden md:flex items-center px-6 py-3 border-b border-gray-200 bg-white shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900">Time Off</h1>
+      <div className="hidden md:flex items-center px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Time Off</h1>
       </div>
       <div className="md:hidden px-4 pt-6 pb-2">
-        <h1 className="text-lg font-semibold text-gray-900">Time Off</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Time Off</h1>
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit mb-6">
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-6">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-              tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             )}
           >
             {t.charAt(0) + t.slice(1).toLowerCase()}
             <span className={cn(
               "text-xs px-1.5 py-px rounded-full font-semibold",
-              tab === t ? "bg-gray-100 text-gray-600" : "bg-gray-200 text-gray-500"
+              tab === t ? "bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
             )}>
               {requests.filter((r) => r.status === t).length}
             </span>
@@ -196,7 +196,7 @@ export default function TimeOffPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-4">
+            <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <Skeleton className="size-9 rounded-full shrink-0" />
@@ -218,23 +218,23 @@ export default function TimeOffPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <p className="text-base font-medium">No {tab.toLowerCase()} requests</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filtered.map((r) => (
-            <div key={r.id} className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-4">
+            <div key={r.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-4">
               <div className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-900 text-sm">{r.employee?.name}</p>
-                    <span className="text-xs text-gray-400">·</span>
-                    <p className="text-xs text-gray-500">{r.employee?.jobRole}</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-50 text-sm">{r.employee?.name}</p>
+                    <span className="text-xs text-gray-400 dark:text-gray-600">·</span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{r.employee?.jobRole}</p>
                   </div>
-                  <p className="text-sm text-gray-700 mt-1">{formatDateRange(r.startDate, r.endDate)}</p>
-                  {r.reason && <p className="text-xs text-gray-500 mt-1">{r.reason}</p>}
-                  {r.reviewNote && <p className="text-xs text-gray-400 mt-1 italic">Note: {r.reviewNote}</p>}
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{formatDateRange(r.startDate, r.endDate)}</p>
+                  {r.reason && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{r.reason}</p>}
+                  {r.reviewNote && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Note: {r.reviewNote}</p>}
                 </div>
                 <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[r.status as Tab]}`}>
                   {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
@@ -250,7 +250,7 @@ export default function TimeOffPage() {
                     value={reviewNote}
                     onChange={(e) => setReviewNote(e.target.value)}
                     autoFocus
-                    className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                    className="flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
                   <div className="flex gap-2 shrink-0">
                     <Button size="sm" variant="destructive" onClick={() => handleDeny(r.id)}>
@@ -340,11 +340,11 @@ export default function TimeOffPage() {
 
                 return (
                   <div key={day}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                       {formatDayHeading(day)}
                     </p>
                     {dayShifts.length === 0 ? (
-                      <p className="text-sm text-gray-400 pl-1">No shifts scheduled</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">No shifts scheduled</p>
                     ) : (
                       <div className="space-y-1.5">
                         {dayShifts.map((shift) => {
@@ -355,20 +355,20 @@ export default function TimeOffPage() {
                               className={cn(
                                 "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm border",
                                 isRequesting
-                                  ? "bg-amber-50 border-amber-200"
-                                  : "bg-gray-50 border-gray-100"
+                                  ? "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800"
+                                  : "bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700"
                               )}
                             >
                               <div className="min-w-0">
-                                <p className={cn("font-medium truncate", isRequesting ? "text-amber-800" : "text-gray-800")}>
+                                <p className={cn("font-medium truncate", isRequesting ? "text-amber-800 dark:text-amber-300" : "text-gray-800 dark:text-gray-200")}>
                                   {shift.employee?.name ?? "Unknown"}
                                   {isRequesting && (
-                                    <span className="ml-1.5 text-xs font-normal text-amber-600">· requesting off</span>
+                                    <span className="ml-1.5 text-xs font-normal text-amber-600 dark:text-amber-400">· requesting off</span>
                                   )}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-0.5">{shift.jobRole}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{shift.jobRole}</p>
                               </div>
-                              <p className={cn("shrink-0 text-xs font-medium tabular-nums ml-3", isRequesting ? "text-amber-700" : "text-gray-600")}>
+                              <p className={cn("shrink-0 text-xs font-medium tabular-nums ml-3", isRequesting ? "text-amber-700 dark:text-amber-400" : "text-gray-600 dark:text-gray-400")}>
                                 {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
                               </p>
                             </div>

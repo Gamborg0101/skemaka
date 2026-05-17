@@ -87,12 +87,12 @@ function EmployeeChip({ employee, missing, over, isOverlay = false }: ChipProps)
 
   const badgeClass =
     over > 0
-      ? "bg-orange-100 text-orange-700"
+      ? "bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300"
       : missing > 4
-      ? "bg-red-100 text-red-700"
+      ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300"
       : missing > 0
-      ? "bg-amber-100 text-amber-700"
-      : "bg-green-100 text-green-700"
+      ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
+      : "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
 
   const badgeLabel =
     over > 0    ? `+${over.toFixed(0)}h`
@@ -105,17 +105,17 @@ function EmployeeChip({ employee, missing, over, isOverlay = false }: ChipProps)
       {...listeners}
       {...attributes}
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 select-none shadow-sm transition-all shrink-0 cursor-grab active:cursor-grabbing",
+        "flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 select-none shadow-sm transition-all shrink-0 cursor-grab active:cursor-grabbing",
         isDragging && !isOverlay && "opacity-40 scale-95",
         isOverlay && "rotate-1 shadow-xl scale-105"
       )}
     >
-      <div className="size-6 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-        <span className="text-[10px] font-bold text-gray-600">{getInitials(employee.name)}</span>
+      <div className="size-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
+        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{getInitials(employee.name)}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold leading-tight truncate text-gray-900">{employee.name}</p>
-        <p className="text-[10px] text-gray-400 leading-tight truncate">{employee.jobRole}</p>
+        <p className="text-xs font-semibold leading-tight truncate text-gray-900 dark:text-gray-100">{employee.name}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight truncate">{employee.jobRole}</p>
       </div>
       <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0", badgeClass)}>
         {badgeLabel}
@@ -159,18 +159,18 @@ function TimelineRow({
   })
 
   return (
-    <div className={cn("flex border-b border-gray-200", isEven ? "bg-white" : "bg-gray-50/60")}>
+    <div className={cn("flex border-b border-gray-200 dark:border-gray-700", isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50/60 dark:bg-gray-800/40")}>
       {/* Name column */}
-      <div className="w-44 shrink-0 border-r border-gray-200 px-3 py-3 flex items-center justify-between">
+      <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-3 flex items-center justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-gray-900 truncate">{employee.name}</p>
-          <p className="text-[10px] text-gray-500 truncate">{employee.jobRole}</p>
+          <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{employee.jobRole}</p>
         </div>
         {isEmpty && (
           <Tooltip content="Add shift" side="right">
             <button
               onClick={() => onRowClick(employee.id, date)}
-              className="shrink-0 size-5 rounded-full bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-700 flex items-center justify-center transition-colors ml-1"
+              className="shrink-0 size-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-500 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center transition-colors ml-1"
               aria-label={`Add shift for ${employee.name}`}
             >
               <Plus className="size-3" />
@@ -184,14 +184,14 @@ function TimelineRow({
         ref={setNodeRef}
         className={cn(
           "relative flex-1 h-14 transition-colors",
-          isOver && canDrop  && "bg-blue-50 ring-1 ring-inset ring-blue-300",
-          isOver && !canDrop && draggingEmpScheduledHere && "bg-red-50 ring-1 ring-inset ring-red-200",
+          isOver && canDrop  && "bg-blue-50 dark:bg-blue-900/30 ring-1 ring-inset ring-blue-300 dark:ring-blue-700",
+          isOver && !canDrop && draggingEmpScheduledHere && "bg-red-50 dark:bg-red-900/30 ring-1 ring-inset ring-red-200 dark:ring-red-800",
         )}
       >
         {hourMarkers.map((hour) => (
           <div
             key={hour}
-            className="absolute top-0 bottom-0 w-px bg-gray-200"
+            className="absolute top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"
             style={{ left: `${((hour - startHour) / (endHour - startHour)) * 100}%` }}
           />
         ))}
@@ -201,7 +201,7 @@ function TimelineRow({
         )}
 
         {isEmpty && canDrop && !isOver && (
-          <div className="absolute inset-x-2 inset-y-2.5 rounded-md border border-dashed border-gray-300 pointer-events-none" />
+          <div className="absolute inset-x-2 inset-y-2.5 rounded-md border border-dashed border-gray-300 dark:border-gray-600 pointer-events-none" />
         )}
 
         {shifts.map((shift) => {
@@ -241,14 +241,14 @@ function TimelineRow({
               <>
                 <div className="absolute top-0 bottom-0 w-0.5 bg-blue-400" style={{ left: `${hoverSnap.pct}%` }} />
                 <div className="absolute top-1 -translate-x-1/2" style={{ left: `${hoverSnap.pct}%` }}>
-                  <span className="text-xs font-semibold text-blue-700 bg-white border border-blue-300 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-700 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
                     {hoverSnap.time}
                   </span>
                 </div>
               </>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xs font-semibold text-blue-700 bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-full shadow-sm">
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700 px-2.5 py-1 rounded-full shadow-sm">
                   Drop to schedule
                 </span>
               </div>
@@ -258,7 +258,7 @@ function TimelineRow({
 
         {isOver && draggingEmpScheduledHere && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-xs font-semibold text-red-600 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full shadow-sm">
+            <span className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 border border-red-200 dark:border-red-800 px-2.5 py-1 rounded-full shadow-sm">
               Already has a shift
             </span>
           </div>
@@ -304,10 +304,10 @@ function DaySection({
   return (
     <div>
       {/* Sticky day header — sticks within the scrollable container */}
-      <div className={cn("sticky top-0 z-[8] border-b border-gray-200", isToday ? "bg-blue-50" : "bg-gray-50")}>
+      <div className={cn("sticky top-0 z-[8] border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50 dark:bg-blue-900/30" : "bg-gray-50 dark:bg-gray-800")}>
         {/* Date label */}
-        <div className={cn("flex items-center gap-2 px-4 py-1.5 border-b", isToday ? "border-blue-100" : "border-gray-100")}>
-          <span className={cn("text-xs font-semibold", isToday ? "text-blue-700" : "text-gray-600")}>
+        <div className={cn("flex items-center gap-2 px-4 py-1.5 border-b", isToday ? "border-blue-100 dark:border-blue-800" : "border-gray-100 dark:border-gray-700")}>
+          <span className={cn("text-xs font-semibold", isToday ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400")}>
             {dayLabel}
           </span>
           {isToday && (
@@ -319,8 +319,8 @@ function DaySection({
 
         {/* Time axis */}
         <div className="flex">
-          <div className="w-44 shrink-0 border-r border-gray-200 px-3 py-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+          <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
               Employee
             </span>
           </div>
@@ -329,7 +329,7 @@ function DaySection({
               const pct = ((hour - startHour) / (endHour - startHour)) * 100
               return (
                 <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
-                  <span className="text-[10px] font-medium text-gray-400 -translate-x-1/2 select-none">
+                  <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
                     {hour.toString().padStart(2, "0")}:00
                   </span>
                 </div>
@@ -494,8 +494,8 @@ export function ShiftTimeline({
       <div className="flex flex-col h-full">
 
         {/* Employee chips */}
-        <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 shrink-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
+        <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
             Drag to schedule · weekly hours
           </p>
           <div className="flex flex-wrap gap-2">
@@ -519,7 +519,7 @@ export function ShiftTimeline({
           <div className="min-w-[560px]">
             {dates.map((date, i) => (
               <div key={date}>
-                {i > 0 && <div className="h-3 bg-gray-100 border-y border-gray-200" />}
+                {i > 0 && <div className="h-3 bg-gray-100 dark:bg-gray-800 border-y border-gray-200 dark:border-gray-700" />}
                 <DaySection
                   date={date}
                   employees={employees}

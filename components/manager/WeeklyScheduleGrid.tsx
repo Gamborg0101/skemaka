@@ -114,9 +114,9 @@ function DroppableCell({
 
   if (isClosed) {
     return (
-      <div className={cn("relative min-h-16 border-r border-b border-gray-200", isToday ? "bg-blue-50/60" : "bg-gray-50/80")}>
+      <div className={cn("relative min-h-16 border-r border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50/60 dark:bg-blue-900/20" : "bg-gray-50/80 dark:bg-gray-800/80")}>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300 select-none">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300 dark:text-gray-600 select-none">
             Closed
           </span>
         </div>
@@ -126,9 +126,9 @@ function DroppableCell({
 
   if (isTimeOff && isEmpty) {
     return (
-      <div ref={setNodeRef} className="relative min-h-16 border-r border-b border-gray-200 bg-rose-50/60">
+      <div ref={setNodeRef} className="relative min-h-16 border-r border-b border-gray-200 dark:border-gray-700 bg-rose-50/60 dark:bg-rose-950/30">
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 select-none">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 dark:text-rose-700 select-none">
             Time Off
           </span>
         </div>
@@ -141,13 +141,13 @@ function DroppableCell({
       ref={setNodeRef}
       onClick={isEmpty ? () => onAddClick(employeeId, date) : undefined}
       className={cn(
-        "group relative min-h-16 p-1.5 border-r border-b border-gray-200 transition-colors",
+        "group relative min-h-16 p-1.5 border-r border-b border-gray-200 dark:border-gray-700 transition-colors",
         isEmpty ? "cursor-pointer" : "cursor-default",
         isOver
-          ? "bg-blue-50"
+          ? "bg-blue-50 dark:bg-blue-900/30"
           : isEmpty
-          ? isWeekend ? "bg-amber-50/60 hover:bg-amber-50" : isToday ? "bg-blue-50/40 hover:bg-blue-50/70" : "bg-gray-50 hover:bg-gray-100"
-          : isWeekend ? "bg-amber-50/40" : isToday ? "bg-blue-50/20" : "bg-white"
+          ? isWeekend ? "bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30" : isToday ? "bg-blue-50/40 dark:bg-blue-900/20 hover:bg-blue-50/70 dark:hover:bg-blue-900/30" : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+          : isWeekend ? "bg-amber-50/40 dark:bg-amber-950/10" : isToday ? "bg-blue-50/20 dark:bg-blue-900/10" : "bg-white dark:bg-gray-900"
       )}
     >
       <div className="space-y-1">
@@ -171,7 +171,7 @@ function DroppableCell({
                 e.stopPropagation()
                 onMarkSick(employeeId, date)
               }}
-              className="size-5 rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200 flex items-center justify-center"
+              className="size-5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-500 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900 flex items-center justify-center"
               aria-label="Mark sick"
             >
               <AlertTriangle className="size-3" />
@@ -183,7 +183,7 @@ function DroppableCell({
                 e.stopPropagation()
                 onAddClick(employeeId, date)
               }}
-              className="size-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center"
+              className="size-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900 flex items-center justify-center"
               aria-label="Add shift"
             >
               <Plus className="size-3" />
@@ -230,7 +230,7 @@ export function WeeklyScheduleGrid({
   const [activeShift, setActiveShift] = useState<Shift | null>(null)
   const [mobileDay, setMobileDay] = useState(0)
   const [startDayOffset, setStartDayOffset] = useState(0)
-  const [containerWidth, setContainerWidth] = useState(1200)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -238,11 +238,10 @@ export function WeeklyScheduleGrid({
     if (!el) return
     const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
     ro.observe(el)
-    setContainerWidth(el.getBoundingClientRect().width)
     return () => ro.disconnect()
   }, [])
 
-  const visibleDays = getVisibleDays(containerWidth)
+  const visibleDays = getVisibleDays(containerWidth ?? 0)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -337,7 +336,7 @@ export function WeeklyScheduleGrid({
   }
 
   return (
-    <>
+    <div ref={gridRef}>
       <DndContext
         id="weekly-schedule-dnd"
         sensors={sensors}
@@ -347,7 +346,7 @@ export function WeeklyScheduleGrid({
         {/* ── Mobile: day picker + employee list (hidden on md+) ── */}
         <div className="md:hidden flex flex-col">
           {/* Day pills */}
-          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 flex shrink-0">
+          <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex shrink-0">
             {days.map((day, i) => {
               const isToday = toISODate(day) === toISODate(new Date())
               const isWeekend = i >= 5
@@ -364,16 +363,16 @@ export function WeeklyScheduleGrid({
                 >
                   <span className={cn(
                     "text-[10px] font-semibold uppercase tracking-wide",
-                    isClosed ? "text-gray-300" : isWeekend ? "text-amber-500" : isSelected ? "text-blue-600" : "text-gray-500"
+                    isClosed ? "text-gray-300 dark:text-gray-600" : isWeekend ? "text-amber-500" : isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
                   )}>
                     {DAY_NAMES[i]}
                   </span>
                   <span className={cn(
                     "mt-0.5 size-6 flex items-center justify-center rounded-full text-xs font-bold",
                     isToday && isSelected  && "bg-blue-600 text-white",
-                    isToday && !isSelected && "ring-2 ring-blue-400 text-blue-700",
-                    !isToday && isSelected && "bg-blue-100 text-blue-700",
-                    !isToday && !isSelected && (isClosed ? "text-gray-300" : "text-gray-700")
+                    isToday && !isSelected && "ring-2 ring-blue-400 text-blue-700 dark:text-blue-400",
+                    !isToday && isSelected && "bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-400",
+                    !isToday && !isSelected && (isClosed ? "text-gray-300 dark:text-gray-600" : "text-gray-700 dark:text-gray-300")
                   )}>
                     {day.getDate()}
                   </span>
@@ -383,7 +382,7 @@ export function WeeklyScheduleGrid({
           </div>
 
           {/* Employee list for selected day */}
-          <div className="divide-y divide-gray-100 pb-20">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800 pb-20">
             {employees.map((employee) => {
               const date = toISODate(days[mobileDay])
               const cellShifts = getShiftsForCell(employee.id, date)
@@ -392,11 +391,11 @@ export function WeeklyScheduleGrid({
               const scheduled = scheduledHoursMap[employee.id] ?? 0
               const contracted = employee.contractedHours
               return (
-                <div key={employee.id} className="bg-white px-4 py-3">
+                <div key={employee.id} className="bg-white dark:bg-gray-900 px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{employee.name}</p>
-                      <p className="text-xs text-gray-500">{employee.jobRole}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">{employee.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{employee.jobRole}</p>
                       {contracted > 0 && (() => {
                         const over = scheduled - contracted
                         if (over > 0) return (
@@ -423,7 +422,7 @@ export function WeeklyScheduleGrid({
                         <Tooltip content="Mark as sick day" side="top">
                           <button
                             onClick={() => onMarkSick(employee.id, date)}
-                            className="size-10 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-colors"
+                            className="size-10 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 flex items-center justify-center transition-colors"
                             aria-label={`Mark ${employee.name} sick`}
                           >
                             <AlertTriangle className="size-4" />
@@ -432,7 +431,7 @@ export function WeeklyScheduleGrid({
                         <Tooltip content="Add shift" side="top">
                           <button
                             onClick={() => openAddDialog(employee.id, date)}
-                            className="size-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                            className="size-10 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center transition-colors"
                             aria-label={`Add shift for ${employee.name}`}
                           >
                             <Plus className="size-4" />
@@ -442,10 +441,10 @@ export function WeeklyScheduleGrid({
                     )}
                   </div>
                   {isClosed && (
-                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-gray-300">Closed</p>
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-gray-300 dark:text-gray-600">Closed</p>
                   )}
                   {isTimeOff && !isClosed && (
-                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-300">Time Off</p>
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-300 dark:text-rose-600">Time Off</p>
                   )}
                   {cellShifts.length > 0 && (
                     <div className="mt-2.5 space-y-1.5">
@@ -468,14 +467,14 @@ export function WeeklyScheduleGrid({
         </div>
 
         {/* ── Desktop: responsive grid (hidden on mobile) ── */}
-        <div ref={gridRef} className="hidden md:block">
+        <div className="hidden md:block">
           <div
             className="grid w-full"
             style={{ gridTemplateColumns: `${EMPLOYEE_COL_WIDTH}px repeat(${visibleDays}, minmax(0, 1fr))` }}
           >
             {/* Header row */}
-            <div className="sticky left-0 z-10 bg-gray-100 border-b border-r border-gray-200 px-3 py-2.5 flex items-center justify-between gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <div className="sticky left-0 z-10 bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-3 py-2.5 flex items-center justify-between gap-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Employee
               </span>
               {visibleDays < 7 && (
@@ -483,7 +482,7 @@ export function WeeklyScheduleGrid({
                   <button
                     onClick={() => setStartDayOffset((o) => Math.max(0, o - 1))}
                     disabled={startDayOffset === 0}
-                    className="size-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    className="size-5 flex items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     aria-label="Previous days"
                   >
                     <ChevronLeft className="size-3.5" />
@@ -491,7 +490,7 @@ export function WeeklyScheduleGrid({
                   <button
                     onClick={() => setStartDayOffset((o) => Math.min(7 - visibleDays, o + 1))}
                     disabled={startDayOffset + visibleDays >= 7}
-                    className="size-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    className="size-5 flex items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                     aria-label="Next days"
                   >
                     <ChevronRight className="size-3.5" />
@@ -508,26 +507,26 @@ export function WeeklyScheduleGrid({
                 <div
                   key={di}
                   className={cn(
-                    "border-b border-r border-gray-200 px-2 py-2.5 text-center",
+                    "border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2.5 text-center",
                     isClosed
-                      ? "bg-gray-100"
-                      : isToday ? "bg-blue-100" : isWeekend ? "bg-amber-50" : "bg-gray-100"
+                      ? "bg-gray-100 dark:bg-gray-800"
+                      : isToday ? "bg-blue-100 dark:bg-blue-900/40" : isWeekend ? "bg-amber-50 dark:bg-amber-950/30" : "bg-gray-100 dark:bg-gray-800"
                   )}
                 >
                   <p className={cn(
                     "text-xs font-semibold uppercase tracking-wide",
-                    isClosed ? "text-gray-400" : isToday ? "text-blue-700" : isWeekend ? "text-amber-700" : "text-gray-600"
+                    isClosed ? "text-gray-400 dark:text-gray-500" : isToday ? "text-blue-700 dark:text-blue-400" : isWeekend ? "text-amber-700 dark:text-amber-500" : "text-gray-600 dark:text-gray-400"
                   )}>
                     {DAY_NAMES[di]}
                   </p>
                   <p className={cn(
                     "text-sm font-semibold",
-                    isClosed ? "text-gray-400" : isToday ? "text-blue-800" : isWeekend ? "text-amber-800" : "text-gray-800"
+                    isClosed ? "text-gray-400 dark:text-gray-500" : isToday ? "text-blue-800 dark:text-blue-300" : isWeekend ? "text-amber-800 dark:text-amber-400" : "text-gray-800 dark:text-gray-200"
                   )}>
                     {formatHeaderDate(day)}
                   </p>
                   {isClosed && (
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Closed</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-0.5">Closed</p>
                   )}
                 </div>
               )
@@ -536,9 +535,9 @@ export function WeeklyScheduleGrid({
             {/* Employee rows */}
             {employees.map((employee) => (
               <React.Fragment key={employee.id}>
-                <div className="sticky left-0 z-10 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 flex flex-col justify-center min-h-16">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{employee.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{employee.jobRole}</p>
+                <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800/80 border-b border-r border-gray-200 dark:border-gray-700 px-3 py-2 flex flex-col justify-center min-h-16">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">{employee.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{employee.jobRole}</p>
                   {(() => {
                     const scheduled = scheduledHoursMap[employee.id] ?? 0
                     const contracted = employee.contractedHours
@@ -645,6 +644,6 @@ export function WeeklyScheduleGrid({
           />
         )
       })()}
-    </>
+    </div>
   )
 }

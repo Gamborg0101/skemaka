@@ -73,7 +73,7 @@ function ShiftPreview() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh">
       {/* ── Left panel ── */}
       <div className="hidden lg:flex lg:w-[58%] bg-slate-900 flex-col p-12 relative overflow-hidden">
         {/* Subtle dot grid */}
@@ -122,17 +122,17 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex items-center justify-center bg-white px-8 py-12">
-        <div className="w-full max-w-sm space-y-8">
+      <div className="flex-1 flex flex-col bg-white dark:bg-gray-950 px-8 overflow-y-auto">
+        <div className="w-full max-w-sm mx-auto space-y-8 py-12 my-auto">
           {/* Mobile-only logo */}
           <div className="text-center lg:hidden">
-            <p className="text-2xl font-bold text-gray-900">Skemaka</p>
-            <p className="mt-1 text-sm text-gray-500">Staff scheduling, simplified.</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">Skemaka</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Staff scheduling, simplified.</p>
           </div>
 
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Welcome back</h1>
-            <p className="mt-1.5 text-sm text-gray-500">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">Welcome back</h1>
+            <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
               Sign in to manage your team&apos;s schedule.
             </p>
           </div>
@@ -140,19 +140,19 @@ export default function LoginPage() {
           <form
             action={async () => {
               "use server"
-              await signIn("google", { redirectTo: "/schedule" })
+              await signIn("google", { redirectTo: "/onboarding" })
             }}
           >
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors"
+              className="w-full flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
             >
               <GoogleIcon />
               Continue with Google
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500">
             By signing in you agree to our{" "}
             <a href="/terms" className="underline underline-offset-2 hover:text-gray-600 transition-colors">
               Terms

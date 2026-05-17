@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose, UserCircle, CalendarX2 } from "lucide-react"
+import { useTheme } from "next-themes"
+import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose, UserCircle, CalendarX2, Sun, Moon, Monitor } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BugReportDialog } from "@/components/manager/BugReportDialog"
 import {
@@ -29,6 +30,31 @@ interface ManagerSidebarProps {
   onCollapse?: () => void
 }
 
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+
+  const options = [
+    { value: "light",  icon: Sun,     label: "Light" },
+    { value: "dark",   icon: Moon,    label: "Dark" },
+    { value: "system", icon: Monitor, label: "System" },
+  ] as const
+
+  const current = options.find((o) => o.value === theme) ?? options[2]
+  const next = options[(options.indexOf(current) + 1) % options.length]
+
+  return (
+    <button
+      onClick={() => setTheme(next.value)}
+      aria-label={`Switch to ${next.label} theme`}
+      title={`Theme: ${current.label} — click for ${next.label}`}
+      className="flex w-full items-center justify-center lg:justify-start gap-3 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors"
+    >
+      <current.icon className="size-4 shrink-0 text-gray-500" />
+      <span className="hidden lg:block text-sm font-medium text-gray-300">{current.label}</span>
+    </button>
+  )
+}
+
 export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -38,7 +64,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
   return (
     <>
       {/* Sidebar: icon-only at md (768px), full at lg (1024px) */}
-      <aside className="hidden md:flex flex-col shrink-0 bg-gray-900 w-14 lg:w-60 transition-[width] duration-200">
+      <aside className="hidden md:flex flex-col shrink-0 bg-gray-900 dark:bg-gray-950 w-14 lg:w-60 transition-[width] duration-200">
         {/* Logo */}
         <div className="flex h-14 items-center justify-center lg:justify-start px-2 lg:px-4 border-b border-white/10 gap-2">
           <span className="text-lg font-bold tracking-tight text-white lg:flex-1">
@@ -79,11 +105,16 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
           })}
         </nav>
 
-        {/* Separator before org footer */}
+        {/* Separator before footer */}
         <div className="mx-2 lg:mx-3 border-t border-white/10" />
 
-        {/* Bug report */}
+        {/* Theme toggle */}
         <div className="px-1.5 lg:px-2 pt-2">
+          <ThemeToggle />
+        </div>
+
+        {/* Bug report */}
+        <div className="px-1.5 lg:px-2 pb-1">
           <BugReportDialog />
         </div>
 
@@ -115,7 +146,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
       </aside>
 
       {/* Mobile bottom nav */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-200 bg-white">
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         {navItems.map(({ short, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/")
           return (
@@ -124,7 +155,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
               href={href}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition-colors min-w-0",
-                active ? "text-blue-600" : "text-gray-500"
+                active ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
               )}
             >
               <Icon className="size-5" />

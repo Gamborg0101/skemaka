@@ -27,9 +27,9 @@ function DayCell({
 }) {
   if (existingShift) {
     return (
-      <div className="h-full min-h-12 rounded bg-blue-50 border border-blue-200 flex flex-col items-center justify-center gap-0.5 px-1">
-        <CalendarCheck className="size-3.5 text-blue-500" />
-        <span className="text-[10px] font-semibold text-blue-700 tabular-nums">
+      <div className="h-full min-h-12 rounded bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 flex flex-col items-center justify-center gap-0.5 px-1">
+        <CalendarCheck className="size-3.5 text-blue-500 dark:text-blue-400" />
+        <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 tabular-nums">
           {formatTime(existingShift.startTime)}–{formatTime(existingShift.endTime)}
         </span>
       </div>
@@ -38,20 +38,20 @@ function DayCell({
 
   if (!day) {
     return noSubmission ? (
-      <div className="h-full min-h-12 rounded bg-red-50 border border-red-100 flex items-center justify-center">
-        <span className="text-xs text-red-300">—</span>
+      <div className="h-full min-h-12 rounded bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 flex items-center justify-center">
+        <span className="text-xs text-red-300 dark:text-red-700">—</span>
       </div>
     ) : (
-      <div className="h-full min-h-12 rounded border border-dashed border-gray-200 flex items-center justify-center">
-        <span className="text-xs text-gray-300">—</span>
+      <div className="h-full min-h-12 rounded border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+        <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
       </div>
     )
   }
 
   if (!day.isAvailable) {
     return (
-      <div className="h-full min-h-12 rounded bg-gray-100 flex items-center justify-center">
-        <span className="text-xs font-medium text-gray-400">Unavailable</span>
+      <div className="h-full min-h-12 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        <span className="text-xs font-medium text-gray-400 dark:text-gray-500">Unavailable</span>
       </div>
     )
   }
@@ -60,14 +60,14 @@ function DayCell({
     <button
       type="button"
       onClick={onBook}
-      className="group w-full h-full min-h-12 rounded bg-green-50 border border-green-200 flex flex-col items-center justify-center gap-0.5 px-1 hover:bg-green-100 hover:border-green-400 transition-colors cursor-pointer"
+      className="group w-full h-full min-h-12 rounded bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex flex-col items-center justify-center gap-0.5 px-1 hover:bg-green-100 dark:hover:bg-green-900/50 hover:border-green-400 dark:hover:border-green-700 transition-colors cursor-pointer"
     >
-      <span className="text-xs font-semibold text-green-700 tabular-nums">
+      <span className="text-xs font-semibold text-green-700 dark:text-green-300 tabular-nums">
         {day.preferredStart && day.preferredEnd
           ? `${formatTime(day.preferredStart)}–${formatTime(day.preferredEnd)}`
           : "Full day"}
       </span>
-      <span className="flex items-center gap-0.5 text-[10px] text-green-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+      <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
         <Plus className="size-2.5" />
         Book shift
       </span>
@@ -84,9 +84,9 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
 
   if (totalCount === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-white py-20 text-center">
-        <p className="text-sm font-medium text-gray-500">No employees</p>
-        <p className="text-xs text-gray-400 mt-1">Add employees to see their availability.</p>
+      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-20 text-center">
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No employees</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Add employees to see their availability.</p>
       </div>
     )
   }
@@ -111,13 +111,13 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
     <div className="space-y-4">
       {/* Summary bar */}
       <div className="flex items-center gap-4 flex-wrap">
-        <span className="text-sm text-gray-600">
-          <span className="font-semibold text-gray-900">{submittedCount}</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{submittedCount}</span>
           {" / "}
-          <span className="font-semibold text-gray-900">{totalCount}</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{totalCount}</span>
           {" submitted"}
         </span>
-        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-16">
+        <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden min-w-16">
           <div
             className="h-full bg-blue-500 rounded-full transition-all"
             style={{ width: `${totalCount > 0 ? (submittedCount / totalCount) * 100 : 0}%` }}
@@ -131,46 +131,46 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[11px] text-gray-500">
+      <div className="flex items-center gap-4 text-[11px] text-gray-500 dark:text-gray-400">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-green-100 border border-green-300" />
+          <span className="inline-block size-2.5 rounded-sm bg-green-100 dark:bg-green-900/50 border border-green-300 dark:border-green-700" />
           Available
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-blue-100 border border-blue-300" />
+          <span className="inline-block size-2.5 rounded-sm bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700" />
           Scheduled
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-gray-100 border border-gray-200" />
+          <span className="inline-block size-2.5 rounded-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" />
           Unavailable
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-red-50 border border-red-200" />
+          <span className="inline-block size-2.5 rounded-sm bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800" />
           Not submitted
         </span>
       </div>
 
       {/* Grid */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div
           className="grid"
           style={{ gridTemplateColumns: "160px repeat(7, minmax(100px, 1fr))" }}
         >
           {/* Header */}
-          <div className="border-b border-r border-gray-200 px-3 py-2.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <div className="border-b border-r border-gray-200 dark:border-gray-700 px-3 py-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
               Employee
             </span>
           </div>
           {days.map((date, i) => (
             <div
               key={date}
-              className="border-b border-r border-gray-200 px-2 py-2.5 text-center last:border-r-0"
+              className="border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2.5 text-center last:border-r-0"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {DAY_NAMES[i]}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 {new Date(date + "T12:00:00").toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "short",
@@ -185,11 +185,11 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
             const hasSubmitted = !!submission
             return (
               <React.Fragment key={employee.id}>
-                <div className="border-b border-r border-gray-100 px-3 py-2 flex flex-col justify-center last:border-b-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{employee.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{employee.jobRole}</p>
+                <div className="border-b border-r border-gray-100 dark:border-gray-800 px-3 py-2 flex flex-col justify-center last:border-b-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{employee.jobRole}</p>
                   {!hasSubmitted && (
-                    <span className="mt-1 text-xs text-amber-600 font-medium">Not submitted</span>
+                    <span className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">Not submitted</span>
                   )}
                 </div>
                 {days.map((date) => {
@@ -198,7 +198,7 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
                   return (
                     <div
                       key={`${employee.id}-${date}`}
-                      className="border-b border-r border-gray-100 p-1.5 last:border-r-0 last:border-b-0"
+                      className="border-b border-r border-gray-100 dark:border-gray-800 p-1.5 last:border-r-0 last:border-b-0"
                     >
                       <DayCell
                         day={dayData}

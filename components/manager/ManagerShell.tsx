@@ -11,10 +11,10 @@ export function ManagerShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider>
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {open && <ManagerSidebar onCollapse={() => setOpen(false)} />}
 
-      <main className="flex-1 overflow-y-auto relative bg-white">
+      <main className="flex-1 overflow-y-auto relative bg-white dark:bg-gray-900">
         {!open && (
           <button
             onClick={() => setOpen(true)}

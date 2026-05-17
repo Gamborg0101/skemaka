@@ -1,0 +1,163 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e875]:
+      - link "Schedule" [ref=e876] [cursor=pointer]:
+        - /url: /schedule
+        - img [ref=e877]
+        - text: Schedule
+      - link "Staff" [ref=e879] [cursor=pointer]:
+        - /url: /employees
+        - img [ref=e880]
+        - text: Staff
+      - link "Avail" [ref=e885] [cursor=pointer]:
+        - /url: /availability
+        - img [ref=e886]
+        - text: Avail
+      - link "Costs" [ref=e889] [cursor=pointer]:
+        - /url: /costs
+        - img [ref=e890]
+        - text: Costs
+      - link "Time Off" [ref=e892] [cursor=pointer]:
+        - /url: /time-off
+        - img [ref=e893]
+        - text: Time Off
+      - link "Shifts" [ref=e897] [cursor=pointer]:
+        - /url: /my-shifts
+        - img [ref=e898]
+        - text: Shifts
+    - main [ref=e66]:
+      - generic [ref=e67]:
+        - generic [ref=e902]:
+          - generic [ref=e903]:
+            - generic [ref=e904]:
+              - button "Week" [ref=e905]:
+                - img [ref=e906]
+                - text: Week
+              - button "Timeline" [ref=e911]:
+                - img [ref=e912]
+                - text: Timeline
+            - button "Publish" [ref=e913]
+          - generic [ref=e914]:
+            - generic [ref=e915]:
+              - button "1d" [active] [ref=e916]
+              - button "3d" [ref=e917]
+              - button "5d" [ref=e918]
+              - button "7d" [ref=e919]
+            - generic [ref=e920]:
+              - button "Previous day" [ref=e926]:
+                - img
+              - button "Next day" [ref=e927]:
+                - img
+              - button "W20" [ref=e929]:
+                - generic [ref=e930]: W20
+        - generic [ref=e86]:
+          - generic [ref=e222]:
+            - generic [ref=e223]:
+              - paragraph [ref=e224]: Drag to schedule · weekly hours
+              - generic [ref=e225]:
+                - button "CG Casper Gamborg Shift Supervisor –18h" [ref=e226]:
+                  - generic [ref=e228]: CG
+                  - generic [ref=e229]:
+                    - paragraph [ref=e230]: Casper Gamborg
+                    - paragraph [ref=e231]: Shift Supervisor
+                  - generic [ref=e232]: –18h
+                - button "DJ Dr. James O'Brien Barista +1h" [ref=e233]:
+                  - generic [ref=e235]: DJ
+                  - generic [ref=e236]:
+                    - paragraph [ref=e237]: Dr. James O'Brien
+                    - paragraph [ref=e238]: Barista
+                  - generic [ref=e239]: +1h
+                - button "LS Lena Schmidt Shift Supervisor –4h" [ref=e240]:
+                  - generic [ref=e242]: LS
+                  - generic [ref=e243]:
+                    - paragraph [ref=e244]: Lena Schmidt
+                    - paragraph [ref=e245]: Shift Supervisor
+                  - generic [ref=e246]: –4h
+                - button "MA Mia Andersen MD Cashier +5h" [ref=e247]:
+                  - generic [ref=e249]: MA
+                  - generic [ref=e250]:
+                    - paragraph [ref=e251]: Mia Andersen MD
+                    - paragraph [ref=e252]: Cashier
+                  - generic [ref=e253]: +5h
+                - button "NP Nadia Patel Barista +11h" [ref=e254]:
+                  - generic [ref=e256]: NP
+                  - generic [ref=e257]:
+                    - paragraph [ref=e258]: Nadia Patel
+                    - paragraph [ref=e259]: Barista
+                  - generic [ref=e260]: +11h
+                - button "SC Sarah Chen Barista –3h" [ref=e261]:
+                  - generic [ref=e263]: SC
+                  - generic [ref=e264]:
+                    - paragraph [ref=e265]: Sarah Chen
+                    - paragraph [ref=e266]: Barista
+                  - generic [ref=e267]: –3h
+                - button "TE Tom Eriksson Kitchen –4h" [ref=e268]:
+                  - generic [ref=e270]: TE
+                  - generic [ref=e271]:
+                    - paragraph [ref=e272]: Tom Eriksson
+                    - paragraph [ref=e273]: Kitchen
+                  - generic [ref=e274]: –4h
+            - generic [ref=e932]:
+              - generic [ref=e933]:
+                - generic [ref=e934]:
+                  - generic [ref=e935]: Sunday 17 May
+                  - generic [ref=e936]: Today
+                - generic [ref=e937]:
+                  - generic [ref=e938]: Employee
+                  - generic [ref=e939]:
+                    - generic [ref=e941]: 06:00
+                    - generic [ref=e943]: 08:00
+                    - generic [ref=e945]: 10:00
+                    - generic [ref=e947]: 12:00
+                    - generic [ref=e949]: 14:00
+                    - generic [ref=e951]: 16:00
+                    - generic [ref=e953]: 18:00
+                    - generic [ref=e955]: 20:00
+                    - generic [ref=e957]: 22:00
+              - generic [ref=e960]:
+                - generic [ref=e961]:
+                  - paragraph [ref=e962]: Casper Gamborg
+                  - paragraph [ref=e963]: Shift Supervisor
+                - button "Add shift for Casper Gamborg" [ref=e964]:
+                  - img [ref=e965]
+              - generic [ref=e978]:
+                - generic [ref=e979]:
+                  - paragraph [ref=e980]: Dr. James O'Brien
+                  - paragraph [ref=e981]: Barista
+                - button "Add shift for Dr. James O'Brien" [ref=e982]:
+                  - img [ref=e983]
+              - generic [ref=e996]:
+                - generic [ref=e997]:
+                  - paragraph [ref=e998]: Lena Schmidt
+                  - paragraph [ref=e999]: Shift Supervisor
+                - button "Add shift for Lena Schmidt" [ref=e1000]:
+                  - img [ref=e1001]
+              - generic [ref=e1014]:
+                - generic [ref=e1015]:
+                  - paragraph [ref=e1016]: Mia Andersen MD
+                  - paragraph [ref=e1017]: Cashier
+                - button "Add shift for Mia Andersen MD" [ref=e1018]:
+                  - img [ref=e1019]
+              - generic [ref=e1032]:
+                - generic [ref=e1033]:
+                  - paragraph [ref=e1034]: Nadia Patel
+                  - paragraph [ref=e1035]: Barista
+                - button "Add shift for Nadia Patel" [ref=e1036]:
+                  - img [ref=e1037]
+              - generic [ref=e1050]:
+                - generic [ref=e1051]:
+                  - paragraph [ref=e1052]: Sarah Chen
+                  - paragraph [ref=e1053]: Barista
+                - button "Add shift for Sarah Chen" [ref=e1054]:
+                  - img [ref=e1055]
+              - generic [ref=e1068]:
+                - generic [ref=e1069]:
+                  - paragraph [ref=e1070]: Tom Eriksson
+                  - paragraph [ref=e1071]: Kitchen
+                - button "Add shift for Tom Eriksson" [ref=e1072]:
+                  - img [ref=e1073]
+          - status [ref=e431]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e205] [cursor=pointer]:
+    - img [ref=e206]
+  - alert [ref=e209]
