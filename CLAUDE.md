@@ -10,10 +10,13 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 ## Auth & sessions
 
 - **NextAuth 5 beta, JWT strategy.** `auth()` is a JWT decode — no DB hit. Use it freely.
-- **`orgId` is embedded in the JWT** (set in the `jwt` callback on sign-in). Access it via `session.user.orgId`.
+- **`orgId` and `role` are embedded in the JWT** (set in the `jwt` callback on sign-in). Access via `session.user.orgId` / `session.user.role`.
+- **JWT role is set from the MANAGER membership, not the User model.** The User model defaults to `EMPLOYEE`; only the membership record matters. The jwt callback sets `token.role = "MANAGER"` if a manager membership is found.
 - **`requireOrgMember(orgId)`** in `lib/apiGuard.ts`:
   - Fast path: checks `session.user.orgId === orgId` — zero DB queries.
   - Slow path (fallback): `db.membership.findFirst()` — only fires if `session.user.orgId` is absent (new user just finished onboarding, token predates this field).
+- **ManagerLayout** has the same slow-path fallback: if `session.user.role` is not MANAGER/ADMIN, it does a DB membership check. If no membership → `/onboarding`. This handles the window between org creation and next sign-in.
+- **Login redirects to `/onboarding`** (not `/schedule`). Onboarding checks `/api/me/context` and redirects returning users to `/schedule` immediately. New users see the onboarding wizard.
 - Edge middleware (`proxy.ts`) uses `authConfig` (edge-safe, no Prisma), not `lib/auth.ts`.
 
 ---
@@ -93,6 +96,7 @@ Current screenshots of the app live in `screenshots/`. Use them to understand th
 | `screenshots/06-settings.png` | Settings page |
 | `screenshots/07-schedule-timeline.png` | Schedule — timeline view |
 | `screenshots/08-my-shifts.png` | My Shifts page |
+| `screenshots/landing-desktop-hero.png` | Landing page — desktop hero (unauthenticated `/`) |
 
 ---
 

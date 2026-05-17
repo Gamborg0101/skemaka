@@ -1,0 +1,124 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - navigation [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - link "Sign in →" [ref=e6] [cursor=pointer]:
+          - /url: /login
+      - generic [ref=e7]:
+        - generic [ref=e10]: 14-day free trial · then €49/mo · No credit card required
+        - heading "Build your week's rota in minutes." [level=1] [ref=e11]
+        - paragraph [ref=e12]: No spreadsheets, no WhatsApp groups. Skemaka gives your team a live rota — with costs, availability, and time-off all in one place.
+        - link "Start free trial" [ref=e14] [cursor=pointer]:
+          - /url: /login
+      - generic [ref=e16]:
+        - generic [ref=e19]: Week 20 · Live schedule
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - paragraph [ref=e23]: Casper G.
+              - paragraph [ref=e24]: Supervisor
+            - generic [ref=e27]: 10:00–18:00
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - paragraph [ref=e30]: Sarah C.
+              - paragraph [ref=e31]: Barista
+            - generic [ref=e34]: 7:00–15:00
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - paragraph [ref=e37]: Tom E.
+              - paragraph [ref=e38]: Kitchen
+            - generic [ref=e41]: 9:00–15:00
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - paragraph [ref=e44]: Mia A.
+              - paragraph [ref=e45]: Cashier
+            - generic [ref=e48]: 11:00–19:00
+        - generic [ref=e49]:
+          - generic [ref=e50]: 06:00
+          - generic [ref=e51]: 09:00
+          - generic [ref=e52]: 12:00
+          - generic [ref=e53]: 15:00
+          - generic [ref=e54]: 18:00
+          - generic [ref=e55]: 21:00
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - heading "Simple, transparent pricing" [level=2] [ref=e59]
+        - paragraph [ref=e60]: One plan. Everything included. Cancel anytime.
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - paragraph [ref=e63]: All-inclusive
+          - generic [ref=e64]:
+            - generic [ref=e65]: €49
+            - generic [ref=e66]: /month
+          - paragraph [ref=e67]: 14 days free, then €49/mo
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - img [ref=e70]
+            - generic [ref=e72]: Unlimited employees
+          - generic [ref=e73]:
+            - img [ref=e74]
+            - generic [ref=e76]: Drag-and-drop weekly scheduling
+          - generic [ref=e77]:
+            - img [ref=e78]
+            - generic [ref=e80]: Live labour cost tracking
+          - generic [ref=e81]:
+            - img [ref=e82]
+            - generic [ref=e84]: Availability & time-off requests
+          - generic [ref=e85]:
+            - img [ref=e86]
+            - generic [ref=e88]: Employee shift portal
+          - generic [ref=e89]:
+            - img [ref=e90]
+            - generic [ref=e92]: Payroll & cost CSV exports
+          - generic [ref=e93]:
+            - img [ref=e94]
+            - generic [ref=e96]: Schedule publishing
+          - generic [ref=e97]:
+            - img [ref=e98]
+            - generic [ref=e100]: Priority support
+        - generic [ref=e101]:
+          - link "Start 14-day free trial" [ref=e102] [cursor=pointer]:
+            - /url: /login
+          - paragraph [ref=e103]: No credit card required
+    - generic [ref=e104]:
+      - generic [ref=e105]:
+        - heading "Everything you need to run a tight schedule" [level=2] [ref=e106]
+        - paragraph [ref=e107]: One tool for the full scheduling workflow — from collecting availability to exporting hours for payroll.
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - img [ref=e111]
+          - heading "Drag-and-drop scheduling" [level=3] [ref=e113]
+          - paragraph [ref=e114]: Build the week's rota in minutes. Move shifts, fill gaps, and publish to your whole team in one click.
+        - generic [ref=e115]:
+          - img [ref=e117]
+          - heading "Live labour costs" [level=3] [ref=e119]
+          - paragraph [ref=e120]: Wage spend updates as you place each shift — so you never go over budget.
+        - generic [ref=e121]:
+          - img [ref=e123]
+          - heading "Collect availability before you schedule" [level=3] [ref=e126]
+          - paragraph [ref=e127]: Send a link to your team. They fill in when they're free. You schedule around it.
+        - generic [ref=e128]:
+          - img [ref=e130]
+          - heading "Staff see their shifts on their phone" [level=3] [ref=e135]
+          - paragraph [ref=e136]: Everyone on your team gets a personal shift view — no printing, no group chats.
+        - generic [ref=e137]:
+          - img [ref=e139]
+          - heading "Time-off management" [level=3] [ref=e141]
+          - paragraph [ref=e142]: Staff submit requests. Approve or deny in one place — they're automatically blocked from that shift.
+        - generic [ref=e143]:
+          - img [ref=e145]
+          - heading "Hours worked & payroll export" [level=3] [ref=e148]
+          - paragraph [ref=e149]: See total hours and wage cost per person each week. Export to a spreadsheet for payroll.
+    - contentinfo [ref=e150]:
+      - generic [ref=e151]:
+        - generic [ref=e152]: Skemaka
+        - navigation [ref=e153]:
+          - link "Terms" [ref=e154] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy" [ref=e155] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=e156]: © 2026 Skemaka ApS
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e162] [cursor=pointer]:
+    - img [ref=e163]

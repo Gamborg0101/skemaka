@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Check, ChevronRight, Building2, Users, Settings } from "lucide-react"
+import { Check, ChevronRight } from "lucide-react"
 
-type Step = 1 | 2 | 3
+type Step = 1 | 2
 
 const CURRENCIES = [
   { code: "EUR", label: "Euro (€)" },
@@ -20,7 +20,6 @@ const DEFAULT_ROLES = ["Waiter", "Chef", "Bartender", "Manager", "Host", "Cashie
 const STEPS = [
   { n: 1 as Step, label: "Workspace" },
   { n: 2 as Step, label: "Team" },
-  { n: 3 as Step, label: "Done" },
 ]
 
 export default function OnboardingPage() {
@@ -199,7 +198,7 @@ export default function OnboardingPage() {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Add your team</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Add employees now, or skip and do it later from the Employees page.
+                  Add employees now, or go straight to your schedule and add them later.
                 </p>
               </div>
 
@@ -226,7 +225,9 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Email</label>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                    Email <span className="normal-case font-normal text-gray-400">(for shift portal access)</span>
+                  </label>
                   <input
                     type="email"
                     value={empEmail}
@@ -268,79 +269,19 @@ export default function OnboardingPage() {
                 </button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setStep(3)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Continue <ChevronRight className="size-4" />
-                </button>
-                <button
-                  onClick={() => setStep(3)}
-                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
-                >
-                  Skip for now
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 3: Done ── */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="size-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                  <Check className="size-8 text-green-600" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">You&apos;re all set!</h2>
-                <p className="text-sm text-gray-500 mt-1">Your workspace is ready. What would you like to do first?</p>
-              </div>
-
-              <div className="space-y-2">
-                {[
-                  {
-                    icon: Users,
-                    label: "Manage employees",
-                    sub: "Add staff, set wages, send invites",
-                    href: "/employees",
-                  },
-                  {
-                    icon: Building2,
-                    label: "View schedule",
-                    sub: "Start building this week's roster",
-                    href: "/schedule",
-                  },
-                  {
-                    icon: Settings,
-                    label: "Configure settings",
-                    sub: "Business hours, job roles & more",
-                    href: "/settings",
-                  },
-                ].map(({ icon: Icon, label, sub, href }) => (
-                  <button
-                    key={href}
-                    onClick={() => router.push(href)}
-                    className="w-full flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
-                  >
-                    <div className="size-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                      <Icon className="size-4 text-gray-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{label}</p>
-                      <p className="text-xs text-gray-500">{sub}</p>
-                    </div>
-                    <ChevronRight className="size-4 text-gray-300 ml-auto shrink-0" />
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => router.push("/schedule")}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {addedEmployees.length > 0 ? "Go to schedule" : "Skip — go to schedule"}
+                <ChevronRight className="size-4" />
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {step < 3 && (
-        <p className="mt-4 text-xs text-gray-400">All settings can be changed later.</p>
-      )}
+      <p className="mt-4 text-xs text-gray-400">All settings can be changed later.</p>
     </div>
   )
 }

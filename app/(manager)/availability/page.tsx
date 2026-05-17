@@ -187,9 +187,9 @@ export default function AvailabilityPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Desktop header */}
-      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold text-gray-900">Availability</h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Availability</h1>
           {request && (
             <Badge
               variant="outline"
@@ -216,7 +216,7 @@ export default function AvailabilityPage() {
       <div className="md:hidden px-4 pt-6 pb-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-gray-900">Availability</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Availability</h1>
             {request && (
               <Badge
                 variant="outline"
@@ -238,7 +238,7 @@ export default function AvailabilityPage() {
             {sending ? "Sending..." : request ? "Request sent" : "Send"}
           </Button>
         </div>
-        {deadline && <p className="text-xs text-gray-500 mt-1">Deadline: {deadline}</p>}
+        {deadline && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Deadline: {deadline}</p>}
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
@@ -247,8 +247,8 @@ export default function AvailabilityPage() {
         <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(-1)}>
           <ChevronLeft className="size-4" />
         </Button>
-        <div className="text-sm font-medium text-gray-800 min-w-0">
-          <span className="text-gray-400 mr-1.5 text-xs">Week {getISOWeek(weekStart)}</span>
+        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 min-w-0">
+          <span className="text-gray-400 dark:text-gray-500 mr-1.5 text-xs">Week {getISOWeek(weekStart)}</span>
           {formatWeekLabel(weekStart)}
         </div>
         <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(1)}>
@@ -257,24 +257,24 @@ export default function AvailabilityPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+          <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="px-3 py-2"><Skeleton className="h-4 w-16" /></div>
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="px-2 py-2 text-center border-l border-gray-200">
+              <div key={i} className="px-2 py-2 text-center border-l border-gray-200 dark:border-gray-700">
                 <Skeleton className="h-3 w-8 mx-auto mb-1" />
                 <Skeleton className="h-4 w-6 mx-auto" />
               </div>
             ))}
           </div>
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className={`grid grid-cols-[140px_repeat(7,1fr)] border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/50" : "bg-white"}`}>
+            <div key={i} className={`grid grid-cols-[140px_repeat(7,1fr)] border-b border-gray-100 dark:border-gray-800 ${i % 2 === 1 ? "bg-gray-50/50 dark:bg-gray-800/50" : "bg-white dark:bg-gray-900"}`}>
               <div className="px-3 py-3 flex items-center gap-2">
                 <Skeleton className="size-7 rounded-full shrink-0" />
                 <Skeleton className="h-4 w-20" />
               </div>
               {Array.from({ length: 7 }).map((_, j) => (
-                <div key={j} className="border-l border-gray-100 py-3 px-2">
+                <div key={j} className="border-l border-gray-100 dark:border-gray-800 py-3 px-2">
                   <Skeleton className="h-6 w-full rounded-md" />
                 </div>
               ))}
@@ -289,9 +289,9 @@ export default function AvailabilityPage() {
           shifts={shifts}
         />
       ) : (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white py-20 text-center">
-          <p className="text-sm font-medium text-gray-500">No availability request for this week</p>
-          <p className="text-xs text-gray-400 mt-1">
+        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-20 text-center">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No availability request for this week</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             Send a request to collect availability from your team.
           </p>
         </div>

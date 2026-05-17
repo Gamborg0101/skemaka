@@ -156,8 +156,8 @@ export function AddShiftDialog({
                   className={cn(
                     "inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors",
                     isActive
-                      ? "bg-blue-50 border-blue-300 text-blue-700"
-                      : "border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700"
+                      ? "bg-blue-50 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300"
+                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/40 hover:border-blue-200 dark:hover:border-blue-700 hover:text-blue-700 dark:hover:text-blue-300"
                   )}
                 >
                   <span className="font-medium">{tmpl.name}</span>
@@ -170,7 +170,7 @@ export function AddShiftDialog({
           </div>
         )}
 
-        <div className="border-t border-gray-100" />
+        <div className="border-t border-gray-100 dark:border-gray-700" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -252,7 +252,7 @@ export function AddShiftDialog({
             <button
               type="button"
               onClick={() => setShowNotes(true)}
-              className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
+              className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               + Add a note
             </button>

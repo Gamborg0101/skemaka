@@ -31,17 +31,17 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="hidden md:flex items-center gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+      <div className="hidden md:flex items-center gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Organization settings</h1>
-          <p className="text-xs text-gray-500">Manage your workspace configuration.</p>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Organization settings</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Manage your workspace configuration.</p>
         </div>
       </div>
 
       {/* Mobile header */}
       <div className="md:hidden px-4 pt-6 pb-2">
-        <h1 className="text-lg font-semibold text-gray-900">Organization settings</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Manage your workspace configuration.</p>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Organization settings</h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage your workspace configuration.</p>
       </div>
 
       {/* Content */}
@@ -58,16 +58,16 @@ export default function SettingsPage() {
           {COMING_SOON.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
-              className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4"
+              className="flex items-start gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-5 py-4"
             >
-              <div className="mt-0.5 size-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                <Icon className="size-4 text-gray-500" />
+              <div className="mt-0.5 size-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                <Icon className="size-4 text-gray-500 dark:text-gray-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">{title}</p>
-                <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-50">{title}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
               </div>
-              <span className="ml-auto shrink-0 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full self-center">
+              <span className="ml-auto shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full self-center">
                 Coming soon
               </span>
             </div>

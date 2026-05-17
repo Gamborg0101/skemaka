@@ -126,10 +126,10 @@ export default function EmployeesPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Desktop header */}
-      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Employees</h1>
-          <p className="text-xs text-gray-500">{activeCount} active · {inactiveCount} inactive</p>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Employees</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{activeCount} active · {inactiveCount} inactive</p>
         </div>
         {activeTab === "active" && (
           <Button onClick={() => setAddOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
@@ -141,8 +141,8 @@ export default function EmployeesPage() {
       {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between gap-3 px-4 pt-6 pb-2">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Employees</h1>
-          <p className="text-xs text-gray-500">{activeCount} active · {inactiveCount} inactive</p>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Employees</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{activeCount} active · {inactiveCount} inactive</p>
         </div>
         {activeTab === "active" && (
           <Button onClick={() => setAddOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
@@ -153,18 +153,18 @@ export default function EmployeesPage() {
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
-      <div className="flex gap-1 mb-4 border-b border-gray-200">
+      <div className="flex gap-1 mb-4 border-b border-gray-200 dark:border-gray-700">
         {(["active", "inactive"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px capitalize ${
-              activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+              activeTab === tab ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
           >
             {tab}
             {(tab === "active" ? activeCount : inactiveCount) > 0 && (
-              <span className="ml-1.5 text-xs rounded-full bg-gray-100 text-gray-600 px-1.5 py-0.5 tabular-nums">
+              <span className="ml-1.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 tabular-nums">
                 {tab === "active" ? activeCount : inactiveCount}
               </span>
             )}
@@ -173,10 +173,10 @@ export default function EmployeesPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-100 border-b border-gray-200">
+              <tr className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <th className="px-4 py-3 text-left"><Skeleton className="h-4 w-16" /></th>
                 <th className="hidden sm:table-cell px-4 py-3 text-left"><Skeleton className="h-4 w-16" /></th>
                 <th className="hidden md:table-cell px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></th>
@@ -185,7 +185,7 @@ export default function EmployeesPage() {
             </thead>
             <tbody>
               {Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className={`border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50" : "bg-white"}`}>
+                <tr key={i} className={`border-b border-gray-100 dark:border-gray-800 ${i % 2 === 1 ? "bg-gray-50 dark:bg-gray-800/50" : "bg-white dark:bg-gray-900"}`}>
                   <td className="px-4 py-3">
                     <Skeleton className="h-4 w-32 mb-1.5" />
                     <Skeleton className="h-3 w-24" />
@@ -205,49 +205,49 @@ export default function EmployeesPage() {
           </table>
         </div>
       ) : visibleEmployees.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
+        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-16 text-center">
           {activeTab === "active" ? (
             <>
-              <p className="text-sm font-medium text-gray-500">No active employees</p>
-              <p className="text-xs text-gray-400 mt-1">Add your first employee to get started.</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No active employees</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Add your first employee to get started.</p>
             </>
           ) : (
-            <p className="text-sm font-medium text-gray-500">No inactive employees</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No inactive employees</p>
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-100 hover:bg-gray-100">
-                <TableHead className="text-gray-700 font-semibold">Name</TableHead>
-                <TableHead className="hidden sm:table-cell text-gray-700 font-semibold">Job Role</TableHead>
-                <TableHead className="hidden md:table-cell text-right text-gray-700 font-semibold">Hourly Wage</TableHead>
-                <TableHead className="text-right text-gray-700 font-semibold">Actions</TableHead>
+              <TableRow className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800">
+                <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Name</TableHead>
+                <TableHead className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-semibold">Job Role</TableHead>
+                <TableHead className="hidden md:table-cell text-right text-gray-700 dark:text-gray-300 font-semibold">Hourly Wage</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300 font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {visibleEmployees.map((emp, idx) => (
                 <TableRow
                   key={emp.id}
-                  className={`transition-colors cursor-pointer hover:bg-blue-50/40 ${idx % 2 === 1 ? "bg-gray-50" : "bg-white"}`}
+                  className={`transition-colors cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/20 ${idx % 2 === 1 ? "bg-gray-50 dark:bg-gray-800/50" : "bg-white dark:bg-gray-900"}`}
                   onClick={() => openSheet(emp)}
                 >
                   <TableCell>
                     <div>
-                      <p className="font-semibold text-gray-900">{emp.name}</p>
-                      <p className="text-xs text-gray-500">{emp.phone ?? "—"}</p>
-                      <p className="text-xs text-gray-500 sm:hidden">{emp.jobRole}</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-50">{emp.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{emp.phone ?? "—"}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">{emp.jobRole}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-gray-700 font-medium">{emp.jobRole}</TableCell>
-                  <TableCell className="hidden md:table-cell text-right tabular-nums text-gray-700 font-medium">
+                  <TableCell className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-medium">{emp.jobRole}</TableCell>
+                  <TableCell className="hidden md:table-cell text-right tabular-nums text-gray-700 dark:text-gray-300 font-medium">
                     {formatCurrency(emp.hourlyWage)}/hr
                   </TableCell>
                   <TableCell className="text-right">
                     {/* On mobile, tapping the row opens the sheet — action buttons shown on sm+ */}
                     <div className="hidden sm:flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" onClick={() => openSheet(emp)} className="text-gray-500 hover:text-gray-700 text-xs">
+                      <Button variant="ghost" size="sm" onClick={() => openSheet(emp)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs">
                         View
                       </Button>
                       <Tooltip content="Edit employee">
@@ -275,7 +275,7 @@ export default function EmployeesPage() {
                       </Tooltip>
                     </div>
                     {/* Mobile: chevron indicator (row tap opens sheet) */}
-                    <span className="sm:hidden text-gray-300 text-xs">›</span>
+                    <span className="sm:hidden text-gray-300 dark:text-gray-600 text-xs">›</span>
                   </TableCell>
                 </TableRow>
               ))}

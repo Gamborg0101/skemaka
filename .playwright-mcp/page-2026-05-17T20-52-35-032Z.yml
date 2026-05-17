@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Skemaka
+      - paragraph [ref=e7]: Staff scheduling, simplified.
+    - generic [ref=e8]:
+      - heading "Welcome back" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Sign in to manage your team's schedule.
+    - button "Continue with Google" [ref=e12]:
+      - img [ref=e13]
+      - text: Continue with Google
+    - paragraph [ref=e18]:
+      - text: By signing in you agree to our
+      - link "Terms" [ref=e19] [cursor=pointer]:
+        - /url: /terms
+      - text: and
+      - link "Privacy Policy" [ref=e20] [cursor=pointer]:
+        - /url: /privacy
+      - text: .
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e26] [cursor=pointer]:
+    - img [ref=e27]

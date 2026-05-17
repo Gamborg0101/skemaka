@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus, X } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { WeeklyScheduleGrid } from "@/components/manager/WeeklyScheduleGrid"
@@ -20,6 +20,7 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState<"week" | "timeline">(() => getOrgSettings().defaultScheduleView)
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split("T")[0])
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
+  const [hintDismissed, setHintDismissed] = useState(false)
 
   const {
     schedule, loading, employees, approvedTimeOff, publishing,
@@ -37,11 +38,8 @@ export default function SchedulePage() {
   }
 
   const jumpToWeek = (newWeekStart: string) => {
-    const offset = Math.round(
-      (new Date(selectedDay + "T12:00:00").getTime() - new Date(weekStart + "T12:00:00").getTime()) / 86400000
-    )
     setWeekStart(newWeekStart)
-    setSelectedDay(addDays(newWeekStart, Math.max(0, Math.min(6, offset))))
+    setSelectedDay(newWeekStart)
   }
 
   const jumpToDay = (day: string) => {
@@ -57,17 +55,27 @@ export default function SchedulePage() {
     if (newWeekStart !== weekStart) setWeekStart(newWeekStart)
   }
 
+  const navigateDays = (direction: -1 | 1) => {
+    const newDay = addDays(selectedDay, direction * dayCount)
+    const newWeekStart = getMondayOfWeek(new Date(newDay + "T12:00:00"))
+    setSelectedDay(newDay)
+    if (newWeekStart !== weekStart) setWeekStart(newWeekStart)
+  }
+
   const today = new Date().toISOString().split("T")[0]
   const isCurrentWeek = getMondayOfWeek(new Date()) === weekStart
 
   const timelineDates = useMemo(() => {
-    const base = dayCount === 1 ? selectedDay : weekStart
-    return Array.from({ length: dayCount }, (_, i) => addDays(base, i))
+    const weekSunday = addDays(weekStart, 6)
+    return Array.from({ length: dayCount }, (_, i) => {
+      const d = addDays(selectedDay, i)
+      return d <= weekSunday ? d : null
+    }).filter(Boolean) as string[]
   }, [dayCount, selectedDay, weekStart])
 
   const todayHidden = viewMode === "week"
     ? isCurrentWeek
-    : dayCount === 1 ? selectedDay === today : isCurrentWeek
+    : timelineDates.includes(today)
 
   const orgSettings = getOrgSettings()
   const { timelineStartHour, timelineEndHour } = useMemo(() => {
@@ -106,6 +114,32 @@ export default function SchedulePage() {
     }, {}),
   [employees, schedule?.shifts])
 
+  // Auto-select 1d on mobile when in timeline mode
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)")
+    const handle = (e: MediaQueryListEvent) => {
+      if (e.matches && viewMode === "timeline") setDayCount(1)
+    }
+    if (mq.matches && viewMode === "timeline") setDayCount(1)
+    mq.addEventListener("change", handle)
+    return () => mq.removeEventListener("change", handle)
+  }, [viewMode])
+
+  // Date range label for multi-day timeline nav
+  const timelineRangeLabel = (() => {
+    if (timelineDates.length === 0) return ""
+    const fmt = (iso: string) => {
+      const d = new Date(iso + "T12:00:00")
+      return [
+        d.toLocaleDateString("en-GB", { weekday: "short" }),
+        d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+      ].join(" ")
+    }
+    const first = timelineDates[0]
+    const last = timelineDates[timelineDates.length - 1]
+    return first === last ? fmt(first) : `${fmt(first)} – ${fmt(last)}`
+  })()
+
   // Shared header elements
   const viewToggle = (
     <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
@@ -131,7 +165,7 @@ export default function SchedulePage() {
   )
 
   const dayCountSelector = viewMode === "timeline" ? (
-    <div className="flex rounded-md border border-gray-200 overflow-hidden shrink-0">
+    <div className="hidden md:flex rounded-md border border-gray-200 overflow-hidden shrink-0">
       {([1, 3, 5, 7] as const).map((n, i) => (
         <button
           key={n}
@@ -152,7 +186,7 @@ export default function SchedulePage() {
         <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label="Previous day">
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="text-sm font-semibold text-gray-700 min-w-44 text-center hidden md:block">
+        <span className="text-sm font-semibold text-gray-700 text-center md:min-w-44">
           {formatDayLabel(selectedDay)}
         </span>
         <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label="Next day">
@@ -162,13 +196,16 @@ export default function SchedulePage() {
       </>
     ) : (
       <>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDays(-1)} aria-label="Previous">
           <ChevronLeft className="size-4" />
         </Button>
-        <WeekPicker weekStart={weekStart} onChange={jumpToWeek} />
-        <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week">
+        <span className="text-sm font-semibold text-gray-700 text-center hidden md:block md:min-w-44">
+          {timelineRangeLabel}
+        </span>
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDays(1)} aria-label="Next">
           <ChevronRight className="size-4" />
         </Button>
+        <WeekPicker weekStart={weekStart} onChange={jumpToWeek} />
       </>
     )
   ) : (
@@ -199,8 +236,8 @@ export default function SchedulePage() {
   return (
     <div className="flex flex-col h-full">
       {/* Desktop header — single row (md+) */}
-      <div className="hidden md:flex items-center gap-2 px-6 py-3 border-b border-gray-200 bg-white">
-        <h1 className="text-lg font-semibold text-gray-900 shrink-0">Schedule</h1>
+      <div className="hidden md:flex items-center gap-2 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50 shrink-0">Schedule</h1>
         {viewToggle}
         <div className="flex-1" />
         <Button
@@ -218,13 +255,13 @@ export default function SchedulePage() {
       </div>
 
       {/* Mobile header — two rows (<md) */}
-      <div className="md:hidden border-b border-gray-200 bg-white">
+      <div className="md:hidden border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="flex items-center gap-2 px-4 py-2">
           {viewToggle}
           <div className="flex-1" />
           {publishBtn}
         </div>
-        <div className="flex items-center gap-1.5 px-4 py-2 border-t border-gray-100">
+        <div className="flex items-center gap-1.5 px-4 py-2 border-t border-gray-100 dark:border-gray-800">
           <Button
             variant="outline"
             size="sm"
@@ -241,6 +278,21 @@ export default function SchedulePage() {
       </div>
 
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
+        {!loading && !hintDismissed && employees.length > 0 && (schedule?.shifts ?? []).length === 0 && (
+          <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50 px-4 py-3">
+            <span className="text-sm text-blue-800 dark:text-blue-300 flex-1">
+              <span className="font-semibold">Your schedule is ready.</span>{" "}
+              Click any empty cell to add your first shift.
+            </span>
+            <button
+              onClick={() => setHintDismissed(true)}
+              aria-label="Dismiss"
+              className="shrink-0 text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="p-4 space-y-0">
             <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
