@@ -21,6 +21,11 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Cannot remove an admin's access" }, { status: 403 })
   }
 
+  const membership = await db.membership.findUnique({
+    where: { userId_organizationId: { userId, organizationId: orgId } },
+  })
+  if (!membership) return NextResponse.json({ error: "User is not a member of this organisation" }, { status: 404 })
+
   await db.$transaction([
     db.membership.update({
       where: { userId_organizationId: { userId, organizationId: orgId } },

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,93 +9,22 @@ import { ShiftTimeline } from "@/components/manager/ShiftTimeline"
 import { getOrgSettings } from "@/lib/orgSettings"
 import { getMondayOfWeek, addDays, formatDayLabel } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
-import { toast } from "sonner"
-import type { Shift, Employee, Schedule, TimeOffRequest } from "@/types"
 import { useOrg } from "@/lib/orgContext"
+import { useScheduleData } from "@/lib/useScheduleData"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function SchedulePage() {
   const { orgId, jobRoles, shiftTemplates } = useOrg()
 
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
-  const [schedule, setSchedule] = useState<Schedule | null>(null)
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
-  const [publishing, setPublishing] = useState(false)
-  const [approvedTimeOff, setApprovedTimeOff] = useState<TimeOffRequest[]>([])
   const [viewMode, setViewMode] = useState<"week" | "timeline">(() => getOrgSettings().defaultScheduleView)
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split("T")[0])
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
 
-  useEffect(() => {
-    fetch(`/api/orgs/${orgId}/employees`)
-      .then((r) => r.json())
-      .then((data: { data?: Employee[] }) => { if (data.data) setEmployees(data.data) })
-      .catch(() => toast.error("Failed to load employees"))
-  }, [orgId])
-
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-
-    async function load() {
-      try {
-        const r = await fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
-        const data = await r.json() as { data: Schedule | null }
-        if (cancelled) return
-
-        if (data.data) {
-          setSchedule(data.data)
-        } else {
-          const cr = await fetch(`/api/orgs/${orgId}/schedules`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weekStart }),
-          })
-          const cdata = await cr.json() as { data: Schedule }
-          if (!cancelled) setSchedule({ ...cdata.data, shifts: [] })
-        }
-      } catch {
-        if (!cancelled) toast.error("Failed to load schedule")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    load()
-    return () => { cancelled = true }
-  }, [weekStart, orgId])
-
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/orgs/${orgId}/time-off?status=APPROVED&weekStart=${weekStart}`)
-      .then((r) => r.json())
-      .then((data: { data?: TimeOffRequest[] }) => { if (!cancelled && data.data) setApprovedTimeOff(data.data) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [weekStart, orgId])
-
-  const handlePublish = async () => {
-    if (!schedule) return
-    setPublishing(true)
-    try {
-      const r = await fetch(`/api/orgs/${orgId}/schedules/${schedule.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ published: true }),
-      })
-      const res = await r.json() as { data?: Schedule; error?: string }
-      if (res.data) {
-        setSchedule((s) => s ? { ...s, publishedAt: res.data!.publishedAt } : s)
-        toast.success("Schedule published — employees notified by SMS")
-      } else {
-        toast.error(res.error ?? "Failed to publish schedule")
-      }
-    } catch {
-      toast.error("Failed to publish schedule")
-    } finally {
-      setPublishing(false)
-    }
-  }
+  const {
+    schedule, loading, employees, approvedTimeOff, publishing,
+    handlePublish, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
+  } = useScheduleData(orgId, weekStart)
 
   const navigateWeek = (direction: -1 | 1) => {
     setWeekStart((ws) => addDays(ws, direction * 7))
@@ -127,147 +56,6 @@ export default function SchedulePage() {
     setSelectedDay(newDay)
     if (newWeekStart !== weekStart) setWeekStart(newWeekStart)
   }
-
-  const handleShiftMove = useCallback(
-    (shiftId: string, newDate: string, newEmployeeId: string) => {
-      if (!schedule) return
-      const prev = schedule.shifts?.find((s) => s.id === shiftId)
-      setSchedule((s) => s ? {
-        ...s,
-        shifts: s.shifts?.map((sh) => sh.id === shiftId ? { ...sh, date: newDate, employeeId: newEmployeeId } : sh),
-      } : s)
-
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: newDate, employeeId: newEmployeeId }),
-      }).then((r) => {
-        if (r.ok) {
-          toast.success("Shift moved")
-        } else {
-          setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === shiftId && prev ? { ...sh, ...prev } : sh) } : s)
-          toast.error("Failed to move shift")
-        }
-      }).catch(() => {
-        setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === shiftId && prev ? { ...sh, ...prev } : sh) } : s)
-        toast.error("Failed to move shift")
-      })
-    },
-    [schedule, orgId]
-  )
-
-  const handleShiftCreate = useCallback(
-    (data: {
-      employeeId: string; date: string; startTime: string; endTime: string
-      breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
-    }) => {
-      if (!schedule) return
-      const tempId = crypto.randomUUID()
-      const optimistic: Shift = {
-        id: tempId, scheduleId: schedule.id, organizationId: orgId,
-        ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      }
-      setSchedule((s) => s ? { ...s, shifts: [...(s.shifts ?? []), optimistic] } : s)
-
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then((r) => r.json()).then((res: { data?: Shift }) => {
-        if (res.data) {
-          setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === tempId ? res.data! : sh) } : s)
-          toast.success("Shift added")
-        } else {
-          setSchedule((s) => s ? { ...s, shifts: s.shifts?.filter((sh) => sh.id !== tempId) } : s)
-          toast.error("Failed to add shift")
-        }
-      }).catch(() => {
-        setSchedule((s) => s ? { ...s, shifts: s.shifts?.filter((sh) => sh.id !== tempId) } : s)
-        toast.error("Failed to add shift")
-      })
-    },
-    [schedule, orgId]
-  )
-
-  const handleShiftUpdate = useCallback(
-    (data: Partial<Shift>) => {
-      if (!schedule || !data.id) return
-      const prev = schedule.shifts?.find((s) => s.id === data.id)
-      setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === data.id ? { ...sh, ...data } : sh) } : s)
-
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${data.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then((r) => {
-        if (r.ok) {
-          toast.success("Shift updated")
-        } else {
-          setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === data.id && prev ? { ...sh, ...prev } : sh) } : s)
-          toast.error("Failed to update shift")
-        }
-      }).catch(() => {
-        setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === data.id && prev ? { ...sh, ...prev } : sh) } : s)
-        toast.error("Failed to update shift")
-      })
-    },
-    [schedule, orgId]
-  )
-
-  const handleShiftDelete = useCallback(
-    (shiftId: string) => {
-      if (!schedule) return
-      const prev = schedule.shifts?.find((s) => s.id === shiftId)
-      setSchedule((s) => s ? { ...s, shifts: s.shifts?.filter((sh) => sh.id !== shiftId) } : s)
-
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}`, { method: "DELETE" })
-        .then((r) => {
-          if (r.ok) {
-            toast.success("Shift deleted")
-          } else {
-            setSchedule((s) => s ? { ...s, shifts: prev ? [...(s.shifts ?? []), prev] : s.shifts } : s)
-            toast.error("Failed to delete shift")
-          }
-        }).catch(() => {
-          setSchedule((s) => s ? { ...s, shifts: prev ? [...(s.shifts ?? []), prev] : s.shifts } : s)
-          toast.error("Failed to delete shift")
-        })
-    },
-    [schedule, orgId]
-  )
-
-  const handleMarkSick = useCallback(
-    (employeeId: string, date: string) => {
-      if (!schedule) return
-      const tempId = crypto.randomUUID()
-      const sickShift: Shift = {
-        id: tempId, scheduleId: schedule.id, organizationId: orgId,
-        employeeId, date, startTime: "00:00", endTime: "00:00",
-        breakMinutes: 0, jobRole: "Sick Day", notes: null, colorTag: "sick",
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      }
-      setSchedule((s) => s ? { ...s, shifts: [...(s.shifts ?? []), sickShift] } : s)
-
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId, date, startTime: "00:00", endTime: "00:00", breakMinutes: 0, jobRole: "Sick Day", colorTag: "sick" }),
-      }).then((r) => r.json()).then((res: { data?: Shift }) => {
-        if (res.data) {
-          setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === tempId ? res.data! : sh) } : s)
-          const emp = employees.find((e) => e.id === employeeId)
-          toast.success(`Sick day registered${emp ? ` for ${emp.name}` : ""}`)
-        } else {
-          setSchedule((s) => s ? { ...s, shifts: s.shifts?.filter((sh) => sh.id !== tempId) } : s)
-          toast.error("Failed to register sick day")
-        }
-      }).catch(() => {
-        setSchedule((s) => s ? { ...s, shifts: s.shifts?.filter((sh) => sh.id !== tempId) } : s)
-        toast.error("Failed to register sick day")
-      })
-    },
-    [schedule, orgId, employees]
-  )
 
   const today = new Date().toISOString().split("T")[0]
   const isCurrentWeek = getMondayOfWeek(new Date()) === weekStart
@@ -419,7 +207,6 @@ export default function SchedulePage() {
           variant="outline"
           size="sm"
           onClick={goToToday}
-          disabled={todayHidden}
           className={todayHidden ? "opacity-0 pointer-events-none" : ""}
         >
           Today
@@ -442,7 +229,6 @@ export default function SchedulePage() {
             variant="outline"
             size="sm"
             onClick={goToToday}
-            disabled={todayHidden}
             className={todayHidden ? "invisible" : ""}
           >
             Today
@@ -456,8 +242,36 @@ export default function SchedulePage() {
 
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
         {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="size-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+          <div className="p-4 space-y-0">
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="grid grid-cols-[160px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50">
+                <div className="px-4 py-3"><Skeleton className="h-4 w-20" /></div>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="px-2 py-3 text-center border-l border-gray-200">
+                    <Skeleton className="h-3 w-8 mx-auto mb-1" />
+                    <Skeleton className="h-4 w-6 mx-auto" />
+                  </div>
+                ))}
+              </div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={`grid grid-cols-[160px_repeat(7,1fr)] border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/50" : "bg-white"}`}>
+                  <div className="px-4 py-3 flex items-center gap-2.5">
+                    <Skeleton className="size-8 rounded-full shrink-0" />
+                    <div>
+                      <Skeleton className="h-4 w-24 mb-1" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <div key={j} className="border-l border-gray-100 p-2">
+                      {j % 3 === 0 && i % 2 === 0 ? (
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         ) : employees.length === 0 ? (
           <div className="flex h-full items-center justify-center px-4">
@@ -485,6 +299,7 @@ export default function SchedulePage() {
             shiftTemplates={shiftTemplates}
             scheduledHoursMap={scheduledHoursMap}
             approvedTimeOff={approvedTimeOff}
+            publishedAt={schedule?.publishedAt ?? null}
             onShiftMove={handleShiftMove}
             onShiftCreate={handleShiftCreate}
             onShiftUpdate={handleShiftUpdate}
@@ -499,6 +314,7 @@ export default function SchedulePage() {
             jobRoles={jobRoles}
             shiftTemplates={shiftTemplates}
             scheduledHoursMap={scheduledHoursMap}
+            publishedAt={schedule?.publishedAt ?? null}
             startHour={timelineStartHour}
             endHour={timelineEndHour}
             onShiftCreate={handleShiftCreate}

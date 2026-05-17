@@ -12,15 +12,17 @@ interface RouteContext {
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
 
-  const isManager = session.user.orgId === orgId
+  const session = await auth()
+  const role = session?.user?.role
+  const isManager = role === "MANAGER" || role === "ADMIN"
   let employeeId: string | null = null
 
   if (!isManager) {
     const emp = await db.employee.findFirst({
-      where: { organizationId: orgId, userId: session.user.id },
+      where: { organizationId: orgId, userId: guard.userId },
       select: { id: true },
       orderBy: { createdAt: "asc" },
     })
@@ -37,6 +39,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   if (statusFilter) where.status = statusFilter
   if (employeeIdFilter) where.employeeId = employeeIdFilter
 
+  if (weekStart && !isValidDate(weekStart)) {
+    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
+  }
+
   // If weekStart is provided, return requests that overlap the week (Mon–Sun)
   if (weekStart) {
     const start = new Date(weekStart + "T00:00:00Z")
@@ -46,24 +52,33 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     where.endDate = { gte: start }
   }
 
-  const requests = await db.timeOffRequest.findMany({
-    where,
-    include: { employee: { select: { id: true, name: true, jobRole: true } } },
-    orderBy: { createdAt: "desc" },
-  })
-
-  return NextResponse.json({ data: requests.map(serTimeOffRequest) })
+  try {
+    const requests = await db.timeOffRequest.findMany({
+      where,
+      include: { employee: { select: { id: true, name: true, jobRole: true } } },
+      orderBy: { createdAt: "desc" },
+    })
+    return NextResponse.json(
+      { data: requests.map(serTimeOffRequest) },
+      { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=120" } }
+    )
+  } catch (err) {
+    console.error("[time-off GET]", err)
+    return NextResponse.json({ error: "Failed to fetch time-off requests" }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const guard = await requireOrgMember(orgId)
+  if ("error" in guard) return guard.error
 
   const { success } = await rateLimitRequest(getClientIp(req.headers))
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  const isManager = session.user.orgId === orgId
+  const session = await auth()
+  const role = session?.user?.role
+  const isManager = role === "MANAGER" || role === "ADMIN"
   let resolvedEmployeeId: string
 
   if (isManager) {
@@ -71,12 +86,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     if (!body.employeeId || !body.startDate || !body.endDate) {
       return NextResponse.json({ error: "employeeId, startDate, and endDate are required" }, { status: 400 })
     }
+    const emp = await db.employee.findFirst({
+      where: { id: body.employeeId, organizationId: orgId },
+      select: { id: true },
+    })
+    if (!emp) return NextResponse.json({ error: "Employee not found" }, { status: 404 })
     resolvedEmployeeId = body.employeeId
     return createRequest(orgId, resolvedEmployeeId, body.startDate, body.endDate, body.reason ?? null)
   }
 
   const emp = await db.employee.findFirst({
-    where: { organizationId: orgId, userId: session.user.id },
+    where: { organizationId: orgId, userId: guard.userId },
     select: { id: true },
     orderBy: { createdAt: "asc" },
   })

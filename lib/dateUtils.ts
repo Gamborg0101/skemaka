@@ -1,6 +1,11 @@
 // ── Date utilities ────────────────────────────────────────────────────────────
-// All functions operate in LOCAL time for user-facing dates and use UTC only
-// where the spec requires it (ISO week numbers per ISO 8601).
+// Convention for YYYY-MM-DD ↔ Date conversions:
+//   • Parse:  always new Date(isoDate + "T12:00:00")  — local noon stays within
+//             the same calendar day in any timezone from UTC-11 to UTC+11.
+//   • Format: always use local getFullYear/getMonth/getDate — never toISOString()
+//             (which gives the UTC date, not the local one).
+// Exception: getISOWeek / getISOYear / getMondayOfISOWeek operate entirely in
+// UTC arithmetic as required by the ISO 8601 week spec.
 
 /** Returns the ISO date string ("YYYY-MM-DD") for the Monday of the given date's week. */
 export function getMondayOfWeek(date: Date): string {
@@ -12,11 +17,13 @@ export function getMondayOfWeek(date: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`
 }
 
-/** Adds (or subtracts) days from an ISO date string. Noon-anchored to avoid DST shifts. */
+/** Adds (or subtracts) days from an ISO date string. Noon-anchored to avoid DST shifts; returns local date components. */
 export function addDays(isoDate: string, days: number): string {
   const d = new Date(isoDate + "T12:00:00")
   d.setDate(d.getDate() + days)
-  return d.toISOString().split("T")[0]
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}-${mm}-${dd}`
 }
 
 /** Returns the ISO week number (1–53) for the given ISO date string. */
@@ -52,10 +59,10 @@ export function getWeekDays(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 }
 
-/** "12 May – 18 May" style label for a week. */
+/** "12 May – 18 May" style label for a week. Noon-anchored to stay on the correct local date. */
 export function formatWeekLabel(weekStart: string): string {
-  const start = new Date(weekStart)
-  const end = new Date(weekStart)
+  const start = new Date(weekStart + "T12:00:00")
+  const end = new Date(weekStart + "T12:00:00")
   end.setDate(end.getDate() + 6)
   const fmt = (d: Date) =>
     d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })

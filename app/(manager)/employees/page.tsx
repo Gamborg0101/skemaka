@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { UserPlus, Power, Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Tooltip } from "@/components/ui/tooltip"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -16,11 +17,14 @@ import { toast } from "sonner"
 import type { Employee, EmploymentType } from "@/types"
 import { useOrg } from "@/lib/orgContext"
 import { formatCurrency } from "@/lib/orgSettings"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useOptimisticList } from "@/lib/useOptimisticList"
 
 export default function EmployeesPage() {
   const { orgId, jobRoles } = useOrg()
 
   const [employees, setEmployees] = useState<Employee[]>([])
+  const { patch: patchEmployee, remove: removeEmployee } = useOptimisticList(employees, setEmployees)
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
@@ -52,7 +56,7 @@ export default function EmployeesPage() {
     const res = await r.json() as { data?: Employee; error?: string }
     if (res.data) {
       setEmployees((prev) => [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name)))
-      toast.success(`${data.name} added. Invite sent to ${data.email}.`)
+      toast.success(`${data.name} added. Use the invite button to send them a link.`)
     } else {
       toast.error(res.error ?? "Failed to add employee")
     }
@@ -60,44 +64,40 @@ export default function EmployeesPage() {
 
   const handleDeactivateConfirm = async (_deleteShifts: boolean) => {
     if (!deactivateTarget) return
-    const r = await fetch(`/api/orgs/${orgId}/employees/${deactivateTarget.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: false }),
-    })
-    if (r.ok) {
-      setEmployees((prev) => prev.map((e) => e.id === deactivateTarget.id ? { ...e, isActive: false } : e))
-      toast.success(`${deactivateTarget.name} deactivated`)
-      // TODO: delete future shifts when wired (_deleteShifts flag)
-    } else {
-      toast.error("Failed to deactivate employee")
-    }
+    const target = deactivateTarget
     setDeactivateTarget(null)
+    await patchEmployee(target.id, { isActive: false } as Partial<Employee>, async () => {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${target.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      })
+      if (!r.ok) { toast.error("Failed to deactivate employee"); throw new Error() }
+      toast.success(`${target.name} deactivated`)
+      return null
+    })
   }
 
   const handleReactivate = async (emp: Employee) => {
-    const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: true }),
-    })
-    if (r.ok) {
-      setEmployees((prev) => prev.map((e) => e.id === emp.id ? { ...e, isActive: true } : e))
+    await patchEmployee(emp.id, { isActive: true } as Partial<Employee>, async () => {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      })
+      if (!r.ok) { toast.error("Failed to reactivate employee"); throw new Error() }
       toast.success(`${emp.name} reactivated`)
-    } else {
-      toast.error("Failed to reactivate employee")
-    }
+      return null
+    })
   }
 
   const handleRemove = async (empId: string, name: string) => {
-    const r = await fetch(`/api/orgs/${orgId}/employees/${empId}`, { method: "DELETE" })
-    if (r.ok) {
-      setEmployees((prev) => prev.filter((e) => e.id !== empId))
-      toast.success(`${name} removed`)
-    } else {
-      toast.error("Failed to remove employee")
-    }
     setDeleteTarget(null)
+    await removeEmployee(empId, async () => {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${empId}`, { method: "DELETE" })
+      if (!r.ok) { toast.error("Failed to remove employee"); throw new Error() }
+      toast.success(`${name} removed`)
+    })
   }
 
   const handleUpdate = async (empId: string, updated: Partial<Employee>) => {
@@ -124,11 +124,25 @@ export default function EmployeesPage() {
   const visibleEmployees = employees.filter((e) => activeTab === "active" ? e.isActive : !e.isActive)
 
   return (
-    <div className="px-4 md:px-6 py-6 pb-20 md:pb-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col h-full">
+      {/* Desktop header */}
+      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">Employees</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{activeCount} active · {inactiveCount} inactive</p>
+          <p className="text-xs text-gray-500">{activeCount} active · {inactiveCount} inactive</p>
+        </div>
+        {activeTab === "active" && (
+          <Button onClick={() => setAddOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
+            <UserPlus className="size-4" />
+            Add Employee
+          </Button>
+        )}
+      </div>
+      {/* Mobile header */}
+      <div className="md:hidden flex items-center justify-between gap-3 px-4 pt-6 pb-2">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Employees</h1>
+          <p className="text-xs text-gray-500">{activeCount} active · {inactiveCount} inactive</p>
         </div>
         {activeTab === "active" && (
           <Button onClick={() => setAddOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
@@ -138,6 +152,7 @@ export default function EmployeesPage() {
         )}
       </div>
 
+      <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       <div className="flex gap-1 mb-4 border-b border-gray-200">
         {(["active", "inactive"] as const).map((tab) => (
           <button
@@ -158,8 +173,36 @@ export default function EmployeesPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="size-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-200">
+                <th className="px-4 py-3 text-left"><Skeleton className="h-4 w-16" /></th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left"><Skeleton className="h-4 w-16" /></th>
+                <th className="hidden md:table-cell px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></th>
+                <th className="px-4 py-3 text-right"><Skeleton className="h-4 w-16 ml-auto" /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className={`border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50" : "bg-white"}`}>
+                  <td className="px-4 py-3">
+                    <Skeleton className="h-4 w-32 mb-1.5" />
+                    <Skeleton className="h-3 w-24" />
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <Skeleton className="h-8 w-12 hidden sm:block" />
+                      <Skeleton className="h-8 w-8 hidden sm:block" />
+                      <Skeleton className="h-8 w-8 hidden sm:block" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : visibleEmployees.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
@@ -207,21 +250,29 @@ export default function EmployeesPage() {
                       <Button variant="ghost" size="sm" onClick={() => openSheet(emp)} className="text-gray-500 hover:text-gray-700 text-xs">
                         View
                       </Button>
-                      <Button variant="ghost" size="icon-sm" onClick={() => openSheetInEditMode(emp)} title="Edit" className="text-gray-500 hover:text-gray-700 min-w-[36px] min-h-[36px]">
-                        <Pencil className="size-3.5" />
-                      </Button>
+                      <Tooltip content="Edit employee">
+                        <Button variant="ghost" size="icon-sm" onClick={() => openSheetInEditMode(emp)} className="text-gray-500 hover:text-gray-700 min-w-[36px] min-h-[36px]">
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </Tooltip>
                       {emp.isActive ? (
-                        <Button variant="ghost" size="icon-sm" onClick={() => setDeactivateTarget(emp)} title="Deactivate" className="text-gray-500 hover:text-amber-600 hover:bg-amber-50 min-w-[36px] min-h-[36px]">
-                          <Power className="size-3.5" />
-                        </Button>
+                        <Tooltip content="Deactivate employee">
+                          <Button variant="ghost" size="icon-sm" onClick={() => setDeactivateTarget(emp)} className="text-gray-500 hover:text-amber-600 hover:bg-amber-50 min-w-[36px] min-h-[36px]">
+                            <Power className="size-3.5" />
+                          </Button>
+                        </Tooltip>
                       ) : (
-                        <Button variant="ghost" size="icon-sm" onClick={() => handleReactivate(emp)} title="Reactivate" className="text-green-600 hover:text-green-700 hover:bg-green-50 min-w-[36px] min-h-[36px]">
-                          <Power className="size-3.5" />
-                        </Button>
+                        <Tooltip content="Reactivate employee">
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleReactivate(emp)} className="text-green-600 hover:text-green-700 hover:bg-green-50 min-w-[36px] min-h-[36px]">
+                            <Power className="size-3.5" />
+                          </Button>
+                        </Tooltip>
                       )}
-                      <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(emp)} className="text-red-500 hover:text-red-600 hover:bg-red-50 min-w-[36px] min-h-[36px]" title="Remove">
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <Tooltip content="Remove employee">
+                        <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(emp)} className="text-red-500 hover:text-red-600 hover:bg-red-50 min-w-[36px] min-h-[36px]">
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </Tooltip>
                     </div>
                     {/* Mobile: chevron indicator (row tap opens sheet) */}
                     <span className="sm:hidden text-gray-300 text-xs">›</span>
@@ -281,6 +332,7 @@ export default function EmployeesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

@@ -19,5 +19,8 @@ export async function GET() {
     return NextResponse.json({ error: "No organization found" }, { status: 404 })
   }
 
-  return NextResponse.json({ data: serOrg(membership.organization) })
+  return NextResponse.json(
+    { data: serOrg(membership.organization) },
+    { headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" } }
+  )
 }

@@ -67,7 +67,7 @@ export default async function EmployeePortalPage() {
   const employee = await db.employee.findFirst({
     where: { email: session.user.email, isActive: true },
     include: {
-      organization: { select: { name: true } },
+      organization: { select: { name: true, settings: true } },
       shifts: {
         where: { date: { gte: currentWeekStart } },
         orderBy: { date: "asc" },
@@ -261,7 +261,9 @@ export default async function EmployeePortalPage() {
             </div>
           </div>
         ))}
-        <TimeOffSection orgId={employee.organizationId} />
+        {(employee.organization.settings as { timeOffEnabled?: boolean } | null)?.timeOffEnabled !== false && (
+          <TimeOffSection orgId={employee.organizationId} />
+        )}
       </div>
     </div>
   )

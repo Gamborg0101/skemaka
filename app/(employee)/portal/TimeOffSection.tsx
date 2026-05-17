@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Plus, CalendarOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import type { TimeOffRequest } from "@/types"
 
@@ -134,9 +135,17 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-6">
-          <div className="size-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-        </div>
+        <ul className="divide-y divide-gray-100">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <li key={i} className="px-4 py-3 flex items-center justify-between gap-3">
+              <div>
+                <Skeleton className="h-4 w-36 mb-1.5" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-5 w-16 rounded-full shrink-0" />
+            </li>
+          ))}
+        </ul>
       ) : requests.length === 0 && !showForm ? (
         <div className="px-4 py-6 text-center">
           <p className="text-sm text-gray-400">No time off requests yet.</p>

@@ -15,6 +15,7 @@ export interface OrgSettings {
   hours: DayHours[]  // index 0 = Monday … 6 = Sunday
   defaultScheduleView: "week" | "timeline"
   currency: string   // ISO 4217 code e.g. "EUR", "USD"
+  timeOffEnabled: boolean
 }
 
 export const SUPPORTED_CURRENCIES = [
@@ -44,6 +45,7 @@ let _settings: OrgSettings = {
   hours: DEFAULT_HOURS.map((h) => ({ ...h })),
   defaultScheduleView: "week",
   currency: "EUR",
+  timeOffEnabled: true,
 }
 
 export function getOrgSettings(): OrgSettings {
@@ -51,6 +53,7 @@ export function getOrgSettings(): OrgSettings {
     hours: _settings.hours.map((h) => ({ ...h })),
     defaultScheduleView: _settings.defaultScheduleView,
     currency: _settings.currency,
+    timeOffEnabled: _settings.timeOffEnabled,
   }
 }
 

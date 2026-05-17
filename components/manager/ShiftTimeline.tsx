@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/core"
 import { Plus } from "lucide-react"
 import { cn, getInitials } from "@/lib/utils"
+import { Tooltip } from "@/components/ui/tooltip"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
 import { SickDayDialog } from "@/components/manager/SickDayDialog"
@@ -130,6 +131,7 @@ interface RowProps {
   date: string
   shifts: Shift[]
   jobRoles: JobRole[]
+  publishedAt?: string | null
   isEven: boolean
   draggingEmpScheduledHere: boolean | null
   todayLine: number | null
@@ -143,7 +145,7 @@ interface RowProps {
 }
 
 function TimelineRow({
-  employee, date, shifts, jobRoles, isEven,
+  employee, date, shifts, jobRoles, publishedAt, isEven,
   draggingEmpScheduledHere, todayLine,
   startHour, endHour, totalMinutes, hourMarkers,
   hoverSnap, onShiftClick, onRowClick,
@@ -159,19 +161,21 @@ function TimelineRow({
   return (
     <div className={cn("flex border-b border-gray-200", isEven ? "bg-white" : "bg-gray-50/60")}>
       {/* Name column */}
-      <div className="w-36 shrink-0 border-r border-gray-200 px-3 py-3 flex items-center justify-between">
+      <div className="w-44 shrink-0 border-r border-gray-200 px-3 py-3 flex items-center justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-gray-900 truncate">{employee.name}</p>
           <p className="text-[10px] text-gray-500 truncate">{employee.jobRole}</p>
         </div>
         {isEmpty && (
-          <button
-            onClick={() => onRowClick(employee.id, date)}
-            className="shrink-0 size-5 rounded-full bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-700 flex items-center justify-center transition-colors ml-1"
-            aria-label={`Add shift for ${employee.name}`}
-          >
-            <Plus className="size-3" />
-          </button>
+          <Tooltip content="Add shift" side="right">
+            <button
+              onClick={() => onRowClick(employee.id, date)}
+              className="shrink-0 size-5 rounded-full bg-blue-100 text-blue-500 hover:bg-blue-200 hover:text-blue-700 flex items-center justify-center transition-colors ml-1"
+              aria-label={`Add shift for ${employee.name}`}
+            >
+              <Plus className="size-3" />
+            </button>
+          </Tooltip>
         )}
       </div>
 
@@ -204,7 +208,9 @@ function TimelineRow({
           const isSick = shift.colorTag === "sick"
           const left  = toPercent(shift.startTime, startHour, totalMinutes)
           const width = isSick ? 100 - left : durationPercent(shift.startTime, shift.endTime, startHour, totalMinutes)
-          const tag   = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
+
+          const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
+          const isPublished = !isSick && !!publishedAt && shift.createdAt <= publishedAt
 
           return (
             <button
@@ -212,7 +218,9 @@ function TimelineRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onShiftClick(shift) }}
               className={cn(
-                "absolute top-2 bottom-2 rounded-md px-2 flex items-center overflow-hidden border border-white/40 shadow-sm transition-all",
+                "absolute top-2 bottom-2 rounded-md px-2 flex items-center overflow-hidden shadow-sm transition-all",
+                "border-2",
+                isPublished ? "border-green-500/60" : "border-orange-400/60",
                 COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
               )}
               style={{ left: `${left}%`, width: `${width}%` }}
@@ -267,6 +275,7 @@ interface DaySectionProps {
   employees: Employee[]
   allShifts: Shift[]
   jobRoles: JobRole[]
+  publishedAt?: string | null
   draggingEmp: Employee | null
   startHour: number
   endHour: number
@@ -279,7 +288,7 @@ interface DaySectionProps {
 }
 
 function DaySection({
-  date, employees, allShifts, jobRoles, draggingEmp,
+  date, employees, allShifts, jobRoles, publishedAt, draggingEmp,
   startHour, endHour, totalMinutes, hourMarkers,
   activeRowId, hoverSnap, onShiftClick, onRowClick,
 }: DaySectionProps) {
@@ -310,7 +319,7 @@ function DaySection({
 
         {/* Time axis */}
         <div className="flex">
-          <div className="w-36 shrink-0 border-r border-gray-200 px-3 py-1.5">
+          <div className="w-44 shrink-0 border-r border-gray-200 px-3 py-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
               Employee
             </span>
@@ -343,6 +352,7 @@ function DaySection({
             date={date}
             shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
             jobRoles={jobRoles}
+            publishedAt={publishedAt}
             isEven={idx % 2 === 0}
             draggingEmpScheduledHere={
               draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id) : null
@@ -371,6 +381,7 @@ interface ShiftTimelineProps {
   jobRoles: JobRole[]
   shiftTemplates: ShiftTemplate[]
   scheduledHoursMap: Record<string, number>
+  publishedAt?: string | null
   startHour?: number
   endHour?: number
   onShiftCreate: (data: {
@@ -394,6 +405,7 @@ export function ShiftTimeline({
   jobRoles,
   shiftTemplates,
   scheduledHoursMap,
+  publishedAt,
   startHour = DEFAULT_START_HOUR,
   endHour = DEFAULT_END_HOUR,
   onShiftCreate,
@@ -513,6 +525,7 @@ export function ShiftTimeline({
                   employees={employees}
                   allShifts={shifts}
                   jobRoles={jobRoles}
+                  publishedAt={publishedAt}
                   draggingEmp={draggingEmp}
                   startHour={startHour}
                   endHour={endHour}

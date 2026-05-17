@@ -18,5 +18,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     orderBy: { submittedAt: "asc" },
   })
 
-  return NextResponse.json({ data: submissions.map(serAvailabilitySubmission) })
+  return NextResponse.json(
+    { data: submissions.map(serAvailabilitySubmission) },
+    { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=120" } }
+  )
 }

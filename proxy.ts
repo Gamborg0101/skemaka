@@ -20,6 +20,24 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
+  // /platform/* and /api/platform/* — superadmin only
+  if (pathname.startsWith("/platform") || pathname.startsWith("/api/platform/")) {
+    if (!isAuthenticated) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+      return NextResponse.redirect(new URL("/login", req.nextUrl.origin))
+    }
+    const userEmail = session?.user?.email
+    if (userEmail !== process.env.SUPERADMIN_EMAIL) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+      return NextResponse.redirect(new URL("/schedule", req.nextUrl.origin))
+    }
+    return NextResponse.next()
+  }
+
   // /api/admin/* — must be authenticated + ADMIN role
   if (pathname.startsWith("/api/admin/")) {
     if (!isAuthenticated) {
@@ -111,10 +129,12 @@ export const config = {
     "/my-shifts/:path*",
     "/admin/:path*",
     "/onboarding/:path*",
+    "/platform/:path*",
     "/api/admin/:path*",
     "/api/orgs/:path*",
     "/api/me/:path*",
     "/api/webhooks/:path*",
     "/api/availability/:path*",
+    "/api/platform/:path*",
   ],
 }

@@ -23,10 +23,14 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: org.stripeCustomerId,
-    return_url: `${appUrl}/billing`,
-  })
-
-  return NextResponse.json({ url: session.url })
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: org.stripeCustomerId,
+      return_url: `${appUrl}/billing`,
+    })
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    console.error("[billing/portal]", err)
+    return NextResponse.json({ error: "Failed to create billing portal session" }, { status: 500 })
+  }
 }

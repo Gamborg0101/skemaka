@@ -30,8 +30,9 @@ export async function requireOrgMember(orgId: string, options: GuardOptions = {}
 
   // Slow path: token predates the orgId claim (e.g. just completed onboarding).
   const membership = await db.membership.findFirst({
-    where: { userId: session.user.id, organizationId: orgId },
+    where: { userId: session.user.id, organizationId: orgId, role: "MANAGER" },
     include: { organization: { select: { subscriptionStatus: true } } },
+    orderBy: { joinedAt: "asc" },
   })
   if (!membership) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }

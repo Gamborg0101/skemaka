@@ -73,6 +73,7 @@ model Organization {
   updatedAt               DateTime                 @updatedAt
   availabilityRequests    AvailabilityRequest[]
   availabilitySubmissions AvailabilitySubmission[]
+  bugReports              BugReport[]
   employees               Employee[]
   jobRoles                JobRole[]
   memberships             Membership[]
@@ -164,8 +165,8 @@ model Schedule {
   duplicates       Schedule[]   @relation("ScheduleDuplicates")
   shifts           Shift[]
 
+  @@unique([organizationId, weekStart])
   @@index([organizationId])
-  @@index([organizationId, weekStart])
   @@index([sourceScheduleId])
 }
 
@@ -281,6 +282,25 @@ model ShiftTemplate {
 
   @@unique([organizationId, name])
   @@index([organizationId])
+}
+
+model BugReport {
+  id             String        @id @default(cuid())
+  organizationId String?
+  userId         String?
+  orgName        String?
+  userName       String?
+  userEmail      String?
+  message        String?
+  errorMessage   String?
+  errorStack     String?
+  url            String?
+  component      String?
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([createdAt])
 }
 
 enum UserRole {

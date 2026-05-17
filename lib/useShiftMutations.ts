@@ -1,0 +1,139 @@
+import { useCallback } from "react"
+import type { Dispatch, SetStateAction } from "react"
+import { toast } from "sonner"
+import type { Schedule, Shift } from "@/types"
+
+export function useShiftMutations(
+  schedule: Schedule | null,
+  setSchedule: Dispatch<SetStateAction<Schedule | null>>,
+  orgId: string,
+  employees: Array<{ id: string; name: string }>
+) {
+  const patchShift = useCallback((id: string, update: Partial<Shift>) => {
+    setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === id ? { ...sh, ...update } : sh) } : s)
+  }, [setSchedule])
+
+  const rollbackShift = useCallback((id: string, prev: Shift | undefined) => {
+    if (!prev) return
+    setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === id ? prev : sh) } : s)
+  }, [setSchedule])
+
+  const deleteShift = useCallback((id: string) => {
+    setSchedule((s) => s ? { ...s, shifts: s.shifts?.filter((sh) => sh.id !== id) } : s)
+  }, [setSchedule])
+
+  const restoreShift = useCallback((shift: Shift) => {
+    setSchedule((s) => s ? { ...s, shifts: [...(s.shifts ?? []), shift] } : s)
+  }, [setSchedule])
+
+  const appendShift = useCallback((shift: Shift) => {
+    setSchedule((s) => s ? { ...s, shifts: [...(s.shifts ?? []), shift] } : s)
+  }, [setSchedule])
+
+  const replaceShift = useCallback((tempId: string, serverShift: Shift) => {
+    setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === tempId ? serverShift : sh) } : s)
+  }, [setSchedule])
+
+  const handleShiftMove = useCallback(
+    (shiftId: string, newDate: string, newEmployeeId: string) => {
+      if (!schedule) return
+      const prev = schedule.shifts?.find((s) => s.id === shiftId)
+      patchShift(shiftId, { date: newDate, employeeId: newEmployeeId })
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: newDate, employeeId: newEmployeeId }),
+      }).then((r) => {
+        if (r.ok) toast.success("Shift moved")
+        else { rollbackShift(shiftId, prev); toast.error("Failed to move shift") }
+      }).catch(() => { rollbackShift(shiftId, prev); toast.error("Failed to move shift") })
+    },
+    [schedule, orgId, patchShift, rollbackShift]
+  )
+
+  const handleShiftCreate = useCallback(
+    (data: {
+      employeeId: string; date: string; startTime: string; endTime: string
+      breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
+    }) => {
+      if (!schedule) return
+      const tempId = crypto.randomUUID()
+      const optimistic: Shift = {
+        id: tempId, scheduleId: schedule.id, organizationId: orgId,
+        ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      }
+      appendShift(optimistic)
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).then((r) => r.json()).then((res: { data?: Shift }) => {
+        if (res.data) { replaceShift(tempId, res.data); toast.success("Shift added") }
+        else { deleteShift(tempId); toast.error("Failed to add shift") }
+      }).catch(() => { deleteShift(tempId); toast.error("Failed to add shift") })
+    },
+    [schedule, orgId, appendShift, replaceShift, deleteShift]
+  )
+
+  const handleShiftUpdate = useCallback(
+    (data: Partial<Shift>) => {
+      if (!schedule || !data.id) return
+      const prev = schedule.shifts?.find((s) => s.id === data.id)
+      patchShift(data.id, data)
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${data.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).then((r) => {
+        if (r.ok) toast.success("Shift updated")
+        else { rollbackShift(data.id!, prev); toast.error("Failed to update shift") }
+      }).catch(() => { rollbackShift(data.id!, prev); toast.error("Failed to update shift") })
+    },
+    [schedule, orgId, patchShift, rollbackShift]
+  )
+
+  const handleShiftDelete = useCallback(
+    (shiftId: string) => {
+      if (!schedule) return
+      const prev = schedule.shifts?.find((s) => s.id === shiftId)
+      deleteShift(shiftId)
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}`, { method: "DELETE" })
+        .then((r) => {
+          if (r.ok) toast.success("Shift deleted")
+          else { if (prev) restoreShift(prev); toast.error("Failed to delete shift") }
+        }).catch(() => { if (prev) restoreShift(prev); toast.error("Failed to delete shift") })
+    },
+    [schedule, orgId, deleteShift, restoreShift]
+  )
+
+  const handleMarkSick = useCallback(
+    (employeeId: string, date: string) => {
+      if (!schedule) return
+      const tempId = crypto.randomUUID()
+      const sickShift: Shift = {
+        id: tempId, scheduleId: schedule.id, organizationId: orgId,
+        employeeId, date, startTime: "00:00", endTime: "00:00",
+        breakMinutes: 0, jobRole: "Sick Day", notes: null, colorTag: "sick",
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      }
+      appendShift(sickShift)
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId, date, startTime: "00:00", endTime: "00:00", breakMinutes: 0, jobRole: "Sick Day", colorTag: "sick" }),
+      }).then((r) => r.json()).then((res: { data?: Shift }) => {
+        if (res.data) {
+          replaceShift(tempId, res.data)
+          const emp = employees.find((e) => e.id === employeeId)
+          toast.success(`Sick day registered${emp ? ` for ${emp.name}` : ""}`)
+        } else {
+          deleteShift(tempId)
+          toast.error("Failed to register sick day")
+        }
+      }).catch(() => { deleteShift(tempId); toast.error("Failed to register sick day") })
+    },
+    [schedule, orgId, employees, appendShift, replaceShift, deleteShift]
+  )
+
+  return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick }
+}

@@ -1,0 +1,214 @@
+- generic [ref=e1]:
+  - generic [ref=e15]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Skemaka
+        - button [ref=e178]:
+          - img [ref=e20]
+      - navigation [ref=e23]:
+        - link [ref=e179] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e25]
+          - text: Schedule
+        - link [ref=e180] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e28]
+          - text: Employees
+        - link [ref=e181] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e34]
+          - text: Availability
+        - link [ref=e182] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e38]
+          - text: Labor Cost
+        - link [ref=e183] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e41]
+          - text: My Shifts
+      - button [ref=e184]:
+        - img [ref=e48]
+        - text: Report a bug
+      - button [ref=e185]:
+        - img [ref=e59]
+        - generic [ref=e63]: The Daily Grind
+        - img [ref=e64]
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - heading [level=1] [ref=e186]: Employees
+            - paragraph [ref=e72]: 7 active · 0 inactive
+          - button [ref=e187]:
+            - img
+            - text: Add Employee
+        - generic [ref=e74]:
+          - button [ref=e188]: active7
+          - button [ref=e189]: inactive
+        - table [ref=e79]:
+          - rowgroup [ref=e80]:
+            - row [ref=e190]:
+              - columnheader [ref=e191]: Name
+              - columnheader [ref=e192]: Job Role
+              - columnheader [ref=e193]: Hourly Wage
+              - columnheader [ref=e194]: Actions
+          - rowgroup [ref=e86]:
+            - row [ref=e195] [cursor=pointer]:
+              - cell [ref=e196]:
+                - generic [ref=e89]:
+                  - paragraph [ref=e90]: Casper Gamborg
+                  - paragraph [ref=e91]: "+4522583032"
+              - cell [ref=e197]: Shift Supervisor
+              - cell [ref=e198]: 22,00 €/hr
+              - cell [ref=e199]:
+                - generic [ref=e95]:
+                  - button [ref=e200]: View
+                  - button [ref=e201]:
+                    - img
+                  - button [ref=e202]:
+                    - img
+                  - button [ref=e203]:
+                    - img
+            - row [ref=e204] [cursor=pointer]:
+              - cell [ref=e205]:
+                - generic [ref=e102]:
+                  - paragraph [ref=e103]: Dr. James O'Brien
+                  - paragraph [ref=e104]: "+17558432986"
+              - cell [ref=e206]: Barista
+              - cell [ref=e207]: 12,69 €/hr
+              - cell [ref=e208]:
+                - generic [ref=e108]:
+                  - button [ref=e209]: View
+                  - button [ref=e210]:
+                    - img
+                  - button [ref=e211]:
+                    - img
+                  - button [ref=e212]:
+                    - img
+            - row [ref=e213] [cursor=pointer]:
+              - cell [ref=e214]:
+                - generic [ref=e115]:
+                  - paragraph [ref=e116]: Lena Schmidt
+                  - paragraph [ref=e117]: "+14997826719"
+              - cell [ref=e215]: Shift Supervisor
+              - cell [ref=e216]: 17,41 €/hr
+              - cell [ref=e217]:
+                - generic [ref=e121]:
+                  - button [ref=e218]: View
+                  - button [ref=e219]:
+                    - img
+                  - button [ref=e220]:
+                    - img
+                  - button [ref=e221]:
+                    - img
+            - row [ref=e222] [cursor=pointer]:
+              - cell [ref=e223]:
+                - generic [ref=e128]:
+                  - paragraph [ref=e129]: Mia Andersen MD
+                  - paragraph [ref=e130]: "+13409397134"
+              - cell [ref=e224]: Cashier
+              - cell [ref=e225]: 12,99 €/hr
+              - cell [ref=e226]:
+                - generic [ref=e134]:
+                  - button [ref=e227]: View
+                  - button [ref=e228]:
+                    - img
+                  - button [ref=e229]:
+                    - img
+                  - button [ref=e230]:
+                    - img
+            - row [ref=e231] [cursor=pointer]:
+              - cell [ref=e232]:
+                - generic [ref=e141]:
+                  - paragraph [ref=e142]: Nadia Patel
+                  - paragraph [ref=e143]: "+12616103541"
+              - cell [ref=e233]: Barista
+              - cell [ref=e234]: 13,53 €/hr
+              - cell [ref=e235]:
+                - generic [ref=e147]:
+                  - button [ref=e236]: View
+                  - button [ref=e237]:
+                    - img
+                  - button [ref=e238]:
+                    - img
+                  - button [ref=e239]:
+                    - img
+            - row [ref=e240] [cursor=pointer]:
+              - cell [ref=e241]:
+                - generic [ref=e154]:
+                  - paragraph [ref=e155]: Sarah Chen
+                  - paragraph [ref=e156]: "+17707878635"
+              - cell [ref=e242]: Barista
+              - cell [ref=e243]: 13,69 €/hr
+              - cell [ref=e244]:
+                - generic [ref=e160]:
+                  - button [ref=e245]: View
+                  - button [ref=e246]:
+                    - img
+                  - button [ref=e247]:
+                    - img
+                  - button [ref=e248]:
+                    - img
+            - row [ref=e249] [cursor=pointer]:
+              - cell [ref=e250]:
+                - generic [ref=e167]:
+                  - paragraph [ref=e168]: Tom Eriksson
+                  - paragraph [ref=e169]: "+19626597145"
+              - cell [ref=e251]: Kitchen
+              - cell [ref=e252]: 13,63 €/hr
+              - cell [ref=e253]:
+                - generic [ref=e173]:
+                  - button [ref=e254]: View
+                  - button [ref=e255]:
+                    - img
+                  - button [ref=e256]:
+                    - img
+                  - button [ref=e257]:
+                    - img
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e10] [cursor=pointer]:
+    - img [ref=e11]
+  - alert [ref=e14]
+  - dialog "Casper Gamborg" [ref=e261]:
+    - generic [ref=e263]:
+      - generic [ref=e264]: CG
+      - generic [ref=e265]:
+        - heading "Casper Gamborg" [level=2] [ref=e266]
+        - paragraph [ref=e267]: Shift Supervisor
+        - generic [ref=e269]: Active
+      - button "Edit" [active] [ref=e270]
+    - separator [ref=e271]
+    - generic [ref=e273]:
+      - generic [ref=e274]:
+        - img [ref=e276]
+        - generic [ref=e279]:
+          - paragraph [ref=e280]: Email
+          - link "gamborgc@gmail.com" [ref=e282] [cursor=pointer]:
+            - /url: mailto:gamborgc@gmail.com
+      - generic [ref=e283]:
+        - img [ref=e285]
+        - generic [ref=e287]:
+          - paragraph [ref=e288]: Phone
+          - generic [ref=e289]: "+4522583032"
+      - generic [ref=e290]:
+        - img [ref=e292]
+        - generic [ref=e295]:
+          - paragraph [ref=e296]: Hourly rate
+          - generic [ref=e298]: 22,00 € / hour
+      - generic [ref=e299]:
+        - img [ref=e301]
+        - generic [ref=e304]:
+          - paragraph [ref=e305]: Contract
+          - generic [ref=e306]: Full Time (40h/week)
+      - generic [ref=e307]:
+        - img [ref=e309]
+        - generic [ref=e311]:
+          - paragraph [ref=e312]: Member since
+          - generic [ref=e313]: 15 May 2026
+      - separator [ref=e314]
+      - generic [ref=e315]:
+        - img [ref=e316]
+        - paragraph [ref=e318]: 0 sick days this month
+    - button "Close" [ref=e319]:
+      - img
+      - generic [ref=e320]: Close

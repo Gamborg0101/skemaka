@@ -1,0 +1,171 @@
+- generic [ref=e1]:
+  - generic [ref=e15]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Skemaka
+        - button "Collapse sidebar" [ref=e322]:
+          - img [ref=e20]
+      - navigation [ref=e23]:
+        - link "Schedule" [ref=e323] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e25]
+          - text: Schedule
+        - link "Employees" [ref=e324] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e28]
+          - text: Employees
+        - link "Availability" [ref=e325] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e34]
+          - text: Availability
+        - link "Labor Cost" [ref=e326] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e38]
+          - text: Labor Cost
+        - link "My Shifts" [ref=e327] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e41]
+          - text: My Shifts
+      - button "Report a bug" [ref=e328]:
+        - img [ref=e48]
+        - text: Report a bug
+      - button "The Daily Grind" [ref=e329]:
+        - img [ref=e59]
+        - generic [ref=e63]: The Daily Grind
+        - img [ref=e64]
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - heading "Employees" [level=1] [ref=e330]
+            - paragraph [ref=e72]: 7 active · 0 inactive
+          - button "Add Employee" [ref=e331]:
+            - img
+            - text: Add Employee
+        - generic [ref=e74]:
+          - button "active7" [ref=e332]
+          - button "inactive" [ref=e333]
+        - table [ref=e79]:
+          - rowgroup [ref=e80]:
+            - row "Name Job Role Hourly Wage Actions" [ref=e334]:
+              - columnheader "Name" [ref=e335]
+              - columnheader "Job Role" [ref=e336]
+              - columnheader "Hourly Wage" [ref=e337]
+              - columnheader "Actions" [ref=e338]
+          - rowgroup [ref=e86]:
+            - row "Casper Gamborg +4522583032 Shift Supervisor 22,00 €/hr View" [ref=e339] [cursor=pointer]:
+              - cell "Casper Gamborg +4522583032" [ref=e340]:
+                - generic [ref=e89]:
+                  - paragraph [ref=e90]: Casper Gamborg
+                  - paragraph [ref=e91]: "+4522583032"
+              - cell "Shift Supervisor" [ref=e341]
+              - cell "22,00 €/hr" [ref=e342]
+              - cell "View" [ref=e343]:
+                - generic [ref=e95]:
+                  - button "View" [active] [ref=e344]
+                  - button "Edit" [ref=e345]:
+                    - img
+                  - button "Deactivate" [ref=e346]:
+                    - img
+                  - button "Remove" [ref=e347]:
+                    - img
+            - row "Dr. James O'Brien +17558432986 Barista 12,69 €/hr View" [ref=e348] [cursor=pointer]:
+              - cell "Dr. James O'Brien +17558432986" [ref=e349]:
+                - generic [ref=e102]:
+                  - paragraph [ref=e103]: Dr. James O'Brien
+                  - paragraph [ref=e104]: "+17558432986"
+              - cell "Barista" [ref=e350]
+              - cell "12,69 €/hr" [ref=e351]
+              - cell "View" [ref=e352]:
+                - generic [ref=e108]:
+                  - button "View" [ref=e353]
+                  - button "Edit" [ref=e354]:
+                    - img
+                  - button "Deactivate" [ref=e355]:
+                    - img
+                  - button "Remove" [ref=e356]:
+                    - img
+            - row "Lena Schmidt +14997826719 Shift Supervisor 17,41 €/hr View" [ref=e357] [cursor=pointer]:
+              - cell "Lena Schmidt +14997826719" [ref=e358]:
+                - generic [ref=e115]:
+                  - paragraph [ref=e116]: Lena Schmidt
+                  - paragraph [ref=e117]: "+14997826719"
+              - cell "Shift Supervisor" [ref=e359]
+              - cell "17,41 €/hr" [ref=e360]
+              - cell "View" [ref=e361]:
+                - generic [ref=e121]:
+                  - button "View" [ref=e362]
+                  - button "Edit" [ref=e363]:
+                    - img
+                  - button "Deactivate" [ref=e364]:
+                    - img
+                  - button "Remove" [ref=e365]:
+                    - img
+            - row "Mia Andersen MD +13409397134 Cashier 12,99 €/hr View" [ref=e366] [cursor=pointer]:
+              - cell "Mia Andersen MD +13409397134" [ref=e367]:
+                - generic [ref=e128]:
+                  - paragraph [ref=e129]: Mia Andersen MD
+                  - paragraph [ref=e130]: "+13409397134"
+              - cell "Cashier" [ref=e368]
+              - cell "12,99 €/hr" [ref=e369]
+              - cell "View" [ref=e370]:
+                - generic [ref=e134]:
+                  - button "View" [ref=e371]
+                  - button "Edit" [ref=e372]:
+                    - img
+                  - button "Deactivate" [ref=e373]:
+                    - img
+                  - button "Remove" [ref=e374]:
+                    - img
+            - row "Nadia Patel +12616103541 Barista 13,53 €/hr View" [ref=e375] [cursor=pointer]:
+              - cell "Nadia Patel +12616103541" [ref=e376]:
+                - generic [ref=e141]:
+                  - paragraph [ref=e142]: Nadia Patel
+                  - paragraph [ref=e143]: "+12616103541"
+              - cell "Barista" [ref=e377]
+              - cell "13,53 €/hr" [ref=e378]
+              - cell "View" [ref=e379]:
+                - generic [ref=e147]:
+                  - button "View" [ref=e380]
+                  - button "Edit" [ref=e381]:
+                    - img
+                  - button "Deactivate" [ref=e382]:
+                    - img
+                  - button "Remove" [ref=e383]:
+                    - img
+            - row "Sarah Chen +17707878635 Barista 13,69 €/hr View" [ref=e384] [cursor=pointer]:
+              - cell "Sarah Chen +17707878635" [ref=e385]:
+                - generic [ref=e154]:
+                  - paragraph [ref=e155]: Sarah Chen
+                  - paragraph [ref=e156]: "+17707878635"
+              - cell "Barista" [ref=e386]
+              - cell "13,69 €/hr" [ref=e387]
+              - cell "View" [ref=e388]:
+                - generic [ref=e160]:
+                  - button "View" [ref=e389]
+                  - button "Edit" [ref=e390]:
+                    - img
+                  - button "Deactivate" [ref=e391]:
+                    - img
+                  - button "Remove" [ref=e392]:
+                    - img
+            - row "Tom Eriksson +19626597145 Kitchen 13,63 €/hr View" [ref=e393] [cursor=pointer]:
+              - cell "Tom Eriksson +19626597145" [ref=e394]:
+                - generic [ref=e167]:
+                  - paragraph [ref=e168]: Tom Eriksson
+                  - paragraph [ref=e169]: "+19626597145"
+              - cell "Kitchen" [ref=e395]
+              - cell "13,63 €/hr" [ref=e396]
+              - cell "View" [ref=e397]:
+                - generic [ref=e173]:
+                  - button "View" [ref=e398]
+                  - button "Edit" [ref=e399]:
+                    - img
+                  - button "Deactivate" [ref=e400]:
+                    - img
+                  - button "Remove" [ref=e401]:
+                    - img
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e10] [cursor=pointer]:
+    - img [ref=e11]
+  - alert [ref=e14]

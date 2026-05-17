@@ -1,0 +1,59 @@
+- generic [ref=e1]:
+  - generic [ref=e15]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Skemaka
+        - button "Collapse sidebar" [ref=e19]:
+          - img [ref=e20]
+      - navigation [ref=e23]:
+        - link "Schedule" [ref=e24] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e25]
+          - text: Schedule
+        - link "Employees" [ref=e27] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e28]
+          - text: Employees
+        - link "Availability" [ref=e33] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e34]
+          - text: Availability
+        - link "Labor Cost" [ref=e37] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e38]
+          - text: Labor Cost
+        - link "My Shifts" [ref=e40] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e41]
+          - text: My Shifts
+      - button "Report a bug" [ref=e47]:
+        - img [ref=e48]
+        - text: Report a bug
+      - button "The Daily Grind" [ref=e58]:
+        - img [ref=e59]
+        - generic [ref=e63]: The Daily Grind
+        - img [ref=e64]
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - generic [ref=e70]:
+            - heading "Availability" [level=1] [ref=e72]
+            - paragraph [ref=e74]: No request sent for this week.
+          - button "Send Availability Request" [ref=e386]:
+            - img
+            - text: Send Availability Request
+        - generic [ref=e75]:
+          - button [active] [ref=e76]:
+            - img
+          - generic [ref=e77]:
+            - generic [ref=e78]: Week 20
+            - text: 11 May – 17 May
+          - button [ref=e79]:
+            - img
+        - generic [ref=e387]:
+          - paragraph [ref=e388]: No availability request for this week
+          - paragraph [ref=e389]: Send a request to collect availability from your team.
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e10] [cursor=pointer]:
+    - img [ref=e11]
+  - alert [ref=e14]

@@ -20,7 +20,10 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     orderBy: { name: "asc" },
   })
 
-  return NextResponse.json({ data: employees.map(serEmployee) })
+  return NextResponse.json(
+    { data: employees.map(serEmployee) },
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {

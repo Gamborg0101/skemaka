@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
 import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel } from "@/lib/dateUtils"
 import type { AvailabilityRequest, Employee, Shift, Schedule } from "@/types"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AvailabilityPage() {
   const { orgId, jobRoles, shiftTemplates } = useOrg()
@@ -184,11 +185,37 @@ export default function AvailabilityPage() {
     : null
 
   return (
-    <div className="px-4 md:px-6 py-6 pb-20 md:pb-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+    <div className="flex flex-col h-full">
+      {/* Desktop header */}
+      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-semibold text-gray-900">Availability</h1>
+          {request && (
+            <Badge
+              variant="outline"
+              className={request.status === "OPEN"
+                ? "border-green-300 text-green-700 bg-green-50"
+                : "text-gray-500"}
+            >
+              {request.status === "OPEN" ? "Open" : "Closed"}
+            </Badge>
+          )}
+          {deadline && <p className="text-xs text-gray-500">· Deadline: {deadline}</p>}
+        </div>
+        <Button
+          onClick={handleSendRequest}
+          disabled={sending || !!request}
+          className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+          size="sm"
+        >
+          <Send className="size-4" />
+          {sending ? "Sending..." : request ? "Request sent" : "Send Availability Request"}
+        </Button>
+      </div>
+      {/* Mobile header */}
+      <div className="md:hidden px-4 pt-6 pb-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-gray-900">Availability</h1>
             {request && (
               <Badge
@@ -201,21 +228,20 @@ export default function AvailabilityPage() {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-gray-500">
-            {deadline ? `Deadline: ${deadline}` : "No request sent for this week."}
-          </p>
+          <Button
+            onClick={handleSendRequest}
+            disabled={sending || !!request}
+            className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+            size="sm"
+          >
+            <Send className="size-4" />
+            {sending ? "Sending..." : request ? "Request sent" : "Send"}
+          </Button>
         </div>
-        <Button
-          onClick={handleSendRequest}
-          disabled={sending || !!request}
-          className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-          size="sm"
-        >
-          <Send className="size-4" />
-          {sending ? "Sending..." : request ? "Request sent" : "Send Availability Request"}
-        </Button>
+        {deadline && <p className="text-xs text-gray-500 mt-1">Deadline: {deadline}</p>}
       </div>
 
+      <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {/* Week navigation */}
       <div className="flex items-center gap-2 mb-5">
         <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(-1)}>
@@ -231,8 +257,29 @@ export default function AvailabilityPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-gray-200 bg-white py-20 text-center">
-          <p className="text-sm text-gray-400">Loading…</p>
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50">
+            <div className="px-3 py-2"><Skeleton className="h-4 w-16" /></div>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="px-2 py-2 text-center border-l border-gray-200">
+                <Skeleton className="h-3 w-8 mx-auto mb-1" />
+                <Skeleton className="h-4 w-6 mx-auto" />
+              </div>
+            ))}
+          </div>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={`grid grid-cols-[140px_repeat(7,1fr)] border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/50" : "bg-white"}`}>
+              <div className="px-3 py-3 flex items-center gap-2">
+                <Skeleton className="size-7 rounded-full shrink-0" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              {Array.from({ length: 7 }).map((_, j) => (
+                <div key={j} className="border-l border-gray-100 py-3 px-2">
+                  <Skeleton className="h-6 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       ) : request ? (
         <AvailabilityGrid
@@ -262,6 +309,7 @@ export default function AvailabilityPage() {
         defaultEndTime={bookDialog.endTime}
         onShiftCreate={handleShiftCreate}
       />
+      </div>
     </div>
   )
 }

@@ -1,0 +1,121 @@
+[     103ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[     115ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   79917ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  143271ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2734545ms] [ERROR] ./app/(manager)/time-off/page.tsx:388:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  386 |     </div>
+  387 |   )
+> 388 | }
+      | ^
+  389 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/(manager)/time-off/page.tsx [Client Component Browser]
+    ./app/(manager)/time-off/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(manager)/time-off/page.tsx [Client Component SSR]
+    ./app/(manager)/time-off/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[ 2734575ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2739449ms] [ERROR] ./app/(manager)/time-off/page.tsx:388:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  386 |     </div>
+  387 |   )
+> 388 | }
+      | ^
+  389 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/(manager)/time-off/page.tsx [Client Component Browser]
+    ./app/(manager)/time-off/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(manager)/time-off/page.tsx [Client Component SSR]
+    ./app/(manager)/time-off/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[ 2739486ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2763588ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2763658ms] [LOG] [Fast Refresh] done in 32ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2791096ms] [ERROR] ./app/(manager)/employees/page.tsx:337:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  335 |     </div>
+  336 |   )
+> 337 | }
+      | ^
+  338 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/(manager)/employees/page.tsx [Client Component Browser]
+    ./app/(manager)/employees/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(manager)/employees/page.tsx [Client Component SSR]
+    ./app/(manager)/employees/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[ 2791122ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2798935ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2799006ms] [LOG] [Fast Refresh] done in 42ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2819769ms] [ERROR] ./app/(manager)/availability/page.tsx:314:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  312 |     </div>
+  313 |   )
+> 314 | }
+      | ^
+  315 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/(manager)/availability/page.tsx [Client Component Browser]
+    ./app/(manager)/availability/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(manager)/availability/page.tsx [Client Component SSR]
+    ./app/(manager)/availability/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[ 2819806ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2826424ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2826498ms] [LOG] [Fast Refresh] done in 39ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2838351ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2838379ms] [LOG] [Fast Refresh] done in 34ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2850268ms] [ERROR] ./app/(manager)/costs/page.tsx:113:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  111 |     </div>
+  112 |   )
+> 113 | }
+      | ^
+  114 |
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./app/(manager)/costs/page.tsx [Client Component Browser]
+    ./app/(manager)/costs/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(manager)/costs/page.tsx [Client Component SSR]
+    ./app/(manager)/costs/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[ 2850308ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2857202ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2857272ms] [LOG] [Fast Refresh] done in 36ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2881413ms] [ERROR] ./app/(manager)/my-shifts/page.tsx:302:1
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  300 |     </div>
+  301 |   )
+> 302 | }
+      | ^
+  303 |
+
+Parsing ecmascript source code failed @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:3318
+[ 2881452ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2885309ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[ 2885372ms] [LOG] [Fast Refresh] done in 24ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477

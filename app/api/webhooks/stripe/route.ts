@@ -37,6 +37,19 @@ export async function POST(req: NextRequest) {
       const organizationId = session.metadata?.organizationId
       if (!organizationId || session.mode !== "subscription") break
 
+      const org = await db.organization.findUnique({
+        where: { id: organizationId },
+        select: { stripeCustomerId: true },
+      })
+      if (!org) break
+
+      // If the org already has a customer ID, it must match what Stripe sent.
+      // Prevents replayed or crafted events from hijacking another org's billing.
+      if (org.stripeCustomerId && org.stripeCustomerId !== (session.customer as string)) {
+        console.error("[stripe webhook] customer mismatch for org", organizationId)
+        return NextResponse.json({ error: "Customer mismatch" }, { status: 400 })
+      }
+
       await db.organization.update({
         where: { id: organizationId },
         data: {

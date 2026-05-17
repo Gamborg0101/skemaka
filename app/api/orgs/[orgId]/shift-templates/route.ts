@@ -17,7 +17,10 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   })
 
-  return NextResponse.json({ data: templates.map(serShiftTemplate) })
+  return NextResponse.json(
+    { data: templates.map(serShiftTemplate) },
+    { headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {

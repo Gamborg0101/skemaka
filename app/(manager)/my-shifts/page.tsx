@@ -162,17 +162,17 @@ export default async function MyShiftsPage({
   const nextShiftId = shifts.find((s) => s.date >= today)?.id
 
   return (
-    <div className="px-4 md:px-6 py-6 pb-20 md:pb-6">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div className="flex flex-col h-full">
+      {/* Desktop header */}
+      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">
             {viewingSelf ? "My Shifts" : `${employee.name}'s Shifts`}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500">
             {employee.jobRole} · {employee.organization.name}
           </p>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           <MyShiftsWeekNav weekStart={weekStart} employeeParam={viewingSelf ? undefined : selectedId} />
           {allEmployees.length > 1 && (
@@ -184,7 +184,31 @@ export default async function MyShiftsPage({
           )}
         </div>
       </div>
+      {/* Mobile header */}
+      <div className="md:hidden px-4 pt-6 pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">
+              {viewingSelf ? "My Shifts" : `${employee.name}'s Shifts`}
+            </h1>
+            <p className="text-xs text-gray-500">
+              {employee.jobRole} · {employee.organization.name}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <MyShiftsWeekNav weekStart={weekStart} employeeParam={viewingSelf ? undefined : selectedId} />
+            {allEmployees.length > 1 && (
+              <EmployeePicker
+                employees={allEmployees}
+                selectedId={selectedId}
+                selfId={selfEmployee.id}
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
+      <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {shifts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-base font-medium">No shifts this week</p>
@@ -273,6 +297,7 @@ export default async function MyShiftsPage({
           })}
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -38,6 +38,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "endTime must be HH:MM" }, { status: 400 })
   }
 
+  if (body.employeeId !== undefined) {
+    const emp = await db.employee.findFirst({
+      where: { id: body.employeeId, organizationId: orgId },
+      select: { id: true },
+    })
+    if (!emp) return NextResponse.json({ error: "Employee not found" }, { status: 404 })
+  }
+
   const shift = await db.shift.update({
     where: { id: shiftId },
     data: {

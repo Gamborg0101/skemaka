@@ -1,0 +1,97 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - button "Collapse sidebar" [ref=e6]:
+          - img [ref=e7]
+      - navigation [ref=e10]:
+        - link "Schedule" [ref=e11] [cursor=pointer]:
+          - /url: /schedule
+          - img [ref=e12]
+          - generic [ref=e14]: Schedule
+        - link "Employees" [ref=e15] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e16]
+          - generic [ref=e21]: Employees
+        - link "Availability" [ref=e22] [cursor=pointer]:
+          - /url: /availability
+          - img [ref=e23]
+          - generic [ref=e26]: Availability
+        - link "Labor Cost" [ref=e27] [cursor=pointer]:
+          - /url: /costs
+          - img [ref=e28]
+          - generic [ref=e30]: Labor Cost
+        - link "Time Off" [ref=e31] [cursor=pointer]:
+          - /url: /time-off
+          - img [ref=e32]
+          - generic [ref=e36]: Time Off
+        - link "My Shifts" [ref=e37] [cursor=pointer]:
+          - /url: /my-shifts
+          - img [ref=e38]
+          - generic [ref=e42]: My Shifts
+      - button "Report a bug" [ref=e45]:
+        - img [ref=e46]
+        - generic [ref=e55]: Report a bug
+      - button "The Daily Grind" [ref=e57]:
+        - img [ref=e58]
+        - generic [ref=e62]: The Daily Grind
+        - img [ref=e63]
+    - main [ref=e66]:
+      - generic [ref=e67]:
+        - heading "Time Off" [level=1] [ref=e69]
+        - generic [ref=e70]:
+          - button "Pending 2" [ref=e140]:
+            - text: Pending
+            - generic [ref=e72]: "2"
+          - button "Approved 1" [ref=e141]:
+            - text: Approved
+            - generic [ref=e74]: "1"
+          - button "Denied 1" [ref=e142]:
+            - text: Denied
+            - generic [ref=e76]: "1"
+        - generic [ref=e77]:
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]:
+                - generic [ref=e146]:
+                  - paragraph [ref=e147]: Nadia Patel
+                  - generic [ref=e148]: ·
+                  - paragraph [ref=e149]: Barista
+                - paragraph [ref=e150]: 25 May – 26 May 2026
+                - paragraph [ref=e151]: Medical appointments
+              - generic [ref=e152]: Pending
+            - generic [ref=e153]:
+              - button "Approve" [ref=e154]:
+                - img
+                - text: Approve
+              - button "Deny" [ref=e155]:
+                - img
+                - text: Deny
+              - button "View schedule" [ref=e156]:
+                - img
+                - text: View schedule
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - generic [ref=e160]:
+                  - paragraph [ref=e161]: Dr. James O'Brien
+                  - generic [ref=e162]: ·
+                  - paragraph [ref=e163]: Barista
+                - paragraph [ref=e164]: 20 May – 22 May 2026
+                - paragraph [ref=e165]: Family trip
+              - generic [ref=e166]: Pending
+            - generic [ref=e167]:
+              - button "Approve" [ref=e168]:
+                - img
+                - text: Approve
+              - button "Deny" [ref=e169]:
+                - img
+                - text: Deny
+              - button "View schedule" [ref=e170]:
+                - img
+                - text: View schedule
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e135] [cursor=pointer]:
+    - img [ref=e136]
+  - alert [ref=e139]

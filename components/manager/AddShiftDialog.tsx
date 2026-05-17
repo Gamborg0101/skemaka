@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -65,10 +65,12 @@ export function AddShiftDialog({
   const [notes, setNotes] = useState("")
   const [showNotes, setShowNotes] = useState(false)
   const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null)
+  const skipAutoSuggestRef = useRef(false)
 
   // Sync pre-filled values whenever the dialog opens
   useEffect(() => {
     if (open) {
+      skipAutoSuggestRef.current = true
       setEmployeeId(defaultEmployeeId)
       setStartTime(defaultStartTime)
       setEndTime(defaultEndTime)
@@ -87,8 +89,12 @@ export function AddShiftDialog({
     setSelectedRole(emp?.jobRole ?? "")
   }, [employeeId, employees])
 
-  // Auto-suggest break based on shift duration
+  // Auto-suggest break based on shift duration (only when user changes times, not on open/template)
   useEffect(() => {
+    if (skipAutoSuggestRef.current) {
+      skipAutoSuggestRef.current = false
+      return
+    }
     const [sh, sm] = startTime.split(":").map(Number)
     const [eh, em] = endTime.split(":").map(Number)
     const mins = (eh * 60 + em) - (sh * 60 + sm)
@@ -98,6 +104,7 @@ export function AddShiftDialog({
   }, [startTime, endTime])
 
   const applyTemplate = (tmpl: ShiftTemplate) => {
+    skipAutoSuggestRef.current = true
     setStartTime(tmpl.startTime)
     setEndTime(tmpl.endTime)
     setBreakMinutes(String(tmpl.breakMinutes))

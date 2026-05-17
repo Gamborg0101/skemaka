@@ -27,7 +27,10 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   })
 
-  return NextResponse.json({ data: shifts.map(serShift) })
+  return NextResponse.json(
+    { data: shifts.map(serShift) },
+    { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=120" } }
+  )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -64,6 +67,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!isNonNegativeInt(breakMinutes ?? 0)) {
     return NextResponse.json({ error: "breakMinutes must be a non-negative integer" }, { status: 400 })
   }
+
+  const employeeInOrg = await db.employee.findFirst({
+    where: { id: employeeId, organizationId: orgId },
+    select: { id: true },
+  })
+  if (!employeeInOrg) return NextResponse.json({ error: "Employee not found" }, { status: 404 })
 
   const dateUTC = new Date(date + "T00:00:00Z")
   const existing = await db.shift.findFirst({
