@@ -9,7 +9,7 @@ import type { UserRole, SubscriptionStatus } from "@/types"
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 30 * 60, updateAge: 0 },
   providers: [
     Google,
     Resend({
