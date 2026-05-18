@@ -114,7 +114,7 @@ function DroppableCell({
 
   if (isClosed) {
     return (
-      <div className={cn("relative min-h-16 border-r border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50/60 dark:bg-blue-900/20" : "bg-gray-50/80 dark:bg-gray-800/80")}>
+      <div className={cn("relative min-h-16 border-r border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50/60 dark:bg-gray-700/20" : "bg-gray-50/80 dark:bg-gray-800/80")}>
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300 dark:text-gray-600 select-none">
             Closed
@@ -144,10 +144,10 @@ function DroppableCell({
         "group relative min-h-16 p-1.5 border-r border-b border-gray-200 dark:border-gray-700 transition-colors",
         isEmpty ? "cursor-pointer" : "cursor-default",
         isOver
-          ? "bg-blue-50 dark:bg-blue-900/30"
+          ? "bg-blue-50 dark:bg-gray-700/25"
           : isEmpty
-          ? isWeekend ? "bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30" : isToday ? "bg-blue-50/40 dark:bg-blue-900/20 hover:bg-blue-50/70 dark:hover:bg-blue-900/30" : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-          : isWeekend ? "bg-amber-50/40 dark:bg-amber-950/10" : isToday ? "bg-blue-50/20 dark:bg-blue-900/10" : "bg-white dark:bg-gray-900"
+          ? isWeekend ? "bg-amber-50/60 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30" : isToday ? "bg-blue-50/40 dark:bg-gray-700/15 hover:bg-blue-50/70 dark:hover:bg-gray-700/25" : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+          : isWeekend ? "bg-amber-50/40 dark:bg-amber-950/10" : isToday ? "bg-blue-50/20 dark:bg-gray-700/10" : "bg-white dark:bg-gray-900"
       )}
     >
       <div className="space-y-1">
@@ -183,7 +183,7 @@ function DroppableCell({
                 e.stopPropagation()
                 onAddClick(employeeId, date)
               }}
-              className="size-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900 flex items-center justify-center"
+              className="size-5 rounded-full bg-blue-100 dark:bg-gray-700/60 text-blue-600 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-gray-700 flex items-center justify-center"
               aria-label="Add shift"
             >
               <Plus className="size-3" />
@@ -358,20 +358,20 @@ export function WeeklyScheduleGrid({
                   onClick={() => setMobileDay(i)}
                   className={cn(
                     "flex-1 flex flex-col items-center py-2.5 border-b-2 transition-colors",
-                    isSelected ? "border-blue-600" : "border-transparent"
+                    isSelected ? "border-blue-600 dark:border-gray-400" : "border-transparent"
                   )}
                 >
                   <span className={cn(
                     "text-[10px] font-semibold uppercase tracking-wide",
-                    isClosed ? "text-gray-300 dark:text-gray-600" : isWeekend ? "text-amber-500" : isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+                    isClosed ? "text-gray-300 dark:text-gray-600" : isWeekend ? "text-amber-500" : isSelected ? "text-blue-600 dark:text-slate-200" : "text-gray-500 dark:text-gray-400"
                   )}>
                     {DAY_NAMES[i]}
                   </span>
                   <span className={cn(
                     "mt-0.5 size-6 flex items-center justify-center rounded-full text-xs font-bold",
                     isToday && isSelected  && "bg-blue-600 text-white",
-                    isToday && !isSelected && "ring-2 ring-blue-400 text-blue-700 dark:text-blue-400",
-                    !isToday && isSelected && "bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-400",
+                    isToday && !isSelected && "ring-2 ring-blue-400 dark:ring-gray-400 text-blue-700 dark:text-gray-100",
+                    !isToday && isSelected && "bg-blue-100 dark:bg-gray-700/60 text-blue-700 dark:text-gray-200",
                     !isToday && !isSelected && (isClosed ? "text-gray-300 dark:text-gray-600" : "text-gray-700 dark:text-gray-300")
                   )}>
                     {day.getDate()}
@@ -431,7 +431,7 @@ export function WeeklyScheduleGrid({
                         <Tooltip content="Add shift" side="top">
                           <button
                             onClick={() => openAddDialog(employee.id, date)}
-                            className="size-10 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center transition-colors"
+                            className="size-10 rounded-full bg-blue-50 dark:bg-gray-800/60 text-blue-600 hover:bg-blue-100 dark:hover:bg-gray-700/50 flex items-center justify-center transition-colors"
                             aria-label={`Add shift for ${employee.name}`}
                           >
                             <Plus className="size-4" />
@@ -510,18 +510,18 @@ export function WeeklyScheduleGrid({
                     "border-b border-r border-gray-200 dark:border-gray-700 px-2 py-2.5 text-center",
                     isClosed
                       ? "bg-gray-100 dark:bg-gray-800"
-                      : isToday ? "bg-blue-100 dark:bg-blue-900/40" : isWeekend ? "bg-amber-50 dark:bg-amber-950/30" : "bg-gray-100 dark:bg-gray-800"
+                      : isToday ? "bg-blue-100 dark:bg-gray-700/30" : isWeekend ? "bg-amber-50 dark:bg-amber-950/30" : "bg-gray-100 dark:bg-gray-800"
                   )}
                 >
                   <p className={cn(
                     "text-xs font-semibold uppercase tracking-wide",
-                    isClosed ? "text-gray-400 dark:text-gray-500" : isToday ? "text-blue-700 dark:text-blue-400" : isWeekend ? "text-amber-700 dark:text-amber-500" : "text-gray-600 dark:text-gray-400"
+                    isClosed ? "text-gray-400 dark:text-gray-500" : isToday ? "text-blue-700 dark:text-gray-100" : isWeekend ? "text-amber-700 dark:text-amber-500" : "text-gray-600 dark:text-gray-400"
                   )}>
                     {DAY_NAMES[di]}
                   </p>
                   <p className={cn(
                     "text-sm font-semibold",
-                    isClosed ? "text-gray-400 dark:text-gray-500" : isToday ? "text-blue-800 dark:text-blue-300" : isWeekend ? "text-amber-800 dark:text-amber-400" : "text-gray-800 dark:text-gray-200"
+                    isClosed ? "text-gray-400 dark:text-gray-500" : isToday ? "text-blue-800 dark:text-gray-200" : isWeekend ? "text-amber-800 dark:text-amber-400" : "text-gray-800 dark:text-gray-200"
                   )}>
                     {formatHeaderDate(day)}
                   </p>

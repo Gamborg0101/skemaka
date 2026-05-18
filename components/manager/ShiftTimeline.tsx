@@ -170,7 +170,7 @@ function TimelineRow({
           <Tooltip content="Add shift" side="right">
             <button
               onClick={() => onRowClick(employee.id, date)}
-              className="shrink-0 size-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-500 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center transition-colors ml-1"
+              className="shrink-0 size-5 rounded-full bg-blue-100 dark:bg-gray-700/60 text-blue-500 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-gray-100 flex items-center justify-center transition-colors ml-1"
               aria-label={`Add shift for ${employee.name}`}
             >
               <Plus className="size-3" />
@@ -184,7 +184,7 @@ function TimelineRow({
         ref={setNodeRef}
         className={cn(
           "relative flex-1 h-14 transition-colors",
-          isOver && canDrop  && "bg-blue-50 dark:bg-blue-900/30 ring-1 ring-inset ring-blue-300 dark:ring-blue-700",
+          isOver && canDrop  && "bg-blue-50 dark:bg-gray-700/25 ring-1 ring-inset ring-blue-300 dark:ring-gray-600",
           isOver && !canDrop && draggingEmpScheduledHere && "bg-red-50 dark:bg-red-900/30 ring-1 ring-inset ring-red-200 dark:ring-red-800",
         )}
       >
@@ -241,14 +241,14 @@ function TimelineRow({
               <>
                 <div className="absolute top-0 bottom-0 w-0.5 bg-blue-400" style={{ left: `${hoverSnap.pct}%` }} />
                 <div className="absolute top-1 -translate-x-1/2" style={{ left: `${hoverSnap.pct}%` }}>
-                  <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-700 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                  <span className="text-xs font-semibold text-blue-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-blue-300 dark:border-gray-600 px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
                     {hoverSnap.time}
                   </span>
                 </div>
               </>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700 px-2.5 py-1 rounded-full shadow-sm">
+                <span className="text-xs font-semibold text-blue-700 dark:text-gray-200 bg-blue-100 dark:bg-gray-700/60 border border-blue-300 dark:border-gray-600 px-2.5 py-1 rounded-full shadow-sm">
                   Drop to schedule
                 </span>
               </div>
@@ -304,10 +304,10 @@ function DaySection({
   return (
     <div>
       {/* Sticky day header — sticks within the scrollable container */}
-      <div className={cn("sticky top-0 z-[8] border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50 dark:bg-blue-900/30" : "bg-gray-50 dark:bg-gray-800")}>
+      <div className={cn("sticky top-0 z-[8] border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50 dark:bg-gray-700/30" : "bg-gray-50 dark:bg-gray-800")}>
         {/* Date label */}
-        <div className={cn("flex items-center gap-2 px-4 py-1.5 border-b", isToday ? "border-blue-100 dark:border-blue-800" : "border-gray-100 dark:border-gray-700")}>
-          <span className={cn("text-xs font-semibold", isToday ? "text-blue-700 dark:text-blue-400" : "text-gray-600 dark:text-gray-400")}>
+        <div className={cn("flex items-center gap-2 px-4 py-1.5 border-b", isToday ? "border-blue-100 dark:border-gray-600" : "border-gray-100 dark:border-gray-700")}>
+          <span className={cn("text-xs font-semibold", isToday ? "text-blue-700 dark:text-gray-100" : "text-gray-600 dark:text-gray-400")}>
             {dayLabel}
           </span>
           {isToday && (

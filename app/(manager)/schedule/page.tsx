@@ -272,15 +272,15 @@ export default function SchedulePage() {
 
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
         {!loading && !hintDismissed && employees.length > 0 && (schedule?.shifts ?? []).length === 0 && (
-          <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50 px-4 py-3">
-            <span className="text-sm text-blue-800 dark:text-blue-300 flex-1">
+          <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-100 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3">
+            <span className="text-sm text-blue-800 dark:text-gray-300 flex-1">
               <span className="font-semibold">Your schedule is ready.</span>{" "}
               Click any empty cell to add your first shift.
             </span>
             <button
               onClick={() => setHintDismissed(true)}
               aria-label="Dismiss"
-              className="shrink-0 text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+              className="shrink-0 text-blue-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
               <X className="size-4" />
             </button>

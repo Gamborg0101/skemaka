@@ -159,7 +159,7 @@ export default function EmployeesPage() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px capitalize ${
-              activeTab === tab ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              activeTab === tab ? "border-blue-600 text-blue-600 dark:border-gray-400 dark:text-slate-200" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
           >
             {tab}
@@ -230,7 +230,7 @@ export default function EmployeesPage() {
               {visibleEmployees.map((emp, idx) => (
                 <TableRow
                   key={emp.id}
-                  className={`transition-colors cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/20 ${idx % 2 === 1 ? "bg-gray-50 dark:bg-gray-800/50" : "bg-white dark:bg-gray-900"}`}
+                  className={`transition-colors cursor-pointer hover:bg-blue-50/40 dark:hover:bg-gray-700/30 ${idx % 2 === 1 ? "bg-gray-50 dark:bg-gray-800/50" : "bg-white dark:bg-gray-900"}`}
                   onClick={() => openSheet(emp)}
                 >
                   <TableCell>

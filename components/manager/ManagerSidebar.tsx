@@ -155,7 +155,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
               href={href}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition-colors min-w-0",
-                active ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"
+                active ? "text-blue-600 dark:text-white" : "text-gray-500 dark:text-gray-400"
               )}
             >
               <Icon className="size-5" />

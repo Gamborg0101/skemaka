@@ -27,9 +27,9 @@ function DayCell({
 }) {
   if (existingShift) {
     return (
-      <div className="h-full min-h-12 rounded bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 flex flex-col items-center justify-center gap-0.5 px-1">
-        <CalendarCheck className="size-3.5 text-blue-500 dark:text-blue-400" />
-        <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 tabular-nums">
+      <div className="h-full min-h-12 rounded bg-blue-50 dark:bg-slate-800/60 border border-blue-200 dark:border-slate-600 flex flex-col items-center justify-center gap-0.5 px-1">
+        <CalendarCheck className="size-3.5 text-blue-500 dark:text-slate-300" />
+        <span className="text-[10px] font-semibold text-blue-700 dark:text-slate-200 tabular-nums">
           {formatTime(existingShift.startTime)}–{formatTime(existingShift.endTime)}
         </span>
       </div>
@@ -137,7 +137,7 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
           Available
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-2.5 rounded-sm bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700" />
+          <span className="inline-block size-2.5 rounded-sm bg-blue-100 dark:bg-slate-700/60 border border-blue-300 dark:border-slate-500" />
           Scheduled
         </span>
         <span className="flex items-center gap-1.5">
