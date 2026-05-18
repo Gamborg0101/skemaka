@@ -8,14 +8,14 @@ import type { SubscriptionStatus } from "@/types"
 function StatusBanner({ status }: { status: SubscriptionStatus }) {
   if (status === "TRIALING") {
     return (
-      <div className="rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/40 px-5 py-4 mb-6">
+      <div className="rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-5 py-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-lg bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center shrink-0">
-            <Zap className="size-4 text-blue-600 dark:text-blue-400" />
+          <div className="size-9 rounded-lg bg-blue-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+            <Zap className="size-4 text-blue-600 dark:text-gray-300" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Free trial</p>
-            <p className="text-sm text-blue-700 dark:text-blue-300">Full access during your trial — subscribe to continue when it ends.</p>
+            <p className="text-sm font-semibold text-blue-900 dark:text-gray-100">Free trial</p>
+            <p className="text-sm text-blue-700 dark:text-gray-400">Full access during your trial — subscribe to continue when it ends.</p>
           </div>
         </div>
       </div>

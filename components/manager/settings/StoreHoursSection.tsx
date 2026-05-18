@@ -74,7 +74,7 @@ export function StoreHoursSection() {
                   "ml-auto shrink-0 text-xs font-medium px-2.5 py-1 rounded-full transition-colors",
                   day.isOpen
                     ? "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50"
-                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60"
+                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-gray-700/50 dark:text-gray-300 dark:hover:bg-gray-700"
                 )}
               >
                 {day.isOpen ? "Set closed" : "Set open"}

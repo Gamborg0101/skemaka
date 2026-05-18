@@ -156,8 +156,8 @@ export function AddShiftDialog({
                   className={cn(
                     "inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors",
                     isActive
-                      ? "bg-blue-50 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300"
-                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/40 hover:border-blue-200 dark:hover:border-blue-700 hover:text-blue-700 dark:hover:text-blue-300"
+                      ? "bg-blue-50 dark:bg-gray-700/60 border-blue-300 dark:border-gray-500 text-blue-700 dark:text-gray-100"
+                      : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-700/40 hover:border-blue-200 dark:hover:border-gray-600 hover:text-blue-700 dark:hover:text-gray-200"
                   )}
                 >
                   <span className="font-medium">{tmpl.name}</span>

@@ -85,7 +85,7 @@ export function TeamAccessSection() {
                   "text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
                   member.role === "ADMIN"
                     ? "bg-purple-50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                    : "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                    : "bg-blue-50 text-blue-700 dark:bg-gray-700/60 dark:text-gray-200"
                 )}>
                   {member.role === "ADMIN" ? "Admin" : "Manager"}
                 </span>
