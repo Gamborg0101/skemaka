@@ -33,7 +33,7 @@ export function EmployeePicker({
       <select
         value={selectedId}
         onChange={handleChange}
-        className="appearance-none bg-white border border-gray-200 rounded-lg pl-3 pr-8 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-3 pr-8 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:border-gray-300 dark:hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
       >
         {employees.map((emp) => (
           <option key={emp.id} value={emp.id}>

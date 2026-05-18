@@ -31,11 +31,11 @@ export function FeaturesSection() {
   return (
     <SettingsSection icon={ToggleRight} title="Features" description="Turn optional features on or off for your workspace.">
       <div className="mt-4 space-y-1">
-        <div className="flex items-center justify-between rounded-lg px-3 py-3 hover:bg-gray-50">
+        <div className="flex items-center justify-between rounded-lg px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40">
           <div className="flex items-center gap-3">
             <CalendarX2 className="size-4 text-gray-400 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-gray-800">Time Off Requests</p>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Time Off Requests</p>
               <p className="text-xs text-gray-500">
                 Let employees submit time off requests for you to approve or deny.
               </p>
@@ -48,7 +48,7 @@ export function FeaturesSection() {
             onClick={() => handleToggleTimeOff(!timeOffEnabled)}
             className={cn(
               "relative h-6 w-11 rounded-full transition-colors shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500",
-              timeOffEnabled ? "bg-blue-600" : "bg-gray-200"
+              timeOffEnabled ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-700"
             )}
           >
             <span

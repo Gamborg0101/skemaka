@@ -99,8 +99,8 @@ export function ShiftTypesSection() {
     <SettingsSection icon={BookOpen} title="Shift Types" description="Presets you can apply with one click when adding a shift.">
       <div className="mt-4">
         {showAddForm ? (
-          <form onSubmit={handleAddTemplate} className="mb-3 p-4 rounded-lg border border-blue-100 bg-blue-50/40 space-y-3">
-            <p className="text-sm font-medium text-gray-700">New shift type</p>
+          <form onSubmit={handleAddTemplate} className="mb-3 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50 bg-blue-50/40 dark:bg-blue-950/30 space-y-3">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">New shift type</p>
             <div className="space-y-1.5">
               <Label htmlFor="tmpl-name" className="text-xs">Name</Label>
               <Input
@@ -175,9 +175,9 @@ export function ShiftTypesSection() {
         ) : shiftTemplates.length > 0 ? (
           <div className="space-y-1 mb-3">
             {shiftTemplates.map((tmpl) => (
-              <div key={tmpl.id} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
+              <div key={tmpl.id} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/40">
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-800">{tmpl.name}</span>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{tmpl.name}</span>
                   <span className="text-sm text-gray-400 ml-2">{formatTemplateSummary(tmpl)}</span>
                 </div>
                 <Tooltip content="Delete shift type">
@@ -185,7 +185,7 @@ export function ShiftTypesSection() {
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => handleDeleteTemplate(tmpl)}
-                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
+                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-950/40 shrink-0"
                   >
                     <Trash2 className="size-3.5" />
                   </Button>

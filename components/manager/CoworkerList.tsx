@@ -21,7 +21,7 @@ export function CoworkerList({ coworkers }: { coworkers: Coworker[] }) {
   const overflow = coworkers.length - PREVIEW
 
   return (
-    <div className="mt-auto pt-3 border-t border-gray-100">
+    <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700/60">
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex -space-x-2">
           {visible.map((cw) => (
@@ -29,7 +29,7 @@ export function CoworkerList({ coworkers }: { coworkers: Coworker[] }) {
               key={cw.name}
               title={`${cw.name} · ${cw.jobRole}`}
               className={cn(
-                "size-7 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-bold shrink-0",
+                "size-7 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center text-white text-[10px] font-bold shrink-0",
                 avatarColor(cw.name)
               )}
             >
@@ -56,14 +56,14 @@ export function CoworkerList({ coworkers }: { coworkers: Coworker[] }) {
       {expanded && (
         <div className="mt-2 space-y-1">
           {coworkers.map((cw) => (
-            <p key={cw.name} className="text-xs text-gray-600">
+            <p key={cw.name} className="text-xs text-gray-600 dark:text-gray-400">
               <span className="font-medium">{cw.name}</span>
               <span className="text-gray-400"> · {cw.jobRole}</span>
             </p>
           ))}
           <button
             onClick={() => setExpanded(false)}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors mt-1"
+            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors mt-1"
           >
             Show less
           </button>

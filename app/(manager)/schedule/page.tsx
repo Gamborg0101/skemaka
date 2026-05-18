@@ -55,13 +55,6 @@ export default function SchedulePage() {
     if (newWeekStart !== weekStart) setWeekStart(newWeekStart)
   }
 
-  const navigateDays = (direction: -1 | 1) => {
-    const newDay = addDays(selectedDay, direction * dayCount)
-    const newWeekStart = getMondayOfWeek(new Date(newDay + "T12:00:00"))
-    setSelectedDay(newDay)
-    if (newWeekStart !== weekStart) setWeekStart(newWeekStart)
-  }
-
   const today = new Date().toISOString().split("T")[0]
   const isCurrentWeek = getMondayOfWeek(new Date()) === weekStart
 
@@ -196,13 +189,13 @@ export default function SchedulePage() {
       </>
     ) : (
       <>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateDays(-1)} aria-label="Previous">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label="Previous">
           <ChevronLeft className="size-4" />
         </Button>
         <span className="text-sm font-semibold text-gray-700 text-center hidden md:block md:min-w-44">
           {timelineRangeLabel}
         </span>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateDays(1)} aria-label="Next">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label="Next">
           <ChevronRight className="size-4" />
         </Button>
         <WeekPicker weekStart={weekStart} onChange={jumpToWeek} />
@@ -295,18 +288,18 @@ export default function SchedulePage() {
         )}
         {loading ? (
           <div className="p-4 space-y-0">
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <div className="grid grid-cols-[160px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+              <div className="grid grid-cols-[160px_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                 <div className="px-4 py-3"><Skeleton className="h-4 w-20" /></div>
                 {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className="px-2 py-3 text-center border-l border-gray-200">
+                  <div key={i} className="px-2 py-3 text-center border-l border-gray-200 dark:border-gray-700">
                     <Skeleton className="h-3 w-8 mx-auto mb-1" />
                     <Skeleton className="h-4 w-6 mx-auto" />
                   </div>
                 ))}
               </div>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className={`grid grid-cols-[160px_repeat(7,1fr)] border-b border-gray-100 ${i % 2 === 1 ? "bg-gray-50/50" : "bg-white"}`}>
+                <div key={i} className={`grid grid-cols-[160px_repeat(7,1fr)] border-b border-gray-100 dark:border-gray-800 ${i % 2 === 1 ? "bg-gray-50/50 dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}>
                   <div className="px-4 py-3 flex items-center gap-2.5">
                     <Skeleton className="size-8 rounded-full shrink-0" />
                     <div>
@@ -315,7 +308,7 @@ export default function SchedulePage() {
                     </div>
                   </div>
                   {Array.from({ length: 7 }).map((_, j) => (
-                    <div key={j} className="border-l border-gray-100 p-2">
+                    <div key={j} className="border-l border-gray-100 dark:border-gray-800 p-2">
                       {j % 3 === 0 && i % 2 === 0 ? (
                         <Skeleton className="h-12 w-full rounded-lg" />
                       ) : null}
