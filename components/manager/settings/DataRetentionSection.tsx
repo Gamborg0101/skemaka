@@ -51,13 +51,13 @@ export function DataRetentionSection() {
       <div className="mt-4 space-y-4">
         <ul className="space-y-1.5">
           {Object.values(RETENTION).map((r) => (
-            <li key={r.label} className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="size-1.5 rounded-full bg-gray-300 shrink-0" />
+            <li key={r.label} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span className="size-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
               {r.label}
             </li>
           ))}
-          <li className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="size-1.5 rounded-full bg-gray-300 shrink-0" />
+          <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className="size-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
             Expired sessions (cleaned automatically)
           </li>
         </ul>
@@ -67,7 +67,7 @@ export function DataRetentionSection() {
         </p>
 
         {done && (
-          <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+          <div className="rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800/50 px-4 py-3 text-sm text-green-800 dark:text-green-300">
             {done.total === 0 ? (
               "Nothing to clean — database is already tidy."
             ) : (
@@ -87,8 +87,8 @@ export function DataRetentionSection() {
           <div className={cn(
             "rounded-lg border px-4 py-3 text-sm",
             preview.total === 0
-              ? "bg-gray-50 border-gray-200 text-gray-500"
-              : "bg-amber-50 border-amber-200 text-amber-900"
+              ? "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"
+              : "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-300"
           )}>
             {preview.total === 0 ? (
               "Nothing to clean — everything is within the retention window."

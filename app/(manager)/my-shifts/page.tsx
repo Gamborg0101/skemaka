@@ -57,12 +57,12 @@ function pickNote(shiftId: string): string {
 }
 
 const ACCENT: Record<string, { badge: string }> = {
-  blue:   { badge: "bg-blue-50 text-blue-700" },
-  green:  { badge: "bg-green-50 text-green-700" },
-  orange: { badge: "bg-orange-50 text-orange-700" },
-  purple: { badge: "bg-purple-50 text-purple-700" },
-  yellow: { badge: "bg-yellow-50 text-yellow-700" },
-  gray:   { badge: "bg-gray-100 text-gray-600" },
+  blue:   { badge: "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" },
+  green:  { badge: "bg-green-50 text-green-700 dark:bg-green-900/50 dark:text-green-300" },
+  orange: { badge: "bg-orange-50 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" },
+  purple: { badge: "bg-purple-50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300" },
+  yellow: { badge: "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300" },
+  gray:   { badge: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" },
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ export default async function MyShiftsPage({
   if (!selfEmployee) {
     return (
       <div className="flex flex-col items-center justify-center py-32 px-4">
-        <p className="text-lg font-semibold text-gray-900 mb-1">No employee profile found</p>
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">No employee profile found</p>
         <p className="text-sm text-gray-500">Add yourself as an employee to see your shifts here.</p>
       </div>
     )
@@ -164,9 +164,9 @@ export default async function MyShiftsPage({
   return (
     <div className="flex flex-col h-full">
       {/* Desktop header */}
-      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+      <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {viewingSelf ? "My Shifts" : `${employee.name}'s Shifts`}
           </h1>
           <p className="text-xs text-gray-500">
@@ -188,7 +188,7 @@ export default async function MyShiftsPage({
       <div className="md:hidden px-4 pt-6 pb-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {viewingSelf ? "My Shifts" : `${employee.name}'s Shifts`}
             </h1>
             <p className="text-xs text-gray-500">
@@ -232,10 +232,10 @@ export default async function MyShiftsPage({
               <div
                 key={shift.id}
                 className={cn(
-                  "bg-white rounded-2xl border flex flex-col transition-shadow",
+                  "bg-white dark:bg-gray-800/60 rounded-2xl border flex flex-col transition-shadow",
                   isToday
-                    ? "border-blue-300 shadow-lg shadow-blue-100/60"
-                    : "border-gray-200 shadow-sm"
+                    ? "border-blue-300 dark:border-blue-700 shadow-lg shadow-blue-100/60 dark:shadow-blue-900/20"
+                    : "border-gray-200 dark:border-gray-700 shadow-sm"
                 )}
               >
                 <div className="p-4 flex flex-col gap-3 flex-1">
@@ -245,7 +245,7 @@ export default async function MyShiftsPage({
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide leading-none">
                         {formatDay(shift.date)}
                       </p>
-                      <p className="text-sm font-medium text-gray-700 mt-0.5">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-0.5">
                         {formatDate(shift.date)}
                       </p>
                     </div>
@@ -256,7 +256,7 @@ export default async function MyShiftsPage({
                         </span>
                       )}
                       {isNext && !isToday && (
-                        <span className="text-[11px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
                           Up next
                         </span>
                       )}
@@ -268,7 +268,7 @@ export default async function MyShiftsPage({
 
                   {/* Time — hero */}
                   <div>
-                    <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-none">
                       {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
@@ -283,8 +283,8 @@ export default async function MyShiftsPage({
                   <p className={cn(
                     "text-xs rounded-lg px-3 py-2 italic leading-relaxed",
                     shift.notes
-                      ? "text-gray-500 bg-gray-50"
-                      : "text-emerald-600 bg-emerald-50"
+                      ? "text-gray-500 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50"
+                      : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40"
                   )}>
                     &ldquo;{shift.notes ?? pickNote(shift.id)}&rdquo;
                   </p>

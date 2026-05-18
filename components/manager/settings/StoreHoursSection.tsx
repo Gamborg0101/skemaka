@@ -57,7 +57,7 @@ export function StoreHoursSection() {
               key={name}
               className={cn("flex items-center gap-3 rounded-lg px-3 py-2", !day.isOpen && "opacity-60")}
             >
-              <span className="w-24 text-sm font-medium text-gray-700 shrink-0">{name}</span>
+              <span className="w-24 text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">{name}</span>
               {day.isOpen ? (
                 <div className="flex items-center gap-2 flex-1">
                   <TimePicker value={day.openTime} onChange={(v) => updateDay(i, { openTime: v })} />
@@ -65,7 +65,7 @@ export function StoreHoursSection() {
                   <TimePicker value={day.closeTime} onChange={(v) => updateDay(i, { closeTime: v })} />
                 </div>
               ) : (
-                <span className="flex-1 text-sm text-gray-400">Closed</span>
+                <span className="flex-1 text-sm text-gray-400 dark:text-gray-500">Closed</span>
               )}
               <button
                 type="button"
@@ -73,8 +73,8 @@ export function StoreHoursSection() {
                 className={cn(
                   "ml-auto shrink-0 text-xs font-medium px-2.5 py-1 rounded-full transition-colors",
                   day.isOpen
-                    ? "text-gray-500 hover:bg-gray-100"
-                    : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                    ? "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50"
+                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-400 dark:hover:bg-blue-900/60"
                 )}
               >
                 {day.isOpen ? "Set closed" : "Set open"}
@@ -84,7 +84,7 @@ export function StoreHoursSection() {
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between gap-4">
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-4">
         <p className="text-xs text-gray-400">
           The timeline shows each day&apos;s hours with a 2-hour buffer on each end.
         </p>

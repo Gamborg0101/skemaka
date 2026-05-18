@@ -42,8 +42,8 @@ export function ScheduleViewSection() {
           className={cn(
             "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors",
             defaultScheduleView === "week"
-              ? "bg-gray-900 text-white border-gray-900"
-              : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+              ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100"
+              : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
           )}
         >
           <LayoutGrid className="size-4" />
@@ -55,8 +55,8 @@ export function ScheduleViewSection() {
           className={cn(
             "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors",
             defaultScheduleView === "timeline"
-              ? "bg-gray-900 text-white border-gray-900"
-              : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+              ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100"
+              : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-200"
           )}
         >
           <AlignLeft className="size-4" />

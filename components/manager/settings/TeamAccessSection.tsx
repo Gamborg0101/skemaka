@@ -74,9 +74,9 @@ export function TeamAccessSection() {
         {team.length > 0 && (
           <div className="space-y-1">
             {team.map((member) => (
-              <div key={member.userId} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
+              <div key={member.userId} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/40">
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-800">{member.name ?? member.email}</span>
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{member.name ?? member.email}</span>
                   {member.name && (
                     <span className="text-sm text-gray-400 ml-2">{member.email}</span>
                   )}
@@ -84,8 +84,8 @@ export function TeamAccessSection() {
                 <span className={cn(
                   "text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
                   member.role === "ADMIN"
-                    ? "bg-purple-50 text-purple-700"
-                    : "bg-blue-50 text-blue-700"
+                    ? "bg-purple-50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                    : "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
                 )}>
                   {member.role === "ADMIN" ? "Admin" : "Manager"}
                 </span>
@@ -95,7 +95,7 @@ export function TeamAccessSection() {
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => handleRevoke(member)}
-                      className="text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
+                      className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-950/40 shrink-0"
                     >
                       <X className="size-3.5" />
                     </Button>

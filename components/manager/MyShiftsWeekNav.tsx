@@ -52,10 +52,10 @@ export function MyShiftsWeekNav({ weekStart, employeeParam }: MyShiftsWeekNavPro
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700 hidden sm:block">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
           {formatInterval(weekStart)}
         </span>
-        <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
           W{getISOWeek(weekStart)}
         </span>
         {weekStart !== currentWeek && (

@@ -8,14 +8,14 @@ import type { SubscriptionStatus } from "@/types"
 function StatusBanner({ status }: { status: SubscriptionStatus }) {
   if (status === "TRIALING") {
     return (
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 mb-6">
+      <div className="rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/40 px-5 py-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-            <Zap className="size-4 text-blue-600" />
+          <div className="size-9 rounded-lg bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center shrink-0">
+            <Zap className="size-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-blue-900">Free trial</p>
-            <p className="text-sm text-blue-700">Full access during your trial — subscribe to continue when it ends.</p>
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Free trial</p>
+            <p className="text-sm text-blue-700 dark:text-blue-300">Full access during your trial — subscribe to continue when it ends.</p>
           </div>
         </div>
       </div>
@@ -23,14 +23,14 @@ function StatusBanner({ status }: { status: SubscriptionStatus }) {
   }
   if (status === "ACTIVE") {
     return (
-      <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 mb-6">
+      <div className="rounded-xl border border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-950/40 px-5 py-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-            <CheckCircle className="size-4 text-green-600" />
+          <div className="size-9 rounded-lg bg-green-100 dark:bg-green-900/60 flex items-center justify-center shrink-0">
+            <CheckCircle className="size-4 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-green-900">Subscription active</p>
-            <p className="text-sm text-green-700">Your plan is active. Use the customer portal to manage payment details and invoices.</p>
+            <p className="text-sm font-semibold text-green-900 dark:text-green-200">Subscription active</p>
+            <p className="text-sm text-green-700 dark:text-green-300">Your plan is active. Use the customer portal to manage payment details and invoices.</p>
           </div>
         </div>
       </div>
@@ -38,28 +38,28 @@ function StatusBanner({ status }: { status: SubscriptionStatus }) {
   }
   if (status === "PAST_DUE") {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 mb-6">
+      <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/40 px-5 py-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-            <AlertTriangle className="size-4 text-amber-600" />
+          <div className="size-9 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center shrink-0">
+            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-amber-900">Payment failed</p>
-            <p className="text-sm text-amber-700">Your last payment didn't go through. Update your payment method to keep your account active.</p>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Payment failed</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">Your last payment didn&apos;t go through. Update your payment method to keep your account active.</p>
           </div>
         </div>
       </div>
     )
   }
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 mb-6">
+    <div className="rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/40 px-5 py-4 mb-6">
       <div className="flex items-center gap-3">
-        <div className="size-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-          <XCircle className="size-4 text-red-600" />
+        <div className="size-9 rounded-lg bg-red-100 dark:bg-red-900/60 flex items-center justify-center shrink-0">
+          <XCircle className="size-4 text-red-600 dark:text-red-400" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-red-900">Subscription cancelled</p>
-          <p className="text-sm text-red-700">Your subscription has ended. Resubscribe to regain full access.</p>
+          <p className="text-sm font-semibold text-red-900 dark:text-red-200">Subscription cancelled</p>
+          <p className="text-sm text-red-700 dark:text-red-300">Your subscription has ended. Resubscribe to regain full access.</p>
         </div>
       </div>
     </div>
@@ -111,7 +111,7 @@ export default function BillingPage() {
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Billing</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Billing</h1>
         <p className="mt-1 text-sm text-gray-500">
           Manage your subscription and payment details.
         </p>
@@ -120,18 +120,18 @@ export default function BillingPage() {
       <StatusBanner status={status} />
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
 
       <div className="space-y-3">
-        <div className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
-          <div className="mt-0.5 size-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-            <CreditCard className="size-4 text-gray-500" />
+        <div className="flex items-start gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 px-5 py-4">
+          <div className="mt-0.5 size-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+            <CreditCard className="size-4 text-gray-500 dark:text-gray-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">Payment &amp; subscription</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Payment &amp; subscription</p>
             <p className="text-sm text-gray-500 mt-0.5">
               {usesPortal
                 ? "Update your payment method or cancel your subscription."
@@ -147,12 +147,12 @@ export default function BillingPage() {
           </button>
         </div>
 
-        <div className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
-          <div className="mt-0.5 size-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-            <Receipt className="size-4 text-gray-500" />
+        <div className="flex items-start gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 px-5 py-4">
+          <div className="mt-0.5 size-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+            <Receipt className="size-4 text-gray-500 dark:text-gray-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">Invoices</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Invoices</p>
             <p className="text-sm text-gray-500 mt-0.5">Download past invoices from the customer portal.</p>
           </div>
           {org.stripeCustomerId ? (
@@ -164,7 +164,7 @@ export default function BillingPage() {
               {loading === "portal" ? "Loading…" : "Open portal"}
             </button>
           ) : (
-            <span className="shrink-0 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full self-center">
+            <span className="shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full self-center">
               No invoices yet
             </span>
           )}

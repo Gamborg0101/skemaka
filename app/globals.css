@@ -128,3 +128,15 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Dark-first background anchored to the OS preference via media query.
+ * This runs before JS, so it eliminates the white flash between HTML parse
+ * and next-themes applying the .dark class to <html>.
+ * Once .dark lands, the CSS-variable cascade takes over as normal.
+ */
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: oklch(0.145 0 0); /* matches --background in .dark */
+  }
+}
