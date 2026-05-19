@@ -1,0 +1,48 @@
+{
+  "name": "mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "*",
+    "@expo/vector-icons": "*",
+    "@skemaka/api": "workspace:*",
+    "@skemaka/types": "workspace:*",
+    "@skemaka/ui": "workspace:*",
+    "@tanstack/react-query": "^5.75.8",
+    "expo": "sdk-53",
+    "expo-constants": "*",
+    "expo-font": "*",
+    "expo-haptics": "*",
+    "expo-linear-gradient": "*",
+    "expo-linking": "*",
+    "expo-router": "sdk-53",
+    "expo-secure-store": "*",
+    "expo-splash-screen": "*",
+    "expo-status-bar": "*",
+    "expo-web-browser": "*",
+    "nativewind": "^4.1.23",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-native": "0.79.7",
+    "react-native-gesture-handler": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-screens": "*",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "~18.3.12",
+    "eslint": "^9",
+    "eslint-config-expo": "*",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3"
+  }
+}

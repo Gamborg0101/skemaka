@@ -2,6 +2,26 @@
 
 # Skemaka — project notes for AI agents
 
+## Monorepo structure
+
+```
+skemaka/                    ← workspace root (Turborepo + pnpm)
+├── apps/
+│   ├── web/                ← Next.js 16 web app
+│   └── mobile/             ← Expo 53 React Native app
+├── packages/
+│   ├── types/              ← @skemaka/types  — shared TypeScript interfaces
+│   ├── api/                ← @skemaka/api    — ApiClient + TanStack Query hooks
+│   └── ui/                 ← @skemaka/ui     — shared design tokens + cn()
+├── turbo.json
+├── pnpm-workspace.yaml
+└── tsconfig.base.json
+```
+
+All paths below are relative to `apps/web/` unless prefixed with `packages/` or `apps/mobile/`.
+
+---
+
 ## What this is
 Staff scheduling SaaS for restaurants. One org per manager. Managers schedule employees, employees view their shifts. Stack: Next.js 16 App Router, Prisma 7, Neon PostgreSQL, NextAuth 5 beta (JWT strategy), Tailwind, shadcn/ui, dnd-kit.
 
@@ -18,6 +38,7 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 - **ManagerLayout** has the same slow-path fallback: if `session.user.role` is not MANAGER/ADMIN, it does a DB membership check. If no membership → `/onboarding`. This handles the window between org creation and next sign-in.
 - **Login redirects to `/onboarding`** (not `/schedule`). Onboarding checks `/api/me/context` and redirects returning users to `/schedule` immediately. New users see the onboarding wizard.
 - Edge middleware (`proxy.ts`) uses `authConfig` (edge-safe, no Prisma), not `lib/auth.ts`.
+- **Mobile auth**: Bearer token from `GET /api/auth/mobile/session`, stored in Keychain via `expo-secure-store`. Refreshed via `POST /api/auth/mobile/refresh`.
 
 ---
 
@@ -43,17 +64,31 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 
 | File | Purpose |
 |---|---|
-| `lib/auth.ts` | NextAuth config, JWT callback (sets `id`, `role`, `orgId`) |
-| `lib/auth.config.ts` | Edge-safe subset used by middleware |
-| `proxy.ts` (root) | Middleware — auth guards for pages + API routes |
-| `lib/apiGuard.ts` | `requireOrgMember` — fast JWT check + DB fallback |
-| `lib/orgContext.tsx` | `OrgProvider` + `useOrg()` hook |
-| `lib/orgSettings.ts` | Module-level singleton for org settings (currency, hours, view). `updateOrgSettings()` updates it. |
-| `lib/prisma.ts` | Prisma client with Neon adapter (30 s timeout) |
-| `lib/serialize.ts` | Prisma → plain-object helpers (`serOrg`, `serShift`, etc.) |
-| `lib/dateUtils.ts` | `getMondayOfWeek`, `addDays`, `getISOWeek` |
-| `app/api/me/context/route.ts` | Single context endpoint (org + roles + templates) |
-| `components/manager/ShiftTimeline.tsx` | Main drag-and-drop scheduling timeline |
+| `apps/web/lib/auth.ts` | NextAuth config, JWT callback (sets `id`, `role`, `orgId`) |
+| `apps/web/lib/auth.config.ts` | Edge-safe subset used by middleware |
+| `apps/web/proxy.ts` | Middleware — auth guards for pages + API routes |
+| `apps/web/lib/apiGuard.ts` | `requireOrgMember` — fast JWT check + DB fallback |
+| `apps/web/lib/orgContext.tsx` | `OrgProvider` + `useOrg()` hook |
+| `apps/web/lib/orgSettings.ts` | Module-level singleton for org settings (currency, hours, view). `updateOrgSettings()` updates it. |
+| `apps/web/lib/prisma.ts` | Prisma client with Neon adapter (30 s timeout) |
+| `apps/web/lib/serialize.ts` | Prisma → plain-object helpers (`serOrg`, `serShift`, etc.) |
+| `apps/web/lib/dateUtils.ts` | `getMondayOfWeek`, `addDays`, `getISOWeek` |
+| `apps/web/app/api/me/context/route.ts` | Single context endpoint (org + roles + templates) |
+| `apps/web/components/manager/ShiftTimeline.tsx` | Main drag-and-drop scheduling timeline |
+| `packages/types/src/index.ts` | Canonical shared TypeScript interfaces |
+| `packages/api/src/client.ts` | ApiClient — fetch wrapper with Bearer auth |
+| `packages/api/src/hooks/` | TanStack Query hooks (used by mobile app) |
+| `apps/mobile/src/store/authStore.ts` | Zustand auth store + expo-secure-store |
+| `apps/mobile/metro.config.js` | Metro monorepo config (watchFolders, nodeModulesPaths) |
+
+---
+
+## Shared types (@skemaka/types)
+
+- **Canonical source**: `packages/types/src/index.ts`
+- **Web app**: imports via `@/types` (which re-exports from `@skemaka/types`) — no internal imports change.
+- **Mobile app**: imports directly from `@skemaka/types`.
+- When adding new types, edit `packages/types/src/index.ts` only.
 
 ---
 
@@ -83,20 +118,20 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 
 ## Screenshots
 
-Current screenshots of the app live in `screenshots/`. Use them to understand the UI before making changes. **Always retake the relevant screenshot after UI work and verify it looks correct — never leave a stale screenshot behind.**
+Current screenshots of the app live in `apps/web/screenshots/`. Use them to understand the UI before making changes. **Always retake the relevant screenshot after UI work and verify it looks correct — never leave a stale screenshot behind.**
 
 | File | What it shows |
 |---|---|
-| `screenshots/00-login.png` | Login / marketing page |
-| `screenshots/01-schedule.png` | Schedule — week grid view |
-| `screenshots/02-employees.png` | Employees list |
-| `screenshots/03-availability.png` | Availability requests |
-| `screenshots/04-costs.png` | Labor costs |
-| `screenshots/05-time-off.png` | Time-off requests |
-| `screenshots/06-settings.png` | Settings page |
-| `screenshots/07-schedule-timeline.png` | Schedule — timeline view |
-| `screenshots/08-my-shifts.png` | My Shifts page |
-| `screenshots/landing-desktop-hero.png` | Landing page — desktop hero (unauthenticated `/`) |
+| `apps/web/screenshots/00-login.png` | Login / marketing page |
+| `apps/web/screenshots/01-schedule.png` | Schedule — week grid view |
+| `apps/web/screenshots/02-employees.png` | Employees list |
+| `apps/web/screenshots/03-availability.png` | Availability requests |
+| `apps/web/screenshots/04-costs.png` | Labor costs |
+| `apps/web/screenshots/05-time-off.png` | Time-off requests |
+| `apps/web/screenshots/06-settings.png` | Settings page |
+| `apps/web/screenshots/07-schedule-timeline.png` | Schedule — timeline view |
+| `apps/web/screenshots/08-my-shifts.png` | My Shifts page |
+| `apps/web/screenshots/landing-desktop-hero.png` | Landing page — desktop hero (unauthenticated `/`) |
 
 ---
 
@@ -106,9 +141,32 @@ When working through a multi-step task, include verification steps in the task l
 
 ---
 
+## Running the project
+
+```bash
+# Install (pnpm required — see SETUP.md)
+pnpm install
+
+# Web dev server
+pnpm dev:web         # or: cd apps/web && pnpm dev
+
+# Mobile dev server (Expo)
+pnpm dev:mobile      # or: cd apps/mobile && pnpm dev
+
+# Typecheck all packages
+pnpm typecheck
+
+# Prisma (always run from apps/web/)
+cd apps/web && npx prisma db push
+cd apps/web && npx prisma generate
+```
+
+---
+
 ## Patterns to follow
 
 - `serXxx()` helpers in `lib/serialize.ts` must be used before returning Prisma objects in API responses (converts `Decimal` → `number`, `Date` → ISO string).
 - Route context params are `Promise<{ ... }>` in Next.js 16 — always `await params`.
 - Never use `findFirst` without `orderBy` when duplicates might exist.
 - `"use client"` is required on any component that imports from `lib/orgSettings.ts` (module singleton only exists client-side).
+- When editing shared types, always edit `packages/types/src/index.ts` — not `apps/web/types/index.ts` (that's a re-export shim).

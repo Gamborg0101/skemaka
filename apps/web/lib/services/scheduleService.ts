@@ -1,0 +1,485 @@
+import { db } from "@/lib/prisma"
+import { serSchedule, serShift, serEmployee } from "@/lib/serialize"
+import { Prisma } from "@/app/generated/prisma/client"
+import {
+  sendSchedulePublishedSms,
+  sendShiftAssignedSms,
+  sendShiftCancelledSms,
+  sendShiftUpdatedSms,
+} from "@/lib/sms"
+import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
+import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
+import type { PaginationParams, Paginated } from "@/lib/validate"
+import { ServiceError } from "./errors"
+
+const SHIFT_EMPLOYEE_SELECT = {
+  id: true, organizationId: true, userId: true,
+  name: true, email: true, phone: true, jobRole: true,
+  hourlyWage: true, employmentType: true, contractedHours: true,
+  notes: true, isActive: true, createdAt: true, updatedAt: true,
+} as const
+
+// ── Schedules ─────────────────────────────────────────────────────────────────
+
+export async function getScheduleByWeek(
+  orgId: string,
+  weekStart: string,
+): Promise<Schedule | null> {
+  const schedule = await db.schedule.findFirst({
+    where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+    orderBy: { createdAt: "asc" },
+  })
+  return schedule ? serSchedule(schedule) : null
+}
+
+export async function listSchedules(orgId: string): Promise<Schedule[]>
+export async function listSchedules(orgId: string, pagination: PaginationParams): Promise<Paginated<Schedule>>
+export async function listSchedules(
+  orgId: string,
+  pagination?: PaginationParams,
+): Promise<Schedule[] | Paginated<Schedule>> {
+  if (!pagination) {
+    const schedules = await db.schedule.findMany({
+      where: { organizationId: orgId },
+      orderBy: { weekStart: "desc" },
+    })
+    return schedules.map(serSchedule)
+  }
+  const [schedules, total] = await Promise.all([
+    db.schedule.findMany({
+      where: { organizationId: orgId },
+      orderBy: { weekStart: "desc" },
+      take:  pagination.limit,
+      skip:  pagination.offset,
+    }),
+    db.schedule.count({ where: { organizationId: orgId } }),
+  ])
+  return {
+    data: schedules.map(serSchedule),
+    meta: { total, limit: pagination.limit, offset: pagination.offset },
+  }
+}
+
+export async function getOrCreateSchedule(
+  orgId: string,
+  weekStart: string,
+): Promise<{ schedule: Schedule; created: boolean }> {
+  const weekStartDate = new Date(weekStart + "T00:00:00Z")
+
+  const existing = await db.schedule.findFirst({
+    where: { organizationId: orgId, weekStart: weekStartDate },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+    orderBy: { createdAt: "asc" },
+  })
+  if (existing) return { schedule: serSchedule(existing), created: false }
+
+  try {
+    const schedule = await db.schedule.create({
+      data: { organizationId: orgId, weekStart: weekStartDate },
+      include: { shifts: true },
+    })
+    return { schedule: serSchedule(schedule), created: true }
+  } catch (err) {
+    // Concurrent POST won the race — return the existing schedule.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const schedule = await db.schedule.findFirst({
+        where: { organizationId: orgId, weekStart: weekStartDate },
+        include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+        orderBy: { createdAt: "asc" },
+      })
+      return { schedule: serSchedule(schedule!), created: false }
+    }
+    throw err
+  }
+}
+
+export async function getScheduleById(
+  orgId: string,
+  scheduleId: string,
+): Promise<Schedule | null> {
+  const schedule = await db.schedule.findFirst({
+    where: { id: scheduleId, organizationId: orgId },
+    include: {
+      shifts: {
+        include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      },
+    },
+  })
+  return schedule ? serSchedule(schedule) : null
+}
+
+export async function duplicateSchedule(
+  orgId: string,
+  scheduleId: string,
+  weekStart: string,
+): Promise<Schedule> {
+  const source = await db.schedule.findFirst({
+    where: { id: scheduleId, organizationId: orgId },
+    include: { shifts: true },
+  })
+  if (!source) throw new ServiceError("Not found", "NOT_FOUND")
+
+  const weekDiff = new Date(weekStart + "T00:00:00Z").getTime() - source.weekStart.getTime()
+
+  const newSchedule = await db.schedule.create({
+    data: {
+      organizationId: orgId,
+      weekStart: new Date(weekStart + "T00:00:00Z"),
+      isDuplicate: true,
+      sourceScheduleId: scheduleId,
+    },
+  })
+
+  if (source.shifts.length > 0) {
+    await db.shift.createMany({
+      data: source.shifts.map((shift) => ({
+        scheduleId: newSchedule.id,
+        organizationId: orgId,
+        employeeId: shift.employeeId,
+        date: new Date(shift.date.getTime() + weekDiff),
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        breakMinutes: shift.breakMinutes,
+        jobRole: shift.jobRole,
+        notes: shift.notes,
+        colorTag: shift.colorTag,
+      })),
+    })
+  }
+
+  await db.schedulingEvent.create({
+    data: {
+      organizationId: orgId,
+      eventType: "SCHEDULE_DUPLICATED",
+      payload: { sourceScheduleId: scheduleId, newScheduleId: newSchedule.id, weekStart },
+    },
+  })
+
+  const result = await db.schedule.findUnique({
+    where: { id: newSchedule.id },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+  })
+  return serSchedule(result!)
+}
+
+export async function publishSchedule(
+  orgId: string,
+  scheduleId: string,
+): Promise<Schedule> {
+  const schedule = await db.schedule.findFirst({
+    where: { id: scheduleId, organizationId: orgId },
+    include: {
+      shifts: {
+        where: { colorTag: { not: "sick" } },
+        include: { employee: { select: { id: true, name: true, phone: true } } },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      },
+      organization: { select: { name: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+  if (!schedule) throw new ServiceError("Not found", "NOT_FOUND")
+  if (schedule.publishedAt) throw new ServiceError("Already published", "CONFLICT")
+
+  const updated = await db.schedule.update({
+    where: { id: scheduleId },
+    data: { publishedAt: new Date() },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+  })
+
+  const byEmployee = new Map<string, { name: string; phone: string | null; lines: string[] }>()
+  for (const shift of schedule.shifts) {
+    const emp = shift.employee
+    if (!byEmployee.has(emp.id)) {
+      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, lines: [] })
+    }
+    const day = new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
+    byEmployee.get(emp.id)!.lines.push(`${day} ${formatTime(shift.startTime)}–${formatTime(shift.endTime)}`)
+  }
+
+  const weekLabel = formatWeekLabel(schedule.weekStart.toISOString().split("T")[0])
+  const orgName = schedule.organization.name
+  for (const { name, phone, lines } of byEmployee.values()) {
+    if (phone) {
+      void sendSchedulePublishedSms({ to: phone, employeeName: name.split(" ")[0], orgName, weekLabel, shiftLines: lines })
+    }
+  }
+
+  return serSchedule(updated)
+}
+
+// ── Shifts ────────────────────────────────────────────────────────────────────
+
+export async function listShifts(orgId: string, scheduleId: string): Promise<Shift[]>
+export async function listShifts(orgId: string, scheduleId: string, pagination: PaginationParams): Promise<Paginated<Shift>>
+export async function listShifts(
+  orgId: string,
+  scheduleId: string,
+  pagination?: PaginationParams,
+): Promise<Shift[] | Paginated<Shift>> {
+  if (!pagination) {
+    const shifts = await db.shift.findMany({
+      where: { scheduleId, organizationId: orgId },
+      include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    })
+    return shifts.map(serShift)
+  }
+  const where = { scheduleId, organizationId: orgId }
+  const [shifts, total] = await Promise.all([
+    db.shift.findMany({
+      where,
+      include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      take:  pagination.limit,
+      skip:  pagination.offset,
+    }),
+    db.shift.count({ where }),
+  ])
+  return {
+    data: shifts.map(serShift),
+    meta: { total, limit: pagination.limit, offset: pagination.offset },
+  }
+}
+
+export type CreateShiftInput = {
+  employeeId: string
+  date: string
+  startTime: string
+  endTime: string
+  breakMinutes?: number
+  jobRole: string
+  notes?: string | null
+  colorTag?: string | null
+}
+
+export async function createShift(
+  orgId: string,
+  scheduleId: string,
+  input: CreateShiftInput,
+): Promise<Shift> {
+  const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag } = input
+
+  const dateUTC = new Date(date + "T00:00:00Z")
+  const [employeeInOrg, existing] = await Promise.all([
+    db.employee.findFirst({ where: { id: employeeId, organizationId: orgId }, select: { id: true } }),
+    db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC }, select: { id: true }, orderBy: { createdAt: "asc" } }),
+  ])
+  if (!employeeInOrg) throw new ServiceError("Employee not found", "NOT_FOUND")
+  if (existing) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+
+  const shift = await db.shift.create({
+    data: {
+      scheduleId,
+      organizationId: orgId,
+      employeeId,
+      date: dateUTC,
+      startTime,
+      endTime,
+      breakMinutes: breakMinutes ?? 0,
+      jobRole,
+      notes: notes ?? null,
+      colorTag: colorTag ?? null,
+    },
+  })
+
+  await db.schedulingEvent.create({
+    data: {
+      organizationId: orgId,
+      eventType: "SHIFT_CREATED",
+      payload: { shiftId: shift.id, scheduleId, employeeId, date, jobRole },
+    },
+  })
+
+  return serShift(shift)
+}
+
+export type UpdateShiftInput = {
+  employeeId?: string
+  date?: string
+  startTime?: string
+  endTime?: string
+  breakMinutes?: number
+  jobRole?: string
+  notes?: string | null
+  colorTag?: string | null
+}
+
+export async function updateShift(
+  orgId: string,
+  scheduleId: string,
+  shiftId: string,
+  input: UpdateShiftInput,
+): Promise<Shift> {
+  const existing = await db.shift.findFirst({
+    where: { id: shiftId, scheduleId, organizationId: orgId },
+    include: {
+      employee: { select: { name: true, phone: true } },
+      organization: { select: { name: true } },
+    },
+  })
+  if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
+
+  if (input.employeeId !== undefined) {
+    const emp = await db.employee.findFirst({
+      where: { id: input.employeeId, organizationId: orgId },
+      select: { id: true },
+    })
+    if (!emp) throw new ServiceError("Employee not found", "NOT_FOUND")
+  }
+
+  const shift = await db.shift.update({
+    where: { id: shiftId },
+    data: {
+      ...(input.employeeId  !== undefined && { employeeId: input.employeeId }),
+      ...(input.date        !== undefined && { date: new Date(input.date + "T00:00:00Z") }),
+      ...(input.startTime   !== undefined && { startTime: input.startTime }),
+      ...(input.endTime     !== undefined && { endTime: input.endTime }),
+      ...(input.breakMinutes !== undefined && { breakMinutes: input.breakMinutes }),
+      ...(input.jobRole     !== undefined && { jobRole: input.jobRole }),
+      ...(input.notes       !== undefined && { notes: input.notes }),
+      ...(input.colorTag    !== undefined && { colorTag: input.colorTag }),
+    },
+  })
+
+  const newDate      = input.date      ?? existing.date.toISOString().split("T")[0]
+  const newStartTime = input.startTime ?? existing.startTime
+  const newEndTime   = input.endTime   ?? existing.endTime
+  const orgName      = existing.organization.name
+  const oldDate      = existing.date.toISOString().split("T")[0]
+
+  const employeeChanged = input.employeeId !== undefined && input.employeeId !== existing.employeeId
+  const timingChanged   = input.date !== undefined || input.startTime !== undefined || input.endTime !== undefined
+
+  if (employeeChanged) {
+    if (existing.employee.phone) {
+      void sendShiftCancelledSms({
+        to: existing.employee.phone,
+        employeeName: existing.employee.name,
+        orgName,
+        date: oldDate,
+        startTime: existing.startTime,
+        endTime: existing.endTime,
+      })
+    }
+    if (input.employeeId) {
+      const newEmp = await db.employee.findUnique({
+        where: { id: input.employeeId },
+        select: { name: true, phone: true },
+      })
+      if (newEmp?.phone) {
+        void sendShiftAssignedSms({
+          to: newEmp.phone,
+          employeeName: newEmp.name,
+          orgName,
+          date: newDate,
+          startTime: newStartTime,
+          endTime: newEndTime,
+        })
+      }
+    }
+  } else if (timingChanged && existing.employee.phone) {
+    void sendShiftUpdatedSms({
+      to: existing.employee.phone,
+      employeeName: existing.employee.name,
+      orgName,
+      date: newDate,
+      startTime: newStartTime,
+      endTime: newEndTime,
+    })
+  }
+
+  return serShift(shift)
+}
+
+export async function deleteShift(
+  orgId: string,
+  scheduleId: string,
+  shiftId: string,
+): Promise<void> {
+  const existing = await db.shift.findFirst({
+    where: { id: shiftId, scheduleId, organizationId: orgId },
+    include: {
+      employee: { select: { name: true, phone: true } },
+      organization: { select: { name: true } },
+    },
+  })
+  if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
+
+  await db.shift.delete({ where: { id: shiftId } })
+
+  if (existing.employee.phone) {
+    void sendShiftCancelledSms({
+      to: existing.employee.phone,
+      employeeName: existing.employee.name,
+      orgName: existing.organization.name,
+      date: existing.date.toISOString().split("T")[0],
+      startTime: existing.startTime,
+      endTime: existing.endTime,
+    })
+  }
+}
+
+// ── Labor costs ───────────────────────────────────────────────────────────────
+
+export async function getLaborCosts(orgId: string, weekStart: string): Promise<WeeklyLaborCost> {
+  const schedule = await db.schedule.findFirst({
+    where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
+    include: {
+      shifts: {
+        where: { colorTag: { not: "sick" } },
+        include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+
+  const shifts = schedule?.shifts ?? []
+  const employeeMap = new Map<string, LaborCostEntry>()
+
+  for (const shift of shifts) {
+    const hours = calcHours(shift.startTime, shift.endTime, shift.breakMinutes)
+    const emp   = serEmployee(shift.employee)
+    if (!employeeMap.has(shift.employeeId)) {
+      employeeMap.set(shift.employeeId, { employee: emp, totalHours: 0, totalCost: 0, shifts: [] })
+    }
+    const entry = employeeMap.get(shift.employeeId)!
+    entry.totalHours = Math.round((entry.totalHours + hours) * 100) / 100
+    entry.totalCost  = Math.round((entry.totalCost + hours * emp.hourlyWage) * 100) / 100
+    entry.shifts.push(serShift(shift))
+  }
+
+  const entries = Array.from(employeeMap.values())
+  return {
+    weekStart,
+    totalHours: Math.round(entries.reduce((s, e) => s + e.totalHours, 0) * 100) / 100,
+    totalCost:  Math.round(entries.reduce((s, e) => s + e.totalCost,  0) * 100) / 100,
+    entries,
+  }
+}
+
+export async function getLaborCostsCsv(orgId: string, weekStart: string): Promise<string> {
+  const [result, org] = await Promise.all([
+    getLaborCosts(orgId, weekStart),
+    db.organization.findUnique({ where: { id: orgId }, select: { currency: true } }),
+  ])
+  const currency = org?.currency ?? "EUR"
+  const q = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`
+  const rows = [
+    ["Employee", "Job Role", "Employment Type", "Contracted Hours", "Scheduled Hours", "Days Worked", `Hourly Wage (${currency})`, `Total Pay (${currency})`],
+    ...result.entries.map((e) => [
+      e.employee.name,
+      e.employee.jobRole,
+      e.employee.employmentType,
+      e.employee.contractedHours,
+      e.totalHours,
+      new Set(e.shifts.map((s) => s.date)).size,
+      e.employee.hourlyWage,
+      e.totalCost,
+    ]),
+  ]
+  return rows.map((r) => r.map(q).join(",")).join("\n")
+}
