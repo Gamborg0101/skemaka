@@ -118,7 +118,7 @@ export type TokenContext = {
 
 export async function resolveInviteToken(token: string): Promise<TokenContext | null> {
   const employee = await db.employee.findFirst({
-    where: { inviteToken: token, isActive: true },
+    where: { inviteToken: token, isActive: true, inviteExpiry: { gt: new Date() } },
     orderBy: { createdAt: "asc" },
   })
   if (!employee) return null

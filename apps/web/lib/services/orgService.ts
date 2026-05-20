@@ -18,10 +18,12 @@ export async function createOrg(
   const resolvedCurrency = currency && (VALID_CURRENCIES as readonly string[]).includes(currency) ? currency : "EUR"
   const baseSlug        = trimmedName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
 
-  let slug   = baseSlug
+  let slug   = baseSlug || "org"
   let suffix = 1
+  const MAX_SLUG_ATTEMPTS = 20
   while (await db.organization.findUnique({ where: { slug } })) {
-    slug = `${baseSlug}-${suffix++}`
+    if (suffix > MAX_SLUG_ATTEMPTS) throw new ServiceError("Could not generate a unique slug", "CONFLICT")
+    slug = `${baseSlug || "org"}-${suffix++}`
   }
 
   const org = await db.organization.create({

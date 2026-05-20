@@ -28,13 +28,36 @@ export default function LoginScreen() {
       if (result.type !== "success") return
 
       const url = new URL(result.url)
-      const token = url.searchParams.get("token")
 
+      // Prefer the newer one-time `code` flow (web redirects with ?code=).
+      // Fall back to the legacy direct `token` flow for backward compatibility.
+      const code = url.searchParams.get("code")
+      if (code) {
+        const resp = await fetch(`${API_URL}/api/auth/mobile/redeem`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        })
+        if (!resp.ok) {
+          Alert.alert("Login failed", "Could not exchange code for session. Please try again.")
+          return
+        }
+        const data = await resp.json() as {
+          token: string
+          userId?: string | null
+          orgId?:  string | null
+          role?:   string | null
+        }
+        await signIn(data.token, { userId: data.userId, orgId: data.orgId, role: data.role })
+        return
+      }
+
+      // Legacy: token delivered directly in the redirect URL
+      const token = url.searchParams.get("token")
       if (!token) {
         Alert.alert("Login failed", "Could not retrieve session. Please try again.")
         return
       }
-
       await signIn(token)
     } catch (err) {
       Alert.alert("Error", err instanceof Error ? err.message : "Unknown error")
@@ -64,7 +87,7 @@ export default function LoginScreen() {
         }}
       />
 
-      <SafeAreaView className="flex-1 px-6 justify-between py-10">
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 px-6 justify-between py-10">
         {/* Top — logo */}
         <View className="items-center pt-16 gap-3">
           <View className="w-16 h-16 rounded-2xl bg-brand/20 border border-brand/30 items-center justify-center">

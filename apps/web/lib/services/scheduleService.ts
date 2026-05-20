@@ -12,11 +12,19 @@ import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
 
+// Full select — only used in manager-only contexts (cost calculations, SMS notifications).
 const SHIFT_EMPLOYEE_SELECT = {
   id: true, organizationId: true, userId: true,
   name: true, email: true, phone: true, jobRole: true,
   hourlyWage: true, employmentType: true, contractedHours: true,
   notes: true, isActive: true, createdAt: true, updatedAt: true,
+} as const
+
+// Restricted select — used when any org member can read the response.
+// Omits salary, contact details, and HR notes so employees cannot read
+// each other's sensitive data via the schedule endpoint.
+const PUBLIC_SHIFT_EMPLOYEE_SELECT = {
+  id: true, name: true, jobRole: true,
 } as const
 
 // ── Schedules ─────────────────────────────────────────────────────────────────
@@ -102,7 +110,7 @@ export async function getScheduleById(
     where: { id: scheduleId, organizationId: orgId },
     include: {
       shifts: {
-        include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+        include: { employee: { select: PUBLIC_SHIFT_EMPLOYEE_SELECT } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
     },
@@ -149,13 +157,13 @@ export async function duplicateSchedule(
     })
   }
 
-  await db.schedulingEvent.create({
+  void db.schedulingEvent.create({
     data: {
       organizationId: orgId,
       eventType: "SCHEDULE_DUPLICATED",
       payload: { sourceScheduleId: scheduleId, newScheduleId: newSchedule.id, weekStart },
     },
-  })
+  }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
 
   const result = await db.schedule.findUnique({
     where: { id: newSchedule.id },
@@ -222,7 +230,7 @@ export async function listShifts(
   if (!pagination) {
     const shifts = await db.shift.findMany({
       where: { scheduleId, organizationId: orgId },
-      include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+      include: { employee: { select: PUBLIC_SHIFT_EMPLOYEE_SELECT } },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     })
     return shifts.map(serShift)
@@ -231,7 +239,7 @@ export async function listShifts(
   const [shifts, total] = await Promise.all([
     db.shift.findMany({
       where,
-      include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
+      include: { employee: { select: PUBLIC_SHIFT_EMPLOYEE_SELECT } },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
       take:  pagination.limit,
       skip:  pagination.offset,
@@ -285,13 +293,13 @@ export async function createShift(
     },
   })
 
-  await db.schedulingEvent.create({
+  void db.schedulingEvent.create({
     data: {
       organizationId: orgId,
       eventType: "SHIFT_CREATED",
       payload: { shiftId: shift.id, scheduleId, employeeId, date, jobRole },
     },
-  })
+  }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
 
   return serShift(shift)
 }

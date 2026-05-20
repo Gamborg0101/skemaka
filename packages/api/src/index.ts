@@ -16,6 +16,13 @@ export {
   submitAvailability,
   getMyTimeOff,
   submitTimeOffRequest,
+  // Manager operations
+  getSchedule,
+  getOrCreateSchedule,
+  createManagedShift,
+  updateManagedShift,
+  deleteManagedShift,
+  listEmployees,
 } from "./api"
 export type {
   MobileSession,
@@ -25,6 +32,7 @@ export type {
   ClockOutOptions,
   DayAvailability,
   TimeOffInput,
+  ShiftInput,
 } from "./api"
 
 // Manager-oriented React Query hooks (used by the web app)

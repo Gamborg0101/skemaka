@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { previewCleanup, runCleanupForOrg } from "@/lib/cleanup"
 
 interface RouteContext {
@@ -11,6 +11,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const preview = await previewCleanup(orgId)
   return NextResponse.json({ data: preview })
@@ -21,6 +23,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const result = await runCleanupForOrg(orgId)
   console.log(`[cleanup] org=${orgId}`, result)

@@ -13,7 +13,9 @@ export function useActiveEntry() {
     queryKey:        ACTIVE_KEY(orgId ?? ""),
     queryFn:         () => getActiveEntry(client, orgId!),
     enabled:         Boolean(orgId),
-    refetchInterval: 30_000,
+    // Only poll when there is an active entry — no need to hit the server
+    // every 30s just to confirm the user is still not clocked in.
+    refetchInterval: (query) => (query.state.data ? 30_000 : false),
     staleTime:       0,
   })
 }

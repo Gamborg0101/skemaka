@@ -132,9 +132,15 @@ export async function POST(req: NextRequest) {
     ? `[Crash] ${errorMessage.slice(0, 80)} — ${reporter}`
     : `Bug report from ${reporter}`
 
+  const superadminEmail = process.env.SUPERADMIN_EMAIL
+  if (!superadminEmail) {
+    console.warn("[bug-report] SUPERADMIN_EMAIL is not set — skipping email notification")
+    return NextResponse.json({ ok: true })
+  }
+
   await resend.emails.send({
     from: process.env.EMAIL_FROM ?? "noreply@skemaka.com",
-    to: process.env.SUPERADMIN_EMAIL ?? "gamborgc@gmail.com",
+    to: superadminEmail,
     subject,
     html: `
       <div style="font-family:sans-serif;max-width:620px;margin:0 auto;padding:32px 24px;">

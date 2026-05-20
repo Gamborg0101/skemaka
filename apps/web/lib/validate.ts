@@ -4,7 +4,9 @@ const TIME_RE = /^\d{2}:\d{2}$/
 export function isValidDate(s: unknown): s is string {
   if (typeof s !== "string" || !DATE_RE.test(s)) return false
   const d = new Date(s + "T00:00:00Z")
-  return !isNaN(d.getTime())
+  if (isNaN(d.getTime())) return false
+  // Reject rolled-over dates like 2024-02-30 (JS silently advances to 2024-03-01)
+  return d.toISOString().startsWith(s)
 }
 
 export function isValidTime(s: unknown): s is string {
@@ -14,11 +16,18 @@ export function isValidTime(s: unknown): s is string {
 }
 
 export function isPositiveFiniteNumber(n: unknown): n is number {
-  return typeof n === "number" && isFinite(n) && n >= 0
+  return typeof n === "number" && isFinite(n) && n > 0
 }
 
 export function isNonNegativeInt(n: unknown): n is number {
   return typeof n === "number" && Number.isInteger(n) && n >= 0
+}
+
+export const VALID_COLOR_TAGS = new Set(["blue", "green", "orange", "purple", "yellow", "rose", "gray", "sick"])
+
+export function isValidColorTag(s: unknown): s is string | null {
+  if (s === null || s === undefined) return true
+  return typeof s === "string" && VALID_COLOR_TAGS.has(s)
 }
 
 // Returns true if startTime < endTime (next-day shifts allowed via dates, so

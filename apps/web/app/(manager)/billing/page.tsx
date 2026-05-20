@@ -155,7 +155,7 @@ export default function BillingPage() {
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Invoices</p>
             <p className="text-sm text-gray-500 mt-0.5">Download past invoices from the customer portal.</p>
           </div>
-          {org.stripeCustomerId ? (
+          {org.subscriptionStatus !== "TRIALING" ? (
             <button
               onClick={openPortal}
               disabled={loading !== null}

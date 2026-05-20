@@ -11,7 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt", maxAge: 30 * 60, updateAge: 0 },
   providers: [
-    Google,
+    Google({ checks: ["state"] }),
     Resend({
       apiKey: process.env.RESEND_API_KEY ?? "",
       from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
@@ -35,9 +35,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = "MANAGER"
           token.orgId = membership.organizationId
           token.subscriptionStatus = membership.organization.subscriptionStatus
+        } else {
+          // Employee: still embed orgId so the mobile app can make API calls.
+          const empMembership = await db.membership.findFirst({
+            where: { userId: user.id! },
+            orderBy: { joinedAt: "asc" },
+          })
+          if (empMembership) {
+            token.orgId = empMembership.organizationId
+          }
         }
       }
-      if (token.email === process.env.ADMIN_EMAIL) {
+      if (token.email === process.env.SUPERADMIN_EMAIL) {
         token.role = "ADMIN"
       }
       token.role ??= "EMPLOYEE"

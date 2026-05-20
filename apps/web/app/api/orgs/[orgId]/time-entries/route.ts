@@ -68,6 +68,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     employeeId?: string; shiftId?: string; note?: string
   }
 
+  if (body.note && body.note.length > 500) {
+    return NextResponse.json({ error: "note must be at most 500 characters" }, { status: 400 })
+  }
+
   let resolvedEmployeeId: string
 
   if (isManager) {

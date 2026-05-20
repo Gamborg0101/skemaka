@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isPositiveFiniteNumber, isNonNegativeInt, parsePaginationParams } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -13,6 +13,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const pagination = parsePaginationParams(req.nextUrl, { limit: 100, maxLimit: 500 })
   const result = await employeeService.listEmployees(orgId, pagination)
@@ -26,6 +28,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const { success } = await rateLimitRequest(getClientIp(req.headers))
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
@@ -44,8 +48,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     )
   }
   if (!isPositiveFiniteNumber(hourlyWage)) {
-    return NextResponse.json({ error: "hourlyWage must be a non-negative number" }, { status: 400 })
+    return NextResponse.json({ error: "hourlyWage must be a positive number" }, { status: 400 })
   }
+  if (name.length > 200) return NextResponse.json({ error: "name must be at most 200 characters" }, { status: 400 })
+  if (email.length > 254) return NextResponse.json({ error: "email must be at most 254 characters" }, { status: 400 })
+  if (phone && phone.length > 20) return NextResponse.json({ error: "phone must be at most 20 characters" }, { status: 400 })
+  if (notes && notes.length > 5000) return NextResponse.json({ error: "notes must be at most 5000 characters" }, { status: 400 })
+  if (jobRole.length > 100) return NextResponse.json({ error: "jobRole must be at most 100 characters" }, { status: 400 })
   if (contractedHours !== undefined && !isNonNegativeInt(contractedHours)) {
     return NextResponse.json({ error: "contractedHours must be a non-negative integer" }, { status: 400 })
   }

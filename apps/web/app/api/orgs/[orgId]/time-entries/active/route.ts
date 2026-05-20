@@ -57,6 +57,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   if (body.breakMinutes !== undefined && !isNonNegativeInt(body.breakMinutes)) {
     return NextResponse.json({ error: "breakMinutes must be a non-negative integer" }, { status: 400 })
   }
+  if (body.note && body.note.length > 500) {
+    return NextResponse.json({ error: "note must be at most 500 characters" }, { status: 400 })
+  }
 
   let resolvedEmployeeId: string
 

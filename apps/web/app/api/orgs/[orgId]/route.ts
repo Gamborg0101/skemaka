@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { SUPPORTED_CURRENCIES } from "@/lib/orgSettings"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as orgService from "@/lib/services/orgService"
@@ -10,6 +10,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId
   const { orgId } = await context.params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const body = await req.json() as { currency?: string }
 

@@ -13,8 +13,13 @@ export class ApiError extends Error {
 // Returns true if the refresh succeeded and the request should be retried.
 type Refresher = () => Promise<boolean>
 
+// Optional hook: receives the current token and returns true when a proactive
+// refresh should happen before sending the request (e.g. token expires in <30s).
+type ProactiveRefreshCheck = (token: string) => boolean
+
 export class ApiClient {
   private refresher: Refresher | null = null
+  private proactiveRefreshCheck: ProactiveRefreshCheck | null = null
   // Shared in-flight promise so concurrent 401s only trigger one refresh.
   private refreshInFlight: Promise<boolean> | null = null
 
@@ -28,11 +33,33 @@ export class ApiClient {
     this.refresher = fn
   }
 
+  /**
+   * Register a callback that inspects the current token before each request.
+   * Return true to trigger a proactive refresh (token about to expire).
+   */
+  setProactiveRefreshCheck(fn: ProactiveRefreshCheck): void {
+    this.proactiveRefreshCheck = fn
+  }
+
   private async request<T>(
     path: string,
     init: RequestOptions = {},
     retry = true,
   ): Promise<T> {
+    // Proactive token expiry check: refresh before the request if the token is
+    // about to expire, avoiding a failed request + round-trip refresh cycle.
+    const currentToken = this.getToken()
+    if (currentToken && this.proactiveRefreshCheck && this.refresher) {
+      if (this.proactiveRefreshCheck(currentToken)) {
+        if (!this.refreshInFlight) {
+          this.refreshInFlight = this.refresher().finally(() => {
+            this.refreshInFlight = null
+          })
+        }
+        await this.refreshInFlight
+      }
+    }
+
     const token = this.getToken()
     const headers: Record<string, string> = {
       "Content-Type": "application/json",

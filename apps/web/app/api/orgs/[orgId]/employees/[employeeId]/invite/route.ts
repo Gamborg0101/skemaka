@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as employeeService from "@/lib/services/employeeService"
 
@@ -11,6 +11,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId, employeeId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   try {
     const employee = await employeeService.refreshInviteToken(orgId, employeeId)

@@ -3,7 +3,9 @@ import { Screen } from "@/components/layout/Screen"
 import { Card } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
 import { Divider } from "@/components/ui/Divider"
+import { ErrorState } from "@/components/feedback/ErrorState"
 import { useAuthStore } from "@/store/authStore"
+import { useCurrentUser } from "@/hooks/useEmployee"
 
 type InfoRowProps = { label: string; value: string | null | undefined }
 
@@ -18,6 +20,18 @@ function InfoRow({ label, value }: InfoRowProps) {
 
 export default function ProfileScreen() {
   const { employee, signOut } = useAuthStore()
+  const { isError, refetch } = useCurrentUser()
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState
+          message="Could not load your profile."
+          onRetry={() => void refetch()}
+        />
+      </Screen>
+    )
+  }
 
   const initials = employee?.name
     .split(" ")
