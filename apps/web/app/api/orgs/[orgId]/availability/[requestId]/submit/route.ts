@@ -28,9 +28,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "This request is no longer accepting submissions" }, { status: 409 })
   }
 
-  const body = await req.json() as {
-    days?: { date: string; isAvailable: boolean; preferredStart?: string; preferredEnd?: string }[]
+  type DayInput = {
+    date: string
+    isAvailable: boolean
+    startTime?: string
+    endTime?: string
   }
+  const body = await req.json() as { days?: DayInput[] }
   const { days } = body
 
   if (!Array.isArray(days) || days.length === 0) {
@@ -44,11 +48,16 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     if (typeof day.isAvailable !== "boolean") {
       return NextResponse.json({ error: "isAvailable must be a boolean" }, { status: 400 })
     }
-    if (day.preferredStart != null && !isValidTime(day.preferredStart)) {
-      return NextResponse.json({ error: `Invalid preferredStart: ${day.preferredStart}` }, { status: 400 })
-    }
-    if (day.preferredEnd != null && !isValidTime(day.preferredEnd)) {
-      return NextResponse.json({ error: `Invalid preferredEnd: ${day.preferredEnd}` }, { status: 400 })
+    if (day.isAvailable) {
+      if (day.startTime != null && !isValidTime(day.startTime)) {
+        return NextResponse.json({ error: `Invalid startTime: ${day.startTime}` }, { status: 400 })
+      }
+      if (day.endTime != null && !isValidTime(day.endTime)) {
+        return NextResponse.json({ error: `Invalid endTime: ${day.endTime}` }, { status: 400 })
+      }
+      if (day.startTime && day.endTime && day.endTime <= day.startTime) {
+        return NextResponse.json({ error: "endTime must be after startTime" }, { status: 400 })
+      }
     }
   }
 

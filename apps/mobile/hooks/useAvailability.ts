@@ -3,31 +3,44 @@ import {
   useApiClient,
   getOpenAvailabilityRequest,
   getMyAvailabilitySubmission,
+  getAllAvailabilitySubmissions,
   submitAvailability,
 } from "@skemaka/api"
 import type { DayAvailability } from "@skemaka/api"
 import { useAuthStore } from "@/store/authStore"
 
-export function useOpenRequest() {
+export function useOpenRequest(weekStart: string) {
   const client = useApiClient()
   const { orgId } = useAuthStore()
 
   return useQuery({
-    queryKey:  ["availability/open", orgId],
-    queryFn:   () => getOpenAvailabilityRequest(client, orgId!),
-    enabled:   Boolean(orgId),
+    queryKey:  ["availability/open", orgId, weekStart],
+    queryFn:   () => getOpenAvailabilityRequest(client, orgId!, weekStart),
+    enabled:   Boolean(orgId && weekStart),
     staleTime: 2 * 60_000,
   })
 }
 
 export function useMySubmission(requestId: string | undefined) {
   const client = useApiClient()
-  const { orgId, employee } = useAuthStore()
+  const { orgId } = useAuthStore()
 
   return useQuery({
-    queryKey: ["availability/submission", orgId, requestId, employee?.id],
-    queryFn:  () => getMyAvailabilitySubmission(client, orgId!, requestId!, employee!.id),
-    enabled:  Boolean(orgId && requestId && employee?.id),
+    queryKey: ["availability/my-submission", orgId, requestId],
+    queryFn:  () => getMyAvailabilitySubmission(client, orgId!, requestId!),
+    enabled:  Boolean(orgId && requestId),
+    staleTime: 60_000,
+  })
+}
+
+export function useAllSubmissions(requestId: string | undefined) {
+  const client = useApiClient()
+  const { orgId } = useAuthStore()
+
+  return useQuery({
+    queryKey:  ["availability/submissions/all", orgId, requestId],
+    queryFn:   () => getAllAvailabilitySubmissions(client, orgId!, requestId!),
+    enabled:   Boolean(orgId && requestId),
     staleTime: 60_000,
   })
 }
@@ -35,14 +48,14 @@ export function useMySubmission(requestId: string | undefined) {
 export function useSubmitAvailability(requestId: string | undefined) {
   const client = useApiClient()
   const qc = useQueryClient()
-  const { orgId, employee } = useAuthStore()
+  const { orgId } = useAuthStore()
 
   return useMutation({
     mutationFn: (days: DayAvailability[]) =>
       submitAvailability(client, orgId!, requestId!, days),
     onSuccess: () => {
       void qc.invalidateQueries({
-        queryKey: ["availability/submission", orgId, requestId, employee?.id],
+        queryKey: ["availability/my-submission", orgId, requestId],
       })
       void qc.invalidateQueries({
         queryKey: ["availability/open", orgId],

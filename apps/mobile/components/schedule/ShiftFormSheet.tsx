@@ -39,6 +39,12 @@ export type ShiftFormSheetProps = {
   onSave: (input: ShiftInput) => void
   onDelete?: () => void
   onClose: () => void
+  /** Pre-fills a new-shift form (ignored when editing an existing shift). */
+  defaultValues?: {
+    employeeId?: string
+    startTime?: string
+    endTime?: string
+  }
 }
 
 // ─── Sub-views ────────────────────────────────────────────────────────────────
@@ -534,7 +540,10 @@ type FormState = {
   notes: string
 }
 
-function initialFormState(shift: Shift | null): FormState {
+function initialFormState(
+  shift: Shift | null,
+  defaults?: ShiftFormSheetProps["defaultValues"],
+): FormState {
   if (shift) {
     return {
       employeeId: shift.employeeId,
@@ -546,9 +555,9 @@ function initialFormState(shift: Shift | null): FormState {
     }
   }
   return {
-    employeeId: "",
-    startTime: "09:00",
-    endTime: "17:00",
+    employeeId: defaults?.employeeId ?? "",
+    startTime:  defaults?.startTime  ?? "09:00",
+    endTime:    defaults?.endTime    ?? "17:00",
     breakMinutes: 30,
     jobRole: "",
     notes: "",
@@ -566,17 +575,18 @@ export function ShiftFormSheet({
   onSave,
   onDelete,
   onClose,
+  defaultValues,
 }: ShiftFormSheetProps) {
   const [view, setView] = useState<SheetView>("form")
-  const [formState, setFormState] = useState<FormState>(() => initialFormState(shift))
+  const [formState, setFormState] = useState<FormState>(() => initialFormState(shift, defaultValues))
 
   // Reset form state whenever the sheet opens with a new shift/date
   useEffect(() => {
     if (visible) {
       setView("form")
-      setFormState(initialFormState(shift))
+      setFormState(initialFormState(shift, defaultValues))
     }
-  }, [visible, shift])
+  }, [visible, shift, defaultValues])
 
   function handleSelectEmployee(employee: Employee) {
     setFormState((s) => ({

@@ -63,8 +63,8 @@ function DayCell({
       className="group w-full h-full min-h-12 rounded bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex flex-col items-center justify-center gap-0.5 px-1 hover:bg-green-100 dark:hover:bg-green-900/50 hover:border-green-400 dark:hover:border-green-700 transition-colors cursor-pointer"
     >
       <span className="text-xs font-semibold text-green-700 dark:text-green-300 tabular-nums">
-        {day.preferredStart && day.preferredEnd
-          ? `${formatTime(day.preferredStart)}–${formatTime(day.preferredEnd)}`
+        {day.startTime && day.endTime
+          ? `${formatTime(day.startTime)}–${formatTime(day.endTime)}`
           : "Full day"}
       </span>
       <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
@@ -206,7 +206,7 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
                         noSubmission={!hasSubmitted}
                         onBook={
                           dayData?.isAvailable && !existingShift
-                            ? () => onBookShift(employee.id, date, dayData.preferredStart, dayData.preferredEnd)
+                            ? () => onBookShift(employee.id, date, dayData.startTime, dayData.endTime)
                             : undefined
                         }
                       />

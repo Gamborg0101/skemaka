@@ -13,6 +13,8 @@ interface OrgContextValue {
   setShiftTemplates: React.Dispatch<React.SetStateAction<ShiftTemplate[]>>
   timeOffEnabled: boolean
   setTimeOffEnabled: React.Dispatch<React.SetStateAction<boolean>>
+  availabilityWindowWeeks: number
+  setAvailabilityWindowWeeks: React.Dispatch<React.SetStateAction<number>>
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null)
@@ -40,6 +42,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [jobRoles, setJobRoles] = useState<JobRole[]>([])
   const [shiftTemplates, setShiftTemplates] = useState<ShiftTemplate[]>([])
   const [timeOffEnabled, setTimeOffEnabled] = useState(true)
+  const [availabilityWindowWeeks, setAvailabilityWindowWeeks] = useState(1)
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +66,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             const { org } = data.data
             const enabled = org.settings?.timeOffEnabled !== false
             setTimeOffEnabled(enabled)
+            setAvailabilityWindowWeeks(org.settings?.availabilityWindowWeeks ?? 1)
             updateOrgSettings({
               currency: org.currency,
               timeOffEnabled: enabled,
@@ -88,8 +92,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   // Must be called unconditionally before any early returns — Rules of Hooks.
   const ctxValue = useMemo(
-    () => org ? { orgId: org.id, org, jobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled } : null,
-    [org, jobRoles, shiftTemplates, timeOffEnabled]
+    () => org ? { orgId: org.id, org, jobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks } : null,
+    [org, jobRoles, shiftTemplates, timeOffEnabled, availabilityWindowWeeks]
   )
 
   if (state === "loading") {

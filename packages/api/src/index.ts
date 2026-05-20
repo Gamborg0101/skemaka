@@ -23,6 +23,9 @@ export {
   updateManagedShift,
   deleteManagedShift,
   listEmployees,
+  getAllTimeOff,
+  reviewTimeOff,
+  getAllAvailabilitySubmissions,
 } from "./api"
 export type {
   MobileSession,
@@ -33,7 +36,10 @@ export type {
   DayAvailability,
   TimeOffInput,
   ShiftInput,
+  OpenRequestResult,
 } from "./api"
+
+export { DEFAULT_ORG_HOURS } from "./api"
 
 // Manager-oriented React Query hooks (used by the web app)
 export { useSchedule, useCreateShift, useDeleteShift } from "./hooks/useSchedule"

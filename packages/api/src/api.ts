@@ -20,7 +20,23 @@ import type {
   AvailabilityRequest,
   AvailabilitySubmission,
   AvailabilityDay,
+  DayHours,
 } from "@skemaka/types"
+
+export const DEFAULT_ORG_HOURS: DayHours[] = [
+  { isOpen: true,  openTime: "07:00", closeTime: "21:00" }, // Mon
+  { isOpen: true,  openTime: "07:00", closeTime: "21:00" }, // Tue
+  { isOpen: true,  openTime: "07:00", closeTime: "21:00" }, // Wed
+  { isOpen: true,  openTime: "07:00", closeTime: "21:00" }, // Thu
+  { isOpen: true,  openTime: "07:00", closeTime: "21:00" }, // Fri
+  { isOpen: true,  openTime: "09:00", closeTime: "17:00" }, // Sat
+  { isOpen: false, openTime: "09:00", closeTime: "17:00" }, // Sun
+]
+
+export type OpenRequestResult = {
+  request: AvailabilityRequest | null
+  orgHours: DayHours[]
+}
 
 // ─── Response envelope helpers ────────────────────────────────────────────────
 
@@ -153,41 +169,45 @@ export async function clockOut(
 // ─── Availability ─────────────────────────────────────────────────────────────
 
 /**
- * Returns the most recent OPEN availability request for the org, or null.
- * Passes status=OPEN and limit=1 to the server to avoid fetching all requests
- * and potentially missing the open one in a large result set.
+ * Returns the availability request for a specific week (auto-created if within the
+ * org's window), or the most recent OPEN request when no weekStart is given.
  */
 export async function getOpenAvailabilityRequest(
   client: ApiClient,
   orgId: string,
-): Promise<AvailabilityRequest | null> {
+  weekStart?: string,
+): Promise<OpenRequestResult> {
+  if (weekStart) {
+    const res = await client.get<{ data: AvailabilityRequest | null; orgHours?: DayHours[] }>(
+      `/api/orgs/${orgId}/availability?week=${weekStart}`,
+    )
+    return { request: res.data ?? null, orgHours: res.orgHours ?? DEFAULT_ORG_HOURS }
+  }
   const res = await client.get<Paginated<AvailabilityRequest>>(
     `/api/orgs/${orgId}/availability?status=OPEN&limit=1`,
   )
-  return res.data?.[0] ?? null
+  return { request: res.data?.[0] ?? null, orgHours: DEFAULT_ORG_HOURS }
 }
 
 /**
- * Returns the authenticated employee's submission for the given request, or null.
- * Passes employeeId as a query parameter to filter server-side.
- * NOTE: The server must support ?employeeId= on this endpoint. If it does not,
- * this will still return the full list and find() would be required client-side.
+ * Returns the authenticated user's own submission for the given request, or null.
+ * Uses the /my-submission endpoint which resolves the employee from the JWT —
+ * no employeeId needed and accessible to all org members (not manager-only).
  */
 export async function getMyAvailabilitySubmission(
   client: ApiClient,
   orgId: string,
   requestId: string,
-  employeeId: string,
 ): Promise<AvailabilitySubmission | null> {
-  const res = await client.get<Paginated<AvailabilitySubmission>>(
-    `/api/orgs/${orgId}/availability/${requestId}/submissions?employeeId=${employeeId}`,
+  const res = await client.get<{ data: AvailabilitySubmission | null }>(
+    `/api/orgs/${orgId}/availability/${requestId}/my-submission`,
   )
-  return res.data?.[0] ?? null
+  return res.data ?? null
 }
 
 export type DayAvailability = Pick<AvailabilityDay, "date" | "isAvailable"> & {
-  preferredStart?: string | null
-  preferredEnd?: string | null
+  startTime?: string | null
+  endTime?: string | null
 }
 
 /**
@@ -344,6 +364,57 @@ export async function listEmployees(
 ): Promise<Employee[]> {
   const res = await client.get<Paginated<Employee>>(
     `/api/orgs/${orgId}/employees?limit=500`,
+  )
+  return res.data ?? []
+}
+
+/**
+ * Returns all time-off requests across the org (manager view).
+ * Sorted by status so PENDING requests surface first.
+ */
+export async function getAllTimeOff(
+  client: ApiClient,
+  orgId: string,
+): Promise<TimeOffRequest[]> {
+  const res = await client.get<Paginated<TimeOffRequest>>(
+    `/api/orgs/${orgId}/time-off?limit=200`,
+  )
+  const items = res.data ?? []
+  // Pending first, then by start date descending
+  return [...items].sort((a, b) => {
+    if (a.status === "PENDING" && b.status !== "PENDING") return -1
+    if (a.status !== "PENDING" && b.status === "PENDING") return 1
+    return b.startDate.localeCompare(a.startDate)
+  })
+}
+
+/**
+ * Approves or denies a time-off request (manager only).
+ */
+export async function reviewTimeOff(
+  client: ApiClient,
+  orgId: string,
+  requestId: string,
+  status: "APPROVED" | "DENIED",
+  reviewNote?: string,
+): Promise<TimeOffRequest> {
+  const res = await client.patch<Wrapped<TimeOffRequest>>(
+    `/api/orgs/${orgId}/time-off/${requestId}`,
+    { status, reviewNote },
+  )
+  return res.data
+}
+
+/**
+ * Returns all availability submissions for the given request (manager view).
+ */
+export async function getAllAvailabilitySubmissions(
+  client: ApiClient,
+  orgId: string,
+  requestId: string,
+): Promise<AvailabilitySubmission[]> {
+  const res = await client.get<Paginated<AvailabilitySubmission>>(
+    `/api/orgs/${orgId}/availability/${requestId}/submissions?limit=500`,
   )
   return res.data ?? []
 }

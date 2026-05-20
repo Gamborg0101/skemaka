@@ -34,6 +34,60 @@ export async function listAvailabilityRequests(
   }
 }
 
+function currentMondayISO(): string {
+  const now = new Date()
+  const day = now.getUTCDay()
+  const diff = day === 0 ? -6 : 1 - day
+  const mon = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff))
+  return mon.toISOString().split("T")[0]
+}
+
+function offsetWeekISO(weekStart: string, n: number): string {
+  const [y, m, d] = weekStart.split("-").map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d + n * 7))
+  return date.toISOString().split("T")[0]
+}
+
+/**
+ * Returns the existing availability request for the given week, or auto-creates one
+ * if the week falls within the org's availability window (default 1 week).
+ * Past weeks with existing requests are always returned (read-only). Returns null
+ * for future weeks outside the window or past weeks with no request.
+ */
+export async function getOrCreateForWeek(
+  orgId: string,
+  weekStart: string,
+): Promise<AvailabilityRequest | null> {
+  // Always return an existing request regardless of when the week falls
+  const existing = await db.availabilityRequest.findFirst({
+    where: { organizationId: orgId, weekStart: new Date(weekStart) },
+    orderBy: { createdAt: "asc" },
+  })
+  if (existing) return serAvailabilityRequest(existing)
+
+  // For past weeks with no existing request, don't create one
+  const today = currentMondayISO()
+  if (weekStart < today) return null
+
+  // Cap auto-creation at 8 weeks out so employees can submit well in advance
+  // without creating requests arbitrarily far into the future.
+  if (weekStart >= offsetWeekISO(today, 8)) return null
+
+  // Auto-create — deadline = Friday before the week starts
+  const [y, m, d] = weekStart.split("-").map(Number)
+  const deadlineDate = new Date(Date.UTC(y, m - 1, d - 3))
+  const deadline = deadlineDate.toISOString().split("T")[0]
+
+  const created = await db.availabilityRequest.create({
+    data: {
+      organizationId: orgId,
+      weekStart: new Date(weekStart),
+      deadline:  new Date(deadline),
+    },
+  })
+  return serAvailabilityRequest(created)
+}
+
 export async function createAvailabilityRequest(
   orgId: string,
   weekStart: string,
@@ -146,10 +200,10 @@ export async function resolveInviteToken(token: string): Promise<TokenContext | 
 }
 
 export type AvailabilityDayInput = {
-  date:           string
-  isAvailable:    boolean
-  preferredStart?: string | null
-  preferredEnd?:   string | null
+  date:        string
+  isAvailable: boolean
+  startTime?:  string | null
+  endTime?:    string | null
 }
 
 export async function submitAvailability(
@@ -167,11 +221,11 @@ export async function submitAvailability(
   await db.availabilityDay.deleteMany({ where: { submissionId: submission.id } })
   await db.availabilityDay.createMany({
     data: days.map((d) => ({
-      submissionId:   submission.id,
-      date:           new Date(d.date),
-      isAvailable:    d.isAvailable,
-      preferredStart: d.preferredStart ?? null,
-      preferredEnd:   d.preferredEnd   ?? null,
+      submissionId: submission.id,
+      date:         new Date(d.date),
+      isAvailable:  d.isAvailable,
+      startTime:    d.isAvailable ? (d.startTime ?? null) : null,
+      endTime:      d.isAvailable ? (d.endTime   ?? null) : null,
     })),
   })
 }

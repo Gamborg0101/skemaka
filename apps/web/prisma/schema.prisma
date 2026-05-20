@@ -236,8 +236,8 @@ model AvailabilityDay {
   submissionId   String
   date           DateTime
   isAvailable    Boolean
-  preferredStart String?
-  preferredEnd   String?
+  startTime      String?
+  endTime        String?
   submission     AvailabilitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])

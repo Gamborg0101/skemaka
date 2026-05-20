@@ -113,15 +113,15 @@ export function serJobRole(r: {
 
 export function serAvailabilityDay(d: {
   id: string; submissionId: string; date: Date
-  isAvailable: boolean; preferredStart: string | null; preferredEnd: string | null
+  isAvailable: boolean; startTime: string | null; endTime: string | null
 }): AvailabilityDay {
   return {
     id: d.id,
     submissionId: d.submissionId,
     date: d.date.toISOString().split("T")[0],
     isAvailable: d.isAvailable,
-    preferredStart: d.preferredStart,
-    preferredEnd: d.preferredEnd,
+    startTime: d.startTime,
+    endTime: d.endTime,
   }
 }
 

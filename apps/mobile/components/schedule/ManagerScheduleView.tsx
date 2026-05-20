@@ -7,6 +7,7 @@ import { ShiftFormSheet } from "@/components/schedule/ShiftFormSheet"
 import { WeekNav, DayStrip } from "@/components/schedule/WeekControls"
 import { ShiftCardSkeleton } from "@/components/ui/Skeleton"
 import { useManagerSchedule, useOrgEmployees } from "@/hooks/useManagerSchedule"
+import { RefreshButton } from "@/components/ui/RefreshButton"
 import { currentWeek, weekDays, offsetWeek } from "@/lib/dates"
 import { formatTime, formatDateLong, todayISO } from "@/lib/utils"
 import type { Shift, Employee } from "@skemaka/types"
@@ -157,8 +158,9 @@ export function ManagerScheduleView() {
 
       {/* ── Fixed header — does not participate in scroll ── */}
       <View>
-        <View className="px-4 pt-4 pb-2">
+        <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
           <Text className="text-2xl font-bold text-ink">Schedule</Text>
+          <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
         </View>
 
         <View className="px-4 pb-2">

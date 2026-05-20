@@ -29,11 +29,19 @@ export function isEmploymentType(val: string): val is EmploymentType {
 
 // ─── Core entities ────────────────────────────────────────────────────────────
 
+export interface DayHours {
+  isOpen: boolean
+  openTime: string   // "HH:MM"
+  closeTime: string  // "HH:MM"
+}
+
 export interface OrgScheduleSettings {
-  hours?: Array<{ isOpen: boolean; openTime: string; closeTime: string }>
+  hours?: DayHours[]
   defaultScheduleView?: "week" | "timeline"
   timeOffEnabled?: boolean
+  availabilityWindowWeeks?: number
 }
+
 
 export interface Organization {
   id: string
@@ -157,8 +165,8 @@ export interface AvailabilityDay {
   submissionId: string
   date: string
   isAvailable: boolean
-  preferredStart: string | null
-  preferredEnd: string | null
+  startTime: string | null
+  endTime: string | null
 }
 
 // ─── Time entries (clock-in / clock-out) ─────────────────────────────────────

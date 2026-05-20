@@ -75,9 +75,10 @@ export async function updateOrgCurrency(orgId: string, newCurrency: string): Pro
 }
 
 export type OrgSettingsPatch = {
-  hours?:               Array<{ isOpen: boolean; openTime: string; closeTime: string }>
-  defaultScheduleView?: "week" | "timeline"
-  timeOffEnabled?:      boolean
+  hours?:                    Array<{ isOpen: boolean; openTime: string; closeTime: string }>
+  defaultScheduleView?:      "week" | "timeline"
+  timeOffEnabled?:           boolean
+  availabilityWindowWeeks?:  number
 }
 
 export async function updateOrgSettings(
@@ -88,9 +89,10 @@ export async function updateOrgSettings(
   const current = (org?.settings as OrgScheduleSettings) ?? {}
   const merged: OrgScheduleSettings = { ...current }
 
-  if (patch.hours               !== undefined) merged.hours               = patch.hours
-  if (patch.defaultScheduleView !== undefined) merged.defaultScheduleView = patch.defaultScheduleView
-  if (patch.timeOffEnabled      !== undefined) merged.timeOffEnabled      = patch.timeOffEnabled
+  if (patch.hours                   !== undefined) merged.hours                   = patch.hours
+  if (patch.defaultScheduleView     !== undefined) merged.defaultScheduleView     = patch.defaultScheduleView
+  if (patch.timeOffEnabled          !== undefined) merged.timeOffEnabled          = patch.timeOffEnabled
+  if (patch.availabilityWindowWeeks !== undefined) merged.availabilityWindowWeeks = patch.availabilityWindowWeeks
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await db.organization.update({ where: { id: orgId }, data: { settings: merged as any } })
