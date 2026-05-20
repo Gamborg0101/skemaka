@@ -8,8 +8,11 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   type TextInput as TextInputType,
 } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
+import * as Haptics from "expo-haptics"
 import { Screen } from "@/components/layout/Screen"
 import { LoadingState } from "@/components/feedback/LoadingState"
 import { ErrorState } from "@/components/feedback/ErrorState"
@@ -17,7 +20,9 @@ import { EmptyState } from "@/components/feedback/EmptyState"
 import { Card } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
 import { Badge } from "@/components/ui/Badge"
-import { useMyTimeOff, useSubmitTimeOff } from "@/hooks/useTimeOff"
+import { RefreshButton } from "@/components/ui/RefreshButton"
+import { useMyTimeOff, useSubmitTimeOff, useAllTimeOff, useReviewTimeOff } from "@/hooks/useTimeOff"
+import { useAuthStore } from "@/store/authStore"
 import { formatDateLong } from "@/lib/utils"
 import type { TimeOffRequest } from "@skemaka/types"
 
@@ -29,6 +34,8 @@ function validateDates(start: string, end: string): string | null {
   if (end < start)              return "End date must be on or after start date."
   return null
 }
+
+// ─── Shared card ──────────────────────────────────────────────────────────────
 
 function RequestCard({ item }: { item: TimeOffRequest }) {
   return (
@@ -49,9 +56,139 @@ function RequestCard({ item }: { item: TimeOffRequest }) {
   )
 }
 
+// ─── Manager view ─────────────────────────────────────────────────────────────
+
+function ManagerTimeOffView() {
+  const { data: requests = [], isLoading, isError, isFetching, refetch } = useAllTimeOff()
+  const review = useReviewTimeOff()
+
+  if (isLoading) return <LoadingState label="Loading requests…" />
+  if (isError)   return <ErrorState onRetry={() => void refetch()} />
+
+  const pending  = requests.filter((r) => r.status === "PENDING")
+  const resolved = requests.filter((r) => r.status !== "PENDING")
+
+  function handleReview(item: TimeOffRequest, status: "APPROVED" | "DENIED") {
+    void Haptics.selectionAsync()
+    const label = status === "APPROVED" ? "Approve" : "Deny"
+    Alert.alert(
+      `${label} request?`,
+      `${item.startDate !== item.endDate ? `${formatDateLong(item.startDate)} – ${formatDateLong(item.endDate)}` : formatDateLong(item.startDate)}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: label,
+          style: status === "DENIED" ? "destructive" : "default",
+          onPress: () =>
+            review.mutate(
+              { requestId: item.id, status },
+              { onError: () => Alert.alert("Error", "Could not update request. Please try again.") },
+            ),
+        },
+      ],
+    )
+  }
+
+  const allItems: Array<TimeOffRequest | { _section: string }> = [
+    ...(pending.length  > 0 ? [{ _section: "Pending" } as const,  ...pending]  : []),
+    ...(resolved.length > 0 ? [{ _section: "Resolved" } as const, ...resolved] : []),
+  ]
+
+  return (
+    <Screen padded={false} edges={["top"]}>
+      <FlatList
+        data={allItems}
+        keyExtractor={(item) => ("_section" in item ? `section-${item._section}` : item.id)}
+        contentContainerClassName="px-4 pt-4 pb-8 gap-2"
+        onRefresh={() => void refetch()}
+        refreshing={isFetching && !isLoading}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View className="mb-2">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-2xl font-bold text-ink">Time Off</Text>
+              <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching && !isLoading} />
+            </View>
+            <Text className="text-sm text-ink-secondary mt-0.5">
+              {pending.length > 0
+                ? `${pending.length} pending review`
+                : "No pending requests"}
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="🌴"
+            title="No requests yet"
+            description="Employees can request time off from the app."
+          />
+        }
+        renderItem={({ item }) => {
+          if ("_section" in item) {
+            return (
+              <Text className="text-xs font-semibold text-ink-muted uppercase tracking-widest pt-3 pb-1">
+                {item._section}
+              </Text>
+            )
+          }
+
+          const isPending = item.status === "PENDING"
+
+          return (
+            <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4 gap-3">
+              {/* Header row */}
+              <View className="flex-row items-start justify-between gap-3">
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-sm font-semibold text-ink">
+                    {formatDateLong(item.startDate)}
+                    {item.startDate !== item.endDate ? ` – ${formatDateLong(item.endDate)}` : ""}
+                  </Text>
+                  {item.reason ? (
+                    <Text className="text-sm text-ink-secondary" numberOfLines={2}>
+                      {item.reason}
+                    </Text>
+                  ) : null}
+                </View>
+                <Badge status={item.status} size="sm" />
+              </View>
+
+              {/* Approve / Deny buttons — only for pending */}
+              {isPending && (
+                <View className="flex-row gap-2">
+                  <Pressable
+                    onPress={() => handleReview(item, "APPROVED")}
+                    disabled={review.isPending}
+                    className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-xl active:opacity-70"
+                    style={{ backgroundColor: "rgba(48,209,88,0.12)", borderWidth: 1, borderColor: "rgba(48,209,88,0.25)" }}
+                  >
+                    <Ionicons name="checkmark" size={14} color="#30D158" />
+                    <Text className="text-sm font-semibold" style={{ color: "#30D158" }}>Approve</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleReview(item, "DENIED")}
+                    disabled={review.isPending}
+                    className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-xl active:opacity-70"
+                    style={{ backgroundColor: "rgba(255,69,58,0.1)", borderWidth: 1, borderColor: "rgba(255,69,58,0.2)" }}
+                  >
+                    <Ionicons name="close" size={14} color="#FF453A" />
+                    <Text className="text-sm font-semibold" style={{ color: "#FF453A" }}>Deny</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          )
+        }}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+      />
+    </Screen>
+  )
+}
+
+// ─── Employee view ────────────────────────────────────────────────────────────
+
 type FormState = { startDate: string; endDate: string; reason: string }
 
-export default function RequestsScreen() {
+function EmployeeTimeOffView() {
   const { data: requests, isLoading, isError, isFetching, refetch } = useMyTimeOff()
   const submit = useSubmitTimeOff()
 
@@ -103,14 +240,17 @@ export default function RequestsScreen() {
               <Text className="text-2xl font-bold text-ink">Time Off</Text>
               <Text className="text-sm text-ink-secondary mt-0.5">Your requests</Text>
             </View>
-            <Button
-              variant="primary"
-              size="sm"
-              onPress={openModal}
-              accessibilityLabel="Request time off"
-            >
-              + Request
-            </Button>
+            <View className="flex-row items-center gap-2">
+              <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching && !isLoading} />
+              <Button
+                variant="primary"
+                size="sm"
+                onPress={openModal}
+                accessibilityLabel="Request time off"
+              >
+                + Request
+              </Button>
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -230,4 +370,13 @@ export default function RequestsScreen() {
       </Modal>
     </Screen>
   )
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
+export default function RequestsScreen() {
+  const { activeView } = useAuthStore()
+  return activeView === "MANAGER"
+    ? <ManagerTimeOffView />
+    : <EmployeeTimeOffView />
 }

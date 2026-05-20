@@ -9,8 +9,11 @@ import { ShiftCardSkeleton, ClockWidgetSkeleton } from "@/components/ui/Skeleton
 import { EmptyState } from "@/components/feedback/EmptyState"
 import { ErrorState } from "@/components/feedback/ErrorState"
 import { Divider } from "@/components/ui/Divider"
+import { ManagerScheduleView } from "@/components/schedule/ManagerScheduleView"
+import { RefreshButton } from "@/components/ui/RefreshButton"
 import { useMyShifts } from "@/hooks/useShifts"
 import { useCurrentUser } from "@/hooks/useEmployee"
+import { useAuthStore } from "@/store/authStore"
 import { isToday, todayISO, formatWeekday, formatDate } from "@/lib/utils"
 import { currentWeek, weekDays, weekRangeLabel, offsetWeek } from "@/lib/dates"
 import type { Shift } from "@skemaka/types"
@@ -68,6 +71,13 @@ function WeekNav({
 }
 
 export default function ShiftsScreen() {
+  const { activeView } = useAuthStore()
+  if (activeView === "MANAGER") return <ManagerScheduleView />
+
+  return <EmployeeShiftsScreen />
+}
+
+function EmployeeShiftsScreen() {
   const { isError: userError, refetch: refetchUser } = useCurrentUser()
   const router = useRouter()
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
@@ -104,7 +114,10 @@ export default function ShiftsScreen() {
         refreshing={isFetching && !isLoading}
         ListHeaderComponent={
           <View className="gap-4 mb-4">
-            <Text className="text-2xl font-bold text-ink">My Shifts</Text>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-2xl font-bold text-ink">My Shifts</Text>
+              <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
+            </View>
 
             <WeekNav
               week={selectedWeek}

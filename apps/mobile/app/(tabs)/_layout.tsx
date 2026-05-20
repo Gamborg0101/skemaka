@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useAuthStore } from "@/store/authStore"
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"]
 
@@ -12,6 +13,8 @@ function tabIcon(active: IconName, inactive: IconName) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
+  const { activeView } = useAuthStore()
+  const isManager = activeView === "MANAGER"
 
   return (
     <Tabs
@@ -51,8 +54,23 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="requests/index"
         options={{
-          title: "Requests",
-          tabBarIcon: tabIcon("paper-plane", "paper-plane-outline"),
+          title: "Time Off",
+          tabBarIcon: tabIcon("calendar-clear", "calendar-clear-outline"),
+        }}
+      />
+      <Tabs.Screen
+        name="team/index"
+        options={{
+          title: "Team",
+          tabBarIcon: tabIcon("people", "people-outline"),
+          href: isManager ? undefined : null,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: tabIcon("settings", "settings-outline"),
         }}
       />
       <Tabs.Screen

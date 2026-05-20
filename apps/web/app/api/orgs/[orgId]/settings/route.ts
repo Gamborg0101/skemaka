@@ -24,10 +24,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     hours?: Array<{ isOpen: boolean; openTime: string; closeTime: string }>
     defaultScheduleView?: string
     timeOffEnabled?: boolean
+    availabilityWindowWeeks?: number
   }
 
-  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined) {
+  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined) {
     return NextResponse.json({ error: "No settings fields provided" }, { status: 400 })
+  }
+  if (body.availabilityWindowWeeks !== undefined) {
+    const w = body.availabilityWindowWeeks
+    if (!Number.isInteger(w) || w < 1 || w > 8) {
+      return NextResponse.json({ error: "availabilityWindowWeeks must be an integer 1–8" }, { status: 400 })
+    }
   }
   if (body.defaultScheduleView && !VALID_VIEWS.has(body.defaultScheduleView)) {
     return NextResponse.json({ error: "Invalid defaultScheduleView" }, { status: 400 })
@@ -47,9 +54,10 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   const merged = await orgService.updateOrgSettings(orgId, {
-    hours:               body.hours,
-    defaultScheduleView: body.defaultScheduleView as "week" | "timeline" | undefined,
-    timeOffEnabled:      body.timeOffEnabled,
+    hours:                    body.hours,
+    defaultScheduleView:      body.defaultScheduleView as "week" | "timeline" | undefined,
+    timeOffEnabled:           body.timeOffEnabled,
+    availabilityWindowWeeks:  body.availabilityWindowWeeks,
   })
 
   return NextResponse.json({ data: merged })

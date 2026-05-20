@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useApiClient, getMyTimeOff, submitTimeOffRequest } from "@skemaka/api"
+import { useApiClient, getMyTimeOff, submitTimeOffRequest, getAllTimeOff, reviewTimeOff } from "@skemaka/api"
 import type { TimeOffInput } from "@skemaka/api"
 import { useAuthStore } from "@/store/authStore"
 import type { TimeOffRequest } from "@skemaka/types"
@@ -13,6 +13,35 @@ export function useMyTimeOff() {
     queryFn:   () => getMyTimeOff(client, orgId!, employee!.id),
     enabled:   Boolean(orgId && employee?.id),
     staleTime: 60_000,
+  })
+}
+
+export function useAllTimeOff() {
+  const client = useApiClient()
+  const { orgId } = useAuthStore()
+
+  return useQuery({
+    queryKey:  ["time-off/all", orgId],
+    queryFn:   () => getAllTimeOff(client, orgId!),
+    enabled:   Boolean(orgId),
+    staleTime: 30_000,
+  })
+}
+
+export function useReviewTimeOff() {
+  const client = useApiClient()
+  const qc = useQueryClient()
+  const { orgId } = useAuthStore()
+
+  return useMutation({
+    mutationFn: ({ requestId, status, reviewNote }: {
+      requestId: string
+      status: "APPROVED" | "DENIED"
+      reviewNote?: string
+    }) => reviewTimeOff(client, orgId!, requestId, status, reviewNote),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["time-off/all", orgId] })
+    },
   })
 }
 

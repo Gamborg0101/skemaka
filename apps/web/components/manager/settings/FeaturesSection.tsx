@@ -1,14 +1,21 @@
 "use client"
 
-import { ToggleRight, CalendarX2 } from "lucide-react"
+import { ToggleRight, CalendarX2, CalendarClock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { updateOrgSettings } from "@/lib/orgSettings"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
+const WINDOW_OPTIONS = [
+  { value: 1, label: "1 week",  description: "Current week only" },
+  { value: 2, label: "2 weeks", description: "Current + next week" },
+  { value: 3, label: "3 weeks", description: "3 weeks ahead" },
+  { value: 4, label: "4 weeks", description: "4 weeks ahead" },
+]
+
 export function FeaturesSection() {
-  const { orgId, timeOffEnabled, setTimeOffEnabled } = useOrg()
+  const { orgId, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks } = useOrg()
 
   async function handleToggleTimeOff(enabled: boolean) {
     setTimeOffEnabled(enabled)
@@ -28,9 +35,28 @@ export function FeaturesSection() {
     }
   }
 
+  async function handleWindowChange(weeks: number) {
+    const prev = availabilityWindowWeeks
+    setAvailabilityWindowWeeks(weeks)
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ availabilityWindowWeeks: weeks }),
+      })
+      if (!r.ok) throw new Error()
+      toast.success(`Employees can now submit availability up to ${weeks} week${weeks > 1 ? "s" : ""} ahead`)
+    } catch {
+      setAvailabilityWindowWeeks(prev)
+      toast.error("Failed to update settings")
+    }
+  }
+
   return (
     <SettingsSection icon={ToggleRight} title="Features" description="Turn optional features on or off for your workspace.">
       <div className="mt-4 space-y-1">
+
+        {/* Time Off */}
         <div className="flex items-center justify-between rounded-lg px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40">
           <div className="flex items-center gap-3">
             <CalendarX2 className="size-4 text-gray-400 shrink-0" />
@@ -59,6 +85,37 @@ export function FeaturesSection() {
             />
           </button>
         </div>
+
+        {/* Availability Window */}
+        <div className="rounded-lg px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40">
+          <div className="flex items-center gap-3 mb-3">
+            <CalendarClock className="size-4 text-gray-400 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Availability Window</p>
+              <p className="text-xs text-gray-500">
+                How far in advance employees can submit their availability.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 ml-7">
+            {WINDOW_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleWindowChange(value)}
+                className={cn(
+                  "flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                  availabilityWindowWeeks === value
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
       </div>
     </SettingsSection>
   )
