@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"]
 
@@ -10,6 +11,8 @@ function tabIcon(active: IconName, inactive: IconName) {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets()
+
   return (
     <Tabs
       screenOptions={{
@@ -21,8 +24,8 @@ export default function TabsLayout() {
           borderTopColor: "#252529",
           borderTopWidth: 1,
           paddingTop: 6,
-          paddingBottom: 4,
-          height: 60,
+          paddingBottom: insets.bottom,
+          height: 60 + insets.bottom,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -42,7 +45,7 @@ export default function TabsLayout() {
         name="availability/index"
         options={{
           title: "Availability",
-          tabBarIcon: tabIcon("time", "time-outline"),
+          tabBarIcon: tabIcon("checkmark-circle", "checkmark-circle-outline"),
         }}
       />
       <Tabs.Screen
@@ -53,7 +56,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile/index"
+        name="profile"
         options={{
           title: "Profile",
           tabBarIcon: tabIcon("person-circle", "person-circle-outline"),

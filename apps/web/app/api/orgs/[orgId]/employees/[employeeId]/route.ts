@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { isPositiveFiniteNumber, isNonNegativeInt } from "@/lib/validate"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as employeeService from "@/lib/services/employeeService"
 import type { Employee } from "@/types"
@@ -13,6 +14,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId, employeeId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
+
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const body = await req.json() as Partial<
     Pick<Employee, "name" | "email" | "phone" | "jobRole" | "hourlyWage" | "notes" | "isActive" | "employmentType" | "contractedHours">
@@ -40,6 +46,11 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const { orgId, employeeId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
+
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   try {
     await employeeService.deleteEmployee(orgId, employeeId)

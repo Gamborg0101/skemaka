@@ -38,7 +38,7 @@ export function serShift(s: {
   date: Date; startTime: string; endTime: string; breakMinutes: number
   jobRole: string; notes: string | null; colorTag: string | null
   createdAt: Date; updatedAt: Date
-  employee?: Parameters<typeof serEmployee>[0]
+  employee?: { id: string; name: string; jobRole: string }
 }): Shift {
   return {
     id: s.id,
@@ -54,7 +54,7 @@ export function serShift(s: {
     colorTag: s.colorTag,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
-    ...(s.employee ? { employee: serEmployee(s.employee) } : {}),
+    ...(s.employee ? { employee: { id: s.employee.id, name: s.employee.name, jobRole: s.employee.jobRole } satisfies EmbeddedEmployee } : {}),
   }
 }
 
@@ -81,7 +81,6 @@ export function serSchedule(s: {
 export function serOrg(o: {
   id: string; name: string; slug: string; currency: string
   settings?: unknown
-  stripeCustomerId: string | null; stripeSubscriptionId: string | null
   subscriptionStatus: string; employeeCount: number
   createdAt: Date; updatedAt: Date
 }): Organization {
@@ -91,8 +90,6 @@ export function serOrg(o: {
     slug: o.slug,
     currency: o.currency,
     settings: (o.settings as Organization["settings"]) ?? null,
-    stripeCustomerId: o.stripeCustomerId,
-    stripeSubscriptionId: o.stripeSubscriptionId,
     subscriptionStatus: o.subscriptionStatus as Organization["subscriptionStatus"],
     employeeCount: o.employeeCount,
     createdAt: o.createdAt.toISOString(),

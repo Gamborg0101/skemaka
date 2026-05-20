@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { isValidColorTag } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as orgService from "@/lib/services/orgService"
 
@@ -23,6 +24,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const body = await req.json() as {
     name?: string; startTime?: string; endTime?: string
@@ -35,6 +38,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       { error: "name, startTime, and endTime are required" },
       { status: 400 },
     )
+  }
+  if (!isValidColorTag(colorTag)) {
+    return NextResponse.json({ error: "Invalid colorTag" }, { status: 400 })
   }
 
   try {

@@ -57,6 +57,20 @@ export function ClockWidgetSkeleton() {
   )
 }
 
+/** Pre-built skeleton for an EmployeeCard row */
+export function EmployeeCardSkeleton() {
+  return (
+    <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4 flex-row items-center gap-4">
+      <Skeleton width={48} height={48} radius={24} />
+      <View className="flex-1 gap-2">
+        <Skeleton width={128} height={15} />
+        <Skeleton width={88} height={13} />
+        <Skeleton width={112} height={11} />
+      </View>
+    </View>
+  )
+}
+
 /** Pre-built skeleton for a request card */
 export function RequestCardSkeleton() {
   return (

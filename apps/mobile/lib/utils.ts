@@ -34,11 +34,13 @@ export function formatWeekday(iso: string): string {
   return d.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
 }
 
-/** Compute shift duration label: "7h 30m" */
+/** Compute shift duration label: "7h 30m". Handles overnight shifts (e.g. 22:00–06:00). */
 export function shiftDuration(startTime: string, endTime: string, breakMinutes = 0): string {
   const [sh, sm] = startTime.split(":").map(Number)
   const [eh, em] = endTime.split(":").map(Number)
-  const total = (eh * 60 + em) - (sh * 60 + sm) - breakMinutes
+  const raw = (eh * 60 + em) - (sh * 60 + sm) - breakMinutes
+  // Add 24h for overnight shifts (raw is negative when end < start)
+  const total = raw < 0 ? raw + 24 * 60 : raw
   const h = Math.floor(total / 60)
   const m = total % 60
   return m === 0 ? `${h}h` : `${h}h ${m}m`

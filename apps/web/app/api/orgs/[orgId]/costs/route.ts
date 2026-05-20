@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { isValidDate } from "@/lib/validate"
 import * as scheduleService from "@/lib/services/scheduleService"
 
@@ -11,6 +11,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const weekStart = req.nextUrl.searchParams.get("weekStart")
   if (!weekStart) {

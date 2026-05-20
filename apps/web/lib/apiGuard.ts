@@ -12,20 +12,46 @@ export type AuthGuard = {
   subscriptionStatus?: SubscriptionStatus
 }
 
+/** Returns a 403 response when the guard's role is not MANAGER or ADMIN. */
+export function requireManagerRole(guard: AuthGuard): { error: Response } | null {
+  if (guard.role !== "MANAGER" && guard.role !== "ADMIN") {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
+  }
+  return null
+}
+
 function jwtCookieName() {
   return process.env.NODE_ENV === "production"
     ? "__Secure-authjs.session-token"
     : "authjs.session-token"
 }
 
+function getAuthSecret(): string {
+  const secret = process.env.AUTH_SECRET
+  if (!secret) throw new Error("AUTH_SECRET environment variable is not set")
+  return secret
+}
+
 async function decodeSessionToken(req: NextRequest) {
   const cookieName = jwtCookieName()
-  return getToken({
-    req,
-    secret: process.env.AUTH_SECRET ?? "",
-    salt: cookieName,
-    cookieName,
-  })
+  const secret = getAuthSecret()
+
+  // Cookie path — web clients
+  const fromCookie = await getToken({ req, secret, salt: cookieName, cookieName })
+  if (fromCookie) return fromCookie
+
+  // Bearer path — mobile clients (NextAuth 5 does not auto-check Authorization header)
+  const authHeader = req.headers.get("authorization")
+  if (authHeader?.startsWith("Bearer ")) {
+    const { decode } = await import("next-auth/jwt")
+    try {
+      return await decode({ token: authHeader.slice(7), secret, salt: cookieName })
+    } catch {
+      return null
+    }
+  }
+
+  return null
 }
 
 export async function requireAuth(req: NextRequest): Promise<{ error: Response } | AuthGuard> {

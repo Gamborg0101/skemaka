@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember } from "@/lib/apiGuard"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as timeOffService from "@/lib/services/timeOffService"
 
@@ -16,9 +17,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
   const body = await req.json() as { status?: "APPROVED" | "DENIED"; reviewNote?: string }
   if (!body.status || !["APPROVED", "DENIED"].includes(body.status)) {
     return NextResponse.json({ error: "status must be APPROVED or DENIED" }, { status: 400 })
+  }
+  if (body.reviewNote && body.reviewNote.length > 2000) {
+    return NextResponse.json({ error: "reviewNote must be at most 2000 characters" }, { status: 400 })
   }
 
   try {
@@ -40,6 +47,9 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   if (guard.role !== "MANAGER" && guard.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   try {
     await timeOffService.deleteTimeOff(orgId, requestId)

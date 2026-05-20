@@ -121,7 +121,7 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
         {/* Org footer */}
         <div className="p-2 lg:p-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex w-full items-center justify-center lg:justify-start gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
+            <DropdownMenuTrigger aria-label="Organization settings menu" className="flex w-full items-center justify-center lg:justify-start gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
               <Building2 className="size-4 shrink-0 text-gray-500" />
               <span className="hidden lg:block flex-1 truncate text-left font-medium text-gray-300">{org.name}</span>
               <Settings className="hidden lg:block size-3.5 shrink-0 text-gray-500" />
@@ -163,6 +163,16 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
             </Link>
           )
         })}
+        <Link
+          href="/settings"
+          className={cn(
+            "flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium transition-colors min-w-0",
+            pathname === "/settings" ? "text-blue-600 dark:text-white" : "text-gray-500 dark:text-gray-400"
+          )}
+        >
+          <Settings className="size-5" />
+          Settings
+        </Link>
       </div>
     </>
   )

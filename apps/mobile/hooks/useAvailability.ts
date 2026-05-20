@@ -44,6 +44,9 @@ export function useSubmitAvailability(requestId: string | undefined) {
       void qc.invalidateQueries({
         queryKey: ["availability/submission", orgId, requestId, employee?.id],
       })
+      void qc.invalidateQueries({
+        queryKey: ["availability/open", orgId],
+      })
     },
   })
 }

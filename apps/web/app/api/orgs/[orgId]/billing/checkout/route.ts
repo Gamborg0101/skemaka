@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/prisma"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { stripe } from "@/lib/stripe"
 
 interface RouteContext {
@@ -11,6 +11,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req, { allowSuspended: true })
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const org = await db.organization.findUnique({
     where: { id: orgId },

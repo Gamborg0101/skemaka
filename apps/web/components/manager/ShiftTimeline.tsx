@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, memo } from "react"
 import {
   DndContext,
   DragEndEvent,
@@ -61,8 +61,7 @@ function durationPercent(start: string, end: string, startHour: number, totalMin
   return Math.max(0, Math.min(100 - toPercent(start, startHour, totalMinutes), (mins / totalMinutes) * 100))
 }
 
-function nowPercent(startHour: number, totalMinutes: number): number {
-  const now = new Date()
+function nowPercent(now: Date, startHour: number, totalMinutes: number): number {
   return ((now.getHours() * 60 + now.getMinutes() - startHour * 60) / totalMinutes) * 100
 }
 
@@ -283,17 +282,18 @@ interface DaySectionProps {
   hourMarkers: number[]
   activeRowId: string | null
   hoverSnap: { time: string; pct: number } | null
+  currentTime: Date
   onShiftClick: (shift: Shift) => void
   onRowClick: (employeeId: string, date: string) => void
 }
 
-function DaySection({
+const DaySection = memo(function DaySection({
   date, employees, allShifts, jobRoles, publishedAt, draggingEmp,
   startHour, endHour, totalMinutes, hourMarkers,
-  activeRowId, hoverSnap, onShiftClick, onRowClick,
+  activeRowId, hoverSnap, currentTime, onShiftClick, onRowClick,
 }: DaySectionProps) {
   const isToday = date === todayStr()
-  const todayLine = isToday ? nowPercent(startHour, totalMinutes) : null
+  const todayLine = isToday ? nowPercent(currentTime, startHour, totalMinutes) : null
   const dayShifts = useMemo(() => allShifts.filter((s) => s.date === date), [allShifts, date])
 
   const dateObj = new Date(date + "T12:00:00")
@@ -370,7 +370,7 @@ function DaySection({
       })}
     </div>
   )
-}
+})
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -421,6 +421,13 @@ export function ShiftTimeline({
   const [editDialog, setEditDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
   const [sickDialog, setSickDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
   const [draggingEmp, setDraggingEmp] = useState<Employee | null>(null)
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+
+  // Update the current-time indicator every minute so it doesn't go stale.
+  useEffect(() => {
+    const id = setInterval(() => setCurrentTime(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const totalMinutes = (endHour - startHour) * 60
   const hourMarkers = useMemo(
@@ -533,6 +540,7 @@ export function ShiftTimeline({
                   hourMarkers={hourMarkers}
                   activeRowId={activeRowId}
                   hoverSnap={hoverSnap}
+                  currentTime={currentTime}
                   onShiftClick={(shift) => {
                     if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
                     else setEditDialog({ open: true, shift })

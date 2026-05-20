@@ -6,7 +6,7 @@ import Google from "next-auth/providers/google"
 // lib/auth.ts extends this with the Prisma adapter and Resend provider.
 // Route-level auth logic lives in proxy.ts; the authorized callback is not used.
 export const authConfig = {
-  providers: [Google],
+  providers: [Google({ checks: ["state"] })],
   pages: {
     signIn: "/login",
   },

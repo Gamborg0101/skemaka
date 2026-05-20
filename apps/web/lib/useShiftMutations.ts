@@ -7,7 +7,8 @@ export function useShiftMutations(
   schedule: Schedule | null,
   setSchedule: Dispatch<SetStateAction<Schedule | null>>,
   orgId: string,
-  employees: Array<{ id: string; name: string }>
+  employees: Array<{ id: string; name: string }>,
+  ensureSchedule: () => Promise<Schedule>,
 ) {
   const patchShift = useCallback((id: string, update: Partial<Shift>) => {
     setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === id ? { ...sh, ...update } : sh) } : s)
@@ -52,18 +53,19 @@ export function useShiftMutations(
   )
 
   const handleShiftCreate = useCallback(
-    (data: {
+    async (data: {
       employeeId: string; date: string; startTime: string; endTime: string
       breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
     }) => {
-      if (!schedule) return
+      // Lazily create the schedule if this week has no schedule yet.
+      const activeSchedule = await ensureSchedule()
       const tempId = crypto.randomUUID()
       const optimistic: Shift = {
-        id: tempId, scheduleId: schedule.id, organizationId: orgId,
+        id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
         ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(optimistic)
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts`, {
+      fetch(`/api/orgs/${orgId}/schedules/${activeSchedule.id}/shifts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -72,7 +74,7 @@ export function useShiftMutations(
         else { deleteShift(tempId); toast.error("Failed to add shift") }
       }).catch(() => { deleteShift(tempId); toast.error("Failed to add shift") })
     },
-    [schedule, orgId, appendShift, replaceShift, deleteShift]
+    [ensureSchedule, orgId, appendShift, replaceShift, deleteShift]
   )
 
   const handleShiftUpdate = useCallback(
@@ -107,17 +109,17 @@ export function useShiftMutations(
   )
 
   const handleMarkSick = useCallback(
-    (employeeId: string, date: string) => {
-      if (!schedule) return
+    async (employeeId: string, date: string) => {
+      const activeSchedule = await ensureSchedule()
       const tempId = crypto.randomUUID()
       const sickShift: Shift = {
-        id: tempId, scheduleId: schedule.id, organizationId: orgId,
+        id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
         employeeId, date, startTime: "00:00", endTime: "00:00",
         breakMinutes: 0, jobRole: "Sick Day", notes: null, colorTag: "sick",
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(sickShift)
-      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts`, {
+      fetch(`/api/orgs/${orgId}/schedules/${activeSchedule.id}/shifts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId, date, startTime: "00:00", endTime: "00:00", breakMinutes: 0, jobRole: "Sick Day", colorTag: "sick" }),
@@ -132,7 +134,7 @@ export function useShiftMutations(
         }
       }).catch(() => { deleteShift(tempId); toast.error("Failed to register sick day") })
     },
-    [schedule, orgId, employees, appendShift, replaceShift, deleteShift]
+    [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift]
   )
 
   return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick }

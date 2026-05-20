@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import type { Employee, Schedule, TimeOffRequest } from "@/types"
 import { useShiftMutations } from "@/lib/useShiftMutations"
@@ -9,6 +9,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
   const [schedule, setSchedule] = useState<Schedule | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [approvedTimeOff, setApprovedTimeOff] = useState<TimeOffRequest[]>([])
 
@@ -22,34 +23,41 @@ export function useScheduleData(orgId: string, weekStart: string) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setLoadError(false)
 
-    async function load() {
-      try {
-        const r = await fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
-        const data = await r.json() as { data: Schedule | null }
+    fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
+      .then((r) => r.json())
+      .then((data: { data: Schedule | null }) => {
         if (cancelled) return
-
-        if (data.data) {
-          setSchedule(data.data)
-        } else {
-          const cr = await fetch(`/api/orgs/${orgId}/schedules`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ weekStart }),
-          })
-          const cdata = await cr.json() as { data: Schedule }
-          if (!cancelled) setSchedule({ ...cdata.data, shifts: [] })
+        // Return null when no schedule exists — don't auto-create.
+        // The schedule is created lazily when the user adds their first shift.
+        setSchedule(data.data ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError(true)
+          toast.error("Failed to load schedule")
         }
-      } catch {
-        if (!cancelled) toast.error("Failed to load schedule")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
 
-    load()
     return () => { cancelled = true }
   }, [weekStart, orgId])
+
+  // Lazily creates the schedule for a week on first shift add. Returns the
+  // schedule (existing or newly created) so callers can immediately use its id.
+  const ensureSchedule = useCallback(async (): Promise<Schedule> => {
+    if (schedule) return schedule
+    const r = await fetch(`/api/orgs/${orgId}/schedules`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekStart }),
+    })
+    const data = await r.json() as { data: Schedule }
+    const newSchedule = { ...data.data, shifts: [] }
+    setSchedule(newSchedule)
+    return newSchedule
+  }, [schedule, orgId, weekStart])
 
   useEffect(() => {
     let cancelled = false
@@ -84,11 +92,12 @@ export function useScheduleData(orgId: string, weekStart: string) {
   }
 
   const { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick } =
-    useShiftMutations(schedule, setSchedule, orgId, employees)
+    useShiftMutations(schedule, setSchedule, orgId, employees, ensureSchedule)
 
   return {
     schedule,
     loading,
+    loadError,
     employees,
     approvedTimeOff,
     publishing,

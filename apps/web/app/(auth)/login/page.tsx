@@ -1,5 +1,7 @@
+import Link from "next/link"
 import { signIn } from "@/lib/auth"
 import { Calendar, DollarSign, Clock } from "lucide-react"
+import { getISOWeek, getMondayOfWeek } from "@/lib/dateUtils"
 
 const features = [
   {
@@ -30,13 +32,13 @@ const DAY_START = 6
 const DAY_END = 22
 const DAY_SPAN = DAY_END - DAY_START
 
-function ShiftPreview() {
+function ShiftPreview({ weekNum }: { weekNum: number }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="flex items-center gap-2 mb-5">
         <span className="size-1.5 rounded-full bg-green-400 animate-pulse" />
         <span className="text-[11px] font-medium text-white/40 uppercase tracking-widest">
-          Week 20 · Live schedule
+          Week {weekNum} · Live schedule
         </span>
       </div>
       <div className="space-y-3">
@@ -71,7 +73,25 @@ function ShiftPreview() {
   )
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>
+}) {
+  const { callbackUrl } = await searchParams
+  const weekNum = getISOWeek(getMondayOfWeek(new Date()))
+  // Use only the path+search so NextAuth's origin check always passes —
+  // the full URL may use a LAN IP that doesn't match NEXTAUTH_URL.
+  let redirectTo = "/onboarding"
+  if (callbackUrl) {
+    try {
+      const u = new URL(callbackUrl)
+      redirectTo = u.pathname + u.search
+    } catch {
+      redirectTo = callbackUrl
+    }
+  }
+
   return (
     <div className="flex min-h-dvh">
       {/* ── Left panel ── */}
@@ -104,7 +124,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <ShiftPreview />
+          <ShiftPreview weekNum={weekNum} />
         </div>
 
         {/* Feature bullets */}
@@ -140,7 +160,7 @@ export default function LoginPage() {
           <form
             action={async () => {
               "use server"
-              await signIn("google", { redirectTo: "/onboarding" })
+              await signIn("google", { redirectTo })
             }}
           >
             <button
@@ -154,13 +174,13 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-gray-400 dark:text-gray-500">
             By signing in you agree to our{" "}
-            <a href="/terms" className="underline underline-offset-2 hover:text-gray-600 transition-colors">
+            <Link href="/terms" className="underline underline-offset-2 hover:text-gray-600 transition-colors">
               Terms
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="/privacy" className="underline underline-offset-2 hover:text-gray-600 transition-colors">
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-600 transition-colors">
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
         </div>

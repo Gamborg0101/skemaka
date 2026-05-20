@@ -410,6 +410,9 @@ async function main() {
   // ── 6. Schedules ──────────────────────────────────────────────────────────
   console.log("6/10 Seeding schedules…")
 
+  // Delete stale schedules (and their shifts via cascade) so stable IDs can be reassigned to current dates
+  await db.schedule.deleteMany({ where: { organizationId: IDS.org } })
+
   const SCHEDULES = [
     { id: IDS.schedW4,  weekStart: w4   },
     { id: IDS.schedW3,  weekStart: w3   },
@@ -422,13 +425,11 @@ async function main() {
     { id: IDS.schedWp4, weekStart: w_p4 },
   ]
 
-  for (const { id, weekStart } of SCHEDULES) {
-    await db.schedule.upsert({
-      where: { id },
-      create: { id, organizationId: IDS.org, weekStart, isDuplicate: false },
-      update: { weekStart },
-    })
-  }
+  await db.schedule.createMany({
+    data: SCHEDULES.map(({ id, weekStart }) => ({
+      id, organizationId: IDS.org, weekStart, isDuplicate: false,
+    })),
+  })
 
   // ── 7. Shifts ─────────────────────────────────────────────────────────────
   console.log("7/10 Seeding shifts…")
@@ -968,10 +969,10 @@ async function main() {
     console.log(`     → ${r.id} (${r.status})`)
   }
 
-  // ── 10. Link ADMIN_EMAIL to the seeded org ────────────────────────────────
+  // ── 10. Link SUPERADMIN_EMAIL to the seeded org ──────────────────────────
   console.log("10/10 Linking admin account…")
 
-  const adminEmail = process.env.ADMIN_EMAIL
+  const adminEmail = process.env.SUPERADMIN_EMAIL
   if (adminEmail) {
     console.log(`     → ${adminEmail}`)
     const adminUser = await db.user.upsert({
@@ -990,7 +991,7 @@ async function main() {
       data:  { userId: adminUser.id },
     })
   } else {
-    console.log("     → ADMIN_EMAIL not set; skipping admin link")
+    console.log("     → SUPERADMIN_EMAIL not set; skipping admin link")
   }
 
   console.log("\nSeed complete ✓")

@@ -41,8 +41,6 @@ export interface Organization {
   slug: string
   currency: string
   settings?: OrgScheduleSettings | null
-  stripeCustomerId: string | null
-  stripeSubscriptionId: string | null
   subscriptionStatus: SubscriptionStatus
   employeeCount: number
   createdAt: string
@@ -129,7 +127,7 @@ export interface Shift {
   colorTag: string | null
   createdAt: string
   updatedAt: string
-  employee?: Employee
+  employee?: EmbeddedEmployee
 }
 
 // ─── Availability ─────────────────────────────────────────────────────────────

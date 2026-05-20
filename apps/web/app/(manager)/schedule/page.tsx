@@ -70,20 +70,20 @@ export default function SchedulePage() {
     ? isCurrentWeek
     : timelineDates.includes(today)
 
-  const orgSettings = getOrgSettings()
   const { timelineStartHour, timelineEndHour } = useMemo(() => {
+    const { hours } = getOrgSettings()
     let minStart = 24, maxEnd = 0
     for (const d of timelineDates) {
       const jsDay = new Date(d + "T12:00:00").getDay()
       const idx = jsDay === 0 ? 6 : jsDay - 1
-      const dh = orgSettings.hours[idx]
+      const dh = hours[idx]
       if (dh.isOpen) {
         minStart = Math.min(minStart, parseInt(dh.openTime.split(":")[0], 10))
         maxEnd = Math.max(maxEnd, parseInt(dh.closeTime.split(":")[0], 10))
       }
     }
     if (minStart >= 24) {
-      const openDays = orgSettings.hours.filter((h) => h.isOpen)
+      const openDays = hours.filter((h) => h.isOpen)
       if (openDays.length > 0) {
         minStart = Math.min(...openDays.map((h) => parseInt(h.openTime.split(":")[0], 10)))
         maxEnd = Math.max(...openDays.map((h) => parseInt(h.closeTime.split(":")[0], 10)))
@@ -92,7 +92,6 @@ export default function SchedulePage() {
       }
     }
     return { timelineStartHour: Math.max(0, minStart - 2), timelineEndHour: Math.min(23, maxEnd + 2) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timelineDates])
 
   const scheduledHoursMap = useMemo(() =>

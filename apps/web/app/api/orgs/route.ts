@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "name is required" }, { status: 400 })
   }
+  if (name.length > 100) {
+    return NextResponse.json({ error: "name must be at most 100 characters" }, { status: 400 })
+  }
 
   try {
     const org = await orgService.createOrg(guard.userId, name, currency)

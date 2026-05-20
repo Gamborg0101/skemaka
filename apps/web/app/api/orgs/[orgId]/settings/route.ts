@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { isValidTime } from "@/lib/validate"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import * as orgService from "@/lib/services/orgService"
 
 interface RouteContext {
@@ -13,6 +14,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
+
+  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const body = await req.json() as {
     hours?: Array<{ isOpen: boolean; openTime: string; closeTime: string }>

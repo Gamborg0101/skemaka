@@ -42,7 +42,7 @@ interface AddShiftDialogProps {
     jobRole: string
     notes: string | null
     colorTag: string | null
-  }) => void
+  }) => void | Promise<void>
 }
 
 export function AddShiftDialog({
@@ -65,9 +65,12 @@ export function AddShiftDialog({
   const [notes, setNotes] = useState("")
   const [showNotes, setShowNotes] = useState(false)
   const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const skipAutoSuggestRef = useRef(false)
 
-  // Sync pre-filled values whenever the dialog opens
+  // Sync pre-filled values whenever the dialog opens. Also sets the initial
+  // role from the employee — this replaces the separate employeeId-change effect
+  // so we avoid two effects both calling setSelectedRole on open.
   useEffect(() => {
     if (open) {
       skipAutoSuggestRef.current = true
@@ -78,16 +81,18 @@ export function AddShiftDialog({
       setNotes("")
       setShowNotes(false)
       setAppliedTemplateId(null)
+      setSubmitting(false)
       const emp = employees.find((e) => e.id === defaultEmployeeId)
       setSelectedRole(emp?.jobRole ?? "")
     }
   }, [open, defaultEmployeeId, defaultDate, defaultStartTime, defaultEndTime, employees])
 
-  // When employee changes, pre-fill their role
+  // When the employee selection changes after open, update the role suggestion.
   useEffect(() => {
+    if (!open) return
     const emp = employees.find((e) => e.id === employeeId)
     setSelectedRole(emp?.jobRole ?? "")
-  }, [employeeId, employees])
+  }, [employeeId, employees, open])
 
   // Auto-suggest break based on shift duration (only when user changes times, not on open/template)
   useEffect(() => {
@@ -112,21 +117,28 @@ export function AddShiftDialog({
     setAppliedTemplateId(tmpl.id)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!employeeId || !defaultDate || !startTime || !endTime) return
+    if (!employeeId || !defaultDate || !startTime || !endTime || submitting) return
+    setSubmitting(true)
     const colorTag = jobRoles.find((r) => r.name === selectedRole)?.color ?? "gray"
-    onShiftCreate({
-      employeeId,
-      date: defaultDate,
-      startTime,
-      endTime,
-      breakMinutes: parseInt(breakMinutes, 10) || 0,
-      jobRole: selectedRole,
-      notes: notes.trim() || null,
-      colorTag,
-    })
-    onOpenChange(false)
+    try {
+      await onShiftCreate({
+        employeeId,
+        date: defaultDate,
+        startTime,
+        endTime,
+        breakMinutes: parseInt(breakMinutes, 10) || 0,
+        jobRole: selectedRole,
+        notes: notes.trim() || null,
+        colorTag,
+      })
+      onOpenChange(false)
+    } catch {
+      // onShiftCreate handles its own error toasts — just re-enable the button
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -264,10 +276,10 @@ export function AddShiftDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!employeeId || !defaultDate}
+              disabled={!employeeId || !defaultDate || submitting}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              Add shift
+              {submitting ? "Adding…" : "Add shift"}
             </Button>
           </DialogFooter>
         </form>

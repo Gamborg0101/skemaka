@@ -52,7 +52,7 @@ export default function AvailabilityPage() {
     }).catch(() => setLoading(false))
   }, [orgId])
 
-  // Whenever the week changes, load the matching request + schedule
+  // Whenever the week changes (after initial load), load the matching request + schedule
   useEffect(() => {
     if (!orgId || loading) return
     let cancelled = false
@@ -86,7 +86,7 @@ export default function AvailabilityPage() {
 
     load()
     return () => { cancelled = true }
-  }, [orgId, weekStart, loading]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orgId, weekStart, allRequests])
 
   const navigateWeek = (dir: -1 | 1) => {
     setWeekStart((ws) => addDays(ws, dir * 7))
@@ -244,14 +244,14 @@ export default function AvailabilityPage() {
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {/* Week navigation */}
       <div className="flex items-center gap-2 mb-5">
-        <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(-1)}>
+        <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(-1)} aria-label="Previous week">
           <ChevronLeft className="size-4" />
         </Button>
         <div className="text-sm font-medium text-gray-800 dark:text-gray-200 min-w-0">
           <span className="text-gray-400 dark:text-gray-500 mr-1.5 text-xs">Week {getISOWeek(weekStart)}</span>
           {formatWeekLabel(weekStart)}
         </div>
-        <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(1)}>
+        <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => navigateWeek(1)} aria-label="Next week">
           <ChevronRight className="size-4" />
         </Button>
       </div>

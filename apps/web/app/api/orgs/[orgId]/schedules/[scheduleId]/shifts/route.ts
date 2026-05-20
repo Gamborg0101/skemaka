@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
-import { isValidDate, isValidTime, isNonNegativeInt, timesAreDifferent, parsePaginationParams } from "@/lib/validate"
+import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { isValidDate, isValidTime, isNonNegativeInt, timesAreDifferent, parsePaginationParams, isValidColorTag } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as scheduleService from "@/lib/services/scheduleService"
@@ -26,6 +26,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId, scheduleId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const { success } = await rateLimitRequest(getClientIp(req.headers))
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
@@ -54,6 +56,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!isNonNegativeInt(breakMinutes ?? 0)) {
     return NextResponse.json({ error: "breakMinutes must be a non-negative integer" }, { status: 400 })
   }
+  if (jobRole.length > 100) return NextResponse.json({ error: "jobRole must be at most 100 characters" }, { status: 400 })
+  if (notes && notes.length > 5000) return NextResponse.json({ error: "notes must be at most 5000 characters" }, { status: 400 })
+  if (!isValidColorTag(colorTag)) return NextResponse.json({ error: "Invalid colorTag" }, { status: 400 })
 
   try {
     const shift = await scheduleService.createShift(orgId, scheduleId, {

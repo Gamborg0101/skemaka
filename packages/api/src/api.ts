@@ -12,6 +12,7 @@
  */
 import type { ApiClient } from "./client"
 import type {
+  Employee,
   Schedule,
   Shift,
   TimeEntry,
@@ -153,19 +154,24 @@ export async function clockOut(
 
 /**
  * Returns the most recent OPEN availability request for the org, or null.
+ * Passes status=OPEN and limit=1 to the server to avoid fetching all requests
+ * and potentially missing the open one in a large result set.
  */
 export async function getOpenAvailabilityRequest(
   client: ApiClient,
   orgId: string,
 ): Promise<AvailabilityRequest | null> {
   const res = await client.get<Paginated<AvailabilityRequest>>(
-    `/api/orgs/${orgId}/availability?limit=10`,
+    `/api/orgs/${orgId}/availability?status=OPEN&limit=1`,
   )
-  return res.data?.find((r) => r.status === "OPEN") ?? null
+  return res.data?.[0] ?? null
 }
 
 /**
  * Returns the authenticated employee's submission for the given request, or null.
+ * Passes employeeId as a query parameter to filter server-side.
+ * NOTE: The server must support ?employeeId= on this endpoint. If it does not,
+ * this will still return the full list and find() would be required client-side.
  */
 export async function getMyAvailabilitySubmission(
   client: ApiClient,
@@ -174,9 +180,9 @@ export async function getMyAvailabilitySubmission(
   employeeId: string,
 ): Promise<AvailabilitySubmission | null> {
   const res = await client.get<Paginated<AvailabilitySubmission>>(
-    `/api/orgs/${orgId}/availability/${requestId}/submissions`,
+    `/api/orgs/${orgId}/availability/${requestId}/submissions?employeeId=${employeeId}`,
   )
-  return res.data?.find((s) => s.employeeId === employeeId) ?? null
+  return res.data?.[0] ?? null
 }
 
 export type DayAvailability = Pick<AvailabilityDay, "date" | "isAvailable"> & {
@@ -236,4 +242,108 @@ export async function submitTimeOffRequest(
     input,
   )
   return res.data
+}
+
+// ─── Manager operations ───────────────────────────────────────────────────────
+
+export type ShiftInput = {
+  employeeId: string
+  date: string
+  startTime: string
+  endTime: string
+  breakMinutes: number
+  jobRole: string
+  notes?: string
+}
+
+/**
+ * Returns the schedule for a given week, or null if none exists.
+ */
+export async function getSchedule(
+  client: ApiClient,
+  orgId: string,
+  weekStart: string,
+): Promise<Schedule | null> {
+  const res = await client.get<Wrapped<Schedule | null>>(
+    `/api/orgs/${orgId}/schedules?weekStart=${weekStart}`,
+  )
+  return res.data ?? null
+}
+
+/**
+ * Returns the schedule for a given week, creating it if it does not exist.
+ */
+export async function getOrCreateSchedule(
+  client: ApiClient,
+  orgId: string,
+  weekStart: string,
+): Promise<Schedule> {
+  const existing = await getSchedule(client, orgId, weekStart)
+  if (existing) return existing
+  const res = await client.post<Wrapped<Schedule>>(
+    `/api/orgs/${orgId}/schedules`,
+    { weekStart },
+  )
+  return res.data
+}
+
+/**
+ * Creates a new shift within the given schedule.
+ */
+export async function createManagedShift(
+  client: ApiClient,
+  orgId: string,
+  scheduleId: string,
+  input: ShiftInput,
+): Promise<Shift> {
+  const res = await client.post<Wrapped<Shift>>(
+    `/api/orgs/${orgId}/schedules/${scheduleId}/shifts`,
+    input,
+  )
+  return res.data
+}
+
+/**
+ * Updates an existing shift.
+ */
+export async function updateManagedShift(
+  client: ApiClient,
+  orgId: string,
+  scheduleId: string,
+  shiftId: string,
+  input: Partial<ShiftInput>,
+): Promise<Shift> {
+  const res = await client.patch<Wrapped<Shift>>(
+    `/api/orgs/${orgId}/schedules/${scheduleId}/shifts/${shiftId}`,
+    input,
+  )
+  return res.data
+}
+
+/**
+ * Deletes a shift.
+ */
+export async function deleteManagedShift(
+  client: ApiClient,
+  orgId: string,
+  scheduleId: string,
+  shiftId: string,
+): Promise<void> {
+  await client.del(
+    `/api/orgs/${orgId}/schedules/${scheduleId}/shifts/${shiftId}`,
+  )
+}
+
+/**
+ * Lists all active employees in the org.  Uses a high limit to load the full
+ * roster in one request — rosters larger than 500 are extremely rare.
+ */
+export async function listEmployees(
+  client: ApiClient,
+  orgId: string,
+): Promise<Employee[]> {
+  const res = await client.get<Paginated<Employee>>(
+    `/api/orgs/${orgId}/employees?limit=500`,
+  )
+  return res.data ?? []
 }

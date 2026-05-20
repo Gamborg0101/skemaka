@@ -104,28 +104,12 @@ describe("serShift", () => {
     expect(serShift(base)).not.toHaveProperty("employee")
   })
 
-  it("serializes nested employee when provided", () => {
-    const employee = {
-      id: "emp-1",
-      organizationId: "org-1",
-      userId: null,
-      name: "Sarah Chen",
-      email: "sarah@example.com",
-      phone: null,
-      jobRole: "Barista",
-      hourlyWage: makeDecimal(14.5),
-      employmentType: "FULL_TIME",
-      contractedHours: 40,
-      notes: null,
-      isActive: true,
-      inviteToken: null,
-      inviteExpiry: null,
-      createdAt: NOW,
-      updatedAt: LATER,
-    }
+  it("serializes nested employee when provided (embedded shape only)", () => {
+    const employee = { id: "emp-1", name: "Sarah Chen", jobRole: "Barista" }
     const result = serShift({ ...base, employee })
+    expect(result.employee?.id).toBe("emp-1")
     expect(result.employee?.name).toBe("Sarah Chen")
-    expect(result.employee?.hourlyWage).toBe(14.5)
+    expect(result.employee?.jobRole).toBe("Barista")
   })
 
   it("preserves scalar fields", () => {
@@ -199,8 +183,6 @@ describe("serOrg", () => {
     name: "The Daily Grind",
     slug: "the-daily-grind",
     currency: "DKK",
-    stripeCustomerId: null,
-    stripeSubscriptionId: null,
     subscriptionStatus: "ACTIVE",
     employeeCount: 7,
     createdAt: NOW,
@@ -220,13 +202,6 @@ describe("serOrg", () => {
     expect(result.slug).toBe("the-daily-grind")
     expect(result.subscriptionStatus).toBe("ACTIVE")
     expect(result.employeeCount).toBe(7)
-    expect(result.stripeCustomerId).toBeNull()
-  })
-
-  it("passes through stripe IDs when present", () => {
-    const result = serOrg({ ...base, stripeCustomerId: "cus_abc", stripeSubscriptionId: "sub_xyz" })
-    expect(result.stripeCustomerId).toBe("cus_abc")
-    expect(result.stripeSubscriptionId).toBe("sub_xyz")
   })
 })
 

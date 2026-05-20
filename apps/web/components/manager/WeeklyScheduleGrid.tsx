@@ -55,7 +55,9 @@ function getVisibleDays(containerWidth: number): 3 | 5 | 7 {
 }
 
 function getWeekDays(weekStart: string): Date[] {
-  const start = new Date(weekStart)
+  // Pin to local noon to avoid DST-boundary shifts on UTC-N timezones where
+  // midnight parsing could roll the date back by the UTC offset.
+  const start = new Date(weekStart + "T12:00:00")
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start)
     d.setDate(start.getDate() + i)

@@ -85,6 +85,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     resolvedEmployeeId = emp.id
   }
 
+  if (body.reason && body.reason.length > 2000) {
+    return NextResponse.json({ error: "reason must be at most 2000 characters" }, { status: 400 })
+  }
+
   if (!isValidDate(body.startDate!) || !isValidDate(body.endDate!)) {
     return NextResponse.json(
       { error: "startDate and endDate must be valid YYYY-MM-DD dates" },

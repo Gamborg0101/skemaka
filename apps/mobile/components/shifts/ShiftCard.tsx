@@ -17,7 +17,7 @@ export function ShiftCard({ shift, onPress, compact = false }: Props) {
   const hours = shiftDuration(shift.startTime, shift.endTime, shift.breakMinutes)
 
   const borderClass = today ? "border-brand/50" : "border-line/60"
-  const bgClass     = today ? "bg-surface"      : "bg-surface"
+  const bgClass     = today ? "bg-brand/5"      : "bg-surface"
 
   async function handlePress() {
     await Haptics.selectionAsync()
@@ -41,12 +41,12 @@ export function ShiftCard({ shift, onPress, compact = false }: Props) {
           <Text className="text-sm text-ink-secondary">{shift.jobRole}</Text>
         </View>
 
-        <View className="items-end gap-1">
+        <View className="flex-row items-center gap-2">
           <View className="bg-elevated rounded-lg px-2.5 py-1">
             <Text className="text-sm font-semibold text-ink">{hours}</Text>
           </View>
           {onPress ? (
-            <Ionicons name="chevron-forward" size={14} color="#4A4A57" />
+            <Ionicons name="chevron-forward" size={16} color="#4A4A57" />
           ) : null}
         </View>
       </View>

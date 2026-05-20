@@ -7,6 +7,7 @@ import { ShiftCard } from "@/components/shifts/ShiftCard"
 import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { ShiftCardSkeleton, ClockWidgetSkeleton } from "@/components/ui/Skeleton"
 import { EmptyState } from "@/components/feedback/EmptyState"
+import { ErrorState } from "@/components/feedback/ErrorState"
 import { Divider } from "@/components/ui/Divider"
 import { useMyShifts } from "@/hooks/useShifts"
 import { useCurrentUser } from "@/hooks/useEmployee"
@@ -67,11 +68,22 @@ function WeekNav({
 }
 
 export default function ShiftsScreen() {
-  useCurrentUser()
+  const { isError: userError, refetch: refetchUser } = useCurrentUser()
   const router = useRouter()
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
 
   const { data: shifts, isLoading, isFetching, refetch } = useMyShifts(selectedWeek)
+
+  if (userError) {
+    return (
+      <Screen>
+        <ErrorState
+          message="Could not load your profile."
+          onRetry={() => void refetchUser()}
+        />
+      </Screen>
+    )
+  }
 
   const isCurrentWeek = selectedWeek === currentWeek()
   const todayShift = isCurrentWeek ? (shifts?.find((s) => s.date === todayISO()) ?? null) : null

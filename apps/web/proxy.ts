@@ -116,8 +116,19 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
-  // /login — redirect to schedule if already authenticated
+  // /login — redirect to schedule if already authenticated, but honour an
+  // existing same-origin callbackUrl first so the mobile OAuth flow can
+  // complete (it routes through /login → /api/auth/mobile/session → exp://…).
   if (pathname === "/login" && isAuthenticated) {
+    const cb = req.nextUrl.searchParams.get("callbackUrl")
+    if (cb) {
+      try {
+        const target = cb.startsWith("/") ? new URL(cb, req.nextUrl.origin) : new URL(cb)
+        if (target.origin === req.nextUrl.origin) return NextResponse.redirect(target)
+      } catch {
+        // malformed callbackUrl — fall through to the default redirect
+      }
+    }
     return NextResponse.redirect(new URL("/schedule", req.nextUrl.origin))
   }
 

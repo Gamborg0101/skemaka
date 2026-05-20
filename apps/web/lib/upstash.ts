@@ -1,7 +1,16 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 
+let _redis: Redis | null = null
 let _ratelimit: Ratelimit | null = null
+
+export function getRedis(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
+  if (!_redis) _redis = new Redis({ url, token })
+  return _redis
+}
 
 function getRatelimit(): Ratelimit | null {
   const url = process.env.UPSTASH_REDIS_REST_URL
@@ -12,7 +21,7 @@ function getRatelimit(): Ratelimit | null {
   }
 
   if (!_ratelimit) {
-    const redis = new Redis({ url, token })
+    const redis = getRedis()!
     _ratelimit = new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(20, "10 s"),
@@ -31,6 +40,12 @@ export const ratelimit = new Proxy({} as Ratelimit, {
     return instance[prop as keyof Ratelimit]
   },
 })
+
+if (process.env.NODE_ENV === "production" && !getRatelimit()) {
+  console.error(
+    "[UPSTASH] Rate limiting is DISABLED — set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN"
+  )
+}
 
 // Prefer x-real-ip (set by Vercel, cannot be forged by clients) over
 // x-forwarded-for (can be sent by the client and is attacker-controlled on
