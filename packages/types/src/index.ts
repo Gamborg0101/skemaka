@@ -50,7 +50,6 @@ export interface Organization {
   currency: string
   settings?: OrgScheduleSettings | null
   subscriptionStatus: SubscriptionStatus
-  employeeCount: number
   createdAt: string
   updatedAt: string
 }
@@ -136,6 +135,14 @@ export interface Shift {
   createdAt: string
   updatedAt: string
   employee?: EmbeddedEmployee
+  /** Total gross minutes worked on this shift's date (sum of completed time entries). Only present when > 0. */
+  workedMinutes?: number
+  /** ISO timestamp of the first clock-in on this shift's date. Present when workedMinutes is set. */
+  clockedInAt?: string
+  /** ISO timestamp of the last clock-out on this shift's date. Present when workedMinutes is set. */
+  clockedOutAt?: string
+  /** ID of the most recent completed TimeEntry for this shift's date. Used by managers to correct clock times. */
+  timeEntryId?: string
 }
 
 // ─── Availability ─────────────────────────────────────────────────────────────

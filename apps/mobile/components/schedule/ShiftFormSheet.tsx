@@ -26,9 +26,28 @@ const TIME_SLOTS: string[] = Array.from({ length: 48 }, (_, i) => {
   return `${String(h).padStart(2, "0")}:${m}`
 })
 
+// Finer 5-minute granularity for clock-time corrections
+const CLOCK_TIME_SLOTS: string[] = Array.from({ length: 24 * 12 }, (_, i) => {
+  const h = Math.floor(i / 12)
+  const m = (i % 12) * 5
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+})
+
+function isoToHHMM(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+}
+
+function hmToISO(originalIso: string, newHHMM: string): string {
+  const d = new Date(originalIso)
+  const [h, m] = newHHMM.split(":").map(Number)
+  d.setHours(h, m, 0, 0)
+  return d.toISOString()
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SheetView = "form" | "employee" | "time-start" | "time-end"
+type SheetView = "form" | "employee" | "time-start" | "time-end" | "clock-in" | "clock-out"
 
 export type ShiftFormSheetProps = {
   visible: boolean
@@ -45,6 +64,14 @@ export type ShiftFormSheetProps = {
     startTime?: string
     endTime?: string
   }
+  /** When present, shows the "Actual hours" section for manager clock corrections. */
+  timeEntry?: {
+    id: string
+    clockedInAt: string
+    clockedOutAt: string
+  }
+  isSavingTimeEntry?: boolean
+  onSaveTimeEntry?: (entryId: string, clockIn: string, clockOut: string) => void
 }
 
 // ─── Sub-views ────────────────────────────────────────────────────────────────
@@ -265,24 +292,26 @@ function EmployeePickerView({
 
 function TimePickerView({
   title,
+  slots,
   selected,
   onSelect,
   onBack,
   onClose,
 }: {
   title: string
+  slots: string[]
   selected: string
   onSelect: (time: string) => void
   onBack: () => void
   onClose: () => void
 }) {
-  const initialIndex = Math.max(0, TIME_SLOTS.indexOf(selected))
+  const initialIndex = Math.max(0, slots.indexOf(selected))
 
   return (
     <>
       <SheetHeader title={title} onBack={onBack} onClose={onClose} />
       <FlatList
-        data={TIME_SLOTS}
+        data={slots}
         keyExtractor={(t) => t}
         showsVerticalScrollIndicator={false}
         initialScrollIndex={Math.max(0, initialIndex - 3)}
@@ -325,6 +354,10 @@ function FormView({
   onClose,
   formState,
   setFormState,
+  clockInTime,
+  clockOutTime,
+  isSavingTimeEntry,
+  onSaveTimeEntry,
 }: {
   date: string
   shift: Shift | null
@@ -336,6 +369,10 @@ function FormView({
   onClose: () => void
   formState: FormState
   setFormState: React.Dispatch<React.SetStateAction<FormState>>
+  clockInTime?: string
+  clockOutTime?: string
+  isSavingTimeEntry?: boolean
+  onSaveTimeEntry?: () => void
 }) {
   const selectedEmployee = employees.find((e) => e.id === formState.employeeId)
 
@@ -523,6 +560,47 @@ function FormView({
             <Text className="text-sm font-medium text-danger">Delete Shift</Text>
           </Pressable>
         )}
+
+        {/* Actual clock times — manager correction */}
+        {clockInTime !== undefined && clockOutTime !== undefined && onSaveTimeEntry && (
+          <View className="mx-4 mt-6 mb-2 rounded-2xl border border-line/40 overflow-hidden">
+            <View className="px-4 py-2 bg-elevated border-b border-line/30">
+              <Text className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">
+                Actual hours
+              </Text>
+            </View>
+
+            <FieldRow label="Clocked in">
+              <SelectButton
+                value={clockInTime}
+                placeholder="—"
+                onPress={() => onNavigate("clock-in")}
+              />
+            </FieldRow>
+
+            <FieldRow label="Clocked out">
+              <SelectButton
+                value={clockOutTime}
+                placeholder="—"
+                onPress={() => onNavigate("clock-out")}
+              />
+            </FieldRow>
+
+            <View className="px-4 pt-3 pb-4">
+              <Pressable
+                onPress={onSaveTimeEntry}
+                disabled={isSavingTimeEntry}
+                className="h-11 rounded-xl bg-ink/10 items-center justify-center active:opacity-70"
+              >
+                {isSavingTimeEntry ? (
+                  <ActivityIndicator size="small" color="#7B6EF8" />
+                ) : (
+                  <Text className="text-sm font-semibold text-ink">Save clock times</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        )}
       </ScrollView>
       </KeyboardAvoidingView>
     </>
@@ -576,17 +654,24 @@ export function ShiftFormSheet({
   onDelete,
   onClose,
   defaultValues,
+  timeEntry,
+  isSavingTimeEntry,
+  onSaveTimeEntry,
 }: ShiftFormSheetProps) {
   const [view, setView] = useState<SheetView>("form")
   const [formState, setFormState] = useState<FormState>(() => initialFormState(shift, defaultValues))
+  const [clockInTime,  setClockInTime]  = useState<string>("")
+  const [clockOutTime, setClockOutTime] = useState<string>("")
 
-  // Reset form state whenever the sheet opens with a new shift/date
+  // Reset all state whenever the sheet opens
   useEffect(() => {
     if (visible) {
       setView("form")
       setFormState(initialFormState(shift, defaultValues))
+      setClockInTime(timeEntry  ? isoToHHMM(timeEntry.clockedInAt)  : "")
+      setClockOutTime(timeEntry ? isoToHHMM(timeEntry.clockedOutAt) : "")
     }
-  }, [visible, shift, defaultValues])
+  }, [visible, shift, defaultValues, timeEntry])
 
   function handleSelectEmployee(employee: Employee) {
     setFormState((s) => ({
@@ -600,6 +685,13 @@ export function ShiftFormSheet({
   function handleSelectTime(field: "startTime" | "endTime", time: string) {
     setFormState((s) => ({ ...s, [field]: time }))
     setView("form")
+  }
+
+  function handleSaveTimeEntry() {
+    if (!timeEntry || !onSaveTimeEntry) return
+    const newClockIn  = hmToISO(timeEntry.clockedInAt,  clockInTime)
+    const newClockOut = hmToISO(timeEntry.clockedOutAt, clockOutTime)
+    onSaveTimeEntry(timeEntry.id, newClockIn, newClockOut)
   }
 
   return (
@@ -626,6 +718,7 @@ export function ShiftFormSheet({
         {view === "time-start" && (
           <TimePickerView
             title="Start Time"
+            slots={TIME_SLOTS}
             selected={formState.startTime}
             onSelect={(t) => handleSelectTime("startTime", t)}
             onBack={() => setView("form")}
@@ -636,8 +729,31 @@ export function ShiftFormSheet({
         {view === "time-end" && (
           <TimePickerView
             title="End Time"
+            slots={TIME_SLOTS}
             selected={formState.endTime}
             onSelect={(t) => handleSelectTime("endTime", t)}
+            onBack={() => setView("form")}
+            onClose={onClose}
+          />
+        )}
+
+        {view === "clock-in" && (
+          <TimePickerView
+            title="Clocked in"
+            slots={CLOCK_TIME_SLOTS}
+            selected={clockInTime}
+            onSelect={(t) => { setClockInTime(t); setView("form") }}
+            onBack={() => setView("form")}
+            onClose={onClose}
+          />
+        )}
+
+        {view === "clock-out" && (
+          <TimePickerView
+            title="Clocked out"
+            slots={CLOCK_TIME_SLOTS}
+            selected={clockOutTime}
+            onSelect={(t) => { setClockOutTime(t); setView("form") }}
             onBack={() => setView("form")}
             onClose={onClose}
           />
@@ -655,6 +771,10 @@ export function ShiftFormSheet({
             onClose={onClose}
             formState={formState}
             setFormState={setFormState}
+            clockInTime={timeEntry  ? clockInTime  : undefined}
+            clockOutTime={timeEntry ? clockOutTime : undefined}
+            isSavingTimeEntry={isSavingTimeEntry}
+            onSaveTimeEntry={timeEntry ? handleSaveTimeEntry : undefined}
           />
         )}
       </SafeAreaView>

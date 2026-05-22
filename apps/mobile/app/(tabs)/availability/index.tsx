@@ -91,15 +91,21 @@ function DayCard({
   index,
   entry,
   readOnly = false,
+  isPast = false,
   dayHours,
   onChange,
+  onEdit,
+  onClose,
 }: {
   date: string
   index: number
   entry: DayEntry
   readOnly?: boolean
+  isPast?: boolean
   dayHours: DayHours
   onChange: (e: DayEntry) => void
+  onEdit?: () => void
+  onClose?: () => void
 }) {
   const [picker, setPicker] = useState<"start" | "end" | null>(null)
   const dayNum  = new Date(date + "T00:00:00Z").getUTCDate()
@@ -128,6 +134,7 @@ function DayCard({
       borderColor: entry.status === "off" ? "rgba(74,74,87,0.16)" : cfg.border,
       backgroundColor: "#1A1A22",
       overflow: "hidden",
+      opacity: isPast ? 0.4 : 1,
     }}>
       {/* Header row */}
       <View className="flex-row items-center" style={{ paddingRight: 16, paddingTop: 14, paddingBottom: readOnly ? 14 : 10 }}>
@@ -136,7 +143,7 @@ function DayCard({
           alignSelf: "stretch",
           backgroundColor: cfg.color,
           borderTopLeftRadius: 16,
-          borderBottomLeftRadius: (!readOnly || showTimes) ? 0 : 16,
+          borderBottomLeftRadius: 16,
           marginRight: 14,
         }} />
         <View className="flex-1">
@@ -147,6 +154,28 @@ function DayCard({
             {cfg.label}{readOnly && showTimes ? `  ·  ${formatTime(entry.start)} – ${formatTime(entry.end)}` : ""}
           </Text>
         </View>
+        {readOnly && onEdit && (
+          <Pressable
+            onPress={() => { void Haptics.selectionAsync(); onEdit() }}
+            hitSlop={8}
+            className="px-3 py-1.5 rounded-xl active:opacity-70"
+            style={{ backgroundColor: "rgba(123,110,248,0.12)", borderWidth: 1, borderColor: "rgba(123,110,248,0.25)" }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#7B6EF8" }}>
+              {entry.status === "available" ? "Edit" : "Set"}
+            </Text>
+          </Pressable>
+        )}
+        {!readOnly && onClose && (
+          <Pressable
+            onPress={() => { void Haptics.selectionAsync(); onClose() }}
+            hitSlop={8}
+            className="w-7 h-7 items-center justify-center rounded-full active:opacity-70"
+            style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+          >
+            <Ionicons name="close" size={15} color="#6B6B7B" />
+          </Pressable>
+        )}
       </View>
 
       {/* Two-button row — editable only */}
@@ -163,10 +192,10 @@ function DayCard({
                 style={{
                   backgroundColor: active ? c.bg : "#141417",
                   borderWidth: 1,
-                  borderColor: active ? c.border : "rgba(255,255,255,0.06)",
+                  borderColor: active ? c.border : "rgba(255,255,255,0.14)",
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: active ? c.color : "#4A4A57" }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: active ? c.color : "#9898A8" }}>
                   {c.label}
                 </Text>
               </Pressable>
@@ -255,7 +284,7 @@ function EmployeeAvailabilityView() {
   const submit = useSubmitAvailability(request?.id)
 
   const [dayEntries, setDayEntries] = useState<Record<string, DayEntry>>({})
-  const [isEditing, setIsEditing] = useState(false)
+  const [editingDate, setEditingDate] = useState<string | null>(null)
 
   const isLoading    = loadingReq || loadingSub
   const canGoBack    = weekStart > offsetWeek(currentWeek(), -MAX_WEEKS_BACK)
@@ -264,17 +293,14 @@ function EmployeeAvailabilityView() {
   function changeWeek(w: string) {
     setWeekStart(w)
     setDayEntries({})
-    setIsEditing(false)
+    setEditingDate(null)
   }
 
-  function startEditing(days: string[]) {
+  function startEditingDay(date: string) {
     const submittedDays = existing?.days ?? []
-    const initial: Record<string, DayEntry> = {}
-    for (const date of days) {
-      initial[date] = submittedDayToEntry(submittedDays.find((d) => d.date === date))
-    }
-    setDayEntries(initial)
-    setIsEditing(true)
+    const entry = submittedDayToEntry(submittedDays.find((d) => d.date === date))
+    setDayEntries((prev) => ({ ...prev, [date]: entry }))
+    setEditingDate(date)
   }
 
   if (isLoading) return <LoadingState label="Loading…" />
@@ -300,62 +326,14 @@ function EmployeeAvailabilityView() {
   }
 
   const days = weekDays(request.weekStart)
+  const isEditing = editingDate !== null
 
   function getEntry(date: string): DayEntry {
-    return dayEntries[date] ?? DEFAULT_ENTRY
+    if (editingDate === date && dayEntries[date]) return dayEntries[date]
+    const submittedDays = existing?.days ?? []
+    return submittedDayToEntry(submittedDays.find((d) => d.date === date))
   }
 
-  // ── Submitted read-only ────────────────────────────────────────────────────
-  if (existing && !isEditing) {
-    const submittedDays = existing.days ?? []
-    const entryFor = (date: string) => submittedDayToEntry(submittedDays.find((d) => d.date === date))
-
-    const availCount = days.filter((d) => entryFor(d).status === "available").length
-    const offCount   = days.filter((d) => entryFor(d).status === "off").length
-
-    return (
-      <Screen scroll={false} padded={false} edges={["top"]}>
-        <View className="px-4 pt-4 pb-1 pr-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-2xl font-bold text-ink">Availability</Text>
-            <View className="flex-row items-center gap-2">
-              <Pressable
-                onPress={() => startEditing(days)}
-                hitSlop={8}
-                className="px-3 py-1.5 rounded-xl active:opacity-70"
-                style={{ backgroundColor: "rgba(123,110,248,0.12)", borderWidth: 1, borderColor: "rgba(123,110,248,0.25)" }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#7B6EF8" }}>Edit</Text>
-              </Pressable>
-              <RefreshButton onPress={() => void refetch()} isRefreshing={loadingReq} />
-            </View>
-          </View>
-          <Text className="text-sm text-ink-secondary mt-0.5">Submitted</Text>
-        </View>
-        <WeekNav weekStart={weekStart} onChange={changeWeek} canGoBack={canGoBack} canGoForward={canGoForward} />
-        <SummaryStrip available={availCount} off={offCount} />
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 8 }}
-        >
-          {days.map((date, i) => (
-            <DayCard
-              key={date}
-              date={date}
-              index={i}
-              entry={entryFor(date)}
-              readOnly
-              dayHours={orgHours[i] ?? orgHours[0]}
-              onChange={() => {}}
-            />
-          ))}
-        </ScrollView>
-      </Screen>
-    )
-  }
-
-  // ── Edit form (new submission or re-edit) ─────────────────────────────────
   const availCount = days.filter((d) => getEntry(d).status === "available").length
   const offCount   = days.filter((d) => getEntry(d).status === "off").length
 
@@ -367,7 +345,7 @@ function EmployeeAvailabilityView() {
           <View className="flex-row items-center gap-2">
             {isEditing && (
               <Pressable
-                onPress={() => { setIsEditing(false); setDayEntries({}) }}
+                onPress={() => { setEditingDate(null); setDayEntries({}) }}
                 hitSlop={8}
                 className="px-3 py-1.5 rounded-xl active:opacity-70"
                 style={{ backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}
@@ -379,7 +357,11 @@ function EmployeeAvailabilityView() {
           </View>
         </View>
         <Text className="text-sm text-ink-secondary mt-0.5">
-          {isEditing ? "Update your availability for this week" : "Set your availability for this week"}
+          {isEditing
+            ? "Update your availability for this week"
+            : existing
+            ? "Submitted"
+            : "Set your availability for this week"}
         </Text>
       </View>
       <WeekNav weekStart={weekStart} onChange={changeWeek} canGoBack={canGoBack} canGoForward={canGoForward} />
@@ -387,47 +369,57 @@ function EmployeeAvailabilityView() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: isEditing ? 16 : 32, gap: 8 }}
       >
-        {days.map((date, i) => (
-          <DayCard
-            key={date}
-            date={date}
-            index={i}
-            entry={getEntry(date)}
-            dayHours={orgHours[i] ?? orgHours[0]}
-            onChange={(e) => setDayEntries((prev) => ({ ...prev, [date]: e }))}
-          />
-        ))}
+        {days.map((date, i) => {
+          const isEditingDay = editingDate === date
+          const isPast = date < todayISO()
+          return (
+            <DayCard
+              key={date}
+              date={date}
+              index={i}
+              entry={getEntry(date)}
+              readOnly={!isEditingDay}
+              isPast={isPast}
+              dayHours={orgHours[i] ?? orgHours[0]}
+              onChange={(e) => setDayEntries((prev) => ({ ...prev, [date]: e }))}
+              onEdit={!isEditingDay && !isPast ? () => startEditingDay(date) : undefined}
+              onClose={isEditingDay ? () => setEditingDate(null) : undefined}
+            />
+          )
+        })}
       </ScrollView>
 
-      <View
-        className="px-4 pt-3 pb-6"
-        style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}
-      >
-        <Button
-          variant="primary"
-          fullWidth
-          loading={submit.isPending}
-          onPress={() => {
-            const dayInputs = days.map((date) => {
-              const e = getEntry(date)
-              return {
-                date,
-                isAvailable: e.status === "available",
-                startTime:   e.status === "available" ? e.start : null,
-                endTime:     e.status === "available" ? e.end   : null,
-              }
-            })
-            submit.mutate(dayInputs, {
-              onSuccess: () => setIsEditing(false),
-              onError: () => Alert.alert("Error", "Could not submit. Please try again."),
-            })
-          }}
+      {isEditing && (
+        <View
+          className="px-4 pt-3 pb-6"
+          style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}
         >
-          {isEditing ? "Update Availability" : "Submit Availability"}
-        </Button>
-      </View>
+          <Button
+            variant="primary"
+            fullWidth
+            loading={submit.isPending}
+            onPress={() => {
+              const dayInputs = days.map((date) => {
+                const e = getEntry(date)
+                return {
+                  date,
+                  isAvailable: e.status === "available",
+                  startTime:   e.status === "available" ? e.start : null,
+                  endTime:     e.status === "available" ? e.end   : null,
+                }
+              })
+              submit.mutate(dayInputs, {
+                onSuccess: () => { setEditingDate(null); setDayEntries({}) },
+                onError: () => Alert.alert("Error", "Could not submit. Please try again."),
+              })
+            }}
+          >
+            Update Availability
+          </Button>
+        </View>
+      )}
     </Screen>
   )
 }

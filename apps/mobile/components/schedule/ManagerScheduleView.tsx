@@ -5,11 +5,15 @@ import * as Haptics from "expo-haptics"
 import { Screen } from "@/components/layout/Screen"
 import { ShiftFormSheet } from "@/components/schedule/ShiftFormSheet"
 import { WeekNav, DayStrip } from "@/components/schedule/WeekControls"
-import { ShiftCardSkeleton } from "@/components/ui/Skeleton"
+import { ClockWidget } from "@/components/shifts/ClockWidget"
+import { ClockWidgetSkeleton, ShiftCardSkeleton } from "@/components/ui/Skeleton"
+import { Divider } from "@/components/ui/Divider"
 import { useManagerSchedule, useOrgEmployees } from "@/hooks/useManagerSchedule"
+import { useUpdateTimeEntry } from "@/hooks/useClock"
 import { RefreshButton } from "@/components/ui/RefreshButton"
+import { useAuthStore } from "@/store/authStore"
 import { currentWeek, weekDays, offsetWeek } from "@/lib/dates"
-import { formatTime, formatDateLong, todayISO } from "@/lib/utils"
+import { formatTime, formatDateLong, todayISO, isShiftDone } from "@/lib/utils"
 import type { Shift, Employee } from "@skemaka/types"
 import type { ShiftInput } from "@skemaka/api"
 
@@ -17,25 +21,43 @@ import type { ShiftInput } from "@skemaka/api"
 
 type ShiftRow = Shift & { employeeName: string }
 
+function formatWorkedTime(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
 function ShiftItem({ shift, onPress }: { shift: ShiftRow; onPress: (s: Shift) => void }) {
+  const done = isShiftDone(shift.date, shift.endTime)
+
   return (
     <Pressable
       onPress={async () => {
         await Haptics.selectionAsync()
         onPress(shift)
       }}
-      className="bg-surface border border-line/60 rounded-2xl px-4 py-4 flex-row items-center active:opacity-75"
+      className={`border rounded-2xl px-4 py-4 flex-row items-center active:opacity-75 ${done ? "bg-surface border-line/30" : "bg-surface border-line/60"}`}
     >
       <View className="flex-1 gap-0.5">
-        <Text className="text-[15px] font-semibold text-ink leading-snug">
+        <Text className={`text-[15px] font-semibold leading-snug ${done ? "text-ink-muted" : "text-ink"}`}>
           {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
         </Text>
-        <Text className="text-sm text-ink-secondary">
+        <Text className={`text-sm ${done ? "text-ink-muted" : "text-ink-secondary"}`}>
           {shift.employeeName}
           {shift.jobRole ? ` · ${shift.jobRole}` : ""}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#4A4A57" />
+
+      <View className="flex-row items-center gap-2">
+        {shift.workedMinutes ? (
+          <Text className={`text-xs font-semibold ${done ? "text-ink-muted" : "text-ink-secondary"}`}>
+            {formatWorkedTime(shift.workedMinutes)}
+          </Text>
+        ) : null}
+        <Ionicons name="chevron-forward" size={16} color={done ? "#2A2A35" : "#4A4A57"} />
+      </View>
     </Pressable>
   )
 }
@@ -55,7 +77,9 @@ export function ManagerScheduleView() {
 
   const { schedule, isLoading, isFetching, refetch, ensureSchedule, addShift, editShift, removeShift } =
     useManagerSchedule(selectedWeek)
+  const updateTimeEntry = useUpdateTimeEntry()
   const { data: employees = [] } = useOrgEmployees()
+  const managerEmployeeId = useAuthStore((s) => s.employee?.id)
 
   const days = weekDays(selectedWeek)
 
@@ -64,7 +88,15 @@ export function ManagerScheduleView() {
     [employees],
   )
 
-  // Shifts for the currently visible day — recalculated only when relevant state changes.
+  // Manager's own employee record floated to the top of the picker list.
+  const sortedEmployees = useMemo((): Employee[] => {
+    if (!managerEmployeeId) return employees
+    const self = employees.find((e) => e.id === managerEmployeeId)
+    if (!self) return employees
+    return [self, ...employees.filter((e) => e.id !== managerEmployeeId)]
+  }, [employees, managerEmployeeId])
+
+  // Shifts for the currently visible day — manager's own shifts sorted first.
   const dayShifts = useMemo(
     (): ShiftRow[] =>
       (schedule?.shifts ?? [])
@@ -72,9 +104,26 @@ export function ManagerScheduleView() {
         .map((s) => ({
           ...s,
           employeeName: employeeMap.get(s.employeeId)?.name ?? "Unknown",
-        })),
-    [schedule, employeeMap, selectedDate],
+        }))
+        .sort((a, b) => {
+          if (a.employeeId === managerEmployeeId) return -1
+          if (b.employeeId === managerEmployeeId) return 1
+          return 0
+        }),
+    [schedule, employeeMap, selectedDate, managerEmployeeId],
   )
+
+  // Manager's own shift for today (used by the clock widget).
+  const managerTodayShift = useMemo(
+    () =>
+      selectedDate === today && managerEmployeeId
+        ? ((schedule?.shifts ?? []).find(
+            (s) => s.date === today && s.employeeId === managerEmployeeId,
+          ) ?? null)
+        : null,
+    [schedule, selectedDate, today, managerEmployeeId],
+  )
+
 
   // When navigating weeks, snap to today (if present) or Monday.
   function changeWeek(newWeek: string) {
@@ -146,6 +195,16 @@ export function ManagerScheduleView() {
 
   const isSaving = addShift.isPending || editShift.isPending
 
+  async function handleSaveTimeEntry(entryId: string, clockIn: string, clockOut: string) {
+    try {
+      await updateTimeEntry.mutateAsync({ entryId, input: { clockIn, clockOut } })
+      void refetch()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Please try again."
+      Alert.alert("Could not save clock times", msg)
+    }
+  }
+
   // ── Layout: fixed header + single-axis FlatList ─────────────────────────────
   //
   // The outer Screen is non-scrolling (flex column).
@@ -190,18 +249,32 @@ export function ManagerScheduleView() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, flexGrow: 1 }}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListHeaderComponent={
-          <View className="flex-row items-center justify-between py-4">
-            <Text className="text-base font-semibold text-ink">
-              {formatDateLong(selectedDate)}
-            </Text>
-            <Pressable
-              onPress={() => void openAddShift(selectedDate)}
-              hitSlop={8}
-              className="flex-row items-center gap-1.5 active:opacity-60"
-            >
-              <Ionicons name="add-circle" size={22} color="#7B6EF8" />
-              <Text className="text-sm font-semibold text-brand">Add Shift</Text>
-            </Pressable>
+          <View>
+            {/* Clock widget — shown only when today is the selected day */}
+            {selectedDate === today ? (
+              <View className="pt-4 pb-2">
+                {isLoading ? (
+                  <ClockWidgetSkeleton />
+                ) : (
+                  <ClockWidget todayShift={managerTodayShift} alwaysShow />
+                )}
+                <Divider className="mt-4" />
+              </View>
+            ) : null}
+
+            <View className="flex-row items-center justify-between py-4">
+              <Text className="text-base font-semibold text-ink">
+                {formatDateLong(selectedDate)}
+              </Text>
+              <Pressable
+                onPress={() => void openAddShift(selectedDate)}
+                hitSlop={8}
+                className="flex-row items-center gap-1.5 active:opacity-60"
+              >
+                <Ionicons name="add-circle" size={22} color="#7B6EF8" />
+                <Text className="text-sm font-semibold text-brand">Add Shift</Text>
+              </Pressable>
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -225,11 +298,22 @@ export function ManagerScheduleView() {
         visible={sheetState.open}
         date={sheetState.open ? sheetState.date : today}
         shift={sheetState.open ? sheetState.shift : null}
-        employees={employees}
+        employees={sortedEmployees}
         isSaving={isSaving}
         onSave={handleSave}
         onDelete={sheetState.open && sheetState.shift ? handleDelete : undefined}
         onClose={closeSheet}
+        timeEntry={
+          sheetState.open && sheetState.shift?.timeEntryId
+            ? {
+                id:           sheetState.shift.timeEntryId,
+                clockedInAt:  sheetState.shift.clockedInAt!,
+                clockedOutAt: sheetState.shift.clockedOutAt!,
+              }
+            : undefined
+        }
+        isSavingTimeEntry={updateTimeEntry.isPending}
+        onSaveTimeEntry={handleSaveTimeEntry}
       />
     </Screen>
   )

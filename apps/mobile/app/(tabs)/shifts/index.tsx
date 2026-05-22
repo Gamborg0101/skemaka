@@ -106,38 +106,42 @@ function EmployeeShiftsScreen() {
 
   return (
     <Screen scroll={false} padded={false} edges={["top"]}>
+      <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
+        <Text className="text-2xl font-bold text-ink">My Shifts</Text>
+        <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
+      </View>
+
+      <View className="px-4 pb-3">
+        <WeekNav
+          week={selectedWeek}
+          onPrev={() => setSelectedWeek((w) => offsetWeek(w, -1))}
+          onNext={() => setSelectedWeek((w) => offsetWeek(w, 1))}
+          onReset={() => setSelectedWeek(currentWeek())}
+        />
+      </View>
+
       <FlatList
         data={dayRows}
         keyExtractor={(item) => item.date}
-        contentContainerClassName="px-4 pt-4 pb-10"
+        contentContainerClassName="px-4 pb-10"
         onRefresh={() => void refetch()}
         refreshing={isFetching && !isLoading}
         ListHeaderComponent={
-          <View className="gap-4 mb-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-2xl font-bold text-ink">My Shifts</Text>
-              <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
+          isCurrentWeek ? (
+            <View className="mb-4">
+              {isLoading ? (
+                <>
+                  <ClockWidgetSkeleton />
+                  <Divider className="mt-4" />
+                </>
+              ) : (
+                <>
+                  <ClockWidget todayShift={todayShift} />
+                  {dayRows.length > 0 && <Divider className="mt-4" />}
+                </>
+              )}
             </View>
-
-            <WeekNav
-              week={selectedWeek}
-              onPrev={() => setSelectedWeek((w) => offsetWeek(w, -1))}
-              onNext={() => setSelectedWeek((w) => offsetWeek(w, 1))}
-              onReset={() => setSelectedWeek(currentWeek())}
-            />
-
-            {isLoading && isCurrentWeek ? (
-              <>
-                <ClockWidgetSkeleton />
-                <Divider />
-              </>
-            ) : !isLoading && isCurrentWeek ? (
-              <>
-                <ClockWidget todayShift={todayShift} />
-                {dayRows.length > 0 && <Divider />}
-              </>
-            ) : null}
-          </View>
+          ) : null
         }
         ListEmptyComponent={
           isLoading ? (

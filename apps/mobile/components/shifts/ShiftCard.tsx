@@ -1,7 +1,7 @@
 import { Pressable, View, Text } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
-import { formatTime, shiftDuration, isToday } from "@/lib/utils"
+import { formatTime, shiftDuration, isToday, isShiftDone } from "@/lib/utils"
 import type { Shift } from "@skemaka/types"
 
 type Props = {
@@ -12,12 +12,13 @@ type Props = {
 
 export function ShiftCard({ shift, onPress, compact = false }: Props) {
   const today = isToday(shift.date)
+  const done  = isShiftDone(shift.date, shift.endTime)
   const start = formatTime(shift.startTime)
   const end   = formatTime(shift.endTime)
   const hours = shiftDuration(shift.startTime, shift.endTime, shift.breakMinutes)
 
-  const borderClass = today ? "border-brand/50" : "border-line/60"
-  const bgClass     = today ? "bg-brand/5"      : "bg-surface"
+  const borderClass = done ? "border-line/30" : today ? "border-brand/50" : "border-line/60"
+  const bgClass     = done ? "bg-surface"     : today ? "bg-brand/5"      : "bg-surface"
 
   async function handlePress() {
     await Haptics.selectionAsync()
@@ -35,18 +36,18 @@ export function ShiftCard({ shift, onPress, compact = false }: Props) {
 
       <View className="flex-row items-center justify-between">
         <View className="flex-1 gap-0.5 pr-3">
-          <Text className="text-[15px] font-semibold text-ink leading-snug">
+          <Text className={`text-[15px] font-semibold leading-snug ${done ? "text-ink-muted" : "text-ink"}`}>
             {start} – {end}
           </Text>
-          <Text className="text-sm text-ink-secondary">{shift.jobRole}</Text>
+          <Text className={`text-sm ${done ? "text-ink-muted" : "text-ink-secondary"}`}>{shift.jobRole}</Text>
         </View>
 
         <View className="flex-row items-center gap-2">
           <View className="bg-elevated rounded-lg px-2.5 py-1">
-            <Text className="text-sm font-semibold text-ink">{hours}</Text>
+            <Text className={`text-sm font-semibold ${done ? "text-ink-muted" : "text-ink"}`}>{hours}</Text>
           </View>
           {onPress ? (
-            <Ionicons name="chevron-forward" size={16} color="#4A4A57" />
+            <Ionicons name="chevron-forward" size={16} color={done ? "#2A2A35" : "#4A4A57"} />
           ) : null}
         </View>
       </View>
