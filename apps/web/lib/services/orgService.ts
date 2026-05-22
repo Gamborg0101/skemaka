@@ -230,6 +230,23 @@ export async function listRoles(orgId: string): Promise<JobRole[]> {
   return roles.map(serJobRole)
 }
 
+export async function renameJobRole(orgId: string, roleId: string, newName: string): Promise<JobRole> {
+  const existing = await db.jobRole.findFirst({
+    where: { id: roleId, organizationId: orgId },
+    select: { id: true, name: true },
+  })
+  if (!existing) throw new ServiceError("Job role not found", "NOT_FOUND")
+  if (existing.name === newName) return serJobRole(await db.jobRole.findUniqueOrThrow({ where: { id: roleId } }))
+
+  const [updated] = await db.$transaction([
+    db.jobRole.update({ where: { id: roleId }, data: { name: newName } }),
+    db.employee.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: newName } }),
+    db.shift.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: newName } }),
+    db.shiftTemplate.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: newName } }),
+  ])
+  return serJobRole(updated)
+}
+
 // ── Shift templates ───────────────────────────────────────────────────────────
 
 export async function listShiftTemplates(orgId: string): Promise<ShiftTemplate[]> {

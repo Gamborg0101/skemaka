@@ -171,12 +171,10 @@ async function main() {
       name:               "The Daily Grind",
       slug:               "the-daily-grind",
       subscriptionStatus: "ACTIVE",
-      employeeCount:      7,
     },
     update: {
       name:               "The Daily Grind",
       subscriptionStatus: "ACTIVE",
-      employeeCount:      7,
     },
   })
 

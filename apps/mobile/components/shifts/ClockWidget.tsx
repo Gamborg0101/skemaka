@@ -1,4 +1,4 @@
-import { View, Text } from "react-native"
+import { View, Text, Alert } from "react-native"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/Button"
 import { Card } from "@/components/ui/Card"
@@ -8,9 +8,18 @@ import type { Shift } from "@skemaka/types"
 
 type Props = {
   todayShift?: Shift | null
+  /** Always render the widget even with no shift (e.g. manager view). */
+  alwaysShow?: boolean
 }
 
-export function ClockWidget({ todayShift }: Props) {
+function formatClockTime(iso: string): string {
+  const d = new Date(iso)
+  const h = String(d.getHours()).padStart(2, "0")
+  const m = String(d.getMinutes()).padStart(2, "0")
+  return `${h}:${m}`
+}
+
+export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
   const { data: entry } = useActiveEntry()
   const clockIn  = useClockIn()
   const clockOut = useClockOut()
@@ -24,8 +33,35 @@ export function ClockWidget({ todayShift }: Props) {
   }, [entry])
 
   const isLoading = clockIn.isPending || clockOut.isPending
+  const clockError = clockIn.error ?? clockOut.error
 
-  if (!todayShift && !entry) return null
+  // Surface errors as an Alert so they're impossible to miss
+  useEffect(() => {
+    if (!clockError) return
+    const msg = clockError instanceof Error ? clockError.message : "Clock action failed. Please try again."
+    Alert.alert("Clock error", msg)
+  }, [clockError])
+
+  // Already clocked in and out today — show the summary, no action needed
+  const alreadyWorked = !entry && todayShift?.clockedInAt && todayShift?.clockedOutAt
+
+  if (!alwaysShow && !todayShift && !entry) return null
+
+  if (alreadyWorked) {
+    return (
+      <Card elevation="raised" className="overflow-hidden">
+        <View className="absolute inset-0 bg-success/5" />
+        <View className="gap-1">
+          <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide">
+            Worked today
+          </Text>
+          <Text className="text-xl font-bold text-ink tracking-tight">
+            {formatClockTime(todayShift!.clockedInAt!)} – {formatClockTime(todayShift!.clockedOutAt!)}
+          </Text>
+        </View>
+      </Card>
+    )
+  }
 
   return (
     <Card elevation="raised" className="overflow-hidden">
@@ -53,6 +89,12 @@ export function ClockWidget({ todayShift }: Props) {
             </View>
           ) : null}
         </View>
+
+        {clockError ? (
+          <Text className="text-xs text-danger text-center">
+            {clockError instanceof Error ? clockError.message : "Clock action failed"}
+          </Text>
+        ) : null}
 
         <Button
           variant={entry ? "danger" : "primary"}

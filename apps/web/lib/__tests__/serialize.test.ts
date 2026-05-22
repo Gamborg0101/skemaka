@@ -184,7 +184,6 @@ describe("serOrg", () => {
     slug: "the-daily-grind",
     currency: "DKK",
     subscriptionStatus: "ACTIVE",
-    employeeCount: 7,
     createdAt: NOW,
     updatedAt: LATER,
   }
@@ -201,7 +200,6 @@ describe("serOrg", () => {
     expect(result.name).toBe("The Daily Grind")
     expect(result.slug).toBe("the-daily-grind")
     expect(result.subscriptionStatus).toBe("ACTIVE")
-    expect(result.employeeCount).toBe(7)
   })
 })
 

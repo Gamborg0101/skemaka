@@ -54,6 +54,7 @@ model User {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   accounts      Account[]
+  bugReports    BugReport[]
   employees     Employee[]
   memberships   Membership[]
   sessions      Session[]
@@ -66,7 +67,6 @@ model Organization {
   stripeCustomerId        String?
   stripeSubscriptionId    String?
   subscriptionStatus      SubscriptionStatus       @default(TRIALING)
-  employeeCount           Int                      @default(0)
   currency                String                   @default("EUR")
   settings                Json?
   createdAt               DateTime                 @default(now())
@@ -324,8 +324,10 @@ model BugReport {
   component      String?
   createdAt      DateTime      @default(now())
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
+  @@index([userId])
   @@index([createdAt])
 }
 

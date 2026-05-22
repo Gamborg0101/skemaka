@@ -45,7 +45,14 @@ export type CreateEmployeeInput = {
   contractedHours?: number
 }
 
+async function assertValidJobRole(orgId: string, jobRole: string): Promise<void> {
+  const role = await db.jobRole.findFirst({ where: { organizationId: orgId, name: jobRole }, select: { id: true } })
+  if (!role) throw new ServiceError(`Job role "${jobRole}" does not exist in this organisation`, "BAD_REQUEST")
+}
+
 export async function createEmployee(orgId: string, input: CreateEmployeeInput): Promise<Employee> {
+  await assertValidJobRole(orgId, input.jobRole)
+
   const existing = await db.employee.findUnique({
     where: { organizationId_email: { organizationId: orgId, email: input.email } },
   })
@@ -71,11 +78,6 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     },
   })
 
-  await db.organization.update({
-    where: { id: orgId },
-    data:  { employeeCount: { increment: 1 } },
-  })
-
   return serEmployee(employee)
 }
 
@@ -98,14 +100,11 @@ export async function updateEmployee(
 ): Promise<Employee> {
   const existing = await db.employee.findFirst({
     where: { id: employeeId, organizationId: orgId },
-    select: { id: true, isActive: true },
+    select: { id: true, isActive: true, userId: true },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
-  const countDelta =
-    input.isActive !== undefined && input.isActive !== existing.isActive
-      ? input.isActive ? 1 : -1
-      : 0
+  if (input.jobRole !== undefined) await assertValidJobRole(orgId, input.jobRole)
 
   try {
     const employee = await db.$transaction(async (tx) => {
@@ -123,11 +122,8 @@ export async function updateEmployee(
           ...(input.contractedHours !== undefined && { contractedHours: input.contractedHours }),
         },
       })
-      if (countDelta !== 0) {
-        await tx.organization.update({
-          where: { id: orgId },
-          data:  { employeeCount: countDelta > 0 ? { increment: 1 } : { decrement: 1 } },
-        })
+      if (input.name !== undefined && existing.userId) {
+        await tx.user.update({ where: { id: existing.userId }, data: { name: input.name } })
       }
       return updated
     })
@@ -148,13 +144,6 @@ export async function deleteEmployee(orgId: string, employeeId: string): Promise
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
   await db.employee.delete({ where: { id: employeeId } })
-
-  if (existing.isActive) {
-    await db.organization.update({
-      where: { id: orgId },
-      data:  { employeeCount: { decrement: 1 } },
-    })
-  }
 }
 
 export async function getEmployeeByUserId(orgId: string, userId: string): Promise<Employee | null> {

@@ -1,0 +1,138 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - navigation [ref=e4]:
+        - generic [ref=e5]: Skemaka
+        - link "Sign in →" [ref=e6] [cursor=pointer]:
+          - /url: /login
+      - generic [ref=e7]:
+        - generic [ref=e10]: 14-day free trial · then €49/mo · No credit card required
+        - heading "Build your week's rota in minutes." [level=1] [ref=e11]:
+          - text: Build your week's rota
+          - text: in minutes.
+        - paragraph [ref=e12]: No spreadsheets, no WhatsApp groups. Skemaka gives your team a live rota — with costs, availability, and time-off all in one place.
+        - generic [ref=e13]:
+          - link "Start free trial" [ref=e14] [cursor=pointer]:
+            - /url: /login
+          - link "See how it works" [ref=e15] [cursor=pointer]:
+            - /url: "#how-it-works"
+      - img "Skemaka schedule timeline view" [ref=e24]
+    - generic [ref=e26]:
+      - paragraph [ref=e27]: Trusted by restaurant teams across Europe
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: 500+
+          - text: shifts scheduled weekly
+        - generic [ref=e31]: "|"
+        - generic [ref=e32]:
+          - generic [ref=e33]: 50+
+          - text: teams onboarded
+        - generic [ref=e34]: "|"
+        - generic [ref=e35]:
+          - generic [ref=e36]: 14-day
+          - text: free trial
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - heading "How it works" [level=2] [ref=e40]
+        - paragraph [ref=e41]: From blank canvas to published schedule in three simple steps.
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]: "1"
+          - heading "Collect availability" [level=3] [ref=e45]
+          - paragraph [ref=e46]: Send a link to your team. Staff fill in when they're free before you ever open the schedule.
+        - generic [ref=e47]:
+          - generic [ref=e48]: "2"
+          - heading "Build the schedule" [level=3] [ref=e49]
+          - paragraph [ref=e50]: Drag employees onto the timeline. Costs update live so you never go over budget.
+        - generic [ref=e51]:
+          - generic [ref=e52]: "3"
+          - heading "Publish to your team" [level=3] [ref=e53]
+          - paragraph [ref=e54]: One click and every employee sees their shifts on their phone — no printing, no group chats.
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - heading "Everything you need to run a tight schedule" [level=2] [ref=e58]
+        - paragraph [ref=e59]: One tool for the full scheduling workflow — from collecting availability to exporting hours for payroll.
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - generic [ref=e64]: Feature 1
+            - heading "Drag-and-drop scheduling" [level=3] [ref=e65]
+            - paragraph [ref=e66]: Build the week's rota in minutes. Move shifts, fill gaps, and publish to your whole team in one click.
+            - link "Try it free →" [ref=e67] [cursor=pointer]:
+              - /url: /login
+          - img "Skemaka schedule grid showing weekly rota" [ref=e71]
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e75]: Feature 2
+            - heading "Live labour costs" [level=3] [ref=e76]
+            - paragraph [ref=e77]: Wage spend updates as you place each shift — so you never go over budget. Export to CSV for payroll in one click.
+            - link "Try it free →" [ref=e78] [cursor=pointer]:
+              - /url: /login
+          - img "Skemaka labour costs overview" [ref=e82]
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - generic [ref=e86]: Feature 3
+            - heading "Availability & time-off" [level=3] [ref=e87]
+            - paragraph [ref=e88]: Staff submit availability and time-off requests. You approve or deny in one place — they're automatically blocked from conflicting shifts.
+            - link "Try it free →" [ref=e89] [cursor=pointer]:
+              - /url: /login
+          - img "Skemaka availability requests screen" [ref=e93]
+    - generic [ref=e95]:
+      - generic [ref=e96]:
+        - heading "Simple, transparent pricing" [level=2] [ref=e97]
+        - paragraph [ref=e98]: One plan. Everything included. Cancel anytime.
+      - generic [ref=e99]:
+        - generic [ref=e100]:
+          - paragraph [ref=e101]: All-inclusive
+          - generic [ref=e102]:
+            - generic [ref=e103]: €49
+            - generic [ref=e104]: /month
+          - paragraph [ref=e105]: 14 days free, then €49/mo
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - img [ref=e108]
+            - generic [ref=e110]: Unlimited employees
+          - generic [ref=e111]:
+            - img [ref=e112]
+            - generic [ref=e114]: Drag-and-drop weekly scheduling
+          - generic [ref=e115]:
+            - img [ref=e116]
+            - generic [ref=e118]: Live labour cost tracking
+          - generic [ref=e119]:
+            - img [ref=e120]
+            - generic [ref=e122]: Availability & time-off requests
+          - generic [ref=e123]:
+            - img [ref=e124]
+            - generic [ref=e126]: Employee shift portal
+          - generic [ref=e127]:
+            - img [ref=e128]
+            - generic [ref=e130]: Payroll & cost CSV exports
+          - generic [ref=e131]:
+            - img [ref=e132]
+            - generic [ref=e134]: Schedule publishing
+          - generic [ref=e135]:
+            - img [ref=e136]
+            - generic [ref=e138]: Priority support
+        - generic [ref=e139]:
+          - link "Start 14-day free trial" [ref=e140] [cursor=pointer]:
+            - /url: /login
+          - paragraph [ref=e141]: No credit card required
+    - generic [ref=e143]:
+      - heading "Ready to stop scheduling on WhatsApp?" [level=2] [ref=e144]
+      - paragraph [ref=e145]: Start your 14-day free trial. No credit card required.
+      - generic [ref=e146]:
+        - link "Get started free" [ref=e147] [cursor=pointer]:
+          - /url: /login
+        - paragraph [ref=e148]: 14 days free · then €49/mo
+    - contentinfo [ref=e149]:
+      - generic [ref=e150]:
+        - generic [ref=e151]: Skemaka
+        - navigation [ref=e152]:
+          - link "Terms" [ref=e153] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy" [ref=e154] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=e155]: © 2026 Skemaka ApS
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e161] [cursor=pointer]:
+    - img [ref=e162]

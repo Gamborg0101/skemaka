@@ -74,3 +74,11 @@ export function todayISO(): string {
 export function isToday(iso: string): boolean {
   return iso === todayISO()
 }
+
+/** Returns true when the shift's end time has already passed. */
+export function isShiftDone(date: string, endTime: string): boolean {
+  const [h, m] = endTime.split(":").map(Number)
+  const end = new Date(`${date}T00:00:00`)
+  end.setHours(h, m, 0, 0)
+  return end < new Date()
+}

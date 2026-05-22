@@ -33,12 +33,64 @@ export async function getScheduleByWeek(
   orgId: string,
   weekStart: string,
 ): Promise<Schedule | null> {
-  const schedule = await db.schedule.findFirst({
-    where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
-    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
-    orderBy: { createdAt: "asc" },
-  })
-  return schedule ? serSchedule(schedule) : null
+  const weekStartDate = new Date(weekStart + "T00:00:00Z")
+  const weekEndDate   = new Date(weekStartDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+  const [schedule, timeEntries] = await Promise.all([
+    db.schedule.findFirst({
+      where: { organizationId: orgId, weekStart: weekStartDate },
+      include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.timeEntry.findMany({
+      where: { organizationId: orgId, clockIn: { gte: weekStartDate, lt: weekEndDate } },
+      select: { id: true, employeeId: true, clockIn: true, clockOut: true },
+    }),
+  ])
+
+  if (!schedule) return null
+
+  // Build a map of "employeeId:YYYY-MM-DD" → summary (completed entries only)
+  type DaySummary = {
+    id: string; workedMinutes: number; firstClockIn: Date; lastClockOut: Date; lastEntryId: string
+  }
+  const entryMap = new Map<string, DaySummary>()
+  for (const entry of timeEntries) {
+    if (!entry.clockOut) continue
+    const date    = entry.clockIn.toISOString().split("T")[0]
+    const key     = `${entry.employeeId}:${date}`
+    const minutes = Math.floor((entry.clockOut.getTime() - entry.clockIn.getTime()) / 60_000)
+    const existing = entryMap.get(key)
+    if (existing) {
+      existing.workedMinutes += minutes
+      if (entry.clockIn  < existing.firstClockIn) existing.firstClockIn = entry.clockIn
+      if (entry.clockOut > existing.lastClockOut) {
+        existing.lastClockOut = entry.clockOut
+        existing.lastEntryId  = entry.id
+      }
+    } else {
+      entryMap.set(key, {
+        id: entry.id, workedMinutes: minutes,
+        firstClockIn: entry.clockIn, lastClockOut: entry.clockOut, lastEntryId: entry.id,
+      })
+    }
+  }
+
+  const serialized = serSchedule(schedule)
+  if (serialized.shifts) {
+    serialized.shifts = serialized.shifts.map((shift) => {
+      const summary = entryMap.get(`${shift.employeeId}:${shift.date}`)
+      if (!summary) return shift
+      return {
+        ...shift,
+        workedMinutes: summary.workedMinutes,
+        clockedInAt:   summary.firstClockIn.toISOString(),
+        clockedOutAt:  summary.lastClockOut.toISOString(),
+        timeEntryId:   summary.lastEntryId,
+      }
+    })
+  }
+  return serialized
 }
 
 export async function listSchedules(orgId: string): Promise<Schedule[]>

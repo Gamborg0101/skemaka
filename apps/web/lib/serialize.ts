@@ -81,7 +81,7 @@ export function serSchedule(s: {
 export function serOrg(o: {
   id: string; name: string; slug: string; currency: string
   settings?: unknown
-  subscriptionStatus: string; employeeCount: number
+  subscriptionStatus: string
   createdAt: Date; updatedAt: Date
 }): Organization {
   return {
@@ -91,7 +91,6 @@ export function serOrg(o: {
     currency: o.currency,
     settings: (o.settings as Organization["settings"]) ?? null,
     subscriptionStatus: o.subscriptionStatus as Organization["subscriptionStatus"],
-    employeeCount: o.employeeCount,
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
   }

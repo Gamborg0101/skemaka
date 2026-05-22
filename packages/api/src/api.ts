@@ -121,23 +121,29 @@ export async function getMyShifts(
 /**
  * Returns the current open time entry for the authenticated employee,
  * or null if they are not clocked in.
+ * Pass `employeeId` when the caller has the MANAGER role and is acting on
+ * their own behalf (e.g. a manager using the mobile app in employee view).
  */
 export async function getActiveEntry(
   client: ApiClient,
   orgId: string,
+  employeeId?: string,
 ): Promise<TimeEntry | null> {
+  const qs = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : ""
   const res = await client.get<Wrapped<TimeEntry | null>>(
-    `/api/orgs/${orgId}/time-entries/active`,
+    `/api/orgs/${orgId}/time-entries/active${qs}`,
   )
   return res.data ?? null
 }
 
-export type ClockInOptions  = { shiftId?: string; note?: string }
-export type ClockOutOptions = { breakMinutes?: number; note?: string }
+export type ClockInOptions  = { shiftId?: string; note?: string; employeeId?: string }
+export type ClockOutOptions = { breakMinutes?: number; note?: string; employeeId?: string }
 
 /**
  * Clocks the authenticated employee in.  The server resolves their employee
- * record from the JWT — no employeeId required.
+ * record from the JWT — no employeeId required for employees.
+ * Pass `employeeId` when the caller has the MANAGER role and is clocking
+ * themselves in (e.g. a manager using the mobile app in employee view).
  */
 export async function clockIn(
   client: ApiClient,
@@ -153,6 +159,8 @@ export async function clockIn(
 
 /**
  * Clocks the authenticated employee out.
+ * Pass `employeeId` when the caller has the MANAGER role and is clocking
+ * themselves out (e.g. a manager using the mobile app in employee view).
  */
 export async function clockOut(
   client: ApiClient,
@@ -162,6 +170,25 @@ export async function clockOut(
   const res = await client.patch<Wrapped<TimeEntry>>(
     `/api/orgs/${orgId}/time-entries/active`,
     opts,
+  )
+  return res.data
+}
+
+export type UpdateTimeEntryInput = {
+  clockIn?: string   // ISO 8601
+  clockOut?: string  // ISO 8601
+}
+
+/** Manager: correct the clock-in/out timestamps on an existing time entry. */
+export async function updateTimeEntry(
+  client: ApiClient,
+  orgId: string,
+  entryId: string,
+  input: UpdateTimeEntryInput,
+): Promise<TimeEntry> {
+  const res = await client.patch<Wrapped<TimeEntry>>(
+    `/api/orgs/${orgId}/time-entries/${encodeURIComponent(entryId)}`,
+    input,
   )
   return res.data
 }
