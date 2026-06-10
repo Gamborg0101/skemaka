@@ -12,7 +12,7 @@ Grounded in the actual codebase as of June 2026. Sections marked **⚠️ HUMAN 
 - [ ] **Seed a Google demo MANAGER account** (e.g. `appreview@skemaka.app`) inside an org with realistic sample data: several employees, a published weekly schedule, a couple of pending availability + time-off requests. The reviewer must land in a *populated* manager view.
 - [ ] **Publish/verify the Google OAuth consent screen** (or allowlist the demo email as a Test user) so "Continue with Google" isn't blocked for the reviewer.
 - [ ] Put the demo creds in App Store Connect's structured **Sign-In Information** fields *and* the review-notes placeholders; set a **Support email/URL**.
-- [ ] **Decide iPad:** capture iPad 13" screenshots **OR** set `supportsTablet: false` in `app.json` to drop the iPad requirement (app is phone-first).
+- [x] **iPad:** set to phone-only (`supportsTablet: false`) — no iPad screenshots needed. (Reversible in a later update if you add iPad support.)
 - [ ] Confirm `/privacy` and `/terms` render publicly (no login wall) on the production domain.
 
 ---
@@ -151,7 +151,7 @@ from the same place.
 Sign in securely with Google or Sign in with Apple. Your manager invites you to get started.
 ```
 
-- **Screenshots** (from the populated demo account): 1) Login, 2) Manager schedule, 3) Employee "My Shifts" + clock widget, 4) Availability, 5) Time Off, 6) Team. Sizes: **6.9" iPhone (required)**, 6.5" iPhone (fallback), **iPad 13" (required only because `supportsTablet: true` — see prep checklist).**
+- **Screenshots** (from the populated demo account): 1) Login, 2) Manager schedule, 3) Employee "My Shifts" + clock widget, 4) Availability, 5) Time Off, 6) Team. Sizes: **6.9" iPhone (required)**, 6.5" iPhone (fallback). App is phone-only (`supportsTablet: false`) — **no iPad screenshots required.**
 - **Privacy Policy URL:** `https://<your-domain>/privacy` · **Support URL:** `https://<your-domain>/terms` (or a `/support` page).
 
 ---
