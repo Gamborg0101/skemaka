@@ -132,6 +132,8 @@ model Employee {
   phone                   String?
   jobRole                 String
   hourlyWage              Decimal                  @db.Decimal(10, 2)
+  wageBaseAmount          Decimal?                 @db.Decimal(12, 4)
+  wageBaseCurrency        String?
   notes                   String?
   isActive                Boolean                  @default(true)
   inviteToken             String?                  @unique

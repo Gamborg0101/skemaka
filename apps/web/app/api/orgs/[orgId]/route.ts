@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId
   }
 
   try {
-    const org = await orgService.updateOrgCurrency(orgId, body.currency)
+    const org = await orgService.updateOrgCurrency(orgId, body.currency, guard.userId)
     return NextResponse.json({ data: org })
   } catch (err) {
     if (err instanceof ServiceError) {
