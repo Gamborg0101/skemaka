@@ -230,6 +230,22 @@ export async function listRoles(orgId: string): Promise<JobRole[]> {
   return roles.map(serJobRole)
 }
 
+export async function createJobRole(orgId: string, name: string, color: string): Promise<JobRole> {
+  const existing = await db.jobRole.findFirst({ where: { organizationId: orgId, name }, select: { id: true } })
+  if (existing) throw new ServiceError("A role with this name already exists", "CONFLICT")
+  const role = await db.jobRole.create({ data: { organizationId: orgId, name, color } })
+  return serJobRole(role)
+}
+
+export async function deleteJobRole(orgId: string, roleId: string): Promise<void> {
+  const role = await db.jobRole.findFirst({ where: { id: roleId, organizationId: orgId }, select: { id: true } })
+  if (!role) throw new ServiceError("Not found", "NOT_FOUND")
+  const roleName = (await db.jobRole.findUniqueOrThrow({ where: { id: roleId }, select: { name: true } })).name
+  const inUse = await db.employee.count({ where: { organizationId: orgId, jobRole: roleName } })
+  if (inUse > 0) throw new ServiceError(`This role is assigned to ${inUse} employee${inUse > 1 ? "s" : ""} — reassign them first`, "CONFLICT")
+  await db.jobRole.delete({ where: { id: roleId } })
+}
+
 export async function renameJobRole(orgId: string, roleId: string, newName: string): Promise<JobRole> {
   const existing = await db.jobRole.findFirst({
     where: { id: roleId, organizationId: orgId },

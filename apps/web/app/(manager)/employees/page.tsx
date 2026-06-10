@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { UserPlus, Power, Trash2, Pencil } from "lucide-react"
+import { UserPlus, Power, Trash2, Pencil, MailCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/tooltip"
 import {
@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useOptimisticList } from "@/lib/useOptimisticList"
 
 export default function EmployeesPage() {
-  const { orgId, jobRoles } = useOrg()
+  const { orgId, jobRoles, org } = useOrg()
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const { patch: patchEmployee, remove: removeEmployee } = useOptimisticList(employees, setEmployees)
@@ -33,6 +33,20 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState<"active" | "inactive">("active")
   const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null)
+
+  const handleResendInvite = async (emp: Employee) => {
+    setResendingInvite(emp.id)
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}/invite`, { method: "POST" })
+      if (!r.ok) throw new Error()
+      toast.success(`Invite resent to ${emp.email}`)
+    } catch {
+      toast.error("Failed to resend invite")
+    } finally {
+      setResendingInvite(null)
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/orgs/${orgId}/employees`)
@@ -56,7 +70,7 @@ export default function EmployeesPage() {
     const res = await r.json() as { data?: Employee; error?: string }
     if (res.data) {
       setEmployees((prev) => [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name)))
-      toast.success(`${data.name} added. Use the invite button to send them a link.`)
+      toast.success(`${data.name} added — invite email sent`)
     } else {
       toast.error(res.error ?? "Failed to add employee")
     }
@@ -242,7 +256,7 @@ export default function EmployeesPage() {
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-medium">{emp.jobRole}</TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums text-gray-700 dark:text-gray-300 font-medium">
-                    {formatCurrency(emp.hourlyWage)}/hr
+                    {formatCurrency(emp.hourlyWage, org?.currency)}/hr
                   </TableCell>
                   <TableCell className="text-right">
                     {/* On mobile, tapping the row opens the sheet — action buttons shown on sm+ */}
@@ -265,6 +279,19 @@ export default function EmployeesPage() {
                         <Tooltip content="Reactivate employee">
                           <Button variant="ghost" size="icon-sm" onClick={() => handleReactivate(emp)} className="text-green-600 hover:text-green-700 hover:bg-green-50 min-w-[36px] min-h-[36px]">
                             <Power className="size-3.5" />
+                          </Button>
+                        </Tooltip>
+                      )}
+                      {!emp.userId && (
+                        <Tooltip content="Resend invite email">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleResendInvite(emp)}
+                            disabled={resendingInvite === emp.id}
+                            className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 min-w-[36px] min-h-[36px]"
+                          >
+                            <MailCheck className="size-3.5" />
                           </Button>
                         </Tooltip>
                       )}

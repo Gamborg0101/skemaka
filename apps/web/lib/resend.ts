@@ -40,7 +40,7 @@ export async function sendAvailabilityInviteEmail({
   deadline,
 }: AvailabilityInviteOptions) {
   return getResend().emails.send({
-    from: process.env.EMAIL_FROM ?? "noreply@skemaka.com",
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
     subject: `Share your availability for the week of ${weekLabel} — ${orgName}`,
     html: `
@@ -65,7 +65,7 @@ export async function sendAvailabilityInviteEmail({
 
 export async function sendInviteEmail({ to, name, orgName, inviteUrl }: InviteEmailOptions) {
   return getResend().emails.send({
-    from: process.env.EMAIL_FROM ?? "noreply@skemaka.com",
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
     subject: `You've been added to ${orgName} on Skemaka`,
     html: `

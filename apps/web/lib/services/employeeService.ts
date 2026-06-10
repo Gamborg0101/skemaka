@@ -53,8 +53,10 @@ async function assertValidJobRole(orgId: string, jobRole: string): Promise<void>
 export async function createEmployee(orgId: string, input: CreateEmployeeInput): Promise<Employee> {
   await assertValidJobRole(orgId, input.jobRole)
 
+  const email = input.email.toLowerCase().trim()
+
   const existing = await db.employee.findUnique({
-    where: { organizationId_email: { organizationId: orgId, email: input.email } },
+    where: { organizationId_email: { organizationId: orgId, email } },
   })
   if (existing) throw new ServiceError("An employee with this email already exists", "CONFLICT")
 
@@ -62,21 +64,32 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     ? input.employmentType
     : "PART_TIME"
 
-  const employee = await db.employee.create({
-    data: {
-      organizationId:  orgId,
-      name:            input.name,
-      email:           input.email,
-      phone:           input.phone           ?? null,
-      jobRole:         input.jobRole,
-      hourlyWage:      input.hourlyWage,
-      employmentType:  resolvedType,
-      contractedHours: input.contractedHours ?? 0,
-      notes:           input.notes           ?? null,
-      inviteToken:     crypto.randomUUID(),
-      inviteExpiry:    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-  })
+  const [employee, org] = await Promise.all([
+    db.employee.create({
+      data: {
+        organizationId:  orgId,
+        name:            input.name,
+        email:           email,
+        phone:           input.phone           ?? null,
+        jobRole:         input.jobRole,
+        hourlyWage:      input.hourlyWage,
+        employmentType:  resolvedType,
+        contractedHours: input.contractedHours ?? 0,
+        notes:           input.notes           ?? null,
+        inviteToken:     crypto.randomUUID(),
+        inviteExpiry:    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    db.organization.findUnique({ where: { id: orgId }, select: { name: true } }),
+  ])
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  sendInviteEmail({
+    to:        employee.email,
+    name:      employee.name,
+    orgName:   org?.name ?? "",
+    inviteUrl: `${appUrl}/portal`,
+  }).catch((err) => console.error("[invite] Resend error:", err))
 
   return serEmployee(employee)
 }
@@ -105,6 +118,7 @@ export async function updateEmployee(
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
   if (input.jobRole !== undefined) await assertValidJobRole(orgId, input.jobRole)
+  if (input.email !== undefined) input = { ...input, email: input.email.toLowerCase().trim() }
 
   try {
     const employee = await db.$transaction(async (tx) => {
@@ -179,12 +193,12 @@ export async function refreshInviteToken(orgId: string, employeeId: string): Pro
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  void sendInviteEmail({
+  sendInviteEmail({
     to:        employee.email,
     name:      employee.name,
     orgName:   org?.name ?? "",
     inviteUrl: `${appUrl}/portal`,
-  })
+  }).catch((err) => console.error("[invite] Resend error:", err))
 
   return serEmployee(updated)
 }

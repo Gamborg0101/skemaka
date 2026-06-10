@@ -23,6 +23,12 @@ import {
 import { getCurrencySymbol } from "@/lib/orgSettings"
 import { isEmploymentType } from "@/types"
 import type { JobRole, EmploymentType } from "@/types"
+
+const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  FULL_TIME:          "Full Time (40h/week)",
+  REDUCED_FULL_TIME:  "Reduced Full Time (32h/week)",
+  PART_TIME:          "Part Time",
+}
 import { parsePhoneNumberWithError, ParseError } from "libphonenumber-js"
 
 function formatPhoneNumber(raw: string): string {
@@ -197,7 +203,7 @@ export function AddEmployeeDialog({
             <Label htmlFor="emp-employment-type">Employment Type</Label>
             <Select value={employmentType} onValueChange={(val) => { if (val && isEmploymentType(val)) setEmploymentType(val) }}>
               <SelectTrigger id="emp-employment-type" className="w-full">
-                <SelectValue />
+                <SelectValue>{EMPLOYMENT_TYPE_LABELS[employmentType]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="FULL_TIME">Full Time (40h/week)</SelectItem>
