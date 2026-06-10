@@ -4,6 +4,7 @@ import { isEmploymentType } from "@/types"
 import type { Employee } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
+import { recordAudit } from "@/lib/audit"
 import { ServiceError } from "./errors"
 
 export async function listEmployees(orgId: string): Promise<Employee[]>
@@ -111,10 +112,11 @@ export async function updateEmployee(
   orgId:      string,
   employeeId: string,
   input:      UpdateEmployeeInput,
+  actorUserId: string,
 ): Promise<Employee> {
   const existing = await db.employee.findFirst({
     where: { id: employeeId, organizationId: orgId },
-    select: { id: true, isActive: true, userId: true },
+    select: { id: true, isActive: true, userId: true, hourlyWage: true },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
@@ -155,6 +157,23 @@ export async function updateEmployee(
       }
       return updated
     })
+
+    // Audit wage changes — who changed an employee's pay, and from/to what.
+    if (input.hourlyWage !== undefined) {
+      const before = (existing.hourlyWage as { toNumber(): number }).toNumber()
+      const after  = (employee.hourlyWage as { toNumber(): number }).toNumber()
+      if (before !== after) {
+        recordAudit({
+          orgId,
+          actorUserId,
+          action: "EMPLOYEE_WAGE_CHANGED",
+          entity: `Employee:${employeeId}`,
+          before: { hourlyWage: before },
+          after:  { hourlyWage: after },
+        })
+      }
+    }
+
     return serEmployee(employee)
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2002") {

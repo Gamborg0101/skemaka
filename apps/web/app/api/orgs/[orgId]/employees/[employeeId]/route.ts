@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const employee = await employeeService.updateEmployee(orgId, employeeId, body)
+    const employee = await employeeService.updateEmployee(orgId, employeeId, body, guard.userId)
     return NextResponse.json({ data: employee })
   } catch (err) {
     if (err instanceof ServiceError) {
