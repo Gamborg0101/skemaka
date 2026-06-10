@@ -64,24 +64,25 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     ? input.employmentType
     : "PART_TIME"
 
-  const [employee, org] = await Promise.all([
-    db.employee.create({
-      data: {
-        organizationId:  orgId,
-        name:            input.name,
-        email:           email,
-        phone:           input.phone           ?? null,
-        jobRole:         input.jobRole,
-        hourlyWage:      input.hourlyWage,
-        employmentType:  resolvedType,
-        contractedHours: input.contractedHours ?? 0,
-        notes:           input.notes           ?? null,
-        inviteToken:     crypto.randomUUID(),
-        inviteExpiry:    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    }),
-    db.organization.findUnique({ where: { id: orgId }, select: { name: true } }),
-  ])
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, currency: true } })
+
+  const employee = await db.employee.create({
+    data: {
+      organizationId:   orgId,
+      name:             input.name,
+      email:            email,
+      phone:            input.phone           ?? null,
+      jobRole:          input.jobRole,
+      hourlyWage:       input.hourlyWage,
+      wageBaseAmount:   input.hourlyWage,
+      wageBaseCurrency: org?.currency ?? "EUR",
+      employmentType:   resolvedType,
+      contractedHours:  input.contractedHours ?? 0,
+      notes:            input.notes           ?? null,
+      inviteToken:      crypto.randomUUID(),
+      inviteExpiry:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   sendInviteEmail({
@@ -120,19 +121,32 @@ export async function updateEmployee(
   if (input.jobRole !== undefined) await assertValidJobRole(orgId, input.jobRole)
   if (input.email !== undefined) input = { ...input, email: input.email.toLowerCase().trim() }
 
+  // When the manager explicitly changes the wage, re-anchor the base to the
+  // new value and the org's current currency so future currency conversions
+  // always convert from the freshest manager-entered wage.
+  let wageBaseUpdate: { wageBaseAmount: number; wageBaseCurrency: string } | undefined
+  if (input.hourlyWage !== undefined) {
+    const org = await db.organization.findUnique({ where: { id: orgId }, select: { currency: true } })
+    wageBaseUpdate = {
+      wageBaseAmount:   input.hourlyWage,
+      wageBaseCurrency: org?.currency ?? "EUR",
+    }
+  }
+
   try {
     const employee = await db.$transaction(async (tx) => {
       const updated = await tx.employee.update({
         where: { id: employeeId },
         data: {
-          ...(input.name           !== undefined && { name: input.name }),
-          ...(input.email          !== undefined && { email: input.email }),
-          ...(input.phone          !== undefined && { phone: input.phone }),
-          ...(input.jobRole        !== undefined && { jobRole: input.jobRole }),
-          ...(input.hourlyWage     !== undefined && { hourlyWage: input.hourlyWage }),
-          ...(input.notes          !== undefined && { notes: input.notes }),
-          ...(input.isActive       !== undefined && { isActive: input.isActive }),
-          ...(input.employmentType !== undefined && isEmploymentType(input.employmentType) && { employmentType: input.employmentType }),
+          ...(input.name            !== undefined && { name: input.name }),
+          ...(input.email           !== undefined && { email: input.email }),
+          ...(input.phone           !== undefined && { phone: input.phone }),
+          ...(input.jobRole         !== undefined && { jobRole: input.jobRole }),
+          ...(input.hourlyWage      !== undefined && { hourlyWage: input.hourlyWage }),
+          ...(wageBaseUpdate !== undefined && wageBaseUpdate),
+          ...(input.notes           !== undefined && { notes: input.notes }),
+          ...(input.isActive        !== undefined && { isActive: input.isActive }),
+          ...(input.employmentType  !== undefined && isEmploymentType(input.employmentType) && { employmentType: input.employmentType }),
           ...(input.contractedHours !== undefined && { contractedHours: input.contractedHours }),
         },
       })
