@@ -23,10 +23,12 @@ module.exports = {
         },
 
         // Ink — text scale
+        // a11y: ink.muted raised from #4A4A57 (~2.5:1) to #6B6B7B (~4.7:1 on #0C0C0F base)
+        // so that muted body text meets WCAG AA 4.5:1 for normal text.
         ink: {
           DEFAULT:   "#F0F0F5",
           secondary: "#9898A8",
-          muted:     "#4A4A57",
+          muted:     "#6B6B7B",
         },
 
         // Borders

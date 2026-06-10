@@ -21,6 +21,7 @@ export function RefreshButton({ onPress, isRefreshing = false }: Props) {
         name="refresh"
         size={18}
         color={isRefreshing ? "#7B6EF8" : "#6B6B7B"}
+        importantForAccessibility="no"
       />
     </Pressable>
   )

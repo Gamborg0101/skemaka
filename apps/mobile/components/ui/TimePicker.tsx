@@ -3,6 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { formatTime } from "@/lib/utils"
+import { useReducedMotion } from "@/hooks/useReducedMotion"
 
 export const TIME_SLOTS: string[] = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2)
@@ -21,6 +22,7 @@ type Props = {
 }
 
 export function TimePickerModal({ visible, title, selected, onSelect, onClose, minTime, maxTime }: Props) {
+  const reduceMotion = useReducedMotion()
   const slots = minTime || maxTime
     ? TIME_SLOTS.filter((t) => (!minTime || t >= minTime) && (!maxTime || t <= maxTime))
     : TIME_SLOTS
@@ -29,7 +31,7 @@ export function TimePickerModal({ visible, title, selected, onSelect, onClose, m
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType={reduceMotion ? "fade" : "slide"}
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
@@ -40,9 +42,11 @@ export function TimePickerModal({ visible, title, selected, onSelect, onClose, m
           <Pressable
             onPress={onClose}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
             className="w-8 h-8 items-center justify-center active:opacity-60"
           >
-            <Ionicons name="close" size={20} color="#A1A1AE" />
+            <Ionicons name="close" size={20} color="#A1A1AE" importantForAccessibility="no" />
           </Pressable>
         </View>
 
@@ -61,6 +65,9 @@ export function TimePickerModal({ visible, title, selected, onSelect, onClose, m
                   onSelect(item)
                   onClose()
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={formatTime(item)}
+                accessibilityState={{ selected: isSelected }}
                 className={`px-6 h-[52px] justify-center border-b border-line/20 active:bg-elevated ${
                   isSelected ? "bg-brand/10" : ""
                 }`}

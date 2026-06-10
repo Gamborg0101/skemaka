@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card"
 import { useActiveEntry, useClockIn, useClockOut } from "@/hooks/useClock"
 import { elapsedSince, formatTime } from "@/lib/utils"
 import type { Shift } from "@skemaka/types"
+// Live indicator: color dot is decorative — the text label "Live" provides the signal
 
 type Props = {
   todayShift?: Shift | null
@@ -84,7 +85,8 @@ export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
 
           {entry ? (
             <View className="flex-row items-center gap-1.5">
-              <View className="w-2 h-2 rounded-full bg-success" />
+              {/* Color dot is decorative — "Live" text provides the non-color signal */}
+              <View className="w-2 h-2 rounded-full bg-success" importantForAccessibility="no" accessibilityElementsHidden />
               <Text className="text-xs font-medium text-success">Live</Text>
             </View>
           ) : null}
@@ -101,6 +103,8 @@ export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
           size="md"
           fullWidth
           loading={isLoading}
+          accessibilityLabel={entry ? "Clock out" : "Clock in"}
+          accessibilityRole="button"
           onPress={() => {
             if (entry) {
               clockOut.mutate(undefined)
