@@ -19,6 +19,15 @@ export function isPositiveFiniteNumber(n: unknown): n is number {
   return typeof n === "number" && isFinite(n) && n > 0
 }
 
+// Upper bound for hourly wage. The DB column is Decimal(10,2) (max ~99,999,999.99)
+// but no realistic wage approaches that — cap well below to stop fat-fingered or
+// malicious values feeding into labour-cost maths.
+export const MAX_HOURLY_WAGE = 100_000
+
+export function isValidWage(n: unknown): n is number {
+  return isPositiveFiniteNumber(n) && n <= MAX_HOURLY_WAGE
+}
+
 export function isNonNegativeInt(n: unknown): n is number {
   return typeof n === "number" && Number.isInteger(n) && n >= 0
 }
