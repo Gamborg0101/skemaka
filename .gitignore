@@ -48,3 +48,6 @@ coverage
 
 # ── Claude Code ──────────────────────────────────────────────────────────────
 .claude/
+
+# Playwright MCP debug artifacts
+apps/web/.playwright-mcp/
