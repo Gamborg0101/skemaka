@@ -31,6 +31,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createRemoteJWKSet, jwtVerify } from "jose"
 import { encode } from "next-auth/jwt"
 import { db } from "@/lib/prisma"
+import { PrismaClient } from "@/app/generated/prisma/client"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { createHash } from "crypto"
 
@@ -153,8 +154,11 @@ export async function POST(req: NextRequest) {
   let userId: string
   try {
     userId = await db.$transaction(async (tx) => {
+      // Prisma 7 types the tx param as Omit<PrismaClient, ITXClientDenyList>, which
+      // hides model delegates from tsc; cast to PrismaClient (runtime is identical).
+      const client = tx as unknown as PrismaClient
       // --- Path A: existing Apple account ---
-      const existingAccount = await tx.account.findUnique({
+      const existingAccount = await client.account.findUnique({
         where: { provider_providerAccountId: { provider: "apple", providerAccountId: appleSub } },
         select: { userId: true },
       })
@@ -164,13 +168,13 @@ export async function POST(req: NextRequest) {
 
       // --- Path B: link to an existing user by verified email ---
       if (claims.email && emailVerified) {
-        const existingUser = await tx.user.findUnique({
+        const existingUser = await client.user.findUnique({
           where: { email: claims.email },
           select: { id: true },
         })
         if (existingUser) {
           // Link Apple as an additional provider — creates the Account row only.
-          await tx.account.create({
+          await client.account.create({
             data: {
               userId:            existingUser.id,
               type:              "oauth",
@@ -189,7 +193,7 @@ export async function POST(req: NextRequest) {
         if (parts.length > 0) name = parts.join(" ")
       }
 
-      const newUser = await tx.user.create({
+      const newUser = await client.user.create({
         data: {
           // email and emailVerified are only set when Apple provides them
           // (first authorisation only). Subsequent logins hit Path A.
@@ -201,7 +205,7 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       })
 
-      await tx.account.create({
+      await client.account.create({
         data: {
           userId:            newUser.id,
           type:              "oauth",
