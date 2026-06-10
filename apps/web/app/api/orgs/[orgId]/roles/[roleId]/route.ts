@@ -32,3 +32,21 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     throw err
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  const { orgId, roleId } = await params
+  const guard = await requireOrgMember(orgId, req)
+  if ("error" in guard) return guard.error
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
+
+  try {
+    await orgService.deleteJobRole(orgId, roleId)
+    return NextResponse.json({ data: { deleted: true } })
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
+    }
+    throw err
+  }
+}
