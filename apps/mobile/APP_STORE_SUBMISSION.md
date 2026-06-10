@@ -89,12 +89,21 @@ Declare exactly these (all **Linked = Yes**, **Tracking = No**):
 
 ## 3. Accessibility Nutrition Label
 
-Honest assessment of the current code:
+Accessibility hardening has been implemented in code (labels on all controls, decorative icons hidden, Dynamic Type reflow, `useReducedMotion` on modals, contrast tokens raised to WCAG AA). The following are **claimable once the on-device verification below passes** — claim them only after confirming on a real device:
 
-- **Claim now (first submission):** **Dark Interface** only. (Captions/Audio Descriptions = N/A — no media.)
-- **Do NOT claim yet** — needs work first: VoiceOver (many icon-only buttons unlabeled), Larger Text/Dynamic Type (fixed sizing + `numberOfLines={1}` will clip at large sizes), Sufficient Contrast (muted grey / yellow-on-dark unverified), Reduced Motion (not honored), Voice Control (depends on VoiceOver labels).
+- **Dark Interface** (already solid)
+- **VoiceOver** · **Voice Control** (all interactive controls labelled; decorative elements hidden; state communicated)
+- **Larger Text** (no `allowFontScaling={false}`; `numberOfLines` removed from content text so it reflows)
+- **Reduced Motion** (slide-in modals fade when Reduce Motion is on)
+- **Sufficient Contrast** (`ink.muted`/tab-inactive/chevron raised `#4A4A57` → `#6B6B7B`, ~4.7:1)
+- **Differentiate Without Color** (every color-only signal paired with text)
 
-**To credibly claim more later** (good candidate for a follow-up task): add `accessibilityRole` + `accessibilityLabel` to every touchable (esp. clock in/out, back/close/refresh, sign-out, time pickers); hide decorative icons; test all core screens at the largest text size; WCAG-check contrast; honor Reduce Motion. Then claim VoiceOver, Voice Control, Larger Text, Sufficient Contrast, Differentiate Without Color, Reduced Motion + Dark Interface.
+Captions / Audio Descriptions = N/A (no media).
+
+**⚠️ HUMAN PREP — verify on-device before claiming** (Settings → Accessibility):
+- **VoiceOver on:** sweep every tab/screen; confirm each control is announced with a sensible name and no decorative icon/chevron is read.
+- **Larger Text at max:** confirm shift cards, employee names/roles, settings rows, and the shift-detail header reflow without clipping/truncation.
+- **Reduce Motion on:** confirm the Time-Off, Team detail, Shift form, and Time-Picker modals fade instead of slide.
 
 ---
 
