@@ -46,8 +46,8 @@ type RowProps = {
 function Row({ icon, iconColor = "#A1A1AE", iconBg = "#252529", label, value, onPress, destructive = false }: RowProps) {
   const inner = (
     <View className="flex-row items-center px-4 py-3.5 gap-3">
-      <View style={{ backgroundColor: iconBg }} className="w-8 h-8 rounded-lg items-center justify-center">
-        <Ionicons name={icon} size={16} color={iconColor} />
+      <View style={{ backgroundColor: iconBg }} className="w-8 h-8 rounded-lg items-center justify-center" importantForAccessibility="no" accessibilityElementsHidden>
+        <Ionicons name={icon} size={16} color={iconColor} importantForAccessibility="no" />
       </View>
       <Text className={`flex-1 text-sm font-medium ${destructive ? "text-red-400" : "text-ink"}`}>
         {label}
@@ -55,7 +55,7 @@ function Row({ icon, iconColor = "#A1A1AE", iconBg = "#252529", label, value, on
       {value
         ? <Text className="text-sm text-ink-muted">{value}</Text>
         : onPress && !destructive
-          ? <Ionicons name="chevron-forward" size={16} color="#4A4A57" />
+          ? <Ionicons name="chevron-forward" size={16} color="#6B6B7B" importantForAccessibility="no" />
           : null}
     </View>
   )
@@ -137,8 +137,8 @@ function DevViewSwitcher() {
                 </Text>
               </View>
               {active && (
-                <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="checkmark" size={12} color="#000" />
+                <View importantForAccessibility="no" accessibilityElementsHidden style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="checkmark" size={12} color="#000" importantForAccessibility="no" />
                 </View>
               )}
             </View>

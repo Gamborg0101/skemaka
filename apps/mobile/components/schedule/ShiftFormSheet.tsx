@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics"
 import type { Shift, Employee } from "@skemaka/types"
 import type { ShiftInput } from "@skemaka/api"
 import { formatTime } from "@/lib/utils"
+import { useReducedMotion } from "@/hooks/useReducedMotion"
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 
@@ -99,9 +100,11 @@ function SheetHeader({
         <Pressable
           onPress={onBack}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
           className="w-8 h-8 items-center justify-center active:opacity-60"
         >
-          <Ionicons name="chevron-back" size={20} color="#7B6EF8" />
+          <Ionicons name="chevron-back" size={20} color="#7B6EF8" importantForAccessibility="no" />
         </Pressable>
       ) : (
         <View className="w-8" />
@@ -110,9 +113,11 @@ function SheetHeader({
       <Pressable
         onPress={onClose}
         hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
         className="w-8 h-8 items-center justify-center active:opacity-60"
       >
-        <Ionicons name="close" size={20} color="#A1A1AE" />
+        <Ionicons name="close" size={20} color="#A1A1AE" importantForAccessibility="no" />
       </Pressable>
     </View>
   )
@@ -136,21 +141,27 @@ function FieldRow({
 function SelectButton({
   value,
   placeholder,
+  label,
   onPress,
 }: {
   value: string
   placeholder: string
+  /** Accessible label for the button; falls back to value or placeholder. */
+  label?: string
   onPress: () => void
 }) {
+  const a11yLabel = label ?? value ?? placeholder
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
       className="flex-row items-center justify-between py-1 active:opacity-60"
     >
       <Text className={`text-sm ${value ? "text-ink font-medium" : "text-ink-muted"}`}>
         {value || placeholder}
       </Text>
-      <Ionicons name="chevron-forward" size={14} color="#4A4A57" />
+      <Ionicons name="chevron-forward" size={14} color="#4A4A57" importantForAccessibility="no" />
     </Pressable>
   )
 }
@@ -208,7 +219,7 @@ function EmployeePickerView({
       <SheetHeader title="Select Employee" onBack={onBack} onClose={onClose} />
       <View className="px-4 py-3 border-b border-line/30">
         <View className="flex-row items-center bg-elevated rounded-xl px-3 h-10 gap-2">
-          <Ionicons name="search" size={16} color="#A1A1AE" />
+          <Ionicons name="search" size={16} color="#A1A1AE" importantForAccessibility="no" />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -219,8 +230,13 @@ function EmployeePickerView({
             returnKeyType="search"
           />
           {query ? (
-            <Pressable onPress={() => setQuery("")} hitSlop={6}>
-              <Ionicons name="close-circle" size={16} color="#4A4A57" />
+            <Pressable
+              onPress={() => setQuery("")}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <Ionicons name="close-circle" size={16} color="#6B6B7B" importantForAccessibility="no" />
             </Pressable>
           ) : null}
         </View>
@@ -242,11 +258,16 @@ function EmployeePickerView({
                 void Haptics.selectionAsync()
                 onSelect(item)
               }}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${item.name}, ${item.jobRole}`}
+              accessibilityState={{ selected: isSelected }}
               className="flex-row items-center justify-between px-4 py-3.5 border-b border-line/20 active:bg-elevated"
             >
               <View className="flex-row items-center gap-3 flex-1">
-                {/* Avatar */}
+                {/* Avatar — decorative, VoiceOver reads the label above */}
                 <View
+                  importantForAccessibility="no"
+                  accessibilityElementsHidden
                   style={{
                     width: 44,
                     height: 44,
@@ -263,10 +284,10 @@ function EmployeePickerView({
 
                 {/* 3-level text hierarchy */}
                 <View className="flex-1 gap-0.5">
-                  <Text className="text-[15px] font-semibold text-ink" numberOfLines={1}>
+                  <Text className="text-[15px] font-semibold text-ink">
                     {item.name}
                   </Text>
-                  <Text className="text-sm text-ink-secondary" numberOfLines={1}>
+                  <Text className="text-sm text-ink-secondary">
                     {item.jobRole}
                   </Text>
                   <Text className="text-xs text-ink-muted">
@@ -274,7 +295,9 @@ function EmployeePickerView({
                   </Text>
                 </View>
               </View>
-              {isSelected && <Ionicons name="checkmark-circle" size={20} color="#7B6EF8" />}
+              {isSelected && (
+                <Ionicons name="checkmark-circle" size={20} color="#7B6EF8" importantForAccessibility="no" />
+              )}
             </Pressable>
           )
         }}
@@ -324,6 +347,9 @@ function TimePickerView({
                 void Haptics.selectionAsync()
                 onSelect(item)
               }}
+              accessibilityRole="button"
+              accessibilityLabel={formatTime(item)}
+              accessibilityState={{ selected: isSelected }}
               className={`px-6 h-[52px] justify-center border-b border-line/20 active:bg-elevated ${
                 isSelected ? "bg-brand/10" : ""
               }`}
@@ -439,6 +465,7 @@ function FormView({
             <SelectButton
               value={selectedEmployee?.name ?? ""}
               placeholder="Select employee…"
+              label={selectedEmployee ? `Employee: ${selectedEmployee.name}` : "Select employee"}
               onPress={() => onNavigate("employee")}
             />
             {errors.employeeId && (
@@ -453,6 +480,7 @@ function FormView({
             <SelectButton
               value={formState.startTime ? formatTime(formState.startTime) : ""}
               placeholder="Pick a time…"
+              label={formState.startTime ? `Start time: ${formatTime(formState.startTime)}` : "Select start time"}
               onPress={() => onNavigate("time-start")}
             />
             {errors.startTime && (
@@ -467,6 +495,7 @@ function FormView({
             <SelectButton
               value={formState.endTime ? formatTime(formState.endTime) : ""}
               placeholder="Pick a time…"
+              label={formState.endTime ? `End time: ${formatTime(formState.endTime)}` : "Select end time"}
               onPress={() => onNavigate("time-end")}
             />
             {errors.endTime && (
@@ -483,11 +512,18 @@ function FormView({
               onPress={() =>
                 setFormState((s) => ({ ...s, breakMinutes: Math.max(0, s.breakMinutes - 15) }))
               }
+              accessibilityRole="button"
+              accessibilityLabel="Decrease break by 15 minutes"
+              accessibilityState={{ disabled: formState.breakMinutes === 0 }}
+              disabled={formState.breakMinutes === 0}
               className="w-8 h-8 rounded-lg bg-elevated items-center justify-center active:opacity-60"
             >
-              <Ionicons name="remove" size={16} color="#A1A1AE" />
+              <Ionicons name="remove" size={16} color="#A1A1AE" importantForAccessibility="no" />
             </Pressable>
-            <Text className="text-sm font-semibold text-ink w-16 text-center">
+            <Text
+              accessibilityLiveRegion="polite"
+              className="text-sm font-semibold text-ink w-16 text-center"
+            >
               {formState.breakMinutes === 0 ? "No break" : `${formState.breakMinutes} min`}
             </Text>
             <Pressable
@@ -495,9 +531,13 @@ function FormView({
               onPress={() =>
                 setFormState((s) => ({ ...s, breakMinutes: Math.min(120, s.breakMinutes + 15) }))
               }
+              accessibilityRole="button"
+              accessibilityLabel="Increase break by 15 minutes"
+              accessibilityState={{ disabled: formState.breakMinutes >= 120 }}
+              disabled={formState.breakMinutes >= 120}
               className="w-8 h-8 rounded-lg bg-elevated items-center justify-center active:opacity-60"
             >
-              <Ionicons name="add" size={16} color="#A1A1AE" />
+              <Ionicons name="add" size={16} color="#A1A1AE" importantForAccessibility="no" />
             </Pressable>
           </View>
         </FieldRow>
@@ -538,6 +578,9 @@ function FormView({
           <Pressable
             onPress={handleSave}
             disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityLabel={shift ? "Save changes to shift" : "Add shift"}
+            accessibilityState={{ disabled: isSaving }}
             className="h-14 rounded-2xl bg-brand items-center justify-center active:opacity-80"
           >
             {isSaving ? (
@@ -555,6 +598,9 @@ function FormView({
           <Pressable
             onPress={onDelete}
             disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityLabel="Delete shift"
+            accessibilityState={{ disabled: isSaving }}
             className="items-center mt-4 py-2 active:opacity-60"
           >
             <Text className="text-sm font-medium text-danger">Delete Shift</Text>
@@ -574,6 +620,7 @@ function FormView({
               <SelectButton
                 value={clockInTime}
                 placeholder="—"
+                label={clockInTime ? `Clocked in at ${clockInTime}` : "Set clock-in time"}
                 onPress={() => onNavigate("clock-in")}
               />
             </FieldRow>
@@ -582,6 +629,7 @@ function FormView({
               <SelectButton
                 value={clockOutTime}
                 placeholder="—"
+                label={clockOutTime ? `Clocked out at ${clockOutTime}` : "Set clock-out time"}
                 onPress={() => onNavigate("clock-out")}
               />
             </FieldRow>
@@ -590,6 +638,9 @@ function FormView({
               <Pressable
                 onPress={onSaveTimeEntry}
                 disabled={isSavingTimeEntry}
+                accessibilityRole="button"
+                accessibilityLabel="Save clock times"
+                accessibilityState={{ disabled: !!isSavingTimeEntry }}
                 className="h-11 rounded-xl bg-ink/10 items-center justify-center active:opacity-70"
               >
                 {isSavingTimeEntry ? (
@@ -658,6 +709,7 @@ export function ShiftFormSheet({
   isSavingTimeEntry,
   onSaveTimeEntry,
 }: ShiftFormSheetProps) {
+  const reduceMotion = useReducedMotion()
   const [view, setView] = useState<SheetView>("form")
   const [formState, setFormState] = useState<FormState>(() => initialFormState(shift, defaultValues))
   const [clockInTime,  setClockInTime]  = useState<string>("")
@@ -697,7 +749,7 @@ export function ShiftFormSheet({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType={reduceMotion ? "fade" : "slide"}
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >

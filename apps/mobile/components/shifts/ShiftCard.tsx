@@ -47,7 +47,7 @@ export function ShiftCard({ shift, onPress, compact = false }: Props) {
             <Text className={`text-sm font-semibold ${done ? "text-ink-muted" : "text-ink"}`}>{hours}</Text>
           </View>
           {onPress ? (
-            <Ionicons name="chevron-forward" size={16} color={done ? "#2A2A35" : "#4A4A57"} />
+            <Ionicons name="chevron-forward" size={16} color={done ? "#2A2A35" : "#4A4A57"} importantForAccessibility="no" />
           ) : null}
         </View>
       </View>
@@ -62,8 +62,14 @@ export function ShiftCard({ shift, onPress, compact = false }: Props) {
 
   if (!onPress) return inner
 
+  const a11yLabel = `${shift.jobRole} shift, ${start} to ${end}${done ? ", completed" : ""}`
   return (
-    <Pressable onPress={() => void handlePress()} className="active:opacity-75">
+    <Pressable
+      onPress={() => void handlePress()}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      className="active:opacity-75"
+    >
       {inner}
     </Pressable>
   )

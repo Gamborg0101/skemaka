@@ -76,6 +76,7 @@ export default function ProfileScreen() {
           variant="danger"
           size="md"
           fullWidth
+          accessibilityLabel="Sign out"
           onPress={handleSignOut}
         >
           Sign Out
