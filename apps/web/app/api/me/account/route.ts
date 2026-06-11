@@ -80,7 +80,7 @@ export async function DELETE(req: NextRequest) {
 
     if (userManagerMemberships.length > 0) {
       // Count MANAGER memberships for each org the user manages in one query.
-      const managerCounts: GroupByResult[] = await db.membership.groupBy({
+      const managerCounts = await db.membership.groupBy({
         by: ["organizationId"],
         where: {
           organizationId: { in: userManagerMemberships.map((m: MembershipWithOrg) => m.organizationId) },
