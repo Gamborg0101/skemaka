@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
-import { isPositiveFiniteNumber, isNonNegativeInt } from "@/lib/validate"
+import { isValidWage, isNonNegativeInt } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as employeeService from "@/lib/services/employeeService"
@@ -24,15 +24,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     Pick<Employee, "name" | "email" | "phone" | "jobRole" | "hourlyWage" | "notes" | "isActive" | "employmentType" | "contractedHours">
   >
 
-  if (body.hourlyWage !== undefined && !isPositiveFiniteNumber(body.hourlyWage)) {
-    return NextResponse.json({ error: "hourlyWage must be a non-negative number" }, { status: 400 })
+  if (body.hourlyWage !== undefined && !isValidWage(body.hourlyWage)) {
+    return NextResponse.json({ error: "hourlyWage must be a positive number up to 100000" }, { status: 400 })
   }
   if (body.contractedHours !== undefined && !isNonNegativeInt(body.contractedHours)) {
     return NextResponse.json({ error: "contractedHours must be a non-negative integer" }, { status: 400 })
   }
 
   try {
-    const employee = await employeeService.updateEmployee(orgId, employeeId, body)
+    const employee = await employeeService.updateEmployee(orgId, employeeId, body, guard.userId)
     return NextResponse.json({ data: employee })
   } catch (err) {
     if (err instanceof ServiceError) {

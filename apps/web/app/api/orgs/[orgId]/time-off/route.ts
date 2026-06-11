@@ -96,6 +96,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     )
   }
 
+  if (body.endDate! < body.startDate!) {
+    return NextResponse.json(
+      { error: "endDate must be on or after startDate" },
+      { status: 400 },
+    )
+  }
+
   try {
     const request = await timeOffService.createTimeOff(
       orgId,
