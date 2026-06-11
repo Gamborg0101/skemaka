@@ -1,0 +1,52 @@
+name: CI
+
+# CI gates: typecheck + unit tests across the monorepo.
+#
+# CD is handled outside this workflow:
+#   - Web:    Vercel's git integration builds and deploys apps/web on every push
+#             (preview deploys for branches, production for main).
+#   - Mobile: EAS builds are triggered manually (`eas build` / `eas submit`),
+#             since App Store builds are billed and human-gated.
+#
+# `pnpm lint` is intentionally not a gate yet — apps/web has pre-existing
+# eslint errors. Add it here once the codebase is lint-clean.
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # prisma.config.ts requires a DATABASE_URL for `prisma generate`,
+      # but generate never opens a connection — a dummy value is enough.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # version is read from the "packageManager" field in package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/web
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
