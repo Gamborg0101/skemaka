@@ -5,6 +5,7 @@ import type { Employee } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
 import { recordAudit } from "@/lib/audit"
+import { syncSubscriptionQuantitySafe } from "./billingService"
 import { ServiceError } from "./errors"
 
 export async function listEmployees(orgId: string): Promise<Employee[]>
@@ -93,6 +94,8 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     inviteUrl: `${appUrl}/portal`,
   }).catch((err) => console.error("[invite] Resend error:", err))
 
+  syncSubscriptionQuantitySafe(orgId)
+
   return serEmployee(employee)
 }
 
@@ -158,6 +161,10 @@ export async function updateEmployee(
       return updated
     })
 
+    if (input.isActive !== undefined && input.isActive !== existing.isActive) {
+      syncSubscriptionQuantitySafe(orgId)
+    }
+
     // Audit wage changes — who changed an employee's pay, and from/to what.
     if (input.hourlyWage !== undefined) {
       const before = (existing.hourlyWage as { toNumber(): number }).toNumber()
@@ -191,6 +198,8 @@ export async function deleteEmployee(orgId: string, employeeId: string): Promise
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
   await db.employee.delete({ where: { id: employeeId } })
+
+  syncSubscriptionQuantitySafe(orgId)
 }
 
 export async function getEmployeeByUserId(orgId: string, userId: string): Promise<Employee | null> {
