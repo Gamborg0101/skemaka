@@ -15,8 +15,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   const ctx = await availabilityService.resolveInviteToken(token)
   if (!ctx) return NextResponse.json({ error: "Invalid or expired token" }, { status: 404 })
 
+  // Public, unauthenticated endpoint — only expose fields the availability page
+  // needs. ctx.employee is the full record (wage, phone, email, notes); never
+  // serialize those to a token-only caller.
+  const employee = { id: ctx.employee.id, name: ctx.employee.name, jobRole: ctx.employee.jobRole }
   return NextResponse.json(
-    { data: { employee: ctx.employee, request: ctx.request, orgName: ctx.orgName } },
+    { data: { employee, request: ctx.request, orgName: ctx.orgName } },
     { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } },
   )
 }

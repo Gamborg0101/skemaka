@@ -4,6 +4,7 @@ import { isEmploymentType } from "@/types"
 import type { Employee } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
+import { recordAudit } from "@/lib/audit"
 import { ServiceError } from "./errors"
 
 export async function listEmployees(orgId: string): Promise<Employee[]>
@@ -53,8 +54,10 @@ async function assertValidJobRole(orgId: string, jobRole: string): Promise<void>
 export async function createEmployee(orgId: string, input: CreateEmployeeInput): Promise<Employee> {
   await assertValidJobRole(orgId, input.jobRole)
 
+  const email = input.email.toLowerCase().trim()
+
   const existing = await db.employee.findUnique({
-    where: { organizationId_email: { organizationId: orgId, email: input.email } },
+    where: { organizationId_email: { organizationId: orgId, email } },
   })
   if (existing) throw new ServiceError("An employee with this email already exists", "CONFLICT")
 
@@ -62,21 +65,33 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     ? input.employmentType
     : "PART_TIME"
 
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, currency: true } })
+
   const employee = await db.employee.create({
     data: {
-      organizationId:  orgId,
-      name:            input.name,
-      email:           input.email,
-      phone:           input.phone           ?? null,
-      jobRole:         input.jobRole,
-      hourlyWage:      input.hourlyWage,
-      employmentType:  resolvedType,
-      contractedHours: input.contractedHours ?? 0,
-      notes:           input.notes           ?? null,
-      inviteToken:     crypto.randomUUID(),
-      inviteExpiry:    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      organizationId:   orgId,
+      name:             input.name,
+      email:            email,
+      phone:            input.phone           ?? null,
+      jobRole:          input.jobRole,
+      hourlyWage:       input.hourlyWage,
+      wageBaseAmount:   input.hourlyWage,
+      wageBaseCurrency: org?.currency ?? "EUR",
+      employmentType:   resolvedType,
+      contractedHours:  input.contractedHours ?? 0,
+      notes:            input.notes           ?? null,
+      inviteToken:      crypto.randomUUID(),
+      inviteExpiry:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   })
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  sendInviteEmail({
+    to:        employee.email,
+    name:      employee.name,
+    orgName:   org?.name ?? "",
+    inviteUrl: `${appUrl}/portal`,
+  }).catch((err) => console.error("[invite] Resend error:", err))
 
   return serEmployee(employee)
 }
@@ -97,28 +112,43 @@ export async function updateEmployee(
   orgId:      string,
   employeeId: string,
   input:      UpdateEmployeeInput,
+  actorUserId: string,
 ): Promise<Employee> {
   const existing = await db.employee.findFirst({
     where: { id: employeeId, organizationId: orgId },
-    select: { id: true, isActive: true, userId: true },
+    select: { id: true, isActive: true, userId: true, hourlyWage: true },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
   if (input.jobRole !== undefined) await assertValidJobRole(orgId, input.jobRole)
+  if (input.email !== undefined) input = { ...input, email: input.email.toLowerCase().trim() }
+
+  // When the manager explicitly changes the wage, re-anchor the base to the
+  // new value and the org's current currency so future currency conversions
+  // always convert from the freshest manager-entered wage.
+  let wageBaseUpdate: { wageBaseAmount: number; wageBaseCurrency: string } | undefined
+  if (input.hourlyWage !== undefined) {
+    const org = await db.organization.findUnique({ where: { id: orgId }, select: { currency: true } })
+    wageBaseUpdate = {
+      wageBaseAmount:   input.hourlyWage,
+      wageBaseCurrency: org?.currency ?? "EUR",
+    }
+  }
 
   try {
     const employee = await db.$transaction(async (tx) => {
       const updated = await tx.employee.update({
         where: { id: employeeId },
         data: {
-          ...(input.name           !== undefined && { name: input.name }),
-          ...(input.email          !== undefined && { email: input.email }),
-          ...(input.phone          !== undefined && { phone: input.phone }),
-          ...(input.jobRole        !== undefined && { jobRole: input.jobRole }),
-          ...(input.hourlyWage     !== undefined && { hourlyWage: input.hourlyWage }),
-          ...(input.notes          !== undefined && { notes: input.notes }),
-          ...(input.isActive       !== undefined && { isActive: input.isActive }),
-          ...(input.employmentType !== undefined && isEmploymentType(input.employmentType) && { employmentType: input.employmentType }),
+          ...(input.name            !== undefined && { name: input.name }),
+          ...(input.email           !== undefined && { email: input.email }),
+          ...(input.phone           !== undefined && { phone: input.phone }),
+          ...(input.jobRole         !== undefined && { jobRole: input.jobRole }),
+          ...(input.hourlyWage      !== undefined && { hourlyWage: input.hourlyWage }),
+          ...(wageBaseUpdate !== undefined && wageBaseUpdate),
+          ...(input.notes           !== undefined && { notes: input.notes }),
+          ...(input.isActive        !== undefined && { isActive: input.isActive }),
+          ...(input.employmentType  !== undefined && isEmploymentType(input.employmentType) && { employmentType: input.employmentType }),
           ...(input.contractedHours !== undefined && { contractedHours: input.contractedHours }),
         },
       })
@@ -127,6 +157,23 @@ export async function updateEmployee(
       }
       return updated
     })
+
+    // Audit wage changes — who changed an employee's pay, and from/to what.
+    if (input.hourlyWage !== undefined) {
+      const before = (existing.hourlyWage as { toNumber(): number }).toNumber()
+      const after  = (employee.hourlyWage as { toNumber(): number }).toNumber()
+      if (before !== after) {
+        recordAudit({
+          orgId,
+          actorUserId,
+          action: "EMPLOYEE_WAGE_CHANGED",
+          entity: `Employee:${employeeId}`,
+          before: { hourlyWage: before },
+          after:  { hourlyWage: after },
+        })
+      }
+    }
+
     return serEmployee(employee)
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2002") {
@@ -179,12 +226,12 @@ export async function refreshInviteToken(orgId: string, employeeId: string): Pro
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  void sendInviteEmail({
+  sendInviteEmail({
     to:        employee.email,
     name:      employee.name,
     orgName:   org?.name ?? "",
     inviteUrl: `${appUrl}/portal`,
-  })
+  }).catch((err) => console.error("[invite] Resend error:", err))
 
   return serEmployee(updated)
 }

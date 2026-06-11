@@ -69,6 +69,32 @@ export async function POST(req: NextRequest) {
   let subscriptionStatus = guard.subscriptionStatus
   const orgId = guard.orgId
   if (orgId) {
+    // Re-validate that this user still has access to the org. A removed manager
+    // or deactivated employee must not be able to refresh into a fresh token.
+    // Pure DB check — no Redis dependency. Note: employees have no Membership
+    // row, so they pass via the active-employee branch; managers via membership.
+    const [membership, activeEmployee] = await Promise.all([
+      db.membership.findUnique({
+        where: { userId_organizationId: { userId: decoded.sub!, organizationId: orgId } },
+        select: { role: true },
+      }),
+      db.employee.findFirst({
+        where: { userId: decoded.sub!, organizationId: orgId, isActive: true },
+        select: { id: true },
+      }),
+    ])
+    if (!membership && !activeEmployee) {
+      return NextResponse.json(
+        { error: "Access revoked", code: "ACCESS_REVOKED" },
+        { status: 401 },
+      )
+    }
+    // Recompute role so a demoted manager loses MANAGER on the next refresh.
+    // Preserve ADMIN (superadmin is set via email match, not via membership).
+    if (decoded.role !== "ADMIN") {
+      decoded.role = membership?.role === "MANAGER" ? "MANAGER" : "EMPLOYEE"
+    }
+
     const org = await db.organization.findUnique({
       where: { id: orgId },
       select: { subscriptionStatus: true },

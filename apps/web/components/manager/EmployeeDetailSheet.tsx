@@ -31,8 +31,15 @@ import {
 } from "@/components/ui/select"
 import { getInitials } from "@/lib/utils"
 import { formatCurrency, getCurrencySymbol } from "@/lib/orgSettings"
+import { useOrg } from "@/lib/orgContext"
 import { isEmploymentType } from "@/types"
 import type { Employee, EmploymentType, JobRole } from "@/types"
+
+const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  FULL_TIME:          "Full Time (40h/week)",
+  REDUCED_FULL_TIME:  "Reduced Full Time (32h/week)",
+  PART_TIME:          "Part Time",
+}
 
 interface EmployeeDetailSheetProps {
   employee: Employee | null
@@ -93,6 +100,7 @@ export function EmployeeDetailSheet({
   orgId,
   initialMode = "view",
 }: EmployeeDetailSheetProps) {
+  const { org } = useOrg()
   const [isEditing, setIsEditing] = useState(initialMode === "edit")
   const [sendingInvite, setSendingInvite] = useState(false)
 
@@ -294,7 +302,7 @@ export function EmployeeDetailSheet({
                   onValueChange={(val) => { if (val && isEmploymentType(val)) setEditEmploymentType(val) }}
                 >
                   <SelectTrigger id="edit-employment-type" className="w-full">
-                    <SelectValue />
+                    <SelectValue>{EMPLOYMENT_TYPE_LABELS[editEmploymentType]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="FULL_TIME">Full Time (40h/week)</SelectItem>
@@ -348,7 +356,7 @@ export function EmployeeDetailSheet({
               </InfoRow>
 
               <InfoRow icon={Briefcase} label="Hourly rate">
-                <span>{formatCurrency(employee.hourlyWage)} / hour</span>
+                <span>{formatCurrency(employee.hourlyWage, org?.currency)} / hour</span>
               </InfoRow>
 
               <InfoRow icon={Briefcase} label="Contract">

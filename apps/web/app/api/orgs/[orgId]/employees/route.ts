@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
-import { isPositiveFiniteNumber, isNonNegativeInt, parsePaginationParams } from "@/lib/validate"
+import { isValidWage, isNonNegativeInt, parsePaginationParams } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as employeeService from "@/lib/services/employeeService"
 
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       { status: 400 },
     )
   }
-  if (!isPositiveFiniteNumber(hourlyWage)) {
-    return NextResponse.json({ error: "hourlyWage must be a positive number" }, { status: 400 })
+  if (!isValidWage(hourlyWage)) {
+    return NextResponse.json({ error: "hourlyWage must be a positive number up to 100000" }, { status: 400 })
   }
   if (name.length > 200) return NextResponse.json({ error: "name must be at most 200 characters" }, { status: 400 })
   if (email.length > 254) return NextResponse.json({ error: "email must be at most 254 characters" }, { status: 400 })
