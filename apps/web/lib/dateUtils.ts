@@ -85,19 +85,29 @@ export function formatTime(time: string): string {
   return m === 0 ? `${hour}${period}` : `${hour}:${m.toString().padStart(2, "0")}${period}`
 }
 
-/** Net shift duration in decimal hours, clamped to 0 if break exceeds duration. */
-export function calcHours(startTime: string, endTime: string, breakMinutes: number): number {
+/**
+ * Gross shift length in minutes (before breaks). When the end time is earlier
+ * than the start time the shift crosses midnight (an overnight shift), so a full
+ * day is added rather than yielding a negative span. Equal times stay 0 — those
+ * are rejected upstream by `timesAreDifferent`.
+ */
+export function grossShiftMinutes(startTime: string, endTime: string): number {
   const [sh, sm] = startTime.split(":").map(Number)
   const [eh, em] = endTime.split(":").map(Number)
-  const totalMinutes = (eh * 60 + em) - (sh * 60 + sm) - breakMinutes
+  let mins = (eh * 60 + em) - (sh * 60 + sm)
+  if (mins < 0) mins += 24 * 60
+  return mins
+}
+
+/** Net shift duration in decimal hours, clamped to 0 if break exceeds duration. */
+export function calcHours(startTime: string, endTime: string, breakMinutes: number): number {
+  const totalMinutes = grossShiftMinutes(startTime, endTime) - breakMinutes
   return Math.max(0, totalMinutes / 60)
 }
 
 /** Net shift duration as a formatted string: "7h" or "7h 30m". Empty string if zero or negative. */
 export function calcNetHours(startTime: string, endTime: string, breakMinutes: number): string {
-  const [sh, sm] = startTime.split(":").map(Number)
-  const [eh, em] = endTime.split(":").map(Number)
-  const net = (eh * 60 + em) - (sh * 60 + sm) - breakMinutes
+  const net = grossShiftMinutes(startTime, endTime) - breakMinutes
   if (net <= 0) return ""
   const h = Math.floor(net / 60)
   const m = net % 60
