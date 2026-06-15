@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { TimePicker } from "@/components/manager/TimePicker"
-import { formatTime, formatDayLabel } from "@/lib/dateUtils"
+import { formatTime, formatDayLabel, grossShiftMinutes } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
 import type { Employee, JobRole, ShiftTemplate } from "@/types"
 
@@ -100,9 +100,7 @@ export function AddShiftDialog({
       skipAutoSuggestRef.current = false
       return
     }
-    const [sh, sm] = startTime.split(":").map(Number)
-    const [eh, em] = endTime.split(":").map(Number)
-    const mins = (eh * 60 + em) - (sh * 60 + sm)
+    const mins = grossShiftMinutes(startTime, endTime)
     if (mins < 360) setBreakMinutes("0")
     else if (mins < 540) setBreakMinutes("30")
     else setBreakMinutes("45")

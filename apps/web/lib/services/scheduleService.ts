@@ -345,6 +345,13 @@ export async function createShift(
     },
   })
 
+  // Changing a published schedule returns it to draft so the manager must
+  // re-publish (and thereby re-notify staff) before the change is "live".
+  await db.schedule.updateMany({
+    where: { id: scheduleId, organizationId: orgId, publishedAt: { not: null } },
+    data: { publishedAt: null },
+  })
+
   void db.schedulingEvent.create({
     data: {
       organizationId: orgId,
@@ -378,6 +385,7 @@ export async function updateShift(
     include: {
       employee: { select: { name: true, phone: true } },
       organization: { select: { name: true } },
+      schedule: { select: { publishedAt: true } },
     },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
@@ -404,6 +412,18 @@ export async function updateShift(
     },
   })
 
+  // Changing a published schedule returns it to draft so the manager must
+  // re-publish (and thereby re-notify staff) before the change is "live".
+  // When that happens we skip the per-shift SMS below — the re-publish blast
+  // covers it, so we don't double-text the employee.
+  const wasPublished = existing.schedule.publishedAt !== null
+  if (wasPublished) {
+    await db.schedule.update({
+      where: { id: scheduleId },
+      data: { publishedAt: null },
+    })
+  }
+
   const newDate      = input.date      ?? existing.date.toISOString().split("T")[0]
   const newStartTime = input.startTime ?? existing.startTime
   const newEndTime   = input.endTime   ?? existing.endTime
@@ -413,7 +433,9 @@ export async function updateShift(
   const employeeChanged = input.employeeId !== undefined && input.employeeId !== existing.employeeId
   const timingChanged   = input.date !== undefined || input.startTime !== undefined || input.endTime !== undefined
 
-  if (employeeChanged) {
+  if (wasPublished) {
+    // Notifications are deferred to re-publish; emit nothing here.
+  } else if (employeeChanged) {
     if (existing.employee.phone) {
       void sendShiftCancelledSms({
         to: existing.employee.phone,
@@ -464,13 +486,25 @@ export async function deleteShift(
     include: {
       employee: { select: { name: true, phone: true } },
       organization: { select: { name: true } },
+      schedule: { select: { publishedAt: true } },
     },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
   await db.shift.delete({ where: { id: shiftId } })
 
-  if (existing.employee.phone) {
+  // Changing a published schedule returns it to draft so the manager must
+  // re-publish before the change is "live". The re-publish blast covers the
+  // notification, so we skip the per-shift cancellation SMS in that case.
+  const wasPublished = existing.schedule.publishedAt !== null
+  if (wasPublished) {
+    await db.schedule.update({
+      where: { id: scheduleId },
+      data: { publishedAt: null },
+    })
+  }
+
+  if (!wasPublished && existing.employee.phone) {
     void sendShiftCancelledSms({
       to: existing.employee.phone,
       employeeName: existing.employee.name,

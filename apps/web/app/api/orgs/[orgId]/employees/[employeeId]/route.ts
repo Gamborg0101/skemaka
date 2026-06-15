@@ -30,6 +30,20 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   if (body.contractedHours !== undefined && !isNonNegativeInt(body.contractedHours)) {
     return NextResponse.json({ error: "contractedHours must be a non-negative integer" }, { status: 400 })
   }
+  // String length caps — mirror the limits enforced on create (POST) so updates
+  // can't bypass them and store oversized values.
+  if (body.name !== undefined && (typeof body.name !== "string" || body.name.length === 0 || body.name.length > 200)) {
+    return NextResponse.json({ error: "name must be between 1 and 200 characters" }, { status: 400 })
+  }
+  if (body.phone !== undefined && body.phone !== null && body.phone.length > 20) {
+    return NextResponse.json({ error: "phone must be at most 20 characters" }, { status: 400 })
+  }
+  if (body.jobRole !== undefined && (typeof body.jobRole !== "string" || body.jobRole.length === 0 || body.jobRole.length > 100)) {
+    return NextResponse.json({ error: "jobRole must be between 1 and 100 characters" }, { status: 400 })
+  }
+  if (body.notes !== undefined && body.notes !== null && body.notes.length > 5000) {
+    return NextResponse.json({ error: "notes must be at most 5000 characters" }, { status: 400 })
+  }
 
   try {
     const employee = await employeeService.updateEmployee(orgId, employeeId, body, guard.userId)
