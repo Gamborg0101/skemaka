@@ -9,6 +9,7 @@ interface OrgContextValue {
   orgId: string
   org: Organization
   jobRoles: JobRole[]
+  setJobRoles: React.Dispatch<React.SetStateAction<JobRole[]>>
   shiftTemplates: ShiftTemplate[]
   setShiftTemplates: React.Dispatch<React.SetStateAction<ShiftTemplate[]>>
   timeOffEnabled: boolean
@@ -70,6 +71,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             updateOrgSettings({
               currency: org.currency,
               timeOffEnabled: enabled,
+              timeFormat: org.settings?.timeFormat ?? "24h",
               ...(org.settings?.hours ? { hours: org.settings.hours as DayHours[] } : {}),
               ...(org.settings?.defaultScheduleView
                 ? { defaultScheduleView: org.settings.defaultScheduleView }
@@ -92,7 +94,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   // Must be called unconditionally before any early returns — Rules of Hooks.
   const ctxValue = useMemo(
-    () => org ? { orgId: org.id, org, jobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks } : null,
+    () => org ? { orgId: org.id, org, jobRoles, setJobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks } : null,
     [org, jobRoles, shiftTemplates, timeOffEnabled, availabilityWindowWeeks]
   )
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Mail,
   Phone,
@@ -31,8 +31,15 @@ import {
 } from "@/components/ui/select"
 import { getInitials } from "@/lib/utils"
 import { formatCurrency, getCurrencySymbol } from "@/lib/orgSettings"
+import { useOrg } from "@/lib/orgContext"
 import { isEmploymentType } from "@/types"
 import type { Employee, EmploymentType, JobRole } from "@/types"
+
+const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  FULL_TIME:          "Full Time (40h/week)",
+  REDUCED_FULL_TIME:  "Reduced Full Time (32h/week)",
+  PART_TIME:          "Part Time",
+}
 
 interface EmployeeDetailSheetProps {
   employee: Employee | null
@@ -93,6 +100,7 @@ export function EmployeeDetailSheet({
   orgId,
   initialMode = "view",
 }: EmployeeDetailSheetProps) {
+  const { org } = useOrg()
   const [isEditing, setIsEditing] = useState(initialMode === "edit")
   const [sendingInvite, setSendingInvite] = useState(false)
 
@@ -122,8 +130,12 @@ export function EmployeeDetailSheet({
   const [editEmploymentType, setEditEmploymentType] = useState<EmploymentType>("PART_TIME")
   const [editContractedHours, setEditContractedHours] = useState("0")
 
-  // Sync form state when employee changes or edit mode opens
-  useEffect(() => {
+  // Sync form state when employee changes — adjust state during render pattern.
+  // Starts null so a non-null employee at mount also populates the fields
+  // (the original effect ran on mount).
+  const [prevEmployee, setPrevEmployee] = useState<Employee | null>(null)
+  if (employee !== prevEmployee) {
+    setPrevEmployee(employee)
     if (employee) {
       setEditName(employee.name)
       setEditEmail(employee.email)
@@ -134,11 +146,15 @@ export function EmployeeDetailSheet({
       setEditEmploymentType(employee.employmentType)
       setEditContractedHours(employee.contractedHours.toString())
     }
-  }, [employee])
+  }
 
-  useEffect(() => {
+  // Reset editing mode when sheet opens/mode changes — adjust state during render pattern.
+  const openModeKey = `${open ? 1 : 0}__${initialMode}`
+  const [prevOpenModeKey, setPrevOpenModeKey] = useState(openModeKey)
+  if (openModeKey !== prevOpenModeKey) {
+    setPrevOpenModeKey(openModeKey)
     setIsEditing(initialMode === "edit")
-  }, [open, initialMode])
+  }
 
   const handleSave = () => {
     if (!employee) return
@@ -294,7 +310,7 @@ export function EmployeeDetailSheet({
                   onValueChange={(val) => { if (val && isEmploymentType(val)) setEditEmploymentType(val) }}
                 >
                   <SelectTrigger id="edit-employment-type" className="w-full">
-                    <SelectValue />
+                    <SelectValue>{EMPLOYMENT_TYPE_LABELS[editEmploymentType]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="FULL_TIME">Full Time (40h/week)</SelectItem>
@@ -348,7 +364,7 @@ export function EmployeeDetailSheet({
               </InfoRow>
 
               <InfoRow icon={Briefcase} label="Hourly rate">
-                <span>{formatCurrency(employee.hourlyWage)} / hour</span>
+                <span>{formatCurrency(employee.hourlyWage, org?.currency)} / hour</span>
               </InfoRow>
 
               <InfoRow icon={Briefcase} label="Contract">

@@ -3,7 +3,10 @@ import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Constants from "expo-constants"
+import { useState } from "react"
 import { useAuthStore, type ActiveView } from "@/store/authStore"
+import { apiClient } from "@/lib/apiClient"
+import { ApiError } from "@skemaka/api"
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -43,8 +46,8 @@ type RowProps = {
 function Row({ icon, iconColor = "#A1A1AE", iconBg = "#252529", label, value, onPress, destructive = false }: RowProps) {
   const inner = (
     <View className="flex-row items-center px-4 py-3.5 gap-3">
-      <View style={{ backgroundColor: iconBg }} className="w-8 h-8 rounded-lg items-center justify-center">
-        <Ionicons name={icon} size={16} color={iconColor} />
+      <View style={{ backgroundColor: iconBg }} className="w-8 h-8 rounded-lg items-center justify-center" importantForAccessibility="no" accessibilityElementsHidden>
+        <Ionicons name={icon} size={16} color={iconColor} importantForAccessibility="no" />
       </View>
       <Text className={`flex-1 text-sm font-medium ${destructive ? "text-red-400" : "text-ink"}`}>
         {label}
@@ -52,7 +55,7 @@ function Row({ icon, iconColor = "#A1A1AE", iconBg = "#252529", label, value, on
       {value
         ? <Text className="text-sm text-ink-muted">{value}</Text>
         : onPress && !destructive
-          ? <Ionicons name="chevron-forward" size={16} color="#4A4A57" />
+          ? <Ionicons name="chevron-forward" size={16} color="#6B6B7B" importantForAccessibility="no" />
           : null}
     </View>
   )
@@ -134,8 +137,8 @@ function DevViewSwitcher() {
                 </Text>
               </View>
               {active && (
-                <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="checkmark" size={12} color="#000" />
+                <View importantForAccessibility="no" accessibilityElementsHidden style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="checkmark" size={12} color="#000" importantForAccessibility="no" />
                 </View>
               )}
             </View>
@@ -152,6 +155,7 @@ export default function SettingsScreen() {
   const { signOut, employee, role, orgId } = useAuthStore()
   const version = Constants.expoConfig?.version ?? "—"
   const canSwitchView = role === "MANAGER" || role === "ADMIN"
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   function handleSignOut() {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
@@ -163,6 +167,44 @@ export default function SettingsScreen() {
         { text: "Sign out", style: "destructive", onPress: () => void signOut() },
       ],
     )
+  }
+
+  function handleDeleteAccount() {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    Alert.alert(
+      "Delete account",
+      "This permanently deletes your account and all associated data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void confirmDeleteAccount(),
+        },
+      ],
+    )
+  }
+
+  async function confirmDeleteAccount() {
+    setIsDeletingAccount(true)
+    try {
+      await apiClient.del("/api/me/account")
+      // 200 { deleted: true } — sign out and let AuthGate redirect to login
+      await signOut()
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Sole-manager block: the server error message already names the org(s)
+        // and tells the user what to do.
+        Alert.alert("Cannot delete account", err.message)
+      } else {
+        Alert.alert(
+          "Something went wrong",
+          "Could not delete your account. Please try again later.",
+        )
+      }
+    } finally {
+      setIsDeletingAccount(false)
+    }
   }
 
   return (
@@ -208,6 +250,19 @@ export default function SettingsScreen() {
         <SectionHeader title="Security" />
         <Card>
           <Row icon="log-out-outline" iconColor="#FF453A" iconBg="#2A1515" label="Sign out" onPress={handleSignOut} destructive />
+        </Card>
+
+        {/* Danger zone */}
+        <SectionHeader title="Danger zone" color="#FF453A" />
+        <Card>
+          <Row
+            icon="trash-outline"
+            iconColor="#FF453A"
+            iconBg="#2A1515"
+            label={isDeletingAccount ? "Deleting…" : "Delete account"}
+            onPress={isDeletingAccount ? undefined : handleDeleteAccount}
+            destructive
+          />
         </Card>
 
         {/* App */}

@@ -23,7 +23,12 @@ export default function ShiftDetailScreen() {
         className="flex-1 bg-base items-center justify-center px-8"
       >
         <Text className="text-ink-secondary text-center mb-4">Shift details not available.</Text>
-        <Pressable onPress={() => router.back()} className="active:opacity-60">
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          className="active:opacity-60"
+        >
           <Text className="text-brand font-semibold">Go back</Text>
         </Pressable>
       </SafeAreaView>
@@ -38,11 +43,13 @@ export default function ShiftDetailScreen() {
       <View className="px-4 pt-2 pb-3 flex-row items-center gap-3 border-b border-line/40">
         <Pressable
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back to shifts"
           className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
         >
-          <Ionicons name="chevron-back" size={18} color="#7B6EF8" />
+          <Ionicons name="chevron-back" size={18} color="#7B6EF8" importantForAccessibility="no" />
         </Pressable>
-        <Text className="text-base font-semibold text-ink flex-1" numberOfLines={1}>
+        <Text className="text-base font-semibold text-ink flex-1">
           {formatDateLong(shift.date)}
         </Text>
       </View>

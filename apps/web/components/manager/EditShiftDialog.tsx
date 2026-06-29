@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { TimePicker } from "@/components/manager/TimePicker"
 import { DateStepper } from "@/components/manager/DateStepper"
+import { grossShiftMinutes } from "@/lib/dateUtils"
 import type { Shift, JobRole } from "@/types"
 
 interface EditShiftDialogProps {
@@ -47,12 +48,18 @@ export function EditShiftDialog({
   const [selectedRole, setSelectedRole] = useState(shift.jobRole)
   const [notes, setNotes] = useState(shift.notes ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const skipAutoSuggestRef = useRef(false)
+  // Last start/end pair the break auto-suggest has seen. Pre-set on open so the
+  // suggestion only fires when the user edits the times.
+  const [prevBreakSuggestKey, setPrevBreakSuggestKey] = useState(`${startTime}__${endTime}`)
 
-  // Re-populate fields whenever the dialog opens for a different shift
-  useEffect(() => {
+  // Track when the dialog transitions from closed→open, or when shift prop changes,
+  // to re-populate fields during render (adjust state during render pattern).
+  const openKey = `${open ? 1 : 0}__${shift.id}`
+  const [prevOpenKey, setPrevOpenKey] = useState(openKey)
+  if (openKey !== prevOpenKey) {
+    setPrevOpenKey(openKey)
     if (open) {
-      skipAutoSuggestRef.current = true
+      setPrevBreakSuggestKey(`${shift.startTime}__${shift.endTime}`)
       setDate(shift.date)
       setStartTime(shift.startTime)
       setEndTime(shift.endTime)
@@ -61,21 +68,18 @@ export function EditShiftDialog({
       setNotes(shift.notes ?? "")
       setConfirmDelete(false)
     }
-  }, [open, shift])
+  }
 
-  // Auto-suggest break based on shift duration (only when user changes times, not on open)
-  useEffect(() => {
-    if (skipAutoSuggestRef.current) {
-      skipAutoSuggestRef.current = false
-      return
-    }
-    const [sh, sm] = startTime.split(":").map(Number)
-    const [eh, em] = endTime.split(":").map(Number)
-    const mins = (eh * 60 + em) - (sh * 60 + sm)
+  // Auto-suggest break based on shift duration (only when user changes times, not on
+  // open — the open path pre-sets prevBreakSuggestKey to the incoming shift's times).
+  const breakSuggestKey = `${startTime}__${endTime}`
+  if (breakSuggestKey !== prevBreakSuggestKey) {
+    setPrevBreakSuggestKey(breakSuggestKey)
+    const mins = grossShiftMinutes(startTime, endTime)
     if (mins < 360) setBreakMinutes("0")
     else if (mins < 540) setBreakMinutes("30")
     else setBreakMinutes("45")
-  }, [startTime, endTime])
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,10 +1,12 @@
 "use client"
 
 import { Building2, Users, Globe } from "lucide-react"
+import { JobRolesSection } from "@/components/manager/settings/JobRolesSection"
 import { StoreHoursSection } from "@/components/manager/settings/StoreHoursSection"
 import { ShiftTypesSection } from "@/components/manager/settings/ShiftTypesSection"
 import { TeamAccessSection } from "@/components/manager/settings/TeamAccessSection"
 import { ScheduleViewSection } from "@/components/manager/settings/ScheduleViewSection"
+import { TimeFormatSection } from "@/components/manager/settings/TimeFormatSection"
 import { CurrencySection } from "@/components/manager/settings/CurrencySection"
 import { DataRetentionSection } from "@/components/manager/settings/DataRetentionSection"
 import { FeaturesSection } from "@/components/manager/settings/FeaturesSection"
@@ -46,10 +48,12 @@ export default function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
+        <JobRolesSection />
         <StoreHoursSection />
         <ShiftTypesSection />
         <TeamAccessSection />
         <ScheduleViewSection />
+        <TimeFormatSection />
         <CurrencySection />
         <DataRetentionSection />
         <FeaturesSection />

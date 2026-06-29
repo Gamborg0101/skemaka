@@ -11,6 +11,9 @@ import { useOrg } from "@/lib/orgContext"
 import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel } from "@/lib/dateUtils"
 import type { AvailabilityRequest, Employee, Shift, Schedule } from "@/types"
 import { Skeleton } from "@/components/ui/skeleton"
+import { fetchAllPages } from "@/lib/pagination"
+
+type AvailabilitySubmission = NonNullable<AvailabilityRequest["submissions"]>[number]
 
 export default function AvailabilityPage() {
   const { orgId, jobRoles, shiftTemplates } = useOrg()
@@ -27,7 +30,10 @@ export default function AvailabilityPage() {
   const [shifts, setShifts] = useState<Shift[]>([])
   const [scheduleId, setScheduleId] = useState<string | null>(null)
 
-  const [loading, setLoading] = useState(true)
+  // initialLoaded tracks whether the first fetch (employees + all requests) is done.
+  // Using a boolean flag avoids calling setState synchronously at the top of an effect.
+  const [initialLoaded, setInitialLoaded] = useState(false)
+  const loading = !initialLoaded
   const [sending, setSending] = useState(false)
   const [bookDialog, setBookDialog] = useState<{
     open: boolean; employeeId: string; date: string; startTime: string; endTime: string
@@ -36,25 +42,23 @@ export default function AvailabilityPage() {
   // Load employees + all requests once
   useEffect(() => {
     if (!orgId) return
-    setLoading(true)
     Promise.all([
-      fetch(`/api/orgs/${orgId}/employees`).then((r) => r.json()),
-      fetch(`/api/orgs/${orgId}/availability`).then((r) => r.json()),
-    ]).then(([empRes, reqRes]) => {
-      if (empRes.data) setEmployees(empRes.data)
-      const reqs: AvailabilityRequest[] = reqRes.data ?? []
+      fetchAllPages<Employee>(`/api/orgs/${orgId}/employees`),
+      fetchAllPages<AvailabilityRequest>(`/api/orgs/${orgId}/availability`),
+    ]).then(([emps, reqs]) => {
+      setEmployees(emps)
       setAllRequests(reqs)
 
       // Jump to the most recent request's week if one exists
       if (reqs[0]?.weekStart) setWeekStart(reqs[0].weekStart)
 
-      setLoading(false)
-    }).catch(() => setLoading(false))
+      setInitialLoaded(true)
+    }).catch(() => setInitialLoaded(true))
   }, [orgId])
 
   // Whenever the week changes (after initial load), load the matching request + schedule
   useEffect(() => {
-    if (!orgId || loading) return
+    if (!orgId || !initialLoaded) return
     let cancelled = false
 
     const matched = allRequests.find((r) => r.weekStart === weekStart) ?? null
@@ -64,9 +68,10 @@ export default function AvailabilityPage() {
       let fullRequest: AvailabilityRequest | null = matched
       if (matched) {
         try {
-          const subRes = await fetch(`/api/orgs/${orgId}/availability/${matched.id}/submissions`)
-          const subJson = await subRes.json()
-          if (!cancelled) fullRequest = { ...matched, submissions: subJson.data ?? [] }
+          const subs = await fetchAllPages<AvailabilitySubmission>(
+            `/api/orgs/${orgId}/availability/${matched.id}/submissions`,
+          )
+          if (!cancelled) fullRequest = { ...matched, submissions: subs }
         } catch { /* leave request without submissions */ }
       }
 
@@ -86,7 +91,7 @@ export default function AvailabilityPage() {
 
     load()
     return () => { cancelled = true }
-  }, [orgId, weekStart, allRequests])
+  }, [orgId, weekStart, allRequests, initialLoaded])
 
   const navigateWeek = (dir: -1 | 1) => {
     setWeekStart((ws) => addDays(ws, dir * 7))

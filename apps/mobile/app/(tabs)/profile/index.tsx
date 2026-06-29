@@ -1,9 +1,9 @@
-import { View, Text, Alert } from "react-native"
+import { View, Text } from "react-native"
 import { Screen } from "@/components/layout/Screen"
 import { Card } from "@/components/ui/Card"
-import { Button } from "@/components/ui/Button"
 import { Divider } from "@/components/ui/Divider"
 import { ErrorState } from "@/components/feedback/ErrorState"
+import { AccountActions } from "@/components/account/AccountActions"
 import { useAuthStore } from "@/store/authStore"
 import { useCurrentUser } from "@/hooks/useEmployee"
 
@@ -19,7 +19,7 @@ function InfoRow({ label, value }: InfoRowProps) {
 }
 
 export default function ProfileScreen() {
-  const { employee, signOut } = useAuthStore()
+  const { employee } = useAuthStore()
   const { isError, refetch } = useCurrentUser()
 
   if (isError) {
@@ -38,13 +38,6 @@ export default function ProfileScreen() {
     .slice(0, 2)
     .map((n) => n[0]?.toUpperCase() ?? "")
     .join("") ?? "?"
-
-  function handleSignOut() {
-    Alert.alert("Sign out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: () => void signOut() },
-    ])
-  }
 
   return (
     <Screen scroll>
@@ -72,14 +65,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Actions */}
-        <Button
-          variant="danger"
-          size="md"
-          fullWidth
-          onPress={handleSignOut}
-        >
-          Sign Out
-        </Button>
+        <AccountActions />
       </View>
     </Screen>
   )

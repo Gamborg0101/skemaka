@@ -6,13 +6,14 @@ Staff scheduling SaaS for restaurants. Managers build weekly rosters, assign shi
 
 ## Features
 
-- **Schedule builder** — drag-and-drop weekly timeline + grid view; 1/3/5/7-day range selector; published/draft state with SMS notifications
+- **Schedule builder** — drag-and-drop weekly timeline + grid view; 1/3/5/7-day range selector; published/draft state with SMS notifications. Editing, adding, or deleting a shift on a published roster returns it to draft, so changes are deliberately re-published (and re-notified) rather than going out silently.
 - **Employee management** — profiles, hourly wages, contracted hours, job roles, invite links
 - **Time-off requests** — employees request leave; managers approve/deny with SMS notifications; approved days grey out in the schedule grid
 - **Availability collection** — token-based forms sent by email; responses aggregated in a weekly grid
-- **Labour cost report** — scheduled hours × wages; CSV payroll export
+- **Labour cost report** — scheduled hours × wages, with overnight shifts counted correctly; CSV payroll export
 - **Onboarding wizard** — 3-step flow: workspace → team → done
-- **Mobile-responsive** — bottom nav + per-day card view on phones; icon sidebar on tablets
+- **Native mobile app** — Expo / React Native app for employees (and managers on the go), sharing types and API hooks with the web app
+- **Mobile-responsive web** — bottom nav + per-day card view on phones; icon sidebar on tablets
 
 ---
 
@@ -20,7 +21,9 @@ Staff scheduling SaaS for restaurants. Managers build weekly rosters, assign shi
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router) |
+| Monorepo | Turborepo + pnpm workspaces |
+| Web framework | Next.js 16 (App Router) |
+| Mobile | Expo / React Native + NativeWind |
 | Language | TypeScript |
 | Database | Neon PostgreSQL (serverless) |
 | ORM | Prisma 7 |
@@ -32,7 +35,7 @@ Staff scheduling SaaS for restaurants. Managers build weekly rosters, assign shi
 | Billing | Stripe |
 | Rate limiting | Upstash Redis |
 | Tests | Vitest |
-| Deployment | Vercel |
+| Deployment | Vercel (web) |
 
 ---
 
@@ -41,6 +44,7 @@ Staff scheduling SaaS for restaurants. Managers build weekly rosters, assign shi
 ### Prerequisites
 
 - Node.js 20+
+- [pnpm](https://pnpm.io) 10+ (this repo is a pnpm workspace — npm/yarn will not resolve the internal packages)
 - A Neon database (or any Postgres instance)
 - Accounts for: Resend, Twilio, Stripe, Upstash Redis (all optional for local dev with mocked calls)
 
@@ -49,20 +53,25 @@ Staff scheduling SaaS for restaurants. Managers build weekly rosters, assign shi
 ```bash
 git clone https://github.com/Gamborg0101/skemaka.git
 cd skemaka
-npm install
+pnpm install
 
-# Copy and fill in env vars
-cp .env.example .env.local
+# Copy and fill in env vars (the web app reads from apps/web/.env.local)
+cp apps/web/.env.example apps/web/.env.local
 
-# Push schema + seed demo data
-npx prisma migrate deploy
+# Push schema + seed demo data (Prisma always runs from apps/web)
+cd apps/web
+npx prisma db push
 npx prisma db seed
+cd ../..
 
-# Start dev server
-npm run dev
+# Start the web dev server (Next.js)
+pnpm dev:web
+
+# …or the mobile dev server (Expo)
+pnpm dev:mobile
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+The web app runs at [http://localhost:3000](http://localhost:3000). `pnpm dev` starts every app via Turborepo.
 
 ### Environment variables
 
@@ -88,6 +97,21 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Project structure
 
+This is a Turborepo + pnpm monorepo:
+
+```
+apps/
+  web/                # Next.js 16 web app (managers + employee portal)
+  mobile/             # Expo / React Native app
+
+packages/
+  types/              # @skemaka/types — shared TypeScript interfaces
+  api/                # @skemaka/api   — ApiClient + TanStack Query hooks
+  ui/                 # @skemaka/ui    — shared design tokens + cn()
+```
+
+Inside `apps/web/`:
+
 ```
 app/
   (manager)/          # Manager-facing pages (schedule, employees, costs, time-off, …)
@@ -108,10 +132,11 @@ lib/
   apiGuard.ts         # requireOrgMember() — fast JWT check + DB fallback
   serialize.ts        # Prisma → plain-object helpers
   sms.ts              # Twilio wrappers
-  dateUtils.ts        # getMondayOfWeek, addDays, getISOWeek
+  dateUtils.ts        # getMondayOfWeek, addDays, getISOWeek, grossShiftMinutes
   validate.ts         # Input validation helpers
   orgContext.tsx      # OrgProvider + useOrg() hook
   prisma.ts           # Prisma client (Neon adapter, 30 s timeout)
+  services/           # Domain logic (scheduleService, employeeService, …)
 
 prisma/
   schema.prisma       # Database schema
@@ -122,26 +147,37 @@ prisma/
 
 ## Scripts
 
+Run from the repo root — Turborepo fans these out across the workspace:
+
 ```bash
-npm run dev        # Start dev server
-npm run build      # Production build
-npm run start      # Start production server
-npm run lint       # ESLint
-npm run test       # Vitest (run once)
-npm run test:watch # Vitest (watch mode)
+pnpm dev           # Start all dev servers
+pnpm dev:web       # Web only (Next.js)
+pnpm dev:mobile    # Mobile only (Expo)
+pnpm build         # Production build (all apps)
+pnpm lint          # ESLint
+pnpm typecheck     # tsc --noEmit across every package
+pnpm test          # Vitest (run once)
+```
+
+App-specific scripts live in each package — e.g. from `apps/web/`:
+
+```bash
+pnpm start         # Start the production Next.js server
+pnpm test:watch    # Vitest (watch mode)
+pnpm screenshots   # Regenerate UI screenshots
 ```
 
 ---
 
 ## Deployment
 
-Designed for Vercel + Neon. Set all env vars in the Vercel dashboard, then:
+The **web app** is designed for Vercel + Neon. Set all env vars in the Vercel dashboard, point the project at `apps/web`, then:
 
 ```bash
 vercel deploy --prod
 ```
 
-Prisma migrations run via `prisma migrate deploy` in the build command or a pre-deploy script.
+Prisma migrations run via `prisma migrate deploy` in the build command or a pre-deploy script. The **mobile app** is built and released separately through Expo.
 
 ---
 

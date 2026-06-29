@@ -46,12 +46,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
-  const body = await req.json() as {
+  let body: {
     employeeId?: string; breakMinutes?: number; note?: string
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
   if (body.breakMinutes !== undefined && !isNonNegativeInt(body.breakMinutes)) {

@@ -1,101 +1,81 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
-import { Check } from "lucide-react"
+import {
+  Check, X, ShieldCheck, Lock, Download, AlertTriangle, GripVertical, Send,
+  Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare,
+} from "lucide-react"
+import { PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS } from "@/lib/pricing"
+import { PricingCalculator } from "@/components/marketing/PricingCalculator"
+import { SchedulePreview } from "@/components/marketing/SchedulePreview"
+import { DEMO_FLAGS, demoWeekSummary } from "@/lib/demo/demoData"
 
-// ── Pricing constants — update these to change what the landing page shows ────
-const PLAN_PRICE_MONTHLY = 49
-const PLAN_CURRENCY = "€"
-const TRIAL_DAYS = 14
+const cost = demoWeekSummary()
 
-// ── Plan feature list ─────────────────────────────────────────────────────────
-const PLAN_FEATURES = [
-  "Unlimited employees",
-  "Drag-and-drop weekly scheduling",
-  "Live labour cost tracking",
-  "Availability & time-off requests",
-  "Employee shift portal",
-  "Payroll & cost CSV exports",
-  "Schedule publishing",
-  "Priority support",
+// ── Trust signals ──────────────────────────────────────────────────────────────
+const TRUST_SIGNALS = [
+  { icon: Lock, title: "Payments handled by Stripe", description: "Card details never touch our servers." },
+  { icon: ShieldCheck, title: "GDPR-compliant, EU-hosted", description: "Your team's data stays in the EU." },
+  { icon: Download, title: "Your data is yours", description: "Export to CSV or delete everything, anytime." },
 ]
 
-// ── How it works steps ────────────────────────────────────────────────────────
-const HOW_IT_WORKS = [
-  {
-    step: "1",
-    title: "Collect availability",
-    description: "Send a link to your team. Staff fill in when they're free before you ever open the schedule.",
-  },
-  {
-    step: "2",
-    title: "Build the schedule",
-    description: "Drag employees onto the timeline. Costs update live so you never go over budget.",
-  },
-  {
-    step: "3",
-    title: "Publish to your team",
-    description: "One click and every employee sees their shifts on their phone — no printing, no group chats.",
-  },
+// ── The three things people actually use ───────────────────────────────────────
+const BENEFITS = [
+  { icon: Coins, title: "Live wage cost", text: "The week's labour total updates as you place each shift." },
+  { icon: MessageSquare, title: "SMS when you publish", text: "Staff get their shifts texted to them — no group chat." },
+  { icon: CalendarCheck, title: "Availability & time-off", text: "Staff send when they can work; requests land in one place." },
+  { icon: AlertTriangle, title: "Conflict warnings", text: "Rostered someone who's off? Skemaka flags it before publish." },
+  { icon: FileSpreadsheet, title: "CSV for payroll", text: "Export hours and pay for the bookkeeper in one click." },
+  { icon: Smartphone, title: "Free staff app", text: "iPhone and Android. Staff see shifts and clock in." },
 ]
 
-// ── Feature showcase items ─────────────────────────────────────────────────────
-const FEATURE_SHOWCASE = [
-  {
-    title: "Drag-and-drop scheduling",
-    description:
-      "Build the week's rota in minutes. Move shifts, fill gaps, and publish to your whole team in one click.",
-    screenshot: "/screenshots/01-schedule.png",
-    alt: "Skemaka schedule grid showing weekly rota",
-  },
-  {
-    title: "Live labour costs",
-    description:
-      "Wage spend updates as you place each shift — so you never go over budget. Export to CSV for payroll in one click.",
-    screenshot: "/screenshots/04-costs.png",
-    alt: "Skemaka labour costs overview",
-  },
-  {
-    title: "Availability & time-off",
-    description:
-      "Staff submit availability and time-off requests. You approve or deny in one place — they're automatically blocked from conflicting shifts.",
-    screenshot: "/screenshots/03-availability.png",
-    alt: "Skemaka availability requests screen",
-  },
+// ── Old way vs Skemaka (the contrast) ──────────────────────────────────────────
+const OLD_WAY = [
+  "Build it in a spreadsheet, then photograph it into the group chat",
+  "“Can anyone cover Saturday?” — sent to twelve, one replies",
+  "Find out you overspent on wages only once payroll lands",
+  "Put someone on a day they'd already booked off",
+]
+const NEW_WAY = [
+  "Drag names onto the week — copy last week and tweak in seconds",
+  "Publish once; everyone gets their shifts by text and in the app",
+  "Watch the wage total add up before you commit to the week",
+  "Skemaka flags time-off and availability clashes before you publish",
 ]
 
-// ── Browser frame mockup ──────────────────────────────────────────────────────
-function BrowserFrame({ src, alt }: { src: string; alt: string }) {
-  return (
-    <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
-      {/* Browser chrome */}
-      <div className="flex items-center gap-1.5 bg-[#1e2433] px-4 py-3 border-b border-white/5">
-        <span className="size-3 rounded-full bg-red-500/80" />
-        <span className="size-3 rounded-full bg-yellow-500/80" />
-        <span className="size-3 rounded-full bg-green-500/80" />
-        <div className="ml-4 flex-1 bg-white/5 rounded-md h-5 max-w-xs" />
-      </div>
-      {/* Screenshot */}
-      <div className="relative w-full aspect-[16/9] bg-slate-800">
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          className="object-cover object-top"
-          priority
-          sizes="(max-width: 768px) 100vw, 896px"
-        />
-      </div>
-    </div>
-  )
-}
+// ── FAQ ─────────────────────────────────────────────────────────────────────────
+const FAQS = [
+  {
+    q: "How do my staff get their shifts?",
+    a: "You publish, and everyone gets a text with their shifts. They can also open the free app or a web link — no setup from them, no printing.",
+  },
+  {
+    q: "Do staff need to create an account?",
+    a: "No. You add them, they get an invite link. They sign in with Google or Apple and they're in — most are set up in under a minute.",
+  },
+  {
+    q: "What does it actually cost?",
+    a: `${PLAN_CURRENCY}${PRICE_PER_EMPLOYEE_MONTHLY} per active employee per month. Deactivate someone for the season and you stop paying for them. No tiers, no setup fee.`,
+  },
+  {
+    q: "Can I export hours for payroll?",
+    a: "Yes — the labour cost view exports to CSV with hours, wage, and total pay per person, ready for your bookkeeper or payroll software.",
+  },
+  {
+    q: "Is there a contract?",
+    a: `No. ${TRIAL_DAYS} days free with no card, then month to month. Cancel whenever — you keep access until the end of the period.`,
+  },
+  {
+    q: "I run more than one venue.",
+    a: "Each venue is its own workspace today. Multi-venue under one login is on the way — get in touch and we'll set you up.",
+  },
+]
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export const metadata = {
-  title: "Skemaka — Staff scheduling, done right",
+  title: "Skemaka — Rota & shift scheduling for restaurants",
   description:
-    "Build weekly rosters, track labour costs, and collect staff availability. Scheduling built for restaurants and hospitality teams.",
+    "Build the week's rota, see the wage cost before you publish, and text shifts to your team. Scheduling built for restaurants and cafés.",
 }
 
 export default async function HomePage() {
@@ -107,261 +87,327 @@ export default async function HomePage() {
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="bg-slate-900 relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div className="pointer-events-none absolute -top-40 -left-40 size-96 rounded-full bg-blue-600/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 right-1/3 size-96 rounded-full bg-indigo-600/10 blur-3xl" />
+        <div className="pointer-events-none absolute -top-40 left-1/4 size-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
 
-        {/* Nav */}
         <nav className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <span className="text-lg font-bold text-white tracking-tight">Skemaka</span>
-          <Link
-            href="/login"
-            className="text-sm font-medium text-white/60 hover:text-white transition-colors"
-          >
-            Sign in →
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link href="/demo" className="text-sm font-medium text-white/60 hover:text-white transition-colors">See the demo</Link>
+            <Link href="/login" className="text-sm font-medium text-white/60 hover:text-white transition-colors">Sign in →</Link>
+          </div>
         </nav>
 
-        {/* Copy */}
-        <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 mb-8">
-            <span className="size-1.5 rounded-full bg-green-400" />
-            <span className="text-xs font-medium text-white/50">
-              {TRIAL_DAYS}-day free trial · then {PLAN_CURRENCY}{PLAN_PRICE_MONTHLY}/mo · No credit card required
-            </span>
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto">
-            Build your week&apos;s rota<br className="hidden sm:block" /> in minutes.
+        {/* Centred headline */}
+        <div className="relative max-w-3xl mx-auto px-6 pt-12 text-center">
+          <p className="text-sm font-semibold text-blue-400 mb-4">Rota software for restaurants &amp; cafés</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-[1.1] tracking-tight">
+            Do the rota in 20 minutes —<br className="hidden sm:block" /> not on a Sunday night.
           </h1>
-          <p className="mt-5 text-lg text-slate-400 max-w-xl mx-auto leading-relaxed">
-            No spreadsheets, no WhatsApp groups. Skemaka gives your team a live rota —
-            with costs, availability, and time-off all in one place.
+          <p className="mt-5 text-lg text-slate-400 leading-relaxed max-w-xl mx-auto">
+            Build the week, watch the wage cost add up as you go, then text everyone their
+            shifts. Instead of a spreadsheet and chasing cover on WhatsApp.
           </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/login"
-              className="w-full sm:w-auto inline-flex items-center justify-center h-11 px-8 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors shadow-sm"
-            >
+          <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/login" className="inline-flex items-center justify-center h-11 px-7 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
               Start free trial
             </Link>
-            <Link
-              href="#how-it-works"
-              className="w-full sm:w-auto inline-flex items-center justify-center h-11 px-8 rounded-lg border border-white/15 text-sm font-medium text-white/70 hover:text-white hover:border-white/30 transition-colors"
-            >
-              See how it works
+            <Link href="/demo" className="inline-flex items-center justify-center h-11 px-7 rounded-lg border border-white/15 text-sm font-medium text-white/80 hover:text-white hover:border-white/30 transition-colors">
+              See the demo restaurant →
             </Link>
           </div>
-        </div>
-
-        {/* Browser frame mockup */}
-        <div className="relative max-w-4xl mx-auto px-6 pt-10 pb-20">
-          <BrowserFrame
-            src="/screenshots/07-schedule-timeline.png"
-            alt="Skemaka schedule timeline view"
-          />
-        </div>
-      </div>
-
-      {/* ── Social proof strip ────────────────────────────────────────────── */}
-      <div className="border-b border-gray-100 bg-white py-6">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-sm font-medium text-gray-400 uppercase tracking-widest mb-3">
-            Trusted by restaurant teams across Europe
+          <p className="mt-4 text-xs text-slate-500">
+            {TRIAL_DAYS} days free · then {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY} per active employee/mo · no card needed
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-gray-500 text-sm">
-            <span className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900">500+</span> shifts scheduled weekly
-            </span>
-            <span className="hidden sm:block text-gray-200">|</span>
-            <span className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900">50+</span> teams onboarded
-            </span>
-            <span className="hidden sm:block text-gray-200">|</span>
-            <span className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900">{TRIAL_DAYS}-day</span> free trial
-            </span>
+        </div>
+
+        {/* Annotated product preview — small cards tell you what you're seeing */}
+        <div className="relative max-w-2xl mx-auto px-6 pt-12 pb-8">
+          <div className="relative">
+            <SchedulePreview />
+            <div className="hidden sm:flex absolute -right-5 top-9 items-center gap-2 rounded-xl bg-white shadow-xl ring-1 ring-black/5 px-3 py-2">
+              <Coins className="size-4 text-emerald-600 shrink-0" />
+              <div className="text-left">
+                <p className="text-[11px] font-semibold text-gray-900 leading-none">Wage cost, live</p>
+                <p className="text-[10px] text-gray-400 mt-1">updates as you add shifts</p>
+              </div>
+            </div>
+            <div className="hidden sm:flex absolute -left-5 bottom-10 items-center gap-2 rounded-xl bg-white shadow-xl ring-1 ring-black/5 px-3 py-2">
+              <AlertTriangle className="size-4 text-red-500 shrink-0" />
+              <div className="text-left">
+                <p className="text-[11px] font-semibold text-gray-900 leading-none">Conflict caught</p>
+                <p className="text-[10px] text-gray-400 mt-1">Tom&apos;s on leave — flagged</p>
+              </div>
+            </div>
           </div>
+
+          {/* Plain legend so the colours are obvious */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-amber-400" /> Kitchen</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-blue-400" /> Front of house</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-purple-400" /> Bar</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded ring-2 ring-red-500" /> Conflict</span>
+          </div>
+        </div>
+
+        <div className="relative pb-16 text-center">
+          <p className="text-xs text-slate-500">Replaces the spreadsheet, the WhatsApp group, and the printout on the fridge.</p>
         </div>
       </div>
 
-      {/* ── How it works ──────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="bg-gray-50 py-24 border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-              How it works
-            </h2>
-            <p className="mt-3 text-base text-gray-500 max-w-lg mx-auto">
-              From blank canvas to published schedule in three simple steps.
-            </p>
-          </div>
+      {/* ── Trust strip ───────────────────────────────────────────────────── */}
+      <div className="border-b border-gray-100 bg-white py-8">
+        <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {TRUST_SIGNALS.map(({ icon: Icon, title, description }) => (
+            <div key={title} className="flex items-start gap-3">
+              <Icon className="size-5 text-slate-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{title}</p>
+                <p className="text-xs text-gray-500">{description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
-            {HOW_IT_WORKS.map(({ step, title, description }) => (
-              <div key={step} className="flex flex-col items-center text-center md:items-start md:text-left">
-                <div className="flex items-center justify-center size-14 rounded-2xl bg-slate-900 text-white text-2xl font-bold mb-5 shrink-0">
-                  {step}
+      {/* ── The problem ────────────────────────────────────────────────────── */}
+      <section className="py-20 border-b border-gray-100">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+            The rota shouldn&apos;t eat your evening
+          </h2>
+          <p className="mt-4 text-lg text-gray-500 leading-relaxed">
+            Most places still run it off a spreadsheet and a group chat. So every week you&apos;re
+            guessing who&apos;s free, missing that someone booked Friday off, and only finding out
+            you went over on wages once payroll lands.
+          </p>
+          <div className="mt-10 grid md:grid-cols-2 gap-6">
+            {/* The old way */}
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-7">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                The Sunday-night way
+              </p>
+              <ul className="mt-5 space-y-3.5">
+                {OLD_WAY.map((line) => (
+                  <li key={line} className="flex items-start gap-3 text-gray-500">
+                    <X className="size-4 text-gray-300 shrink-0 mt-0.5" />
+                    <span className="text-sm leading-relaxed">{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* With Skemaka */}
+            <div className="rounded-2xl border-2 border-slate-900 bg-white p-7 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-900">
+                With Skemaka
+              </p>
+              <ul className="mt-5 space-y-3.5">
+                {NEW_WAY.map((line) => (
+                  <li key={line} className="flex items-start gap-3 text-gray-800">
+                    <Check className="size-4 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-sm leading-relaxed">{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How a week works ───────────────────────────────────────────────── */}
+      <section className="bg-gray-50 py-20 border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">How a week works</h2>
+          <div className="mt-12 grid md:grid-cols-3 gap-8">
+            {[
+              { n: 1, icon: CalendarCheck, t: "Staff send availability", d: "They tap the days they can work from a link. No more asking around." },
+              { n: 2, icon: GripVertical, t: "You build the rota", d: "Drag names onto days. The wage total adds up live, so an expensive week shows up before you publish it." },
+              { n: 3, icon: Send, t: "Publish — everyone knows", d: "One tap texts everyone their shifts and puts them in the app. Nothing on the fridge." },
+            ].map(({ n, icon: Icon, t, d }) => (
+              <div key={n} className="rounded-2xl border border-gray-200 bg-white p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="inline-flex items-center justify-center size-9 rounded-lg bg-slate-900 text-white">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Step {n}</span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
+                <h3 className="text-base font-semibold text-gray-900">{t}</h3>
+                <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Feature showcase ──────────────────────────────────────────────── */}
-      <section className="py-24">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-              Everything you need to run a tight schedule
-            </h2>
-            <p className="mt-3 text-base text-gray-500 max-w-lg mx-auto">
-              One tool for the full scheduling workflow — from collecting availability to exporting hours for payroll.
-            </p>
+      {/* ── Solution deep-dives (live visuals, not screenshots) ────────────── */}
+      <section className="py-20">
+        <div className="max-w-5xl mx-auto px-6 space-y-20">
+
+          {/* Build the rota */}
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Build the rota by dragging names</h3>
+              <p className="mt-3 text-gray-500 leading-relaxed">
+                Drop people onto shifts. Copy last week and tweak it. It&apos;s the bit you do every
+                week — so it&apos;s built to be fast, not clever.
+              </p>
+            </div>
+            <SchedulePreview />
           </div>
 
-          <div className="space-y-28">
-            {FEATURE_SHOWCASE.map(({ title, description, screenshot, alt }, index) => {
-              const isEven = index % 2 === 0
-              return (
-                <div
-                  key={title}
-                  className={`flex flex-col gap-12 items-center ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"}`}
-                >
-                  {/* Text */}
-                  <div className="flex-1 lg:max-w-md">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 mb-5">
-                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
-                        Feature {index + 1}
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 tracking-tight mb-4">{title}</h3>
-                    <p className="text-base text-gray-500 leading-relaxed">{description}</p>
-                    <Link
-                      href="/login"
-                      className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900 hover:text-slate-600 transition-colors"
-                    >
-                      Try it free →
-                    </Link>
-                  </div>
-
-                  {/* Screenshot */}
-                  <div className="flex-1 w-full">
-                    <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-lg shadow-gray-200/80">
-                      <div className="relative w-full aspect-[16/10] bg-gray-100">
-                        <Image
-                          src={screenshot}
-                          alt={alt}
-                          fill
-                          className="object-cover object-top"
-                          sizes="(max-width: 1024px) 100vw, 560px"
-                        />
-                      </div>
-                    </div>
-                  </div>
+          {/* Wage cost */}
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div className="lg:order-2">
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Know the cost before you publish</h3>
+              <p className="mt-3 text-gray-500 leading-relaxed">
+                Every shift adds to the running wage total. Spot the heavy Saturday while you can
+                still change it — not when payroll lands.
+              </p>
+            </div>
+            <div className="lg:order-1 grid grid-cols-3 gap-3">
+              {[
+                { label: "This week", value: `${cost.totalHours}h` },
+                { label: "Wage cost", value: `${PLAN_CURRENCY}${cost.totalCost.toLocaleString()}` },
+                { label: "Avg rate", value: `${PLAN_CURRENCY}${cost.avgRate}` },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-4 text-center">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{s.label}</p>
+                  <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums">{s.value}</p>
                 </div>
-              )
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Catch problems */}
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Catch problems before staff do</h3>
+              <p className="mt-3 text-gray-500 leading-relaxed">
+                Put someone on a day they&apos;re off, or one they marked unavailable, and Skemaka
+                tells you — before you publish, not after the complaint.
+              </p>
+            </div>
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
+                <AlertTriangle className="size-4" /> {DEMO_FLAGS.length} things to fix before publishing
+              </p>
+              <ul className="mt-2 space-y-1.5 text-sm text-red-700">
+                {DEMO_FLAGS.map((f) => (
+                  <li key={`${f.staffId}:${f.day}`}>• {f.note}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Benefit grid ───────────────────────────────────────────────────── */}
+      <section className="bg-gray-50 py-20 border-y border-gray-100">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">
+            Everything a restaurant rota actually needs
+          </h2>
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
+            {BENEFITS.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="flex items-start gap-3">
+                <span className="shrink-0 size-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                  <Icon className="size-4 text-slate-700" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{title}</p>
+                  <p className="mt-0.5 text-sm text-gray-500 leading-relaxed">{text}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── Pricing ─────────────────────────────────────────────────────────── */}
-      <section className="bg-gray-50 border-t border-b border-gray-100 py-24">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-              Simple, transparent pricing
-            </h2>
+      <section className="py-20 border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Pay for who&apos;s working</h2>
             <p className="mt-3 text-base text-gray-500">
-              One plan. Everything included. Cancel anytime.
+              <span className="font-semibold text-gray-900">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY} per active employee / month.</span>{" "}
+              No tiers, no setup fee, cancel anytime.
             </p>
           </div>
 
-          <div className="max-w-sm mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="bg-slate-900 px-8 py-8 text-center relative overflow-hidden">
-              <div
-                className="pointer-events-none absolute inset-0 opacity-40"
-                style={{
-                  backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
-                  backgroundSize: "20px 20px",
-                }}
-              />
-              <p className="relative text-xs font-semibold uppercase tracking-widest text-white/40 mb-3">
-                All-inclusive
-              </p>
-              <div className="relative flex items-end justify-center gap-1">
-                <span className="text-5xl font-bold text-white tabular-nums">
-                  {PLAN_CURRENCY}{PLAN_PRICE_MONTHLY}
-                </span>
-                <span className="text-white/40 pb-1.5 text-base">/month</span>
-              </div>
-              <p className="relative mt-2 text-sm text-white/35">
-                {TRIAL_DAYS} days free, then {PLAN_CURRENCY}{PLAN_PRICE_MONTHLY}/mo
-              </p>
-            </div>
-
-            <div className="px-8 py-7 space-y-3">
-              {PLAN_FEATURES.map((feat) => (
-                <div key={feat} className="flex items-center gap-3">
-                  <Check className="size-4 text-green-600 shrink-0" />
-                  <span className="text-sm text-gray-700">{feat}</span>
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <div className="bg-slate-900 px-8 py-7 text-center">
+                <div className="flex items-end justify-center gap-1">
+                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}</span>
+                  <span className="text-white/40 pb-1.5 text-base">/ employee / mo</span>
                 </div>
-              ))}
+                <p className="mt-2 text-sm text-white/35">{TRIAL_DAYS} days free — billed only for active staff</p>
+              </div>
+              <div className="px-8 py-6 space-y-2.5">
+                {[
+                  "Only pay for active staff",
+                  "Unlimited rotas, shifts & history",
+                  "Availability, time-off & SMS alerts",
+                  "Labour cost + CSV payroll export",
+                  "Free staff app (iOS & Android)",
+                ].map((f) => (
+                  <div key={f} className="flex items-center gap-3">
+                    <Check className="size-4 text-green-600 shrink-0" />
+                    <span className="text-sm text-gray-700">{f}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="px-8 pb-7">
+                <Link href="/login" className="flex w-full h-11 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white hover:bg-slate-800 transition-colors">
+                  Start {TRIAL_DAYS}-day free trial
+                </Link>
+                <p className="mt-3 text-center text-xs text-gray-400">No credit card required</p>
+              </div>
             </div>
 
-            <div className="px-8 pb-8">
-              <Link
-                href="/login"
-                className="flex w-full h-11 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
-              >
-                Start {TRIAL_DAYS}-day free trial
-              </Link>
-              <p className="mt-3 text-center text-xs text-gray-400">
-                No credit card required
-              </p>
+            <div className="lg:pt-2">
+              <p className="text-sm font-semibold text-gray-900 mb-3">What will it cost me?</p>
+              <PricingCalculator />
             </div>
           </div>
         </div>
       </section>
 
+      {/* ── FAQ ─────────────────────────────────────────────────────────────── */}
+      <section className="py-20">
+        <div className="max-w-2xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center mb-10">
+            Questions owners ask
+          </h2>
+          <div className="divide-y divide-gray-100 border-y border-gray-100">
+            {FAQS.map(({ q, a }) => (
+              <details key={q} className="group py-4">
+                <summary className="flex items-center justify-between cursor-pointer list-none">
+                  <span className="text-sm font-semibold text-gray-900 pr-4">{q}</span>
+                  <span className="text-gray-400 group-open:rotate-45 transition-transform text-lg leading-none">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-gray-500 leading-relaxed">{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Bottom CTA ────────────────────────────────────────────────────── */}
-      <section className="bg-slate-900 relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div className="pointer-events-none absolute -top-40 right-0 size-96 rounded-full bg-blue-600/10 blur-3xl" />
-        <div className="relative max-w-3xl mx-auto px-6 py-24 text-center">
-          <h2 className="text-4xl font-bold text-white tracking-tight">
-            Ready to stop scheduling on WhatsApp?
+      <section className="bg-slate-900">
+        <div className="max-w-3xl mx-auto px-6 py-20 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+            Get next week&apos;s rota off WhatsApp.
           </h2>
           <p className="mt-4 text-lg text-slate-400">
-            Start your {TRIAL_DAYS}-day free trial. No credit card required.
+            Try it on the demo restaurant, or start free with your own team.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/login"
-              className="w-full sm:w-auto inline-flex items-center justify-center h-12 px-10 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors shadow-sm"
-            >
-              Get started free
+            <Link href="/login" className="inline-flex items-center justify-center h-12 px-10 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
+              Start free trial
             </Link>
-            <p className="text-sm text-slate-500">
-              {TRIAL_DAYS} days free · then {PLAN_CURRENCY}{PLAN_PRICE_MONTHLY}/mo
-            </p>
+            <Link href="/demo" className="inline-flex items-center justify-center h-12 px-10 rounded-lg border border-white/15 text-sm font-medium text-white/80 hover:text-white hover:border-white/30 transition-colors">
+              See the demo →
+            </Link>
           </div>
         </div>
       </section>
@@ -371,6 +417,7 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
           <span className="font-semibold text-gray-900 tracking-tight">Skemaka</span>
           <nav className="flex items-center gap-6">
+            <Link href="/demo" className="hover:text-gray-600 transition-colors">Demo</Link>
             <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
           </nav>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
-import { isPositiveFiniteNumber, isNonNegativeInt, parsePaginationParams } from "@/lib/validate"
+import { isValidWage, isValidEmail, isNonNegativeInt, parsePaginationParams } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as employeeService from "@/lib/services/employeeService"
 
@@ -17,7 +17,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   if (managerCheck) return managerCheck.error
 
   const pagination = parsePaginationParams(req.nextUrl, { limit: 100, maxLimit: 500 })
-  const result = await employeeService.listEmployees(orgId, pagination)
+  const status = req.nextUrl.searchParams.get("status")
+  const filter =
+    status === "active" ? { isActive: true } : status === "inactive" ? { isActive: false } : undefined
+  const result = await employeeService.listEmployees(orgId, pagination, filter)
   return NextResponse.json(
     result,
     { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } },
@@ -31,13 +34,18 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  const body = await req.json() as {
+  let body: {
     name?: string; email?: string; phone?: string
     jobRole?: string; hourlyWage?: number; notes?: string
     employmentType?: string; contractedHours?: number
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
   const { name, email, jobRole, hourlyWage, phone, notes, employmentType, contractedHours } = body
 
@@ -47,11 +55,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       { status: 400 },
     )
   }
-  if (!isPositiveFiniteNumber(hourlyWage)) {
-    return NextResponse.json({ error: "hourlyWage must be a positive number" }, { status: 400 })
+  if (!isValidWage(hourlyWage)) {
+    return NextResponse.json({ error: "hourlyWage must be a positive number up to 100000" }, { status: 400 })
   }
   if (name.length > 200) return NextResponse.json({ error: "name must be at most 200 characters" }, { status: 400 })
-  if (email.length > 254) return NextResponse.json({ error: "email must be at most 254 characters" }, { status: 400 })
+  if (!isValidEmail(email)) return NextResponse.json({ error: "email must be a valid email address" }, { status: 400 })
   if (phone && phone.length > 20) return NextResponse.json({ error: "phone must be at most 20 characters" }, { status: 400 })
   if (notes && notes.length > 5000) return NextResponse.json({ error: "notes must be at most 5000 characters" }, { status: 400 })
   if (jobRole.length > 100) return NextResponse.json({ error: "jobRole must be at most 100 characters" }, { status: 400 })

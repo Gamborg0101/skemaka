@@ -19,9 +19,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const body = await req.json() as {
+  let body: {
     clockIn?: string; clockOut?: string | null
     breakMinutes?: number; shiftId?: string | null; note?: string | null
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
   if (Object.keys(body).length === 0) {
@@ -46,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const entry = await clockService.adminUpdateEntry(orgId, entryId, body)
+    const entry = await clockService.adminUpdateEntry(orgId, entryId, body, guard.userId)
     return NextResponse.json({ data: entry })
   } catch (err) {
     if (err instanceof ServiceError) {
@@ -68,7 +73,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    await clockService.adminDeleteEntry(orgId, entryId)
+    await clockService.adminDeleteEntry(orgId, entryId, guard.userId)
     return NextResponse.json({ data: null })
   } catch (err) {
     if (err instanceof ServiceError) {

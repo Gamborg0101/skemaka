@@ -8,21 +8,25 @@ interface RouteContext {
 }
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const { token } = await params
   const ctx = await availabilityService.resolveInviteToken(token)
   if (!ctx) return NextResponse.json({ error: "Invalid or expired token" }, { status: 404 })
 
+  // Public, unauthenticated endpoint — only expose fields the availability page
+  // needs. ctx.employee is the full record (wage, phone, email, notes); never
+  // serialize those to a token-only caller.
+  const employee = { id: ctx.employee.id, name: ctx.employee.name, jobRole: ctx.employee.jobRole }
   return NextResponse.json(
-    { data: { employee: ctx.employee, request: ctx.request, orgName: ctx.orgName } },
+    { data: { employee, request: ctx.request, orgName: ctx.orgName } },
     { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } },
   )
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const { token } = await params
@@ -36,8 +40,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     )
   }
 
-  const body = await req.json() as {
+  let body: {
     days?: { date: string; isAvailable: boolean; startTime?: string; endTime?: string }[]
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
   const { days } = body
 

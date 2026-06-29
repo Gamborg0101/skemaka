@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as orgService from "@/lib/services/orgService"
 
@@ -13,6 +14,9 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   if ("error" in guard) return guard.error
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
+
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   try {
     await orgService.deleteShiftTemplate(orgId, templateId)

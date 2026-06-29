@@ -1,0 +1,121 @@
+name: CI
+
+# CI gates: typecheck + lint (web) + unit tests across the monorepo.
+#
+# CD is handled outside this workflow:
+#   - Web:    Vercel's git integration builds and deploys apps/web on every push
+#             (preview deploys for branches, production for main).
+#   - Mobile: EAS builds are triggered manually (`eas build` / `eas submit`),
+#             since App Store builds are billed and human-gated.
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly E2E run (04:00 UTC) — keeps browser/DB-heavy minutes off every push.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # prisma.config.ts requires a DATABASE_URL for `prisma generate`,
+      # but generate never opens a connection — a dummy value is enough.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        # version is read from the "packageManager" field in package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/web
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint (web)
+        run: pnpm --filter web lint
+
+      - name: Test
+        run: pnpm test
+
+  # Browser E2E for the money path (access control, trial paywall, invite claim).
+  # Nightly + manual only. Runs the Neon serverless driver against a plain Postgres
+  # via the Neon wsproxy (see lib/prisma.ts NEON_WS_PROXY).
+  e2e:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      wsproxy:
+        image: ghcr.io/neondatabase/wsproxy:latest
+        env:
+          APPEND_PORT: "postgres:5432"
+          ALLOW_ADDR_REGEX: ".*"
+          LOG_TRAFFIC: "true"
+        ports: ["5433:80"]
+    env:
+      DATABASE_URL: postgres://e2e:e2e@localhost:5432/e2e?sslmode=disable
+      DIRECT_URL: postgres://e2e:e2e@localhost:5432/e2e?sslmode=disable
+      NEON_WS_PROXY: localhost:5433/v1
+      AUTH_SECRET: e2e-auth-secret
+      NEXTAUTH_URL: http://localhost:3000
+      E2E_TEST_LOGIN: "1"
+      E2E_TEST_PASSWORD: e2e-secret
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/web
+        run: npx prisma generate
+
+      - name: Apply schema
+        working-directory: apps/web
+        run: npx prisma migrate deploy
+
+      - name: Seed E2E data
+        working-directory: apps/web
+        run: pnpm seed:e2e
+
+      - name: Install Playwright browser
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: pnpm --filter web test:e2e

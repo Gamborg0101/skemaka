@@ -40,6 +40,8 @@ export interface OrgScheduleSettings {
   defaultScheduleView?: "week" | "timeline"
   timeOffEnabled?: boolean
   availabilityWindowWeeks?: number
+  /** Clock format for shift times. "24h" → 14:00 (EU default), "12h" → 2:00 PM (US). */
+  timeFormat?: "12h" | "24h"
 }
 
 
