@@ -33,6 +33,76 @@ const e2eProvider =
       ]
     : []
 
+/** Org billing fields cached in the JWT for the paywall fast-path. */
+const ORG_BILLING_SELECT = {
+  subscriptionStatus: true,
+  trialEndsAt: true,
+  pastDueSince: true,
+} as const
+
+/**
+ * How long a member's cached JWT claims (role, orgId, billing) are trusted
+ * before the jwt callback re-checks them against the DB.
+ *
+ * The session is rolling (updateAge: 0) and the jwt callback only recomputes
+ * claims from the DB when `user` is present (sign-in), so without this an active
+ * manager's MANAGER/orgId claims would never refresh — a removed or demoted
+ * manager would keep access for as long as they stay active. Re-validating on a
+ * short interval bounds that window. The check is a single indexed lookup and
+ * runs at most once per interval per active session. (Mobile is independently
+ * covered by /api/auth/mobile/refresh, which already re-validates membership.)
+ */
+const CLAIM_REVALIDATE_MS = 60_000
+
+type MutableToken = Record<string, unknown> & {
+  sub?: string
+  orgId?: string
+  role?: string
+  checkedAt?: number
+}
+
+/**
+ * Re-derive role + billing for `token.orgId` straight from the DB and write the
+ * result back onto the token — mirrors the sign-in logic in the jwt callback.
+ * Strips the org claims entirely when the user no longer has any access to the
+ * org, so requireOrgMember's slow path denies the next request.
+ */
+async function revalidateOrgClaims(token: MutableToken): Promise<void> {
+  const userId = token.sub
+  const orgId = token.orgId
+  if (!userId || !orgId) return
+
+  const [membership, activeEmployee] = await Promise.all([
+    db.membership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: orgId } },
+      include: { organization: { select: ORG_BILLING_SELECT } },
+    }),
+    db.employee.findFirst({
+      where: { userId, organizationId: orgId, isActive: true },
+      include: { organization: { select: ORG_BILLING_SELECT } },
+    }),
+  ])
+
+  const org = membership?.organization ?? activeEmployee?.organization
+  if (!org) {
+    // No membership and no active employee record → access revoked. Strip org
+    // claims; the next requireOrgMember call falls to the slow path and 403s.
+    token.role = "EMPLOYEE"
+    delete token.orgId
+    delete token.subscriptionStatus
+    delete token.trialEndsAt
+    delete token.pastDueSince
+    return
+  }
+
+  // Demote a removed/changed manager; keep MANAGER only if the membership says so.
+  token.role = membership?.role === "MANAGER" ? "MANAGER" : "EMPLOYEE"
+  token.orgId = orgId
+  token.subscriptionStatus = org.subscriptionStatus
+  token.trialEndsAt = org.trialEndsAt?.getTime() ?? null
+  token.pastDueSince = org.pastDueSince?.getTime() ?? null
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
@@ -90,7 +160,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.pastDueSince = empMembership.organization.pastDueSince?.getTime() ?? null
           }
         }
+        // Stamp the validation time so subsequent (user-less) invocations can
+        // tell when the cached claims are due for a DB re-check.
+        token.checkedAt = Date.now()
+      } else if (
+        token.orgId &&
+        (typeof token.checkedAt !== "number" ||
+          Date.now() - token.checkedAt > CLAIM_REVALIDATE_MS)
+      ) {
+        // Periodic re-validation for active sessions (no `user` on these calls).
+        await revalidateOrgClaims(token as MutableToken)
+        token.checkedAt = Date.now()
       }
+      // Superadmin is identified by email, not membership — restore it last so a
+      // re-validation that downgraded role to EMPLOYEE can't strip ADMIN.
       if (token.email === process.env.SUPERADMIN_EMAIL) {
         token.role = "ADMIN"
       }
