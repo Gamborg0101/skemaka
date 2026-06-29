@@ -109,7 +109,7 @@ export function ClaimInviteClient({ token }: Props) {
               onKeyDown={(e) => { if (e.key === "Enter" && code.length === 6) void submitCode() }}
               disabled={state.status === "submitting"}
               placeholder="••••••"
-              className="w-full text-center text-2xl tracking-[0.5em] font-mono border border-gray-300 rounded-lg py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full text-center text-2xl tracking-[0.5em] font-mono text-gray-900 placeholder:text-gray-300 border border-gray-300 rounded-lg py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
             {state.status === "enterCode" && state.error && (
               <p className="text-sm text-red-500 mb-4">{state.error}</p>

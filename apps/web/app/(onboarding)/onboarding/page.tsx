@@ -18,9 +18,16 @@ const CURRENCIES = [
 const DEFAULT_ROLES = ["Waiter", "Chef", "Bartender", "Manager", "Host", "Cashier"]
 
 const STEPS = [
-  { n: 1 as Step, label: "Workspace" },
-  { n: 2 as Step, label: "Team" },
+  { n: 1 as Step, label: "Your business" },
+  { n: 2 as Step, label: "Your team" },
 ]
+
+// Explicit text + placeholder colors so inputs don't inherit the themed
+// (possibly near-white) foreground on these intentionally light-themed pages.
+const INPUT_CLASS =
+  "w-full px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+const SELECT_CLASS =
+  "w-full px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -144,8 +151,9 @@ export default function OnboardingPage() {
           {step === 1 && (
             <form onSubmit={handleCreateOrg} className="space-y-5">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Set up your workspace</h2>
-                <p className="text-sm text-gray-500 mt-1">Tell us about your business.</p>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 1 of 2</p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">Set up your workspace</h2>
+                <p className="text-sm text-gray-500 mt-1">Name your business and pick a currency. Next, you&apos;ll add your team.</p>
               </div>
 
               <div className="space-y-1.5">
@@ -157,7 +165,7 @@ export default function OnboardingPage() {
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   placeholder="e.g. The Corner Café"
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={INPUT_CLASS}
                   autoFocus
                   required
                 />
@@ -170,7 +178,7 @@ export default function OnboardingPage() {
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className={SELECT_CLASS}
                 >
                   {CURRENCIES.map(({ code, label }) => (
                     <option key={code} value={code}>{label}</option>
@@ -196,7 +204,8 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Add your team</h2>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 2 of 2</p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">Add your team</h2>
                 <p className="text-sm text-gray-500 mt-1">
                   Add employees now, or go straight to your schedule and add them later.
                 </p>
@@ -221,7 +230,7 @@ export default function OnboardingPage() {
                     value={empName}
                     onChange={(e) => setEmpName(e.target.value)}
                     placeholder="Jane Smith"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLASS}
                   />
                 </div>
                 <div className="space-y-1">
@@ -233,7 +242,7 @@ export default function OnboardingPage() {
                     value={empEmail}
                     onChange={(e) => setEmpEmail(e.target.value)}
                     placeholder="jane@example.com"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={INPUT_CLASS}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -242,7 +251,7 @@ export default function OnboardingPage() {
                     <select
                       value={empRole}
                       onChange={(e) => setEmpRole(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className={SELECT_CLASS}
                     >
                       {DEFAULT_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
@@ -256,7 +265,7 @@ export default function OnboardingPage() {
                       placeholder="15.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={INPUT_CLASS}
                     />
                   </div>
                 </div>
@@ -281,7 +290,7 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-gray-400">All settings can be changed later.</p>
+      <p className="mt-4 text-xs text-gray-600">You can change any of this later in Settings.</p>
     </div>
   )
 }
