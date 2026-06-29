@@ -169,8 +169,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           Date.now() - token.checkedAt > CLAIM_REVALIDATE_MS)
       ) {
         // Periodic re-validation for active sessions (no `user` on these calls).
-        await revalidateOrgClaims(token as MutableToken)
-        token.checkedAt = Date.now()
+        try {
+          await revalidateOrgClaims(token as MutableToken)
+          token.checkedAt = Date.now()
+        } catch (err) {
+          // Fail open to the cached claims: a DB blip / Neon cold start must not
+          // break auth() (which is otherwise a pure JWT decode). Leave checkedAt
+          // unchanged so the next request retries — the only cost of an outage is
+          // a temporarily longer revocation window.
+          console.error("[auth] claim re-validation failed (using cached claims):", err)
+        }
       }
       // Superadmin is identified by email, not membership — restore it last so a
       // re-validation that downgraded role to EMPLOYEE can't strip ADMIN.
