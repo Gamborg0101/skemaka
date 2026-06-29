@@ -60,12 +60,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
-  const body = await req.json() as {
+  let body: {
     employeeId?: string; shiftId?: string; note?: string
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
   if (body.note && body.note.length > 500) {

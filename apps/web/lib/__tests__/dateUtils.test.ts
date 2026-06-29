@@ -280,36 +280,57 @@ describe("getWeekDays", () => {
 // Tests: formatTime
 // ===========================================================================
 
-describe("formatTime", () => {
+describe("formatTime — 12h", () => {
   it("midnight: 00:00 → 12AM", () => {
-    expect(formatTime("00:00")).toBe("12AM")
+    expect(formatTime("00:00", "12h")).toBe("12AM")
   })
   it("noon: 12:00 → 12PM", () => {
-    expect(formatTime("12:00")).toBe("12PM")
+    expect(formatTime("12:00", "12h")).toBe("12PM")
   })
   it("morning whole hour: 08:00 → 8AM", () => {
-    expect(formatTime("08:00")).toBe("8AM")
+    expect(formatTime("08:00", "12h")).toBe("8AM")
   })
   it("afternoon whole hour: 15:00 → 3PM", () => {
-    expect(formatTime("15:00")).toBe("3PM")
+    expect(formatTime("15:00", "12h")).toBe("3PM")
   })
   it("morning with minutes: 07:30 → 7:30AM", () => {
-    expect(formatTime("07:30")).toBe("7:30AM")
+    expect(formatTime("07:30", "12h")).toBe("7:30AM")
   })
   it("afternoon with minutes: 13:30 → 1:30PM", () => {
-    expect(formatTime("13:30")).toBe("1:30PM")
+    expect(formatTime("13:30", "12h")).toBe("1:30PM")
   })
   it("just past midnight: 00:01 → 12:01AM", () => {
-    expect(formatTime("00:01")).toBe("12:01AM")
+    expect(formatTime("00:01", "12h")).toBe("12:01AM")
   })
   it("end of day: 23:59 → 11:59PM", () => {
-    expect(formatTime("23:59")).toBe("11:59PM")
+    expect(formatTime("23:59", "12h")).toBe("11:59PM")
   })
   it("just past noon: 12:01 → 12:01PM", () => {
-    expect(formatTime("12:01")).toBe("12:01PM")
+    expect(formatTime("12:01", "12h")).toBe("12:01PM")
   })
   it("single-digit minute is zero-padded: 14:05 → 2:05PM", () => {
-    expect(formatTime("14:05")).toBe("2:05PM")
+    expect(formatTime("14:05", "12h")).toBe("2:05PM")
+  })
+})
+
+describe("formatTime — 24h (default)", () => {
+  it("defaults to 24h when no format given: 15:00 → 15:00", () => {
+    expect(formatTime("15:00")).toBe("15:00")
+  })
+  it("midnight: 00:00 → 00:00", () => {
+    expect(formatTime("00:00", "24h")).toBe("00:00")
+  })
+  it("noon: 12:00 → 12:00", () => {
+    expect(formatTime("12:00", "24h")).toBe("12:00")
+  })
+  it("morning whole hour zero-pads: 08:00 → 08:00", () => {
+    expect(formatTime("08:00", "24h")).toBe("08:00")
+  })
+  it("afternoon with minutes: 14:30 → 14:30", () => {
+    expect(formatTime("14:30", "24h")).toBe("14:30")
+  })
+  it("end of day: 23:59 → 23:59", () => {
+    expect(formatTime("23:59", "24h")).toBe("23:59")
   })
 })
 

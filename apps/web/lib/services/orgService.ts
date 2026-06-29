@@ -1,13 +1,17 @@
 import { db } from "@/lib/prisma"
-import { Prisma } from "@/app/generated/prisma/client"
+import { PrismaClient } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
 import { seedDefaultRoles } from "@/lib/seedDefaultRoles"
+import { recordAudit } from "@/lib/audit"
 import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings } from "@/types"
 import { ServiceError } from "./errors"
 
 // ── Organization ──────────────────────────────────────────────────────────────
 
 const VALID_CURRENCIES = ["EUR", "USD", "GBP", "DKK", "SEK", "NOK"] as const
+
+/** Length of the free trial granted to a new organization. */
+export const TRIAL_DAYS = 14
 
 export async function createOrg(
   userId: string,
@@ -26,20 +30,34 @@ export async function createOrg(
     slug = `${baseSlug || "org"}-${suffix++}`
   }
 
-  const org = await db.organization.create({
-    data: { name: trimmedName, slug, currency: resolvedCurrency },
-  })
+  const org = await db.$transaction(async (tx) => {
+    // Prisma 7 types the tx callback param as Omit<PrismaClient, ITXClientDenyList>;
+    // tsc cannot see delegate properties through Omit on a class, so cast as done
+    // in app/api/me/account/route.ts.
+    const client = tx as unknown as PrismaClient
 
-  await db.membership.create({
-    data: { userId, organizationId: org.id, role: "MANAGER" },
-  })
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+    const newOrg = await client.organization.create({
+      data: { name: trimmedName, slug, currency: resolvedCurrency, trialEndsAt },
+    })
 
-  await seedDefaultRoles(org.id)
+    await client.membership.create({
+      data: { userId, organizationId: newOrg.id, role: "MANAGER" },
+    })
+
+    await seedDefaultRoles(newOrg.id, client)
+
+    return newOrg
+  })
 
   return serOrg(org)
 }
 
-export async function updateOrgCurrency(orgId: string, newCurrency: string): Promise<Organization> {
+export async function updateOrgCurrency(
+  orgId: string,
+  newCurrency: string,
+  actorUserId: string,
+): Promise<Organization> {
   const org = await db.organization.findFirst({
     where: { id: orgId },
     orderBy: { createdAt: "asc" },
@@ -47,27 +65,96 @@ export async function updateOrgCurrency(orgId: string, newCurrency: string): Pro
   if (!org) throw new ServiceError("Not found", "NOT_FOUND")
   if (org.currency === newCurrency) return serOrg(org)
 
-  let rate: number
-  try {
-    const res = await fetch(
-      `https://api.frankfurter.app/latest?from=${org.currency}&to=${newCurrency}`,
-      { signal: AbortSignal.timeout(8000) },
-    )
-    if (!res.ok) throw new Error("rate fetch failed")
-    const data = await res.json() as { rates: Record<string, number> }
-    rate = data.rates[newCurrency]
-    if (!rate) throw new Error("rate not in response")
-  } catch {
-    throw new ServiceError("Could not fetch exchange rate. Try again.", "UPSTREAM")
+  const oldCurrency = org.currency
+
+  // Fetch all employees for this org so we can group by their base currency.
+  // Select only the fields we need for the conversion computation.
+  const employees = await db.employee.findMany({
+    where: { organizationId: orgId },
+    select: {
+      id:               true,
+      hourlyWage:       true,
+      wageBaseAmount:   true,
+      wageBaseCurrency: true,
+    },
+  })
+
+  // Determine which distinct base currencies we need rates for.
+  // Employees without a wageBaseCurrency are treated as if their base is the
+  // org's old currency (legacy/fallback path — backfill applied below).
+  const baseCurrencies = new Set<string>()
+  for (const emp of employees) {
+    const base = emp.wageBaseCurrency ?? oldCurrency
+    if (base !== newCurrency) {
+      baseCurrencies.add(base)
+    }
   }
 
+  // Fetch one FX rate per distinct (base → newCurrency) pair, in parallel.
+  const rateMap = new Map<string, number>()
+  if (baseCurrencies.size > 0) {
+    const rateEntries = await Promise.all(
+      Array.from(baseCurrencies).map(async (baseCurrency): Promise<[string, number]> => {
+        // Same-currency case: rate is exactly 1, no HTTP call needed.
+        if (baseCurrency === newCurrency) return [baseCurrency, 1]
+        try {
+          const res = await fetch(
+            `https://api.frankfurter.app/latest?from=${baseCurrency}&to=${newCurrency}`,
+            { signal: AbortSignal.timeout(8000) },
+          )
+          if (!res.ok) throw new Error("rate fetch failed")
+          const data = await res.json() as { rates: Record<string, number> }
+          const rate = data.rates[newCurrency]
+          if (!rate) throw new Error("rate not in response")
+          return [baseCurrency, rate]
+        } catch {
+          throw new ServiceError(
+            `Could not fetch exchange rate for ${baseCurrency} → ${newCurrency}. Try again.`,
+            "UPSTREAM",
+          )
+        }
+      }),
+    )
+    for (const [currency, rate] of rateEntries) {
+      rateMap.set(currency, rate)
+    }
+  }
+
+  // Build the per-employee wage updates inside a transaction.
   await db.$transaction(async (tx) => {
     await tx.organization.update({ where: { id: orgId }, data: { currency: newCurrency } })
-    await tx.$executeRaw(Prisma.sql`
-      UPDATE "Employee"
-      SET "hourlyWage" = ROUND("hourlyWage" * ${rate}::numeric, 2)
-      WHERE "organizationId" = ${orgId}
-    `)
+
+    for (const emp of employees) {
+      const hasBase = emp.wageBaseAmount != null && emp.wageBaseCurrency != null
+
+      // Legacy fallback: if base fields are null, treat current hourlyWage as
+      // the base in the old org currency and backfill the base columns now.
+      const baseAmount   = hasBase ? (emp.wageBaseAmount as { toNumber(): number }).toNumber() : (emp.hourlyWage as { toNumber(): number }).toNumber()
+      const baseCurrency = hasBase ? emp.wageBaseCurrency! : oldCurrency
+
+      const rate = baseCurrency === newCurrency ? 1 : (rateMap.get(baseCurrency) ?? 1)
+      const newWage = Math.round(baseAmount * rate * 100) / 100
+
+      await tx.employee.update({
+        where: { id: emp.id },
+        data: {
+          hourlyWage: newWage,
+          // Backfill base columns for legacy rows that didn't have them.
+          ...(!hasBase && {
+            wageBaseAmount:   baseAmount,
+            wageBaseCurrency: baseCurrency,
+          }),
+        },
+      })
+    }
+  })
+
+  recordAudit({
+    orgId,
+    actorUserId,
+    action: "CURRENCY_CHANGED",
+    before: { currency: oldCurrency },
+    after:  { currency: newCurrency },
   })
 
   const updated = await db.organization.findFirst({ where: { id: orgId }, orderBy: { createdAt: "asc" } })
@@ -79,6 +166,7 @@ export type OrgSettingsPatch = {
   defaultScheduleView?:      "week" | "timeline"
   timeOffEnabled?:           boolean
   availabilityWindowWeeks?:  number
+  timeFormat?:               "12h" | "24h"
 }
 
 export async function updateOrgSettings(
@@ -93,6 +181,7 @@ export async function updateOrgSettings(
   if (patch.defaultScheduleView     !== undefined) merged.defaultScheduleView     = patch.defaultScheduleView
   if (patch.timeOffEnabled          !== undefined) merged.timeOffEnabled          = patch.timeOffEnabled
   if (patch.availabilityWindowWeeks !== undefined) merged.availabilityWindowWeeks = patch.availabilityWindowWeeks
+  if (patch.timeFormat              !== undefined) merged.timeFormat              = patch.timeFormat
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await db.organization.update({ where: { id: orgId }, data: { settings: merged as any } })
@@ -228,6 +317,22 @@ export async function listRoles(orgId: string): Promise<JobRole[]> {
     orderBy: { name: "asc" },
   })
   return roles.map(serJobRole)
+}
+
+export async function createJobRole(orgId: string, name: string, color: string): Promise<JobRole> {
+  const existing = await db.jobRole.findFirst({ where: { organizationId: orgId, name }, select: { id: true } })
+  if (existing) throw new ServiceError("A role with this name already exists", "CONFLICT")
+  const role = await db.jobRole.create({ data: { organizationId: orgId, name, color } })
+  return serJobRole(role)
+}
+
+export async function deleteJobRole(orgId: string, roleId: string): Promise<void> {
+  const role = await db.jobRole.findFirst({ where: { id: roleId, organizationId: orgId }, select: { id: true } })
+  if (!role) throw new ServiceError("Not found", "NOT_FOUND")
+  const roleName = (await db.jobRole.findUniqueOrThrow({ where: { id: roleId }, select: { name: true } })).name
+  const inUse = await db.employee.count({ where: { organizationId: orgId, jobRole: roleName } })
+  if (inUse > 0) throw new ServiceError(`This role is assigned to ${inUse} employee${inUse > 1 ? "s" : ""} — reassign them first`, "CONFLICT")
+  await db.jobRole.delete({ where: { id: roleId } })
 }
 
 export async function renameJobRole(orgId: string, roleId: string, newName: string): Promise<JobRole> {

@@ -29,12 +29,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  const body = await req.json() as {
+  let body: {
     employeeId?: string; date?: string; startTime?: string; endTime?: string
     breakMinutes?: number; jobRole?: string; notes?: string; colorTag?: string
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
   const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag } = body
 

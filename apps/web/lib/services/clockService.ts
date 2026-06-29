@@ -1,5 +1,6 @@
 import { db } from "@/lib/prisma"
 import { serTimeEntry } from "@/lib/serialize"
+import { recordAudit } from "@/lib/audit"
 import type { TimeEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -158,6 +159,7 @@ export async function adminUpdateEntry(
   orgId: string,
   entryId: string,
   input: UpdateTimeEntryInput,
+  actorUserId: string,
 ): Promise<TimeEntry> {
   const existing = await db.timeEntry.findFirst({
     where: { id: entryId, organizationId: orgId },
@@ -186,14 +188,32 @@ export async function adminUpdateEntry(
     },
     include: { employee: { select: ENTRY_EMPLOYEE_SELECT } },
   })
+
+  recordAudit({
+    orgId,
+    actorUserId,
+    action: "TIME_ENTRY_UPDATED",
+    entity: `TimeEntry:${entryId}`,
+    before: { clockIn: existing.clockIn.toISOString(), clockOut: existing.clockOut?.toISOString() ?? null, breakMinutes: existing.breakMinutes },
+    after:  { clockIn: entry.clockIn.toISOString(),    clockOut: entry.clockOut?.toISOString() ?? null,    breakMinutes: entry.breakMinutes },
+  })
+
   return serTimeEntry(entry)
 }
 
-export async function adminDeleteEntry(orgId: string, entryId: string): Promise<void> {
+export async function adminDeleteEntry(orgId: string, entryId: string, actorUserId: string): Promise<void> {
   const existing = await db.timeEntry.findFirst({
     where: { id: entryId, organizationId: orgId },
     orderBy: { createdAt: "asc" },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
   await db.timeEntry.delete({ where: { id: entryId } })
+
+  recordAudit({
+    orgId,
+    actorUserId,
+    action: "TIME_ENTRY_DELETED",
+    entity: `TimeEntry:${entryId}`,
+    before: { clockIn: existing.clockIn.toISOString(), clockOut: existing.clockOut?.toISOString() ?? null, breakMinutes: existing.breakMinutes },
+  })
 }

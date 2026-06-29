@@ -7,6 +7,7 @@ export {
   getMobileSession,
   refreshMobileToken,
   getCurrentUser,
+  deleteAccount,
   getMyShifts,
   getActiveEntry,
   clockIn,

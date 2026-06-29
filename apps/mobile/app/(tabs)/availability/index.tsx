@@ -61,10 +61,13 @@ function WeekNav({
         onPress={() => { if (canGoBack) { void Haptics.selectionAsync(); onChange(offsetWeek(weekStart, -1)) } }}
         hitSlop={8}
         disabled={!canGoBack}
+        accessibilityRole="button"
+        accessibilityLabel="Previous week"
+        accessibilityState={{ disabled: !canGoBack }}
         className="w-8 h-8 items-center justify-center rounded-full active:opacity-60"
         style={{ backgroundColor: canGoBack ? "rgba(255,255,255,0.06)" : "transparent" }}
       >
-        <Ionicons name="chevron-back" size={18} color={canGoBack ? "#9898A8" : "#3A3A44"} />
+        <Ionicons name="chevron-back" size={18} color={canGoBack ? "#9898A8" : "#3A3A44"} importantForAccessibility="no" />
       </Pressable>
 
       <Text style={{ fontSize: 13, fontWeight: "600", color: "#9898A8" }}>
@@ -75,10 +78,13 @@ function WeekNav({
         onPress={() => { if (canGoForward) { void Haptics.selectionAsync(); onChange(offsetWeek(weekStart, 1)) } }}
         hitSlop={8}
         disabled={!canGoForward}
+        accessibilityRole="button"
+        accessibilityLabel="Next week"
+        accessibilityState={{ disabled: !canGoForward }}
         className="w-8 h-8 items-center justify-center rounded-full active:opacity-60"
         style={{ backgroundColor: canGoForward ? "rgba(255,255,255,0.06)" : "transparent" }}
       >
-        <Ionicons name="chevron-forward" size={18} color={canGoForward ? "#9898A8" : "#3A3A44"} />
+        <Ionicons name="chevron-forward" size={18} color={canGoForward ? "#9898A8" : "#3A3A44"} importantForAccessibility="no" />
       </Pressable>
     </View>
   )
@@ -158,6 +164,8 @@ function DayCard({
           <Pressable
             onPress={() => { void Haptics.selectionAsync(); onEdit() }}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${entry.status === "available" ? "Edit" : "Set"} availability for ${DAY_LABELS[index]}`}
             className="px-3 py-1.5 rounded-xl active:opacity-70"
             style={{ backgroundColor: "rgba(123,110,248,0.12)", borderWidth: 1, borderColor: "rgba(123,110,248,0.25)" }}
           >
@@ -170,10 +178,12 @@ function DayCard({
           <Pressable
             onPress={() => { void Haptics.selectionAsync(); onClose() }}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Close editor for ${DAY_LABELS[index]}`}
             className="w-7 h-7 items-center justify-center rounded-full active:opacity-70"
             style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
           >
-            <Ionicons name="close" size={15} color="#6B6B7B" />
+            <Ionicons name="close" size={15} color="#6B6B7B" importantForAccessibility="no" />
           </Pressable>
         )}
       </View>
@@ -188,6 +198,9 @@ function DayCard({
               <Pressable
                 key={s}
                 onPress={() => selectStatus(s)}
+                accessibilityRole="button"
+                accessibilityLabel={c.label}
+                accessibilityState={{ selected: active }}
                 className="flex-1 py-2 items-center rounded-xl active:opacity-70"
                 style={{
                   backgroundColor: active ? c.bg : "#141417",
@@ -212,6 +225,8 @@ function DayCard({
         >
           <Pressable
             onPress={() => setPicker("start")}
+            accessibilityRole="button"
+            accessibilityLabel={`From: ${formatTime(entry.start)}`}
             className="flex-1 items-center rounded-xl py-2.5 active:opacity-70"
             style={{ backgroundColor: "#141417", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}
           >
@@ -219,10 +234,13 @@ function DayCard({
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#F2F2F7" }}>{formatTime(entry.start)}</Text>
           </Pressable>
 
-          <Ionicons name="arrow-forward" size={14} color="#4A4A57" />
+          {/* Arrow is decorative — the two Pressable labels convey the range */}
+          <Ionicons name="arrow-forward" size={14} color="#4A4A57" importantForAccessibility="no" />
 
           <Pressable
             onPress={() => setPicker("end")}
+            accessibilityRole="button"
+            accessibilityLabel={`Until: ${formatTime(entry.end)}`}
             className="flex-1 items-center rounded-xl py-2.5 active:opacity-70"
             style={{ backgroundColor: "#141417", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}
           >
@@ -254,11 +272,12 @@ function SummaryStrip({ available, off }: { available: number; off: number }) {
   return (
     <View className="flex-row items-center gap-4 px-4 pb-3">
       <View className="flex-row items-center gap-1.5">
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: STATUS_CONFIG.available.color }} />
+        {/* Color dot is decorative — text below carries the meaning */}
+        <View importantForAccessibility="no" accessibilityElementsHidden style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: STATUS_CONFIG.available.color }} />
         <Text style={{ fontSize: 12, color: "#9898A8" }}>{available} available</Text>
       </View>
       <View className="flex-row items-center gap-1.5">
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: STATUS_CONFIG.off.color }} />
+        <View importantForAccessibility="no" accessibilityElementsHidden style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: STATUS_CONFIG.off.color }} />
         <Text style={{ fontSize: 12, color: "#9898A8" }}>{off} not available</Text>
       </View>
     </View>
@@ -347,6 +366,8 @@ function EmployeeAvailabilityView() {
               <Pressable
                 onPress={() => { setEditingDate(null); setDayEntries({}) }}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel availability editing"
                 className="px-3 py-1.5 rounded-xl active:opacity-70"
                 style={{ backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}
               >
@@ -580,6 +601,9 @@ function ManagerAvailabilityView() {
               <Pressable
                 key={date}
                 onPress={() => { void Haptics.selectionAsync(); setSelectedDate(date) }}
+                accessibilityRole="button"
+                accessibilityLabel={`${DAY_SHORT[i]} ${new Date(date + "T00:00:00Z").getUTCDate()}, ${dayAvailCount} available`}
+                accessibilityState={{ selected: isSelected }}
                 className="items-center active:opacity-70"
                 style={{
                   minWidth: 52,
@@ -598,7 +622,8 @@ function ManagerAvailabilityView() {
                   {new Date(date + "T00:00:00Z").getUTCDate()}
                 </Text>
                 {dayAvailCount > 0 && (
-                  <View style={{ marginTop: 4, width: 6, height: 6, borderRadius: 3, backgroundColor: isSelected ? "#7B6EF8" : "#30D158" }} />
+                  // Dot is decorative — the count is already in accessibilityLabel above
+                  <View importantForAccessibility="no" accessibilityElementsHidden style={{ marginTop: 4, width: 6, height: 6, borderRadius: 3, backgroundColor: isSelected ? "#7B6EF8" : "#30D158" }} />
                 )}
               </Pressable>
             )
@@ -658,7 +683,10 @@ function ManagerAvailabilityView() {
                 className="bg-surface border rounded-2xl px-4 py-3.5 flex-row items-center gap-3"
                 style={{ borderColor: isAvail ? "rgba(48,209,88,0.25)" : "rgba(255,255,255,0.07)" }}
               >
+                {/* Status icon — decorative; the text below conveys available/unavailable/no response */}
                 <View
+                  importantForAccessibility="no"
+                  accessibilityElementsHidden
                   className="w-8 h-8 rounded-full items-center justify-center"
                   style={{
                     backgroundColor: isAvail
@@ -672,11 +700,12 @@ function ManagerAvailabilityView() {
                     name={isAvail ? "checkmark" : noResp ? "time-outline" : "close"}
                     size={16}
                     color={isAvail ? "#30D158" : noResp ? "#6B6B7B" : "#FF453A"}
+                    importantForAccessibility="no"
                   />
                 </View>
 
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold text-ink" numberOfLines={1}>
+                  <Text className="text-sm font-semibold text-ink">
                     {employee.name}
                   </Text>
                   <Text className="text-xs text-ink-muted mt-0.5">
@@ -702,6 +731,9 @@ function ManagerAvailabilityView() {
                     <Pressable
                       onPress={() => void openAssignSheet(employee)}
                       disabled={ensureSchedule.isPending}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Assign shift to ${employee.name}`}
+                      accessibilityState={{ disabled: ensureSchedule.isPending }}
                       className="px-3 py-1.5 rounded-xl active:opacity-70"
                       style={{ backgroundColor: "rgba(48,209,88,0.12)", borderWidth: 1, borderColor: "rgba(48,209,88,0.2)" }}
                     >

@@ -7,17 +7,27 @@
     "icon": "./assets/icon.png",
     "scheme": "skemaka",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.skemaka.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.skemaka.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -35,7 +45,16 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

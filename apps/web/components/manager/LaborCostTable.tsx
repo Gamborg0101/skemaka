@@ -32,7 +32,7 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
         <Card size="sm" className="border-l-4 border-l-blue-500">
           <CardHeader>
             <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Total Labor Cost
+              Total Labour Cost
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -74,7 +74,7 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
         {costs.entries.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No shifts scheduled this week</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Labor costs will appear once shifts are added.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Labour costs will appear once shifts are added.</p>
           </div>
         ) : (
         <Table>

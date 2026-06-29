@@ -9,6 +9,7 @@ import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { ClockWidgetSkeleton, ShiftCardSkeleton } from "@/components/ui/Skeleton"
 import { Divider } from "@/components/ui/Divider"
 import { useManagerSchedule, useOrgEmployees } from "@/hooks/useManagerSchedule"
+import { useCurrentUser } from "@/hooks/useEmployee"
 import { useUpdateTimeEntry } from "@/hooks/useClock"
 import { RefreshButton } from "@/components/ui/RefreshButton"
 import { useAuthStore } from "@/store/authStore"
@@ -31,6 +32,7 @@ function formatWorkedTime(minutes: number): string {
 
 function ShiftItem({ shift, onPress }: { shift: ShiftRow; onPress: (s: Shift) => void }) {
   const done = isShiftDone(shift.date, shift.endTime)
+  const a11yLabel = `${shift.employeeName}, ${formatTime(shift.startTime)} to ${formatTime(shift.endTime)}${shift.jobRole ? `, ${shift.jobRole}` : ""}${done ? ", completed" : ""}`
 
   return (
     <Pressable
@@ -38,6 +40,8 @@ function ShiftItem({ shift, onPress }: { shift: ShiftRow; onPress: (s: Shift) =>
         await Haptics.selectionAsync()
         onPress(shift)
       }}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
       className={`border rounded-2xl px-4 py-4 flex-row items-center active:opacity-75 ${done ? "bg-surface border-line/30" : "bg-surface border-line/60"}`}
     >
       <View className="flex-1 gap-0.5">
@@ -56,7 +60,7 @@ function ShiftItem({ shift, onPress }: { shift: ShiftRow; onPress: (s: Shift) =>
             {formatWorkedTime(shift.workedMinutes)}
           </Text>
         ) : null}
-        <Ionicons name="chevron-forward" size={16} color={done ? "#2A2A35" : "#4A4A57"} />
+        <Ionicons name="chevron-forward" size={16} color={done ? "#2A2A35" : "#4A4A57"} importantForAccessibility="no" />
       </View>
     </Pressable>
   )
@@ -79,6 +83,10 @@ export function ManagerScheduleView() {
     useManagerSchedule(selectedWeek)
   const updateTimeEntry = useUpdateTimeEntry()
   const { data: employees = [] } = useOrgEmployees()
+  // Syncs the org's clock format (24h/12h) into the lib/timeFormat singleton so
+  // shift times here honor the setting too. No-ops if the manager has no
+  // employee record (the /me 404 is ignored).
+  useCurrentUser()
   const managerEmployeeId = useAuthStore((s) => s.employee?.id)
 
   const days = weekDays(selectedWeek)
@@ -269,9 +277,11 @@ export function ManagerScheduleView() {
               <Pressable
                 onPress={() => void openAddShift(selectedDate)}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Add shift"
                 className="flex-row items-center gap-1.5 active:opacity-60"
               >
-                <Ionicons name="add-circle" size={22} color="#7B6EF8" />
+                <Ionicons name="add-circle" size={22} color="#7B6EF8" importantForAccessibility="no" />
                 <Text className="text-sm font-semibold text-brand">Add Shift</Text>
               </Pressable>
             </View>

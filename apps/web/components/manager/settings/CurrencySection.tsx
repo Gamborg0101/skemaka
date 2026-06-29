@@ -40,7 +40,7 @@ export function CurrencySection() {
   }
 
   return (
-    <SettingsSection icon={Globe} title="Currency" description="Currency shown on wages and labor costs.">
+    <SettingsSection icon={Globe} title="Currency" description="Currency shown on wages and labour costs.">
       <div className="mt-4 flex flex-wrap gap-2">
         {SUPPORTED_CURRENCIES.map((c) => (
           <button

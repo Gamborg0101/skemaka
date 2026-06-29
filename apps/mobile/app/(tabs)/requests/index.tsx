@@ -13,6 +13,7 @@ import {
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { useReducedMotion } from "@/hooks/useReducedMotion"
 import { Screen } from "@/components/layout/Screen"
 import { LoadingState } from "@/components/feedback/LoadingState"
 import { ErrorState } from "@/components/feedback/ErrorState"
@@ -158,19 +159,25 @@ function ManagerTimeOffView() {
                   <Pressable
                     onPress={() => handleReview(item, "APPROVED")}
                     disabled={review.isPending}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Approve time-off request from ${formatDateLong(item.startDate)}${item.startDate !== item.endDate ? ` to ${formatDateLong(item.endDate)}` : ""}`}
+                    accessibilityState={{ disabled: review.isPending }}
                     className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-xl active:opacity-70"
                     style={{ backgroundColor: "rgba(48,209,88,0.12)", borderWidth: 1, borderColor: "rgba(48,209,88,0.25)" }}
                   >
-                    <Ionicons name="checkmark" size={14} color="#30D158" />
+                    <Ionicons name="checkmark" size={14} color="#30D158" importantForAccessibility="no" />
                     <Text className="text-sm font-semibold" style={{ color: "#30D158" }}>Approve</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => handleReview(item, "DENIED")}
                     disabled={review.isPending}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Deny time-off request from ${formatDateLong(item.startDate)}${item.startDate !== item.endDate ? ` to ${formatDateLong(item.endDate)}` : ""}`}
+                    accessibilityState={{ disabled: review.isPending }}
                     className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-xl active:opacity-70"
                     style={{ backgroundColor: "rgba(255,69,58,0.1)", borderWidth: 1, borderColor: "rgba(255,69,58,0.2)" }}
                   >
-                    <Ionicons name="close" size={14} color="#FF453A" />
+                    <Ionicons name="close" size={14} color="#FF453A" importantForAccessibility="no" />
                     <Text className="text-sm font-semibold" style={{ color: "#FF453A" }}>Deny</Text>
                   </Pressable>
                 </View>
@@ -191,6 +198,7 @@ type FormState = { startDate: string; endDate: string; reason: string }
 function EmployeeTimeOffView() {
   const { data: requests, isLoading, isError, isFetching, refetch } = useMyTimeOff()
   const submit = useSubmitTimeOff()
+  const reduceMotion = useReducedMotion()
 
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<FormState>({ startDate: "", endDate: "", reason: "" })
@@ -267,7 +275,7 @@ function EmployeeTimeOffView() {
 
       <Modal
         visible={showModal}
-        animationType="slide"
+        animationType={reduceMotion ? "fade" : "slide"}
         presentationStyle="pageSheet"
         onRequestClose={closeModal}
       >
@@ -360,6 +368,7 @@ function EmployeeTimeOffView() {
                 variant="primary"
                 fullWidth
                 loading={submit.isPending}
+                accessibilityLabel="Submit time-off request"
                 onPress={handleSubmit}
               >
                 Submit Request

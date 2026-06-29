@@ -6,6 +6,7 @@ import { AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Shift, Employee, JobRole } from "@/types"
 import { formatTime, calcNetHours } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 
 const COLOR_BG: Record<string, string> = {
   blue:   "bg-blue-100 dark:bg-blue-900/70",
@@ -45,6 +46,7 @@ export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: S
     ? { transform: CSS.Translate.toString(transform) }
     : undefined
 
+  const tf = getOrgSettings().timeFormat
   const isSick = shift.colorTag === "sick"
 
   if (isSick) {
@@ -70,7 +72,7 @@ export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: S
         <p className="text-rose-400 dark:text-rose-400 leading-tight mt-0.5">Sick Day</p>
         {shift.startTime !== "00:00" && (
           <p className="text-rose-400 dark:text-rose-500 leading-tight">
-            {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
+            {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
             {" · "}{calcNetHours(shift.startTime, shift.endTime, shift.breakMinutes)}
           </p>
         )}
@@ -105,7 +107,7 @@ export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: S
       <p className={cn("font-semibold leading-tight truncate", textClass)}>{employee.name}</p>
       <p className={cn("truncate leading-tight mt-0.5 opacity-70", textClass)}>{shift.jobRole}</p>
       <p className={cn("leading-tight mt-0.5 opacity-60", textClass)}>
-        {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
+        {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
         {" · "}{calcNetHours(shift.startTime, shift.endTime, shift.breakMinutes)}
       </p>
       {shift.breakMinutes > 0 && (

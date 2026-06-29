@@ -10,14 +10,23 @@ export default auth((req) => {
   const isAuthenticated = !!session?.user
   const userRole = session?.user?.role
 
+  // Stamp every request with a correlation id (honouring an upstream one if a
+  // proxy already set it) so route-handler logs can be tied to a single request.
+  const requestId = req.headers.get("x-request-id") ?? crypto.randomUUID()
+  const passThrough = () => {
+    const headers = new Headers(req.headers)
+    headers.set("x-request-id", requestId)
+    return NextResponse.next({ request: { headers } })
+  }
+
   // /api/webhooks/* — public, Stripe verifies its own signature
   if (pathname.startsWith("/api/webhooks/")) {
-    return NextResponse.next()
+    return passThrough()
   }
 
   // /api/availability/* — public, token-based
   if (pathname.startsWith("/api/availability/")) {
-    return NextResponse.next()
+    return passThrough()
   }
 
   // API requests with a Bearer token bypass cookie-based middleware auth.
@@ -25,7 +34,7 @@ export default auth((req) => {
   // which call getToken() and accept both cookies and Authorization: Bearer headers.
   // This lets mobile clients use the API without browser cookies.
   if (pathname.startsWith("/api/") && req.headers.get("authorization")?.startsWith("Bearer ")) {
-    return NextResponse.next()
+    return passThrough()
   }
 
   // /platform/* and /api/platform/* — superadmin only
@@ -132,7 +141,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/schedule", req.nextUrl.origin))
   }
 
-  return NextResponse.next()
+  return passThrough()
 })
 
 export const config = {

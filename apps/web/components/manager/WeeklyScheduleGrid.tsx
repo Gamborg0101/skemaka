@@ -4,7 +4,6 @@ import React, {
   useState,
   useCallback,
   useMemo,
-  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
@@ -289,20 +288,27 @@ export function WeeklyScheduleGrid({
 
   const days = getWeekDays(schedule.weekStart);
 
-  // Sync selected mobile day to today when week changes; reset desktop offset to Monday
-  useEffect(() => {
+  // Sync selected mobile day to today when week changes; reset desktop offset to Monday.
+  // Uses "adjust state during render" pattern — avoids setState in an effect.
+  // Starts empty so the sync also runs on first render (the original effect ran on mount).
+  const [prevWeekStart, setPrevWeekStart] = useState("");
+  if (schedule.weekStart !== prevWeekStart) {
+    setPrevWeekStart(schedule.weekStart);
     const todayISO = new Date().toISOString().split("T")[0];
     const idx = days.findIndex((d) => toISODate(d) === todayISO);
     setMobileDay(idx >= 0 ? idx : 0);
     setStartDayOffset(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schedule.weekStart]);
+  }
 
-  // Clamp offset when the number of visible columns shrinks
-  useEffect(() => {
+  // Clamp offset when the number of visible columns shrinks.
+  // Uses "adjust state during render" pattern.
+  const [prevVisibleDays, setPrevVisibleDays] = useState(visibleDays);
+  if (visibleDays !== prevVisibleDays) {
+    setPrevVisibleDays(visibleDays);
     setStartDayOffset((o) => Math.min(o, 7 - visibleDays));
-  }, [visibleDays]);
-  const shifts = schedule.shifts ?? [];
+  }
+
+  const shifts = useMemo(() => schedule.shifts ?? [], [schedule.shifts]);
   const closedDays = getOrgSettings().hours.map((h) => !h.isOpen); // index 0=Mon…6=Sun
 
   const timeOffByEmployee = useMemo(() => {

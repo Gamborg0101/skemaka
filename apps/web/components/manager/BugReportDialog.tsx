@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Bug } from "lucide-react"
 import {
   Dialog,
@@ -23,11 +23,15 @@ export function BugReportDialog({ prefillError, defaultOpen = false, onClose }: 
   const [open, setOpen] = useState(defaultOpen)
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
+  // Track prev defaultOpen to detect transitions to true (adjust during render).
+  const [prevDefaultOpen, setPrevDefaultOpen] = useState(defaultOpen)
 
-  // Sync defaultOpen changes (e.g. error boundary mounts with defaultOpen=true)
-  useEffect(() => {
+  // Sync defaultOpen changes (e.g. error boundary mounts with defaultOpen=true).
+  // Uses the "adjust state during render" pattern instead of an effect.
+  if (defaultOpen !== prevDefaultOpen) {
+    setPrevDefaultOpen(defaultOpen)
     if (defaultOpen) setOpen(true)
-  }, [defaultOpen])
+  }
 
   function handleOpenChange(next: boolean) {
     setOpen(next)

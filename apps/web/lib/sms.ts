@@ -1,4 +1,55 @@
 import twilio from "twilio";
+import { db } from "@/lib/prisma";
+
+/** Standard A2P opt-out footer appended to every outbound message. */
+const OPT_OUT_NOTICE = "Reply STOP to opt out.";
+
+// Inbound keyword sets (case-insensitive). STOP/START mirror Twilio's standard
+// Advanced Opt-Out keywords; we maintain our own list as a belt-and-suspenders
+// suppression layer on top of carrier-level handling.
+const STOP_KEYWORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit"]);
+const START_KEYWORDS = new Set(["start", "yes", "unstop"]);
+const HELP_KEYWORDS = new Set(["help", "info"]);
+
+export type SmsKeyword = "stop" | "start" | "help" | null;
+
+/** Classify an inbound SMS body as a STOP/START/HELP keyword (or null). */
+export function classifyKeyword(body: string): SmsKeyword {
+  const word = body.trim().toLowerCase();
+  if (STOP_KEYWORDS.has(word)) return "stop";
+  if (START_KEYWORDS.has(word)) return "start";
+  if (HELP_KEYWORDS.has(word)) return "help";
+  return null;
+}
+
+/**
+ * Normalize a phone number to a stable suppression-list key: keep a leading "+"
+ * and digits only, dropping spaces, dashes, and parentheses. Twilio delivers the
+ * inbound `From` in E.164, so this lets a STOP match employee numbers stored in
+ * looser formats.
+ */
+export function normalizePhone(phone: string): string {
+  const trimmed = phone.trim();
+  const plus = trimmed.startsWith("+") ? "+" : "";
+  return plus + trimmed.replace(/[^0-9]/g, "");
+}
+
+/** Record a STOP: suppress all future SMS to this number (idempotent). */
+export async function suppressNumber(phone: string): Promise<void> {
+  const key = normalizePhone(phone);
+  await db.smsOptOut.upsert({ where: { phone: key }, create: { phone: key }, update: {} });
+}
+
+/** Record a START/UNSTOP: re-enable SMS to this number. */
+export async function unsuppressNumber(phone: string): Promise<void> {
+  const key = normalizePhone(phone);
+  await db.smsOptOut.deleteMany({ where: { phone: key } });
+}
+
+async function isSuppressed(phone: string): Promise<boolean> {
+  const row = await db.smsOptOut.findUnique({ where: { phone: normalizePhone(phone) } });
+  return row !== null;
+}
 
 function getClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -29,9 +80,14 @@ async function send(to: string, body: string): Promise<void> {
     console.warn("[sms] Twilio not configured — skipping SMS");
     return;
   }
+  // Respect opt-out before doing anything else (carrier + legal compliance).
+  if (await isSuppressed(to)) {
+    console.warn("[sms] recipient has opted out — skipping SMS");
+    return;
+  }
   const recipient = process.env.TWILIO_TO_OVERRIDE ?? to;
   try {
-    await client.messages.create({ body, from, to: recipient });
+    await client.messages.create({ body: `${body} ${OPT_OUT_NOTICE}`, from, to: recipient });
   } catch (err) {
     console.error("[sms] Failed to send SMS:", err);
   }

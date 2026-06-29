@@ -17,10 +17,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  const body = await req.json() as { status?: "APPROVED" | "DENIED"; reviewNote?: string }
+  let body: { status?: "APPROVED" | "DENIED"; reviewNote?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
   if (!body.status || !["APPROVED", "DENIED"].includes(body.status)) {
     return NextResponse.json({ error: "status must be APPROVED or DENIED" }, { status: 400 })
   }
@@ -48,7 +53,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   try {

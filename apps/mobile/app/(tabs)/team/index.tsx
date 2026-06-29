@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
+import { useReducedMotion } from "@/hooks/useReducedMotion"
 import { Screen } from "@/components/layout/Screen"
 import { EmployeeCardSkeleton } from "@/components/ui/Skeleton"
 import { EmptyState } from "@/components/feedback/EmptyState"
@@ -98,12 +99,12 @@ function EmployeeCard({
       {/* Three-level text hierarchy */}
       <View className="flex-1 gap-0.5">
         {/* PRIMARY — name */}
-        <Text className="text-[15px] font-semibold text-ink leading-snug" numberOfLines={1}>
+        <Text className="text-[15px] font-semibold text-ink leading-snug">
           {employee.name}
         </Text>
 
         {/* SECONDARY — role */}
-        <Text className="text-sm text-ink-secondary" numberOfLines={1}>
+        <Text className="text-sm text-ink-secondary">
           {employee.jobRole}
         </Text>
 
@@ -113,7 +114,7 @@ function EmployeeCard({
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={16} color="#4A4A57" />
+      <Ionicons name="chevron-forward" size={16} color="#4A4A57" importantForAccessibility="no" />
     </Pressable>
   )
 }
@@ -124,7 +125,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row items-center justify-between px-4 py-4">
       <Text className="text-sm text-ink-secondary">{label}</Text>
-      <Text className="text-sm font-medium text-ink flex-1 text-right pl-4" numberOfLines={1}>
+      <Text className="text-sm font-medium text-ink flex-1 text-right pl-4">
         {value}
       </Text>
     </View>
@@ -138,6 +139,7 @@ function EmployeeDetailSheet({
   employee: Employee | null
   onClose: () => void
 }) {
+  const reduceMotion = useReducedMotion()
   if (!employee) return null
 
   const label = employmentLabel(employee.employmentType)
@@ -145,7 +147,7 @@ function EmployeeDetailSheet({
   return (
     <Modal
       visible
-      animationType="slide"
+      animationType={reduceMotion ? "fade" : "slide"}
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
@@ -214,7 +216,7 @@ function SearchBar({
 }) {
   return (
     <View className="flex-row items-center bg-elevated border border-line/40 rounded-xl px-3 h-11 gap-2">
-      <Ionicons name="search" size={16} color="#A1A1AE" />
+      <Ionicons name="search" size={16} color="#A1A1AE" importantForAccessibility="no" />
       <TextInput
         value={value}
         onChangeText={onChange}
@@ -226,8 +228,13 @@ function SearchBar({
         autoCapitalize="none"
       />
       {value.length > 0 && (
-        <Pressable onPress={() => onChange("")} hitSlop={8}>
-          <Ionicons name="close-circle" size={16} color="#4A4A57" />
+        <Pressable
+          onPress={() => onChange("")}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
+          <Ionicons name="close-circle" size={16} color="#6B6B7B" importantForAccessibility="no" />
         </Pressable>
       )}
     </View>

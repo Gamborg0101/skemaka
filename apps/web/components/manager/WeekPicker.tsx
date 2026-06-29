@@ -41,15 +41,17 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
   const [viewMonth, setViewMonth] = useState(() => new Date(weekStart + "T12:00:00").getMonth())
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Follow external week/day changes when picker is closed
-  useEffect(() => {
-    if (!open) {
-      const anchor = dayMode && selectedDay ? selectedDay : weekStart
-      const d = new Date(anchor + "T12:00:00")
-      setViewYear(d.getFullYear())
-      setViewMonth(d.getMonth())
-    }
-  }, [weekStart, selectedDay, dayMode, open])
+  // Follow external week/day changes when picker is closed.
+  // Uses the "adjust state during render" pattern to avoid setState in an effect.
+  const anchorKey = `${open ? 1 : 0}__${dayMode ? (selectedDay ?? "") : weekStart}`
+  const [prevAnchorKey, setPrevAnchorKey] = useState(anchorKey)
+  if (!open && anchorKey !== prevAnchorKey) {
+    setPrevAnchorKey(anchorKey)
+    const anchor = dayMode && selectedDay ? selectedDay : weekStart
+    const d = new Date(anchor + "T12:00:00")
+    setViewYear(d.getFullYear())
+    setViewMonth(d.getMonth())
+  }
 
   // Close on outside click
   useEffect(() => {

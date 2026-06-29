@@ -14,14 +14,13 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { useOrg } from "@/lib/orgContext"
 
 const BASE_NAV_ITEMS = [
   { label: "Schedule",     short: "Schedule", href: "/schedule",     icon: CalendarDays, always: true },
   { label: "Employees",    short: "Staff",    href: "/employees",    icon: Users,        always: true },
   { label: "Availability", short: "Avail",    href: "/availability", icon: ClipboardList,always: true },
-  { label: "Labor Cost",   short: "Costs",    href: "/costs",        icon: DollarSign,   always: true },
+  { label: "Labour Cost",   short: "Costs",    href: "/costs",        icon: DollarSign,   always: true },
   { label: "Time Off",     short: "Time Off", href: "/time-off",     icon: CalendarX2,   always: false },
   { label: "My Shifts",    short: "Shifts",   href: "/my-shifts",    icon: UserCircle,   always: true },
 ]

@@ -5,6 +5,7 @@ import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as timeOffService from "@/lib/services/timeOffService"
 import { getEmployeeByUserId, getEmployeeById } from "@/lib/services/employeeService"
+import { logError, requestIdFrom } from "@/lib/log"
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=120" } },
     )
   } catch (err) {
-    console.error("[time-off GET]", err)
+    logError("time-off GET", err, { requestId: requestIdFrom(req.headers) })
     return NextResponse.json({ error: "Failed to fetch time-off requests" }, { status: 500 })
   }
 }
@@ -55,13 +56,18 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
 
-  const body = await req.json() as {
+  let body: {
     employeeId?: string; startDate?: string; endDate?: string; reason?: string
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
   let resolvedEmployeeId: string
@@ -92,6 +98,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!isValidDate(body.startDate!) || !isValidDate(body.endDate!)) {
     return NextResponse.json(
       { error: "startDate and endDate must be valid YYYY-MM-DD dates" },
+      { status: 400 },
+    )
+  }
+
+  if (body.endDate! < body.startDate!) {
+    return NextResponse.json(
+      { error: "endDate must be on or after startDate" },
       { status: 400 },
     )
   }

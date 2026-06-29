@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isValidColorTag } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as orgService from "@/lib/services/orgService"
@@ -27,9 +28,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  const body = await req.json() as {
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
+  let body: {
     name?: string; startTime?: string; endTime?: string
     breakMinutes?: number; jobRole?: string; colorTag?: string | null
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
   const { name, startTime, endTime, breakMinutes, jobRole, colorTag } = body
 

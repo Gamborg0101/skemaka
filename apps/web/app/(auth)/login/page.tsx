@@ -11,7 +11,7 @@ const features = [
   },
   {
     icon: DollarSign,
-    title: "Live labor costs",
+    title: "Live labour costs",
     description: "Wage spend updates as you schedule.",
   },
   {
@@ -23,32 +23,32 @@ const features = [
 
 const PREVIEW_SHIFTS = [
   {
-    name: "Niels G.",
-    role: "Supervisor",
-    start: 10,
-    end: 18,
-    color: "bg-slate-400",
+    name: "Marco",
+    role: "Head chef",
+    start: 14,
+    end: 22,
+    color: "bg-amber-400",
   },
   {
-    name: "Sarah C.",
-    role: "Barista",
-    start: 7,
-    end: 15,
+    name: "Aoife",
+    role: "Sous chef",
+    start: 15,
+    end: 22,
+    color: "bg-amber-400",
+  },
+  {
+    name: "Priya",
+    role: "Bartender",
+    start: 16,
+    end: 22,
+    color: "bg-purple-400",
+  },
+  {
+    name: "Lena",
+    role: "Waiter",
+    start: 16,
+    end: 22,
     color: "bg-blue-400",
-  },
-  {
-    name: "Tom E.",
-    role: "Kitchen",
-    start: 9,
-    end: 15,
-    color: "bg-orange-400",
-  },
-  {
-    name: "Mia A.",
-    role: "Cashier",
-    start: 11,
-    end: 19,
-    color: "bg-green-400",
   },
 ];
 

@@ -83,6 +83,7 @@ export function DayStrip({
           .toUpperCase()
         const num = d.getUTCDate()
 
+        const fullLabel = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
         return (
           <Pressable
             key={date}
@@ -91,7 +92,7 @@ export function DayStrip({
               onSelect(date)
             }}
             accessibilityRole="button"
-            accessibilityLabel={date}
+            accessibilityLabel={`${fullLabel}${today ? ", today" : ""}`}
             accessibilityState={{ selected: isSelected }}
             className={`flex-1 items-center py-2.5 rounded-xl ${
               isSelected

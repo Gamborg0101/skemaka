@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { UserPlus, Power, Trash2, Pencil } from "lucide-react"
+import { UserPlus, Power, Trash2, Pencil, MailCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/tooltip"
 import {
@@ -18,14 +18,15 @@ import type { Employee, EmploymentType } from "@/types"
 import { useOrg } from "@/lib/orgContext"
 import { formatCurrency } from "@/lib/orgSettings"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useOptimisticList } from "@/lib/useOptimisticList"
+import { Pagination } from "@/components/ui/pagination"
+import { fetchPage } from "@/lib/pagination"
+
+const PAGE_SIZE = 25
 
 export default function EmployeesPage() {
-  const { orgId, jobRoles } = useOrg()
+  const { orgId, jobRoles, org } = useOrg()
 
   const [employees, setEmployees] = useState<Employee[]>([])
-  const { patch: patchEmployee, remove: removeEmployee } = useOptimisticList(employees, setEmployees)
-  const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -33,16 +34,66 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState<"active" | "inactive">("active")
   const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null)
+
+  // Server-side pagination + per-tab counts.
+  const [offset, setOffset] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [activeCount, setActiveCount] = useState(0)
+  const [inactiveCount, setInactiveCount] = useState(0)
+
+  // Bumping this token re-runs the load effect (used by mutations to refresh).
+  const [reloadToken, setReloadToken] = useState(0)
+  const reload = () => setReloadToken((t) => t + 1)
+
+  // Derive loading from whether the data matches the requested (tab, page) key,
+  // rather than toggling a flag synchronously inside the effect.
+  const [loadedKey, setLoadedKey] = useState("")
+  const currentKey = `${orgId}|${activeTab}|${offset}`
+  const loading = currentKey !== loadedKey
+
+  const handleResendInvite = async (emp: Employee) => {
+    setResendingInvite(emp.id)
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}/invite`, { method: "POST" })
+      if (!r.ok) throw new Error()
+      toast.success(`Invite resent to ${emp.email}`)
+    } catch {
+      toast.error("Failed to resend invite")
+    } finally {
+      setResendingInvite(null)
+    }
+  }
 
   useEffect(() => {
-    fetch(`/api/orgs/${orgId}/employees`)
-      .then((r) => r.json())
-      .then((data: { data?: Employee[] }) => {
-        if (data.data) setEmployees(data.data)
-      })
-      .catch(() => toast.error("Failed to load employees"))
-      .finally(() => setLoading(false))
-  }, [orgId])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data, meta } = await fetchPage<Employee>(
+          `/api/orgs/${orgId}/employees?status=${activeTab}`,
+          PAGE_SIZE,
+          offset,
+        )
+        if (cancelled) return
+        const m = meta as typeof meta & { activeCount: number; inactiveCount: number }
+        setEmployees(data)
+        setTotal(m.total)
+        setActiveCount(m.activeCount)
+        setInactiveCount(m.inactiveCount)
+      } catch {
+        if (!cancelled) toast.error("Failed to load employees")
+      } finally {
+        if (!cancelled) setLoadedKey(`${orgId}|${activeTab}|${offset}`)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [orgId, activeTab, offset, reloadToken])
+
+  // Switch tab: reset to the first page (the effect above reloads).
+  const changeTab = (tab: "active" | "inactive") => {
+    setActiveTab(tab)
+    setOffset(0)
+  }
 
   const handleAdd = async (data: {
     name: string; email: string; phone: string; jobRole: string
@@ -55,49 +106,46 @@ export default function EmployeesPage() {
     })
     const res = await r.json() as { data?: Employee; error?: string }
     if (res.data) {
-      setEmployees((prev) => [...prev, res.data!].sort((a, b) => a.name.localeCompare(b.name)))
-      toast.success(`${data.name} added. Use the invite button to send them a link.`)
+      toast.success(`${data.name} added — invite email sent`)
+      // New employees are active; surface them on the active tab's first page.
+      if (activeTab === "active" && offset === 0) reload()
+      else changeTab("active")
     } else {
       toast.error(res.error ?? "Failed to add employee")
     }
   }
 
-  const handleDeactivateConfirm = async (_deleteShifts: boolean) => {
+  const handleDeactivateConfirm = async () => {
     if (!deactivateTarget) return
     const target = deactivateTarget
     setDeactivateTarget(null)
-    await patchEmployee(target.id, { isActive: false } as Partial<Employee>, async () => {
-      const r = await fetch(`/api/orgs/${orgId}/employees/${target.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: false }),
-      })
-      if (!r.ok) { toast.error("Failed to deactivate employee"); throw new Error() }
-      toast.success(`${target.name} deactivated`)
-      return null
+    const r = await fetch(`/api/orgs/${orgId}/employees/${target.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: false }),
     })
+    if (!r.ok) { toast.error("Failed to deactivate employee"); return }
+    toast.success(`${target.name} deactivated`)
+    reload()
   }
 
   const handleReactivate = async (emp: Employee) => {
-    await patchEmployee(emp.id, { isActive: true } as Partial<Employee>, async () => {
-      const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: true }),
-      })
-      if (!r.ok) { toast.error("Failed to reactivate employee"); throw new Error() }
-      toast.success(`${emp.name} reactivated`)
-      return null
+    const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: true }),
     })
+    if (!r.ok) { toast.error("Failed to reactivate employee"); return }
+    toast.success(`${emp.name} reactivated`)
+    reload()
   }
 
   const handleRemove = async (empId: string, name: string) => {
     setDeleteTarget(null)
-    await removeEmployee(empId, async () => {
-      const r = await fetch(`/api/orgs/${orgId}/employees/${empId}`, { method: "DELETE" })
-      if (!r.ok) { toast.error("Failed to remove employee"); throw new Error() }
-      toast.success(`${name} removed`)
-    })
+    const r = await fetch(`/api/orgs/${orgId}/employees/${empId}`, { method: "DELETE" })
+    if (!r.ok) { toast.error("Failed to remove employee"); return }
+    toast.success(`${name} removed`)
+    reload()
   }
 
   const handleUpdate = async (empId: string, updated: Partial<Employee>) => {
@@ -119,9 +167,8 @@ export default function EmployeesPage() {
   const openSheet = (emp: Employee) => { setSelectedEmployee(emp); setSheetMode("view"); setSheetOpen(true) }
   const openSheetInEditMode = (emp: Employee) => { setSelectedEmployee(emp); setSheetMode("edit"); setSheetOpen(true) }
 
-  const activeCount = employees.filter((e) => e.isActive).length
-  const inactiveCount = employees.filter((e) => !e.isActive).length
-  const visibleEmployees = employees.filter((e) => activeTab === "active" ? e.isActive : !e.isActive)
+  // Counts come from the server (whole org); the page itself is the current tab.
+  const visibleEmployees = employees
 
   return (
     <div className="flex flex-col h-full">
@@ -157,7 +204,7 @@ export default function EmployeesPage() {
         {(["active", "inactive"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => changeTab(tab)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px capitalize ${
               activeTab === tab ? "border-blue-600 text-blue-600 dark:border-gray-400 dark:text-slate-200" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
@@ -242,7 +289,7 @@ export default function EmployeesPage() {
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-medium">{emp.jobRole}</TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums text-gray-700 dark:text-gray-300 font-medium">
-                    {formatCurrency(emp.hourlyWage)}/hr
+                    {formatCurrency(emp.hourlyWage, org?.currency)}/hr
                   </TableCell>
                   <TableCell className="text-right">
                     {/* On mobile, tapping the row opens the sheet — action buttons shown on sm+ */}
@@ -268,6 +315,19 @@ export default function EmployeesPage() {
                           </Button>
                         </Tooltip>
                       )}
+                      {!emp.userId && (
+                        <Tooltip content="Resend invite email">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleResendInvite(emp)}
+                            disabled={resendingInvite === emp.id}
+                            className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 min-w-[36px] min-h-[36px]"
+                          >
+                            <MailCheck className="size-3.5" />
+                          </Button>
+                        </Tooltip>
+                      )}
                       <Tooltip content="Remove employee">
                         <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(emp)} className="text-red-500 hover:text-red-600 hover:bg-red-50 min-w-[36px] min-h-[36px]">
                           <Trash2 className="size-3.5" />
@@ -282,6 +342,16 @@ export default function EmployeesPage() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {!loading && total > 0 && (
+        <Pagination
+          total={total}
+          limit={PAGE_SIZE}
+          offset={offset}
+          onOffsetChange={setOffset}
+          label={activeTab}
+        />
       )}
 
       <AddEmployeeDialog

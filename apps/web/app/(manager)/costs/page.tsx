@@ -15,19 +15,30 @@ export default function CostsPage() {
   const { orgId } = useOrg()
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
   const [costs, setCosts] = useState<WeeklyLaborCost | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Track which (orgId, weekStart) pair the current costs data corresponds to.
+  // loading is derived from key mismatch — avoids calling setState in an effect.
+  // Starts empty (never matches a real key) so the first mount is loading.
+  const [fetchedKey, setFetchedKey] = useState("")
+  const currentKey = `${orgId}__${weekStart}`
+  const loading = currentKey !== fetchedKey
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
 
     fetch(`/api/orgs/${orgId}/costs?weekStart=${weekStart}`)
       .then((r) => r.json())
       .then((data: { data?: WeeklyLaborCost }) => {
-        if (!cancelled && data.data) setCosts(data.data)
+        if (!cancelled) {
+          if (data.data) setCosts(data.data)
+          setFetchedKey(`${orgId}__${weekStart}`)
+        }
       })
-      .catch(() => { if (!cancelled) toast.error("Failed to load costs") })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("Failed to load costs")
+          setFetchedKey(`${orgId}__${weekStart}`)
+        }
+      })
 
     return () => { cancelled = true }
   }, [weekStart, orgId])
@@ -41,7 +52,7 @@ export default function CostsPage() {
     <div className="flex flex-col h-full">
       {/* Desktop header */}
       <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Labor Cost</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Labour Cost</h1>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setWeekStart(getMondayOfWeek(new Date()))} disabled={isCurrentWeek} className="mr-1">
             Today
@@ -68,7 +79,7 @@ export default function CostsPage() {
       </div>
       {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between gap-2 px-4 pt-6 pb-2 flex-wrap">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Labor Cost</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Labour Cost</h1>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setWeekStart(getMondayOfWeek(new Date()))} disabled={isCurrentWeek}>Today</Button>
           <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week"><ChevronLeft className="size-4" /></Button>

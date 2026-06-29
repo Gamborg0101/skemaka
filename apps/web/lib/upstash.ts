@@ -4,17 +4,28 @@ import { Redis } from "@upstash/redis"
 let _redis: Redis | null = null
 let _ratelimit: Ratelimit | null = null
 
+// Resolve the Upstash REST credentials from either naming convention:
+// our canonical UPSTASH_REDIS_REST_* (used locally and when set directly), or
+// the KV_REST_API_* names that Vercel's native Upstash/KV integration injects.
+// Preferring the canonical names keeps local dev and explicit config in control.
+function upstashUrl(): string | undefined {
+  return process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
+}
+function upstashToken(): string | undefined {
+  return process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
+}
+
 export function getRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  const url = upstashUrl()
+  const token = upstashToken()
   if (!url || !token) return null
   if (!_redis) _redis = new Redis({ url, token })
   return _redis
 }
 
 function getRatelimit(): Ratelimit | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  const url = upstashUrl()
+  const token = upstashToken()
 
   if (!url || !token) {
     return null
@@ -58,14 +69,39 @@ export function getClientIp(headers: Headers): string {
   )
 }
 
-export async function rateLimitRequest(identifier: string): Promise<{ success: boolean }> {
+/**
+ * Rate-limit a request keyed on `${scope}:${identifier}` so that different
+ * endpoint classes (auth, mutation, report) each have their own 20req/10s
+ * window rather than sharing one global bucket.
+ *
+ * Fail-closed in production: when Upstash is not configured we block requests
+ * so that rate-limiting cannot be silently bypassed by missing env vars.
+ * In dev/test we stay permissive (success: true).
+ *
+ * Transient Redis errors (network blip, cold start): we fail OPEN and log the
+ * error — availability over strictness for transient faults.
+ */
+export async function rateLimitRequest(
+  identifier: string,
+  scope: string = "mutation",
+): Promise<{ success: boolean }> {
   const instance = getRatelimit()
 
-  // Dev mode: env vars missing — skip rate limiting
   if (!instance) {
+    // Production without Upstash configured — fail closed.
+    if (process.env.NODE_ENV === "production") {
+      return { success: false }
+    }
+    // Dev / test — stay permissive.
     return { success: true }
   }
 
-  const result = await instance.limit(identifier)
-  return { success: result.success }
+  try {
+    const result = await instance.limit(`${scope}:${identifier}`)
+    return { success: result.success }
+  } catch (err) {
+    // Transient Redis outage — fail open so a Redis hiccup doesn't take down the API.
+    console.error("[UPSTASH] rateLimitRequest error (failing open):", err)
+    return { success: true }
+  }
 }

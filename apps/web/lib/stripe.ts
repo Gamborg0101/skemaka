@@ -16,15 +16,3 @@ export const stripe = new Proxy({} as Stripe, {
     return getStripe()[prop as keyof Stripe];
   },
 });
-
-export async function getStripeCustomerPortalUrl(
-  customerId: string,
-): Promise<string> {
-  const session = await getStripe().billingPortal.sessions.create({
-    customer: customerId,
-    return_url: process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
-      : "http://localhost:3000/dashboard",
-  });
-  return session.url;
-}
