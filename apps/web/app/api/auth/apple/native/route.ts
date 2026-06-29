@@ -240,10 +240,23 @@ export async function POST(req: NextRequest) {
   let role:               string = "EMPLOYEE"
   let orgId:              string | undefined
   let subscriptionStatus: string | undefined
+  // Billing timestamps are cached as epoch millis (matching lib/auth.ts). They
+  // MUST travel with subscriptionStatus — canAccessOrg treats a TRIALING status
+  // with a null trialEndsAt as an open trial, so omitting them would silently
+  // bypass trial-expiry enforcement on the JWT fast path.
+  let trialEndsAt:        number | null = null
+  let pastDueSince:       number | null = null
+
+  // Same billing fields lib/auth.ts caches in the jwt callback.
+  const ORG_BILLING_SELECT = {
+    subscriptionStatus: true,
+    trialEndsAt: true,
+    pastDueSince: true,
+  } as const
 
   const managerMembership = await db.membership.findFirst({
     where:   { userId, role: "MANAGER" },
-    include: { organization: { select: { subscriptionStatus: true } } },
+    include: { organization: { select: ORG_BILLING_SELECT } },
     orderBy: { joinedAt: "asc" },
   })
 
@@ -251,13 +264,19 @@ export async function POST(req: NextRequest) {
     role               = "MANAGER"
     orgId              = managerMembership.organizationId
     subscriptionStatus = managerMembership.organization.subscriptionStatus
+    trialEndsAt        = managerMembership.organization.trialEndsAt?.getTime() ?? null
+    pastDueSince       = managerMembership.organization.pastDueSince?.getTime() ?? null
   } else {
     const empMembership = await db.membership.findFirst({
       where:   { userId },
+      include: { organization: { select: ORG_BILLING_SELECT } },
       orderBy: { joinedAt: "asc" },
     })
     if (empMembership) {
-      orgId = empMembership.organizationId
+      orgId              = empMembership.organizationId
+      subscriptionStatus = empMembership.organization.subscriptionStatus
+      trialEndsAt        = empMembership.organization.trialEndsAt?.getTime() ?? null
+      pastDueSince       = empMembership.organization.pastDueSince?.getTime() ?? null
     }
   }
 
@@ -284,7 +303,7 @@ export async function POST(req: NextRequest) {
       email:              userRecord?.email ?? undefined,
       role,
       ...(orgId              !== undefined && { orgId }),
-      ...(subscriptionStatus !== undefined && { subscriptionStatus }),
+      ...(subscriptionStatus !== undefined && { subscriptionStatus, trialEndsAt, pastDueSince }),
     },
     secret,
     salt,
