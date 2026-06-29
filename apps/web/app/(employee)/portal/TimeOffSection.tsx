@@ -98,7 +98,7 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
                   setStartDate(e.target.value)
                   if (endDate && e.target.value > endDate) setEndDate(e.target.value)
                 }}
-                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -109,7 +109,7 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
                 min={startDate}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -120,7 +120,7 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. holiday, appointment…"
-              className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex gap-2">
