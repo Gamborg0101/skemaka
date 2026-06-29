@@ -20,17 +20,24 @@ export async function register() {
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "STRIPE_PRICE_ID",
-    "UPSTASH_REDIS_REST_URL",
-    "UPSTASH_REDIS_REST_TOKEN",
     "RESEND_API_KEY",
     "NEXT_PUBLIC_APP_URL",
     "SUPERADMIN_EMAIL",
     "CRON_SECRET",
   ] as const
 
-  const missing = REQUIRED_ENV_VARS.filter(
+  const missing: string[] = REQUIRED_ENV_VARS.filter(
     (key) => !process.env[key] || process.env[key]!.trim() === "",
   )
+
+  // Upstash Redis (rate limiting) may be supplied under our canonical names or
+  // under the KV_REST_API_* names that Vercel's native Upstash/KV integration
+  // injects. Require one complete pair — see lib/upstash.ts for the same logic.
+  const hasRedisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim() || process.env.KV_REST_API_URL?.trim()
+  const hasRedisToken =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || process.env.KV_REST_API_TOKEN?.trim()
+  if (!hasRedisUrl) missing.push("UPSTASH_REDIS_REST_URL (or KV_REST_API_URL)")
+  if (!hasRedisToken) missing.push("UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_TOKEN)")
 
   if (missing.length > 0) {
     throw new Error(

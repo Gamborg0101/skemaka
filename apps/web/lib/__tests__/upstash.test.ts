@@ -10,20 +10,32 @@ import { describe, it, expect, afterEach } from "vitest"
 // Store originals so we can restore them after each test
 const origUrl   = process.env.UPSTASH_REDIS_REST_URL
 const origToken = process.env.UPSTASH_REDIS_REST_TOKEN
+const origKvUrl   = process.env.KV_REST_API_URL
+const origKvToken = process.env.KV_REST_API_TOKEN
 const origEnv   = process.env.NODE_ENV
+
+function restore(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key]
+  } else {
+    process.env[key] = value
+  }
+}
+
+// "Not configured" means BOTH naming conventions are absent — clear them all.
+function clearUpstashEnv() {
+  delete process.env.UPSTASH_REDIS_REST_URL
+  delete process.env.UPSTASH_REDIS_REST_TOKEN
+  delete process.env.KV_REST_API_URL
+  delete process.env.KV_REST_API_TOKEN
+}
 
 afterEach(() => {
   // Restore env vars
-  if (origUrl === undefined) {
-    delete process.env.UPSTASH_REDIS_REST_URL
-  } else {
-    process.env.UPSTASH_REDIS_REST_URL = origUrl
-  }
-  if (origToken === undefined) {
-    delete process.env.UPSTASH_REDIS_REST_TOKEN
-  } else {
-    process.env.UPSTASH_REDIS_REST_TOKEN = origToken
-  }
+  restore("UPSTASH_REDIS_REST_URL", origUrl)
+  restore("UPSTASH_REDIS_REST_TOKEN", origToken)
+  restore("KV_REST_API_URL", origKvUrl)
+  restore("KV_REST_API_TOKEN", origKvToken)
   // NODE_ENV is read-only in some environments — ignore errors
   try {
     Object.defineProperty(process.env, "NODE_ENV", { value: origEnv, configurable: true })
@@ -38,8 +50,7 @@ import { vi } from "vitest"
 
 describe("rateLimitRequest — fail closed in production", () => {
   it("returns { success: false } in production when Upstash is not configured", async () => {
-    delete process.env.UPSTASH_REDIS_REST_URL
-    delete process.env.UPSTASH_REDIS_REST_TOKEN
+    clearUpstashEnv()
     try {
       Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true })
     } catch {
@@ -55,8 +66,7 @@ describe("rateLimitRequest — fail closed in production", () => {
   })
 
   it("returns { success: true } in development when Upstash is not configured", async () => {
-    delete process.env.UPSTASH_REDIS_REST_URL
-    delete process.env.UPSTASH_REDIS_REST_TOKEN
+    clearUpstashEnv()
     try {
       Object.defineProperty(process.env, "NODE_ENV", { value: "development", configurable: true })
     } catch {
@@ -72,8 +82,7 @@ describe("rateLimitRequest — fail closed in production", () => {
   it("scopes the key as scope:identifier", async () => {
     // When Upstash IS configured, verify the key contains the scope prefix.
     // We mock the Redis / Ratelimit instances to avoid a real network call.
-    delete process.env.UPSTASH_REDIS_REST_URL
-    delete process.env.UPSTASH_REDIS_REST_TOKEN
+    clearUpstashEnv()
     try {
       Object.defineProperty(process.env, "NODE_ENV", { value: "development", configurable: true })
     } catch {
