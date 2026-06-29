@@ -4,17 +4,28 @@ import { Redis } from "@upstash/redis"
 let _redis: Redis | null = null
 let _ratelimit: Ratelimit | null = null
 
+// Resolve the Upstash REST credentials from either naming convention:
+// our canonical UPSTASH_REDIS_REST_* (used locally and when set directly), or
+// the KV_REST_API_* names that Vercel's native Upstash/KV integration injects.
+// Preferring the canonical names keeps local dev and explicit config in control.
+function upstashUrl(): string | undefined {
+  return process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
+}
+function upstashToken(): string | undefined {
+  return process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
+}
+
 export function getRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  const url = upstashUrl()
+  const token = upstashToken()
   if (!url || !token) return null
   if (!_redis) _redis = new Redis({ url, token })
   return _redis
 }
 
 function getRatelimit(): Ratelimit | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  const url = upstashUrl()
+  const token = upstashToken()
 
   if (!url || !token) {
     return null
