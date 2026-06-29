@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 
@@ -9,56 +9,122 @@ interface Props {
 }
 
 type State =
-  | { status: "loading" }
+  | { status: "requesting" }
+  | { status: "enterCode"; emailHint: string; error?: string }
+  | { status: "submitting"; emailHint: string }
   | { status: "success"; orgName: string }
   | { status: "error"; message: string }
 
 export function ClaimInviteClient({ token }: Props) {
-  const [state, setState] = useState<State>({ status: "loading" })
+  const [state, setState] = useState<State>({ status: "requesting" })
+  const [code, setCode] = useState("")
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function claim() {
-      try {
-        const res = await fetch("/api/me/claim-invite", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        })
-
-        if (cancelled) return
-
-        const body = await res.json() as { data?: { orgName: string }; error?: string }
-
-        if (res.ok && body.data) {
-          setState({ status: "success", orgName: body.data.orgName })
-        } else {
-          setState({ status: "error", message: body.error ?? "Something went wrong." })
-        }
-      } catch {
-        if (!cancelled) {
-          setState({ status: "error", message: "Network error — please try again." })
-        }
+  // Step 1: ask the server to email a verification code to the employee's address.
+  const requestCode = useCallback(async () => {
+    setState({ status: "requesting" })
+    try {
+      const res = await fetch("/api/me/claim-invite/request-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      })
+      const body = (await res.json()) as {
+        data?: { sent?: boolean; email?: string; alreadyLinked?: boolean; orgName?: string }
+        error?: string
       }
-    }
 
-    void claim()
-
-    return () => {
-      cancelled = true
+      if (res.ok && body.data?.alreadyLinked) {
+        setState({ status: "success", orgName: body.data.orgName ?? "your organisation" })
+        return
+      }
+      if (res.ok && body.data?.sent) {
+        setState({ status: "enterCode", emailHint: body.data.email ?? "your email" })
+        return
+      }
+      setState({ status: "error", message: body.error ?? "Something went wrong." })
+    } catch {
+      setState({ status: "error", message: "Network error — please try again." })
     }
   }, [token])
+
+  useEffect(() => {
+    void requestCode()
+  }, [requestCode])
+
+  // Step 2: submit the code to link the account.
+  async function submitCode() {
+    if (state.status !== "enterCode") return
+    const emailHint = state.emailHint
+    setState({ status: "submitting", emailHint })
+    try {
+      const res = await fetch("/api/me/claim-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, code }),
+      })
+      const body = (await res.json()) as { data?: { orgName: string }; error?: string }
+
+      if (res.ok && body.data) {
+        setState({ status: "success", orgName: body.data.orgName })
+        return
+      }
+      setState({ status: "enterCode", emailHint, error: body.error ?? "Incorrect code." })
+      setCode("")
+    } catch {
+      setState({ status: "enterCode", emailHint, error: "Network error — please try again." })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="mb-8 text-2xl font-bold text-gray-900 tracking-tight">Skemaka</div>
 
       <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
-        {state.status === "loading" && (
+        {state.status === "requesting" && (
           <>
             <Loader2 className="size-10 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-sm text-gray-500">Linking your account…</p>
+            <p className="text-sm text-gray-500">Sending your verification code…</p>
+          </>
+        )}
+
+        {(state.status === "enterCode" || state.status === "submitting") && (
+          <>
+            <h1 className="text-lg font-semibold text-gray-900 mb-1">Enter your code</h1>
+            <p className="text-sm text-gray-500 mb-6">
+              We emailed a 6-digit code to <strong>{state.emailHint}</strong>. Enter it to link your account.
+            </p>
+            <input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(e) => { if (e.key === "Enter" && code.length === 6) void submitCode() }}
+              disabled={state.status === "submitting"}
+              placeholder="••••••"
+              className="w-full text-center text-2xl tracking-[0.5em] font-mono border border-gray-300 rounded-lg py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            {state.status === "enterCode" && state.error && (
+              <p className="text-sm text-red-500 mb-4">{state.error}</p>
+            )}
+            <button
+              onClick={() => void submitCode()}
+              disabled={state.status === "submitting" || code.length !== 6}
+              className="inline-flex items-center justify-center w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {state.status === "submitting" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Link my account"
+              )}
+            </button>
+            <button
+              onClick={() => void requestCode()}
+              disabled={state.status === "submitting"}
+              className="mt-3 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            >
+              Resend code
+            </button>
           </>
         )}
 

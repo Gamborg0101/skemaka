@@ -64,6 +64,35 @@ export async function sendAvailabilityInviteEmail({
   })
 }
 
+interface ClaimCodeOptions {
+  to: string
+  name: string
+  orgName: string
+  code: string
+}
+
+export async function sendClaimCodeEmail({ to, name, orgName, code }: ClaimCodeOptions) {
+  return getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    to,
+    subject: `Your Skemaka verification code: ${code}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <p style="color: #555; margin-bottom: 8px;">
+          Use this code to link your account to <strong>${orgName}</strong> on Skemaka:
+        </p>
+        <div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #111; background: #f3f4f6; border-radius: 8px; padding: 16px 24px; text-align: center; margin: 16px 0;">
+          ${code}
+        </div>
+        <p style="color: #999; font-size: 13px; margin-top: 24px;">
+          This code expires in 10 minutes. If you didn't request it, you can ignore this email — your account is safe.
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }: InviteEmailOptions) {
   return getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",

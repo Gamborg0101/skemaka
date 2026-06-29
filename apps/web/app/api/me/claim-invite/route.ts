@@ -17,7 +17,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/apiGuard"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
-import { claimInvite } from "@/lib/services/employeeService"
+import { claimInvite, getClaimableEmployee } from "@/lib/services/employeeService"
+import { verifyClaimCode } from "@/lib/inviteClaimCode"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { logError, requestIdFrom } from "@/lib/log"
 
@@ -42,13 +43,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  const { token } = body
+  const { token, code } = body as { token?: unknown; code?: unknown }
   if (!token || typeof token !== "string") {
     return NextResponse.json({ error: "token is required" }, { status: 400 })
   }
 
-  // ── 4. Claim ───────────────────────────────────────────────────────────────
+  // ── 4. Verify the emailed code, then claim ───────────────────────────────────
+  // The code (sent to the employee's record email by /request-code) proves the
+  // caller controls that inbox, so a forwarded/leaked link can't claim the
+  // identity. Skipped only when the invite is already linked to this same user
+  // (idempotent re-claim — no code was issued).
   try {
+    const employee = await getClaimableEmployee(token, userId)
+
+    if (!employee.alreadyLinkedToUser) {
+      if (!code || typeof code !== "string" || !/^\d{6}$/.test(code)) {
+        return NextResponse.json({ error: "A 6-digit verification code is required" }, { status: 400 })
+      }
+      const verdict = await verifyClaimCode(employee.id, code)
+      if (!verdict.ok) {
+        const message =
+          verdict.reason === "too_many"
+            ? "Too many incorrect attempts. Request a new code."
+            : verdict.reason === "expired"
+              ? "That code has expired. Request a new one."
+              : "Incorrect code."
+        const status = verdict.reason === "too_many" ? 429 : 400
+        return NextResponse.json({ error: message, code: verdict.reason }, { status })
+      }
+    }
+
     const result = await claimInvite(token, userId)
     return NextResponse.json({ data: result })
   } catch (err) {
