@@ -97,9 +97,17 @@ export async function POST(req: NextRequest) {
 
     const org = await db.organization.findUnique({
       where: { id: orgId },
-      select: { subscriptionStatus: true },
+      select: { subscriptionStatus: true, trialEndsAt: true, pastDueSince: true },
     })
-    if (org) subscriptionStatus = org.subscriptionStatus as typeof subscriptionStatus
+    if (org) {
+      subscriptionStatus = org.subscriptionStatus as typeof subscriptionStatus
+      // Refresh the full billing snapshot so the new token's status and its
+      // timestamps stay internally consistent — and so tokens minted before the
+      // timestamps were embedded get backfilled (canAccessOrg treats TRIALING
+      // with a null trialEndsAt as an open trial, bypassing trial expiry).
+      decoded.trialEndsAt  = org.trialEndsAt?.getTime() ?? null
+      decoded.pastDueSince = org.pastDueSince?.getTime() ?? null
+    }
 
     if (subscriptionStatus === "CANCELED") {
       return NextResponse.json(
