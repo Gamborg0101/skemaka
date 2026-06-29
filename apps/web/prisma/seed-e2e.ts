@@ -12,7 +12,17 @@ config({ path: ".env.local" })
 
 import { PrismaClient } from "../app/generated/prisma/client"
 import { PrismaNeon } from "@prisma/adapter-neon"
+import { neonConfig } from "@neondatabase/serverless"
 import { E2E } from "../e2e/fixtures"
+
+// CI / local-testing only: route the Neon serverless driver at a local wsproxy so
+// the seed can run against a plain Postgres container (mirrors lib/prisma.ts).
+if (process.env.NEON_WS_PROXY) {
+  neonConfig.wsProxy = () => process.env.NEON_WS_PROXY!
+  neonConfig.useSecureWebSocket = false
+  neonConfig.pipelineConnect = false
+  neonConfig.pipelineTLS = false
+}
 
 const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL ?? "" })
 const db = new PrismaClient({ adapter })
