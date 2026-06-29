@@ -37,4 +37,21 @@ export async function register() {
       `[startup] Missing required environment variables:\n${missing.map((k) => `  • ${k}`).join("\n")}\n\nSet these in your deployment environment before starting the server.`,
     )
   }
+
+  // The E2E test-login provider (lib/auth.ts) is full account-takeover-by-email
+  // gated only by a shared password. It must NEVER exist in production. If either
+  // var leaks into a prod deploy, crash the boot loudly rather than silently
+  // exposing the backdoor.
+  const FORBIDDEN_ENV_VARS = ["E2E_TEST_LOGIN", "E2E_TEST_PASSWORD"] as const
+  const present = FORBIDDEN_ENV_VARS.filter(
+    (key) => process.env[key] && process.env[key]!.trim() !== "",
+  )
+
+  if (present.length > 0) {
+    throw new Error(
+      `[startup] Refusing to boot: test-only environment variables are set in production:\n${present
+        .map((k) => `  • ${k}`)
+        .join("\n")}\n\nThese enable the E2E credentials backdoor and must never be present in a production environment.`,
+    )
+  }
 }
