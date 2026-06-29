@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { TimePicker } from "@/components/manager/TimePicker"
 import { formatTime, formatDayLabel, grossShiftMinutes } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 import { cn } from "@/lib/utils"
 import type { Employee, JobRole, ShiftTemplate } from "@/types"
 
@@ -66,14 +67,21 @@ export function AddShiftDialog({
   const [showNotes, setShowNotes] = useState(false)
   const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const skipAutoSuggestRef = useRef(false)
+  // Last start/end pair the break auto-suggest has seen. Pre-set on open and on
+  // template apply so the suggestion only fires when the user edits the times.
+  const [prevBreakSuggestKey, setPrevBreakSuggestKey] = useState(`${startTime}__${endTime}`)
 
-  // Sync pre-filled values whenever the dialog opens. Also sets the initial
-  // role from the employee — this replaces the separate employeeId-change effect
-  // so we avoid two effects both calling setSelectedRole on open.
-  useEffect(() => {
+  // Track when the dialog transitions from closed to open, or when pre-fill props
+  // change while open, so we can reset form fields during render (avoids calling
+  // setState synchronously inside an effect).
+  const openKey = `${open ? 1 : 0}__${defaultEmployeeId}__${defaultDate}__${defaultStartTime}__${defaultEndTime}`
+  // Starts empty so a dialog mounted already-open still gets its fields prefilled.
+  const [prevOpenKey, setPrevOpenKey] = useState("")
+
+  if (openKey !== prevOpenKey) {
+    setPrevOpenKey(openKey)
     if (open) {
-      skipAutoSuggestRef.current = true
+      setPrevBreakSuggestKey(`${defaultStartTime}__${defaultEndTime}`)
       setEmployeeId(defaultEmployeeId)
       setStartTime(defaultStartTime)
       setEndTime(defaultEndTime)
@@ -85,29 +93,30 @@ export function AddShiftDialog({
       const emp = employees.find((e) => e.id === defaultEmployeeId)
       setSelectedRole(emp?.jobRole ?? "")
     }
-  }, [open, defaultEmployeeId, defaultDate, defaultStartTime, defaultEndTime, employees])
+  }
 
-  // When the employee selection changes after open, update the role suggestion.
-  useEffect(() => {
-    if (!open) return
+  // When the employee selection changes while open, update the role suggestion
+  // during render (adjust state during render pattern).
+  const [prevEmployeeId, setPrevEmployeeId] = useState(employeeId)
+  if (open && employeeId !== prevEmployeeId) {
+    setPrevEmployeeId(employeeId)
     const emp = employees.find((e) => e.id === employeeId)
     setSelectedRole(emp?.jobRole ?? "")
-  }, [employeeId, employees, open])
+  }
 
-  // Auto-suggest break based on shift duration (only when user changes times, not on open/template)
-  useEffect(() => {
-    if (skipAutoSuggestRef.current) {
-      skipAutoSuggestRef.current = false
-      return
-    }
+  // Auto-suggest break based on shift duration (only when user changes times, not on
+  // open/template — those paths pre-set prevBreakSuggestKey to the incoming times).
+  const breakSuggestKey = `${startTime}__${endTime}`
+  if (breakSuggestKey !== prevBreakSuggestKey) {
+    setPrevBreakSuggestKey(breakSuggestKey)
     const mins = grossShiftMinutes(startTime, endTime)
     if (mins < 360) setBreakMinutes("0")
     else if (mins < 540) setBreakMinutes("30")
     else setBreakMinutes("45")
-  }, [startTime, endTime])
+  }
 
   const applyTemplate = (tmpl: ShiftTemplate) => {
-    skipAutoSuggestRef.current = true
+    setPrevBreakSuggestKey(`${tmpl.startTime}__${tmpl.endTime}`)
     setStartTime(tmpl.startTime)
     setEndTime(tmpl.endTime)
     setBreakMinutes(String(tmpl.breakMinutes))
@@ -158,6 +167,7 @@ export function AddShiftDialog({
           <div className="flex flex-wrap gap-1.5 -mt-1">
             {shiftTemplates.map((tmpl) => {
               const isActive = tmpl.id === appliedTemplateId
+              const tf = getOrgSettings().timeFormat
               return (
                 <button
                   key={tmpl.id}
@@ -172,7 +182,7 @@ export function AddShiftDialog({
                 >
                   <span className="font-medium">{tmpl.name}</span>
                   <span className={isActive ? "text-blue-400" : "text-gray-400"}>
-                    {formatTime(tmpl.startTime)}–{formatTime(tmpl.endTime)}
+                    {formatTime(tmpl.startTime, tf)}–{formatTime(tmpl.endTime, tf)}
                   </span>
                 </button>
               )

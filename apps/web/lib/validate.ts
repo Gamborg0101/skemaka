@@ -32,6 +32,14 @@ export function isNonNegativeInt(n: unknown): n is number {
   return typeof n === "number" && Number.isInteger(n) && n >= 0
 }
 
+// Deliberately loose — RFC-compliant validation is a rabbit hole; this catches
+// obvious typos (missing @, missing domain) without rejecting valid addresses.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export function isValidEmail(s: unknown): s is string {
+  return typeof s === "string" && s.length <= 254 && EMAIL_RE.test(s)
+}
+
 export const VALID_COLOR_TAGS = new Set(["blue", "green", "orange", "purple", "yellow", "rose", "gray", "sick"])
 
 export function isValidColorTag(s: unknown): s is string | null {

@@ -1,19 +1,38 @@
 import { db } from "@/lib/prisma"
+import { PrismaClient } from "@/app/generated/prisma/client"
 import { serEmployee } from "@/lib/serialize"
 import { isEmploymentType } from "@/types"
 import type { Employee } from "@/types"
-import type { PaginationParams, Paginated } from "@/lib/validate"
+import type { PaginationParams } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
 import { recordAudit } from "@/lib/audit"
 import { syncSubscriptionQuantitySafe } from "./billingService"
 import { ServiceError } from "./errors"
 
+/** Optional filter for the paginated employee list. */
+export type EmployeeListFilter = { isActive?: boolean }
+
+/**
+ * Paginated employee list. Meta carries `activeCount` / `inactiveCount` for the
+ * whole org (independent of the current filter) so the UI can render tab badges
+ * while paging within a single tab.
+ */
+export type PaginatedEmployees = {
+  data: Employee[]
+  meta: { total: number; limit: number; offset: number; activeCount: number; inactiveCount: number }
+}
+
 export async function listEmployees(orgId: string): Promise<Employee[]>
-export async function listEmployees(orgId: string, pagination: PaginationParams): Promise<Paginated<Employee>>
+export async function listEmployees(
+  orgId: string,
+  pagination: PaginationParams,
+  filter?: EmployeeListFilter,
+): Promise<PaginatedEmployees>
 export async function listEmployees(
   orgId: string,
   pagination?: PaginationParams,
-): Promise<Employee[] | Paginated<Employee>> {
+  filter?: EmployeeListFilter,
+): Promise<Employee[] | PaginatedEmployees> {
   if (!pagination) {
     const employees = await db.employee.findMany({
       where: { organizationId: orgId },
@@ -21,18 +40,24 @@ export async function listEmployees(
     })
     return employees.map(serEmployee)
   }
-  const [employees, total] = await Promise.all([
+  const where = {
+    organizationId: orgId,
+    ...(filter?.isActive !== undefined ? { isActive: filter.isActive } : {}),
+  }
+  const [employees, total, activeCount, inactiveCount] = await Promise.all([
     db.employee.findMany({
-      where: { organizationId: orgId },
+      where,
       orderBy: { name: "asc" },
       take:  pagination.limit,
       skip:  pagination.offset,
     }),
-    db.employee.count({ where: { organizationId: orgId } }),
+    db.employee.count({ where }),
+    db.employee.count({ where: { organizationId: orgId, isActive: true } }),
+    db.employee.count({ where: { organizationId: orgId, isActive: false } }),
   ])
   return {
     data: employees.map(serEmployee),
-    meta: { total, limit: pagination.limit, offset: pagination.offset },
+    meta: { total, limit: pagination.limit, offset: pagination.offset, activeCount, inactiveCount },
   }
 }
 
@@ -74,6 +99,8 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
       name:             input.name,
       email:            email,
       phone:            input.phone           ?? null,
+      // Record that the manager asserted SMS consent when a number is provided.
+      smsConsentAt:     input.phone ? new Date() : null,
       jobRole:          input.jobRole,
       hourlyWage:       input.hourlyWage,
       wageBaseAmount:   input.hourlyWage,
@@ -92,6 +119,7 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     name:      employee.name,
     orgName:   org?.name ?? "",
     inviteUrl: `${appUrl}/portal`,
+    joinUrl:   `${appUrl}/join/${employee.inviteToken}`,
   }).catch((err) => console.error("[invite] Resend error:", err))
 
   syncSubscriptionQuantitySafe(orgId)
@@ -190,16 +218,73 @@ export async function updateEmployee(
   }
 }
 
-export async function deleteEmployee(orgId: string, employeeId: string): Promise<void> {
+export async function deleteEmployee(
+  orgId: string,
+  employeeId: string,
+  actorUserId?: string,
+): Promise<void> {
   const existing = await db.employee.findFirst({
     where: { id: employeeId, organizationId: orgId },
     select: { id: true, isActive: true },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
+  // Hard delete. All child rows (shifts, time entries, availability, time-off)
+  // declare onDelete: Cascade on their Employee relation, so this leaves no
+  // orphans — satisfying the GDPR erasure (right to be forgotten) requirement.
   await db.employee.delete({ where: { id: employeeId } })
 
+  if (actorUserId) {
+    recordAudit({
+      orgId,
+      actorUserId,
+      action: "EMPLOYEE_ERASED",
+      entity: `Employee:${employeeId}`,
+    })
+  }
+
   syncSubscriptionQuantitySafe(orgId)
+}
+
+/**
+ * GDPR data-subject export: every record we hold for one employee, returned as a
+ * plain serializable object. Manager-scoped (caller must guard org membership).
+ */
+export async function exportEmployeeData(orgId: string, employeeId: string) {
+  const employee = await db.employee.findFirst({
+    where: { id: employeeId, organizationId: orgId },
+    include: {
+      shifts: true,
+      timeEntries: true,
+      timeOffRequests: true,
+      availabilitySubmissions: true,
+    },
+  })
+  if (!employee) throw new ServiceError("Not found", "NOT_FOUND")
+
+  return {
+    exportedAt: new Date().toISOString(),
+    employee: {
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      phone: employee.phone,
+      jobRole: employee.jobRole,
+      hourlyWage: Number(employee.hourlyWage),
+      wageBaseAmount: employee.wageBaseAmount === null ? null : Number(employee.wageBaseAmount),
+      wageBaseCurrency: employee.wageBaseCurrency,
+      employmentType: employee.employmentType,
+      contractedHours: employee.contractedHours,
+      notes: employee.notes,
+      isActive: employee.isActive,
+      smsConsentAt: employee.smsConsentAt?.toISOString() ?? null,
+      createdAt: employee.createdAt.toISOString(),
+    },
+    shifts: employee.shifts,
+    timeEntries: employee.timeEntries,
+    timeOffRequests: employee.timeOffRequests,
+    availabilitySubmissions: employee.availabilitySubmissions,
+  }
 }
 
 export async function getEmployeeByUserId(orgId: string, userId: string): Promise<Employee | null> {
@@ -235,12 +320,92 @@ export async function refreshInviteToken(orgId: string, employeeId: string): Pro
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const newToken = updated.inviteToken ?? ""
   sendInviteEmail({
     to:        employee.email,
     name:      employee.name,
     orgName:   org?.name ?? "",
     inviteUrl: `${appUrl}/portal`,
+    joinUrl:   `${appUrl}/join/${newToken}`,
   }).catch((err) => console.error("[invite] Resend error:", err))
 
   return serEmployee(updated)
+}
+
+export type ClaimInviteResult = {
+  organizationId: string
+  employeeId:     string
+  employeeName:   string
+  orgName:        string
+}
+
+/**
+ * Links a signed-in user to their employee record via the invite token.
+ *
+ * - Validates the token is active and not expired.
+ * - If employee.userId is already set to a different user → CONFLICT.
+ * - If already set to this user → idempotent success.
+ * - In a transaction: sets employee.userId and upserts an EMPLOYEE Membership,
+ *   but does NOT downgrade an existing MANAGER membership.
+ * - Does NOT clear inviteToken — the availability link continues to work.
+ */
+export async function claimInvite(
+  token:  string,
+  userId: string,
+): Promise<ClaimInviteResult> {
+  const employee = await db.employee.findFirst({
+    where: {
+      inviteToken: token,
+      isActive:    true,
+      inviteExpiry: { gt: new Date() },
+    },
+    include: {
+      organization: { select: { name: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!employee) {
+    throw new ServiceError("Invalid or expired invite link", "NOT_FOUND")
+  }
+
+  // Already claimed by a different user
+  if (employee.userId && employee.userId !== userId) {
+    throw new ServiceError("This invite has already been claimed", "CONFLICT")
+  }
+
+  // Idempotent: already linked to this user
+  if (employee.userId === userId) {
+    return {
+      organizationId: employee.organizationId,
+      employeeId:     employee.id,
+      employeeName:   employee.name,
+      orgName:        employee.organization.name,
+    }
+  }
+
+  // Link user to employee and create/update membership without downgrading manager
+  await db.$transaction(async (tx) => {
+    const client = tx as unknown as PrismaClient
+
+    await client.employee.update({
+      where: { id: employee.id },
+      data:  { userId },
+    })
+
+    // Upsert an EMPLOYEE membership. The update branch is a deliberate no-op so
+    // an existing MANAGER membership is never downgraded to EMPLOYEE.
+    await client.membership.upsert({
+      where:  { userId_organizationId: { userId, organizationId: employee.organizationId } },
+      create: { userId, organizationId: employee.organizationId, role: "EMPLOYEE" },
+      update: {}, // no-op: preserve whatever role already exists
+    })
+  })
+
+  return {
+    organizationId: employee.organizationId,
+    employeeId:     employee.id,
+    employeeName:   employee.name,
+    orgName:        employee.organization.name,
+  }
 }

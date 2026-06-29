@@ -8,7 +8,7 @@ interface RouteContext {
 }
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const { token } = await params
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const { token } = await params
@@ -40,8 +40,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     )
   }
 
-  const body = await req.json() as {
+  let body: {
     days?: { date: string; isAvailable: boolean; startTime?: string; endTime?: string }[]
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
   const { days } = body
 

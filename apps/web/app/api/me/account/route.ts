@@ -39,6 +39,7 @@ import { requireAuth } from "@/lib/apiGuard"
 import { db } from "@/lib/prisma"
 import { PrismaClient } from "@/app/generated/prisma/client"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+import { logError, requestIdFrom } from "@/lib/log"
 
 type MembershipWithOrg = {
   organizationId: string
@@ -52,7 +53,7 @@ type GroupByResult = {
 
 export async function DELETE(req: NextRequest) {
   // ── 1. Rate-limit ──────────────────────────────────────────────────────────
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
@@ -143,7 +144,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ deleted: true }, { status: 200 })
   } catch (err) {
-    console.error("[DELETE /api/me/account]", err)
+    logError("DELETE /api/me/account", err, { requestId: requestIdFrom(req.headers) })
     return NextResponse.json({ error: "Failed to delete account" }, { status: 500 })
   }
 }

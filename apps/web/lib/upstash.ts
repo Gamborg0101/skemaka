@@ -58,14 +58,39 @@ export function getClientIp(headers: Headers): string {
   )
 }
 
-export async function rateLimitRequest(identifier: string): Promise<{ success: boolean }> {
+/**
+ * Rate-limit a request keyed on `${scope}:${identifier}` so that different
+ * endpoint classes (auth, mutation, report) each have their own 20req/10s
+ * window rather than sharing one global bucket.
+ *
+ * Fail-closed in production: when Upstash is not configured we block requests
+ * so that rate-limiting cannot be silently bypassed by missing env vars.
+ * In dev/test we stay permissive (success: true).
+ *
+ * Transient Redis errors (network blip, cold start): we fail OPEN and log the
+ * error — availability over strictness for transient faults.
+ */
+export async function rateLimitRequest(
+  identifier: string,
+  scope: string = "mutation",
+): Promise<{ success: boolean }> {
   const instance = getRatelimit()
 
-  // Dev mode: env vars missing — skip rate limiting
   if (!instance) {
+    // Production without Upstash configured — fail closed.
+    if (process.env.NODE_ENV === "production") {
+      return { success: false }
+    }
+    // Dev / test — stay permissive.
     return { success: true }
   }
 
-  const result = await instance.limit(identifier)
-  return { success: result.success }
+  try {
+    const result = await instance.limit(`${scope}:${identifier}`)
+    return { success: result.success }
+  } catch (err) {
+    // Transient Redis outage — fail open so a Redis hiccup doesn't take down the API.
+    console.error("[UPSTASH] rateLimitRequest error (failing open):", err)
+    return { success: true }
+  }
 }

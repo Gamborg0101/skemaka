@@ -10,7 +10,7 @@ export default function PrivacyPage() {
 
       <Section title="1. Who We Are">
         <p>
-          Skemaka ApS ("Skemaka", "we", "us") operates the Skemaka staff-scheduling platform. We are
+          Skemaka ApS (&ldquo;Skemaka&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) operates the Skemaka staff-scheduling platform. We are
           registered in Denmark and act as the data controller for the personal data described in this
           policy. For data you enter about your employees, you are the controller and we act as your
           processor — see Section 6.
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
         <p>We share data with the following sub-processors to operate the Service:</p>
         <ul>
           <li>
-            <strong>Google</strong> — authentication via Google OAuth. Google's{" "}
+            <strong>Google</strong> — authentication via Google OAuth. Google&rsquo;s{" "}
             <a href="https://policies.google.com/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener">
               Privacy Policy
             </a>{" "}
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Stripe</strong> — payment processing. Stripe is PCI DSS Level 1 certified and
-            GDPR-compliant. See Stripe's{" "}
+            GDPR-compliant. See Stripe&rsquo;s{" "}
             <a href="https://stripe.com/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener">
               Privacy Policy
             </a>
@@ -112,12 +112,17 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Vercel</strong> — application hosting and edge delivery. Data in transit passes
-            through Vercel's infrastructure.
+            through Vercel&rsquo;s infrastructure.
           </li>
         </ul>
         <p>
-          We require all sub-processors to maintain appropriate security measures and process data only
-          as instructed.
+          A complete, current list of our sub-processors — including Twilio (SMS), Resend (email), and
+          Upstash (rate limiting) — is maintained at{" "}
+          <a href="/subprocessors" className="text-blue-600 hover:underline">
+            skemaka.com/subprocessors
+          </a>
+          . We require all sub-processors to maintain appropriate security measures and process data
+          only as instructed.
         </p>
       </Section>
 
@@ -176,7 +181,7 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Access</strong> — request a copy of the personal data we hold about you.</li>
           <li><strong>Rectification</strong> — ask us to correct inaccurate data.</li>
-          <li><strong>Erasure</strong> — ask us to delete your data ("right to be forgotten").</li>
+          <li><strong>Erasure</strong> — ask us to delete your data (&ldquo;right to be forgotten&rdquo;).</li>
           <li><strong>Portability</strong> — receive your data in a structured, machine-readable format.</li>
           <li><strong>Restriction</strong> — ask us to pause processing while a dispute is resolved.</li>
           <li><strong>Objection</strong> — object to processing based on legitimate interests.</li>
@@ -207,7 +212,7 @@ export default function PrivacyPage() {
       <Section title="12. Changes to This Policy">
         <p>
           We may update this policy from time to time. We will notify you of material changes by email
-          or in-app notice at least 14 days before they take effect. The "Last updated" date at the top
+          or in-app notice at least 14 days before they take effect. The &ldquo;Last updated&rdquo; date at the top
           of this page reflects the most recent revision.
         </p>
       </Section>

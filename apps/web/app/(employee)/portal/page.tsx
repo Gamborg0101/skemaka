@@ -89,6 +89,8 @@ export default async function EmployeePortalPage() {
     )
   }
 
+  const tf = (employee.organization.settings as { timeFormat?: "12h" | "24h" } | null)?.timeFormat ?? "24h"
+
   // Fetch schedule publishedAt for each week shown
   const weekStarts = [...new Set(employee.shifts.map((s) => getMondayOfWeek(s.date)))]
   const schedules = weekStarts.length > 0
@@ -211,7 +213,7 @@ export default async function EmployeePortalPage() {
                       <div className="flex items-center gap-1.5 text-gray-600">
                         <Clock className="size-4 shrink-0 text-gray-400" />
                         <span className="text-sm font-medium">
-                          {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
+                          {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
                         </span>
                         <span className="text-sm text-gray-400">
                           · {hours}h

@@ -6,6 +6,7 @@ import { StoreHoursSection } from "@/components/manager/settings/StoreHoursSecti
 import { ShiftTypesSection } from "@/components/manager/settings/ShiftTypesSection"
 import { TeamAccessSection } from "@/components/manager/settings/TeamAccessSection"
 import { ScheduleViewSection } from "@/components/manager/settings/ScheduleViewSection"
+import { TimeFormatSection } from "@/components/manager/settings/TimeFormatSection"
 import { CurrencySection } from "@/components/manager/settings/CurrencySection"
 import { DataRetentionSection } from "@/components/manager/settings/DataRetentionSection"
 import { FeaturesSection } from "@/components/manager/settings/FeaturesSection"
@@ -52,6 +53,7 @@ export default function SettingsPage() {
         <ShiftTypesSection />
         <TeamAccessSection />
         <ScheduleViewSection />
+        <TimeFormatSection />
         <CurrencySection />
         <DataRetentionSection />
         <FeaturesSection />

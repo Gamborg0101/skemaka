@@ -49,5 +49,11 @@ coverage
 # ── Claude Code ──────────────────────────────────────────────────────────────
 .claude/
 
-# Playwright MCP debug artifacts
+# Playwright MCP debug artifacts (any location)
+.playwright-mcp/
 apps/web/.playwright-mcp/
+.gstack/
+
+# Ad-hoc QA / demo screenshots dropped at the repo root
+/demo-desktop.png
+/qa-*.png

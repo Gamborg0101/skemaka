@@ -2,6 +2,7 @@ import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuthStore } from "@/store/authStore"
+import { NoOrgScreen } from "@/components/account/NoOrgScreen"
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"]
 
@@ -13,8 +14,13 @@ function tabIcon(active: IconName, inactive: IconName) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
-  const { activeView } = useAuthStore()
+  const { activeView, orgId } = useAuthStore()
   const isManager = activeView === "MANAGER"
+
+  // A signed-in user with no organisation (e.g. a fresh Apple/Google account
+  // not yet invited to a team) has nothing to show in the data tabs — every
+  // screen is org-scoped. Show a dedicated state instead of empty/broken tabs.
+  if (!orgId) return <NoOrgScreen />
 
   return (
     <Tabs

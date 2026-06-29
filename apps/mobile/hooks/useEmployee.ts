@@ -1,7 +1,8 @@
 import { useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { useApiClient, getCurrentUser } from "@skemaka/api"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useApiClient, getCurrentUser, deleteAccount } from "@skemaka/api"
 import { useAuthStore } from "@/store/authStore"
+import { setTimeFormat } from "@/lib/timeFormat"
 
 export function useCurrentUser() {
   const client = useApiClient()
@@ -26,7 +27,26 @@ export function useCurrentUser() {
       jobRole: query.data.jobRole,
       phone:   query.data.phone,
     })
+    setTimeFormat(query.data.timeFormat ?? "24h")
   }, [query.data, setEmployee])
 
   return query
+}
+
+/**
+ * Permanently deletes the signed-in user's account (Guideline 5.1.1(v)).
+ * On success the React Query cache is cleared so no stale data lingers; the
+ * caller is responsible for signing out. A 409 (sole manager) surfaces as an
+ * `ApiError` with a human-readable message for the caller to display.
+ */
+export function useDeleteAccount() {
+  const client = useApiClient()
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => deleteAccount(client),
+    onSuccess: () => {
+      qc.clear()
+    },
+  })
 }

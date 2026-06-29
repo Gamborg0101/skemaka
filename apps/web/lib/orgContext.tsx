@@ -71,6 +71,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             updateOrgSettings({
               currency: org.currency,
               timeOffEnabled: enabled,
+              timeFormat: org.settings?.timeFormat ?? "24h",
               ...(org.settings?.hours ? { hours: org.settings.hours as DayHours[] } : {}),
               ...(org.settings?.defaultScheduleView
                 ? { defaultScheduleView: org.settings.defaultScheduleView }

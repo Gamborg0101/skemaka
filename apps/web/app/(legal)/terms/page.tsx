@@ -10,7 +10,7 @@ export default function TermsPage() {
 
       <Section title="1. Introduction">
         <p>
-          These Terms of Service ("Terms") govern your access to and use of Skemaka ("the Service"), a
+          These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of Skemaka (&ldquo;the Service&rdquo;), a
           staff-scheduling platform operated by Skemaka ApS, a company registered in Denmark. By creating
           an account or using the Service you agree to be bound by these Terms. If you do not agree, do
           not use the Service.
@@ -54,7 +54,7 @@ export default function TermsPage() {
           except where required by applicable law.
         </p>
         <p>
-          We reserve the right to change pricing with at least 30 days' notice. Continued use of the
+          We reserve the right to change pricing with at least 30 days&rsquo; notice. Continued use of the
           Service after a price change constitutes acceptance of the new pricing.
         </p>
       </Section>

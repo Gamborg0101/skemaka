@@ -77,9 +77,19 @@ export function formatDayLabel(isoDate: string): string {
   })
 }
 
-/** Compact 12-hour time formatter: "8AM" / "8:30AM". */
-export function formatTime(time: string): string {
+export type TimeFormat = "12h" | "24h"
+
+/**
+ * Time-of-day formatter for wall-clock "HH:MM" strings.
+ *   • "24h" (default, EU/Denmark): "08:00" / "14:30" — no AM/PM.
+ *   • "12h" (US):                  "8AM"   / "2:30PM".
+ * Default is 24h so every caller renders EU-correct unless explicitly told otherwise.
+ */
+export function formatTime(time: string, format: TimeFormat = "24h"): string {
   const [h, m] = time.split(":").map(Number)
+  if (format === "24h") {
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  }
   const period = h >= 12 ? "PM" : "AM"
   const hour = h % 12 === 0 ? 12 : h % 12
   return m === 0 ? `${hour}${period}` : `${hour}:${m.toString().padStart(2, "0")}${period}`

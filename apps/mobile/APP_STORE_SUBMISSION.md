@@ -9,6 +9,7 @@ Grounded in the actual codebase as of June 2026. Sections marked **⚠️ HUMAN 
 
 - [ ] **Apple Developer Program** enrolled; **"Sign in with Apple" capability** enabled on App ID `com.skemaka.app`.
 - [ ] Fill `eas.json` submit creds: `appleId`, `ascAppId`, `appleTeamId`.
+- [ ] **Set the production API URL** — replace `https://REPLACE-WITH-PRODUCTION-DOMAIN` in `eas.json` (`build.production.env.EXPO_PUBLIC_API_URL`, and `build.preview` for device QA) with the deployed web domain. Without this the build talks to `localhost` and every request fails on-device.
 - [ ] **Seed a Google demo MANAGER account** (e.g. `appreview@skemaka.app`) inside an org with realistic sample data: several employees, a published weekly schedule, a couple of pending availability + time-off requests. The reviewer must land in a *populated* manager view.
 - [ ] **Publish/verify the Google OAuth consent screen** (or allowlist the demo email as a Test user) so "Continue with Google" isn't blocked for the reviewer.
 - [ ] Put the demo creds in App Store Connect's structured **Sign-In Information** fields *and* the review-notes placeholders; set a **Support email/URL**.

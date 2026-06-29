@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isValidDate, isValidTime, isValidColorTag } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as scheduleService from "@/lib/services/scheduleService"
@@ -16,9 +17,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  const body = await req.json() as Partial<
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
+  let body: Partial<
     Pick<Shift, "date" | "startTime" | "endTime" | "breakMinutes" | "jobRole" | "notes" | "colorTag" | "employeeId">
   >
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
 
   if (body.date      !== undefined && !isValidDate(body.date)) {
     return NextResponse.json({ error: "date must be a valid YYYY-MM-DD" }, { status: 400 })
@@ -50,6 +59,9 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   if ("error" in guard) return guard.error
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
+
+  const { success: deleteOk } = await rateLimitRequest(getClientIp(req.headers), "mutation")
+  if (!deleteOk) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   try {
     await scheduleService.deleteShift(orgId, scheduleId, shiftId)

@@ -224,6 +224,145 @@ export async function duplicateSchedule(
   return serSchedule(result!)
 }
 
+// ── Magic-moment: starter week + copy-previous ─────────────────────────────────
+
+/** Sensible defaults for an auto-generated starter shift. */
+export const STARTER_DEFAULTS = {
+  startTime: "09:00",
+  endTime: "17:00",
+  breakMinutes: 30,
+  weekdayCount: 5, // Mon–Fri
+} as const
+
+function addDaysISO(weekStart: string, days: number): string {
+  const d = new Date(weekStart + "T00:00:00Z")
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().split("T")[0]
+}
+
+/**
+ * Pure: build a default Mon–Fri 09:00–17:00 shift per employee for `weekStart`.
+ * Kept side-effect-free so it can be unit-tested without a DB.
+ */
+export function buildStarterShifts(
+  employees: { id: string; jobRole: string }[],
+  weekStart: string,
+): CreateShiftInput[] {
+  const shifts: CreateShiftInput[] = []
+  for (const emp of employees) {
+    for (let day = 0; day < STARTER_DEFAULTS.weekdayCount; day++) {
+      shifts.push({
+        employeeId: emp.id,
+        date: addDaysISO(weekStart, day),
+        startTime: STARTER_DEFAULTS.startTime,
+        endTime: STARTER_DEFAULTS.endTime,
+        breakMinutes: STARTER_DEFAULTS.breakMinutes,
+        jobRole: emp.jobRole,
+      })
+    }
+  }
+  return shifts
+}
+
+/**
+ * Fill an empty week with a default shift for every active employee so a
+ * first-time manager sees a complete schedule immediately. Refuses if the week
+ * already has shifts (never overwrites real work).
+ */
+export async function generateStarterWeek(orgId: string, weekStart: string): Promise<Schedule> {
+  const { schedule } = await getOrCreateSchedule(orgId, weekStart)
+
+  const [existingCount, employees] = await Promise.all([
+    db.shift.count({ where: { scheduleId: schedule.id } }),
+    db.employee.findMany({
+      where: { organizationId: orgId, isActive: true },
+      select: { id: true, jobRole: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ])
+  if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
+  if (employees.length === 0) throw new ServiceError("Add an employee first", "CONFLICT")
+
+  await db.shift.createMany({
+    data: buildStarterShifts(employees, weekStart).map((s) => ({
+      scheduleId:     schedule.id,
+      organizationId: orgId,
+      employeeId:     s.employeeId,
+      date:           new Date(s.date + "T00:00:00Z"),
+      startTime:      s.startTime,
+      endTime:        s.endTime,
+      breakMinutes:   s.breakMinutes ?? 0,
+      jobRole:        s.jobRole,
+    })),
+  })
+
+  void db.schedulingEvent.create({
+    data: { organizationId: orgId, eventType: "STARTER_WEEK_GENERATED", payload: { scheduleId: schedule.id, weekStart, employeeCount: employees.length } },
+  }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
+
+  const result = await db.schedule.findUnique({
+    where: { id: schedule.id },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+  })
+  return serSchedule(result!)
+}
+
+/**
+ * Clone the most recent prior week that has shifts into `weekStart`, shifting
+ * each shift's date by the week delta. Only copies shifts for still-active
+ * employees and skips sick days. Refuses if the target week already has shifts.
+ */
+export async function copyPreviousWeek(orgId: string, weekStart: string): Promise<Schedule> {
+  const target = new Date(weekStart + "T00:00:00Z")
+
+  const prior = await db.schedule.findFirst({
+    where: { organizationId: orgId, weekStart: { lt: target }, shifts: { some: {} } },
+    orderBy: { weekStart: "desc" },
+    include: { shifts: true },
+  })
+  if (!prior) throw new ServiceError("No previous week with shifts to copy", "NOT_FOUND")
+
+  const { schedule } = await getOrCreateSchedule(orgId, weekStart)
+  const existingCount = await db.shift.count({ where: { scheduleId: schedule.id } })
+  if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
+
+  const activeIds = new Set(
+    (await db.employee.findMany({
+      where: { organizationId: orgId, isActive: true },
+      select: { id: true },
+    })).map((e) => e.id),
+  )
+
+  const weekDiff = target.getTime() - prior.weekStart.getTime()
+  const data = prior.shifts
+    .filter((s) => activeIds.has(s.employeeId) && s.colorTag !== "sick")
+    .map((s) => ({
+      scheduleId:     schedule.id,
+      organizationId: orgId,
+      employeeId:     s.employeeId,
+      date:           new Date(s.date.getTime() + weekDiff),
+      startTime:      s.startTime,
+      endTime:        s.endTime,
+      breakMinutes:   s.breakMinutes,
+      jobRole:        s.jobRole,
+      notes:          s.notes,
+      colorTag:       s.colorTag,
+    }))
+  if (data.length === 0) throw new ServiceError("Nothing to copy from the previous week", "CONFLICT")
+
+  await db.shift.createMany({ data })
+
+  void db.schedulingEvent.create({
+    data: { organizationId: orgId, eventType: "WEEK_COPIED", payload: { scheduleId: schedule.id, sourceScheduleId: prior.id, weekStart, shiftCount: data.length } },
+  }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
+
+  const result = await db.schedule.findUnique({
+    where: { id: schedule.id },
+    include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+  })
+  return serSchedule(result!)
+}
+
 export async function publishSchedule(
   orgId: string,
   scheduleId: string,
@@ -236,12 +375,14 @@ export async function publishSchedule(
         include: { employee: { select: { id: true, name: true, phone: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
-      organization: { select: { name: true } },
+      organization: { select: { name: true, settings: true } },
     },
     orderBy: { createdAt: "asc" },
   })
   if (!schedule) throw new ServiceError("Not found", "NOT_FOUND")
   if (schedule.publishedAt) throw new ServiceError("Already published", "CONFLICT")
+
+  const tf = (schedule.organization.settings as { timeFormat?: "12h" | "24h" } | null)?.timeFormat ?? "24h"
 
   const updated = await db.schedule.update({
     where: { id: scheduleId },
@@ -256,7 +397,7 @@ export async function publishSchedule(
       byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, lines: [] })
     }
     const day = new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
-    byEmployee.get(emp.id)!.lines.push(`${day} ${formatTime(shift.startTime)}–${formatTime(shift.endTime)}`)
+    byEmployee.get(emp.id)!.lines.push(`${day} ${formatTime(shift.startTime, tf)}–${formatTime(shift.endTime, tf)}`)
   }
 
   const weekLabel = formatWeekLabel(schedule.weekStart.toISOString().split("T")[0])

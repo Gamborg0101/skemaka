@@ -9,6 +9,7 @@ import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { ClockWidgetSkeleton, ShiftCardSkeleton } from "@/components/ui/Skeleton"
 import { Divider } from "@/components/ui/Divider"
 import { useManagerSchedule, useOrgEmployees } from "@/hooks/useManagerSchedule"
+import { useCurrentUser } from "@/hooks/useEmployee"
 import { useUpdateTimeEntry } from "@/hooks/useClock"
 import { RefreshButton } from "@/components/ui/RefreshButton"
 import { useAuthStore } from "@/store/authStore"
@@ -82,6 +83,10 @@ export function ManagerScheduleView() {
     useManagerSchedule(selectedWeek)
   const updateTimeEntry = useUpdateTimeEntry()
   const { data: employees = [] } = useOrgEmployees()
+  // Syncs the org's clock format (24h/12h) into the lib/timeFormat singleton so
+  // shift times here honor the setting too. No-ops if the manager has no
+  // employee record (the /me 404 is ignored).
+  useCurrentUser()
   const managerEmployeeId = useAuthStore((s) => s.employee?.id)
 
   const days = weekDays(selectedWeek)

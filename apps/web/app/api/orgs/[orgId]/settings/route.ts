@@ -9,6 +9,7 @@ interface RouteContext {
 }
 
 const VALID_VIEWS = new Set(["week", "timeline"])
+const VALID_TIME_FORMATS = new Set(["12h", "24h"])
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -17,18 +18,27 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  const body = await req.json() as {
+  let body: {
     hours?: Array<{ isOpen: boolean; openTime: string; closeTime: string }>
     defaultScheduleView?: string
     timeOffEnabled?: boolean
     availabilityWindowWeeks?: number
+    timeFormat?: string
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined) {
+  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined && body.timeFormat === undefined) {
     return NextResponse.json({ error: "No settings fields provided" }, { status: 400 })
+  }
+  if (body.timeFormat !== undefined && !VALID_TIME_FORMATS.has(body.timeFormat)) {
+    return NextResponse.json({ error: "timeFormat must be '12h' or '24h'" }, { status: 400 })
   }
   if (body.availabilityWindowWeeks !== undefined) {
     const w = body.availabilityWindowWeeks
@@ -38,6 +48,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
   if (body.defaultScheduleView && !VALID_VIEWS.has(body.defaultScheduleView)) {
     return NextResponse.json({ error: "Invalid defaultScheduleView" }, { status: 400 })
+  }
+  if (body.timeOffEnabled !== undefined && typeof body.timeOffEnabled !== "boolean") {
+    return NextResponse.json({ error: "timeOffEnabled must be a boolean" }, { status: 400 })
   }
   if (body.hours !== undefined) {
     if (!Array.isArray(body.hours) || body.hours.length !== 7) {
@@ -58,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     defaultScheduleView:      body.defaultScheduleView as "week" | "timeline" | undefined,
     timeOffEnabled:           body.timeOffEnabled,
     availabilityWindowWeeks:  body.availabilityWindowWeeks,
+    timeFormat:               body.timeFormat as "12h" | "24h" | undefined,
   })
 
   return NextResponse.json({ data: merged })

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { logError } from "@/lib/log"
 
 export default function GlobalError({
   error,
@@ -10,7 +11,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error(error)
+    logError("app/error", error, { digest: error.digest })
   }, [error])
 
   return (

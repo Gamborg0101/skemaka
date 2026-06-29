@@ -71,7 +71,7 @@ function ReportCard({ r }: { r: BugReportRow }) {
               <p className="text-sm font-medium text-red-700 mb-1 break-all">{r.errorMessage}</p>
             )}
             {r.message && (
-              <p className="text-sm text-gray-700 italic">"{r.message}"</p>
+              <p className="text-sm text-gray-700 italic">&ldquo;{r.message}&rdquo;</p>
             )}
             {r.url && (
               <p className="text-xs text-gray-400 mt-1 truncate">{r.url}</p>

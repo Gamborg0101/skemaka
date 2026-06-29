@@ -3,17 +3,23 @@ import { requireAuth } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as orgService from "@/lib/services/orgService"
+import { logError, requestIdFrom } from "@/lib/log"
 
 export async function POST(req: NextRequest) {
   const guard = await requireAuth(req)
   if ("error" in guard) return guard.error
 
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
-  const body = await req.json() as { name?: string; currency?: string }
+  let body: { name?: string; currency?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
   const { name, currency } = body
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -30,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (err instanceof ServiceError) {
       return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
     }
-    console.error("[orgs POST]", err)
+    logError("orgs POST", err, { requestId: requestIdFrom(req.headers) })
     return NextResponse.json({ error: "Failed to create organization" }, { status: 500 })
   }
 }

@@ -44,7 +44,7 @@ function cookieName() {
 }
 
 export async function POST(req: NextRequest) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "auth")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const guard = await requireAuth(req)
