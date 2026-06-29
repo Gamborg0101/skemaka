@@ -30,19 +30,24 @@ export async function POST(req: NextRequest) {
 
   // Verify the request really came from Twilio. The signature is computed over the
   // exact public URL Twilio called, reconstructed from the forwarded host/proto.
+  // Fail CLOSED if the auth token is unconfigured — without it we cannot prove the
+  // request came from Twilio, so an attacker could otherwise POST STOP/START to
+  // suppress or re-subscribe arbitrary phone numbers.
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const signature = req.headers.get("x-twilio-signature")
-  if (authToken) {
-    const proto = req.headers.get("x-forwarded-proto") ?? "https"
-    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? ""
-    const url = `${proto}://${host}${req.nextUrl.pathname}`
-    const valid = signature
-      ? twilio.validateRequest(authToken, signature, url, params)
-      : false
-    if (!valid) {
-      logError("twilio/sms", "invalid Twilio signature", { requestId })
-      return NextResponse.json({ error: "Invalid signature" }, { status: 403 })
-    }
+  if (!authToken) {
+    logError("twilio/sms", "TWILIO_AUTH_TOKEN is not set — rejecting request", { requestId })
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 })
+  }
+  const proto = req.headers.get("x-forwarded-proto") ?? "https"
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? ""
+  const url = `${proto}://${host}${req.nextUrl.pathname}`
+  const valid = signature
+    ? twilio.validateRequest(authToken, signature, url, params)
+    : false
+  if (!valid) {
+    logError("twilio/sms", "invalid Twilio signature", { requestId })
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 })
   }
 
   const from = params.From ?? ""
