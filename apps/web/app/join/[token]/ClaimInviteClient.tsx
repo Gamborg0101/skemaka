@@ -15,41 +15,48 @@ type State =
   | { status: "success"; orgName: string }
   | { status: "error"; message: string }
 
+// Step 1: ask the server to email a verification code to the employee's address.
+// Pure async helper that resolves to the next State — callers apply it via
+// `.then(setState)`, keeping every state update inside a promise callback.
+async function requestVerificationCode(token: string): Promise<State> {
+  try {
+    const res = await fetch("/api/me/claim-invite/request-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+    const body = (await res.json()) as {
+      data?: { sent?: boolean; email?: string; alreadyLinked?: boolean; orgName?: string }
+      error?: string
+    }
+
+    if (res.ok && body.data?.alreadyLinked) {
+      return { status: "success", orgName: body.data.orgName ?? "your organisation" }
+    }
+    if (res.ok && body.data?.sent) {
+      return { status: "enterCode", emailHint: body.data.email ?? "your email" }
+    }
+    return { status: "error", message: body.error ?? "Something went wrong." }
+  } catch {
+    return { status: "error", message: "Network error — please try again." }
+  }
+}
+
 export function ClaimInviteClient({ token }: Props) {
   const [state, setState] = useState<State>({ status: "requesting" })
   const [code, setCode] = useState("")
 
-  // Step 1: ask the server to email a verification code to the employee's address.
-  const requestCode = useCallback(async () => {
+  // Resend (user-triggered): show the spinner immediately, then re-request.
+  const requestCode = useCallback(() => {
     setState({ status: "requesting" })
-    try {
-      const res = await fetch("/api/me/claim-invite/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      })
-      const body = (await res.json()) as {
-        data?: { sent?: boolean; email?: string; alreadyLinked?: boolean; orgName?: string }
-        error?: string
-      }
-
-      if (res.ok && body.data?.alreadyLinked) {
-        setState({ status: "success", orgName: body.data.orgName ?? "your organisation" })
-        return
-      }
-      if (res.ok && body.data?.sent) {
-        setState({ status: "enterCode", emailHint: body.data.email ?? "your email" })
-        return
-      }
-      setState({ status: "error", message: body.error ?? "Something went wrong." })
-    } catch {
-      setState({ status: "error", message: "Network error — please try again." })
-    }
+    void requestVerificationCode(token).then(setState)
   }, [token])
 
+  // On mount the initial state is already "requesting"; kick off the request and
+  // apply the result inside the promise callback.
   useEffect(() => {
-    void requestCode()
-  }, [requestCode])
+    void requestVerificationCode(token).then(setState)
+  }, [token])
 
   // Step 2: submit the code to link the account.
   async function submitCode() {
