@@ -339,6 +339,47 @@ export type ClaimInviteResult = {
   orgName:        string
 }
 
+export type ClaimableEmployee = {
+  id:                  string
+  organizationId:      string
+  email:               string
+  name:                string
+  orgName:             string
+  /** True when the invite is already linked to this same user (claim is idempotent). */
+  alreadyLinkedToUser: boolean
+}
+
+/**
+ * Resolve the employee an invite token points to, enforcing the same ownership
+ * rules as claimInvite WITHOUT mutating anything. Used by the claim-code flow to
+ * decide whether to issue a verification code. Throws ServiceError on an invalid/
+ * expired token (404) or a token already claimed by someone else (409).
+ */
+export async function getClaimableEmployee(
+  token:  string,
+  userId: string,
+): Promise<ClaimableEmployee> {
+  const employee = await db.employee.findFirst({
+    where: { inviteToken: token, isActive: true, inviteExpiry: { gt: new Date() } },
+    include: { organization: { select: { name: true } } },
+    orderBy: { createdAt: "asc" },
+  })
+  if (!employee) {
+    throw new ServiceError("Invalid or expired invite link", "NOT_FOUND")
+  }
+  if (employee.userId && employee.userId !== userId) {
+    throw new ServiceError("This invite has already been claimed", "CONFLICT")
+  }
+  return {
+    id:                  employee.id,
+    organizationId:      employee.organizationId,
+    email:               employee.email,
+    name:                employee.name,
+    orgName:             employee.organization.name,
+    alreadyLinkedToUser: employee.userId === userId,
+  }
+}
+
 /**
  * Links a signed-in user to their employee record via the invite token.
  *
