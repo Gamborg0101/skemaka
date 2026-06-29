@@ -12,7 +12,9 @@ import { useOrg } from "@/lib/orgContext"
 import { useOptimisticList } from "@/lib/useOptimisticList"
 import type { TimeOffRequest, Schedule, Shift } from "@/types"
 import { cn } from "@/lib/utils"
+import { fetchAllPages } from "@/lib/pagination"
 import { getMondayOfWeek, addDays, formatTime } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 
 type Tab = "PENDING" | "APPROVED" | "DENIED"
 
@@ -60,10 +62,14 @@ function getDaysInRange(startDate: string, endDate: string): string[] {
 
 export default function TimeOffPage() {
   const { orgId } = useOrg()
+  const tf = getOrgSettings().timeFormat
   const [tab, setTab] = useState<Tab>("PENDING")
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
   const { patch: patchRequest, remove: removeRequest } = useOptimisticList(requests, setRequests)
-  const [loading, setLoading] = useState(true)
+  // Track which orgId the current requests data was fetched for.
+  // loading is derived — avoids calling setState synchronously in an effect.
+  const [fetchedOrgId, setFetchedOrgId] = useState<string>("")
+  const loading = fetchedOrgId !== orgId
   const [denyId, setDenyId] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState("")
 
@@ -72,50 +78,60 @@ export default function TimeOffPage() {
   const [previewShifts, setPreviewShifts] = useState<Shift[]>([])
   const [previewLoading, setPreviewLoading] = useState(false)
 
+  // Reset the preview during render when a new request is selected (adjust state
+  // during render pattern) — the effect below only performs the fetch.
+  const [prevViewRequest, setPrevViewRequest] = useState<TimeOffRequest | null>(null)
+  if (viewRequest !== prevViewRequest) {
+    setPrevViewRequest(viewRequest)
+    if (viewRequest) {
+      setPreviewLoading(true)
+      setPreviewShifts([])
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    fetch(`/api/orgs/${orgId}/time-off`)
-      .then(async (r) => {
-        const d = await r.json() as { data?: TimeOffRequest[]; error?: string }
+    // Load every request (the page groups/filters by status client-side).
+    fetchAllPages<TimeOffRequest>(`/api/orgs/${orgId}/time-off`)
+      .then((all) => {
         if (!cancelled) {
-          if (d.data) setRequests(d.data)
-          else if (!r.ok) toast.error(d.error ?? "Failed to load requests")
+          setRequests(all)
+          setFetchedOrgId(orgId)
         }
       })
-      .catch(() => { if (!cancelled) toast.error("Failed to load requests") })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("Failed to load requests")
+          setFetchedOrgId(orgId)
+        }
+      })
     return () => { cancelled = true }
   }, [orgId])
 
-  // Fetch shifts when a request is selected for preview
-  const fetchPreview = useCallback(async (req: TimeOffRequest) => {
-    setPreviewLoading(true)
-    setPreviewShifts([])
-    try {
-      const weeks = getWeeksForRange(req.startDate, req.endDate)
-      const allShifts = await Promise.all(
-        weeks.map(async (weekStart) => {
-          const sr = await fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
-          const sd = await sr.json() as { data: Schedule | null }
-          if (!sd.data) return []
-          const shiftsRes = await fetch(`/api/orgs/${orgId}/schedules/${sd.data.id}/shifts`)
-          const shiftsData = await shiftsRes.json() as { data: Shift[] }
-          return shiftsData.data ?? []
-        })
-      )
-      const flat = allShifts.flat()
-      setPreviewShifts(flat.filter((s) => s.date >= req.startDate && s.date <= req.endDate))
-    } catch {
-      toast.error("Failed to load schedule")
-    } finally {
-      setPreviewLoading(false)
-    }
+  // Fetch shifts for a request's date range. Pure fetch — state updates happen
+  // in the effect's promise callbacks below.
+  const fetchPreview = useCallback(async (req: TimeOffRequest): Promise<Shift[]> => {
+    const weeks = getWeeksForRange(req.startDate, req.endDate)
+    const allShifts = await Promise.all(
+      weeks.map(async (weekStart) => {
+        const sr = await fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
+        const sd = await sr.json() as { data: Schedule | null }
+        if (!sd.data) return []
+        return fetchAllPages<Shift>(`/api/orgs/${orgId}/schedules/${sd.data.id}/shifts`)
+      })
+    )
+    const flat = allShifts.flat()
+    return flat.filter((s) => s.date >= req.startDate && s.date <= req.endDate)
   }, [orgId])
 
   useEffect(() => {
-    if (viewRequest) fetchPreview(viewRequest)
-    else setPreviewShifts([])
+    if (!viewRequest) return
+    let cancelled = false
+    fetchPreview(viewRequest)
+      .then((shifts) => { if (!cancelled) setPreviewShifts(shifts) })
+      .catch(() => { if (!cancelled) toast.error("Failed to load schedule") })
+      .finally(() => { if (!cancelled) setPreviewLoading(false) })
+    return () => { cancelled = true }
   }, [viewRequest, fetchPreview])
 
   const tabs: Tab[] = ["PENDING", "APPROVED", "DENIED"]
@@ -369,7 +385,7 @@ export default function TimeOffPage() {
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{shift.jobRole}</p>
                               </div>
                               <p className={cn("shrink-0 text-xs font-medium tabular-nums ml-3", isRequesting ? "text-amber-700 dark:text-amber-400" : "text-gray-600 dark:text-gray-400")}>
-                                {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
+                                {formatTime(shift.startTime, tf)}–{formatTime(shift.endTime, tf)}
                               </p>
                             </div>
                           )

@@ -23,6 +23,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         <div className="mx-auto max-w-3xl px-6 py-8 flex gap-6 text-sm text-gray-400">
           <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
           <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
+          <Link href="/subprocessors" className="hover:text-gray-600 transition-colors">Sub-processors</Link>
         </div>
       </footer>
     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Mail,
   Phone,
@@ -130,8 +130,12 @@ export function EmployeeDetailSheet({
   const [editEmploymentType, setEditEmploymentType] = useState<EmploymentType>("PART_TIME")
   const [editContractedHours, setEditContractedHours] = useState("0")
 
-  // Sync form state when employee changes or edit mode opens
-  useEffect(() => {
+  // Sync form state when employee changes — adjust state during render pattern.
+  // Starts null so a non-null employee at mount also populates the fields
+  // (the original effect ran on mount).
+  const [prevEmployee, setPrevEmployee] = useState<Employee | null>(null)
+  if (employee !== prevEmployee) {
+    setPrevEmployee(employee)
     if (employee) {
       setEditName(employee.name)
       setEditEmail(employee.email)
@@ -142,11 +146,15 @@ export function EmployeeDetailSheet({
       setEditEmploymentType(employee.employmentType)
       setEditContractedHours(employee.contractedHours.toString())
     }
-  }, [employee])
+  }
 
-  useEffect(() => {
+  // Reset editing mode when sheet opens/mode changes — adjust state during render pattern.
+  const openModeKey = `${open ? 1 : 0}__${initialMode}`
+  const [prevOpenModeKey, setPrevOpenModeKey] = useState(openModeKey)
+  if (openModeKey !== prevOpenModeKey) {
+    setPrevOpenModeKey(openModeKey)
     setIsEditing(initialMode === "edit")
-  }, [open, initialMode])
+  }
 
   const handleSave = () => {
     if (!employee) return

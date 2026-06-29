@@ -20,6 +20,7 @@ interface InviteEmailOptions {
   name: string
   orgName: string
   inviteUrl: string
+  joinUrl?: string
 }
 
 interface AvailabilityInviteOptions {
@@ -63,7 +64,7 @@ export async function sendAvailabilityInviteEmail({
   })
 }
 
-export async function sendInviteEmail({ to, name, orgName, inviteUrl }: InviteEmailOptions) {
+export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }: InviteEmailOptions) {
   return getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
@@ -80,8 +81,18 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl }: InviteEm
         <a href="${inviteUrl}" style="display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
           View my shifts
         </a>
+        ${joinUrl ? `
+        <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <p style="color: #374151; font-size: 14px; margin: 0 0 12px;">
+            <strong>Create your account</strong> to see your shifts in the app and get availability notifications.
+          </p>
+          <a href="${joinUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
+            Create my account
+          </a>
+        </div>
+        ` : ""}
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
-          This link is personal to you — please don't share it.
+          These links are personal to you — please don't share them.
         </p>
       </div>
     `,

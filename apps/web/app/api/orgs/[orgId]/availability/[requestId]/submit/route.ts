@@ -34,7 +34,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     startTime?: string
     endTime?: string
   }
-  const body = await req.json() as { days?: DayInput[] }
+  let body: { days?: DayInput[] }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
   const { days } = body
 
   if (!Array.isArray(days) || days.length === 0) {

@@ -17,7 +17,7 @@ import { decode } from "next-auth/jwt"
 import { rateLimitRequest, getClientIp, getRedis } from "@/lib/upstash"
 
 export async function POST(req: NextRequest) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "auth")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   let body: { code?: unknown }

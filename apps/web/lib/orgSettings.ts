@@ -16,6 +16,7 @@ export interface OrgSettings {
   defaultScheduleView: "week" | "timeline"
   currency: string   // ISO 4217 code e.g. "EUR", "USD"
   timeOffEnabled: boolean
+  timeFormat: "12h" | "24h"  // "24h" = 14:00 (EU default), "12h" = 2:00 PM (US)
 }
 
 export const SUPPORTED_CURRENCIES = [
@@ -46,6 +47,7 @@ let _settings: OrgSettings = {
   defaultScheduleView: "week",
   currency: "EUR",
   timeOffEnabled: true,
+  timeFormat: "24h",
 }
 
 export function getOrgSettings(): OrgSettings {
@@ -54,6 +56,7 @@ export function getOrgSettings(): OrgSettings {
     defaultScheduleView: _settings.defaultScheduleView,
     currency: _settings.currency,
     timeOffEnabled: _settings.timeOffEnabled,
+    timeFormat: _settings.timeFormat,
   }
 }
 

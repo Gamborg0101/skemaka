@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe"
 import { db } from "@/lib/prisma"
 import { SubscriptionStatus } from "@/app/generated/prisma/enums"
 import type Stripe from "stripe"
+import { logError, requestIdFrom } from "@/lib/log"
 
 const STATUS_MAP: Record<string, SubscriptionStatus> = {
   active: SubscriptionStatus.ACTIVE,
@@ -13,6 +14,46 @@ const STATUS_MAP: Record<string, SubscriptionStatus> = {
   paused: SubscriptionStatus.CANCELED,
   incomplete: SubscriptionStatus.PAST_DUE,
   incomplete_expired: SubscriptionStatus.CANCELED,
+}
+
+/**
+ * Apply a subscription status to every org with this Stripe customer.
+ *
+ * Non-regressive: the update only lands when this event is at least as new as
+ * the last one we applied (`stripeEventAt`), so a late/out-of-order delivery can
+ * never overwrite newer state. `pastDueSince` is anchored to the FIRST failure
+ * and cleared on recovery (ACTIVE/TRIALING).
+ */
+async function applyStatus(
+  stripeCustomerId: string,
+  status: SubscriptionStatus,
+  subscriptionId: string | null,
+  eventTime: Date,
+): Promise<void> {
+  // Anchor the grace clock to the first observed failure only (idempotent).
+  if (status === SubscriptionStatus.PAST_DUE) {
+    await db.organization.updateMany({
+      where: { stripeCustomerId, pastDueSince: null },
+      data: { pastDueSince: eventTime },
+    })
+  }
+
+  const clearGrace =
+    status === SubscriptionStatus.ACTIVE || status === SubscriptionStatus.TRIALING
+
+  await db.organization.updateMany({
+    where: {
+      stripeCustomerId,
+      // Ordering guard: skip if a newer event already applied.
+      OR: [{ stripeEventAt: null }, { stripeEventAt: { lte: eventTime } }],
+    },
+    data: {
+      subscriptionStatus: status,
+      stripeEventAt: eventTime,
+      ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
+      ...(clearGrace ? { pastDueSince: null } : {}),
+    },
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -31,6 +72,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 })
   }
 
+  // ── Idempotency ────────────────────────────────────────────────────────────
+  // Record the event id before doing any work. A replayed/duplicated delivery
+  // hits the primary-key constraint and is acknowledged without re-processing.
+  try {
+    await db.processedStripeEvent.create({ data: { id: event.id, type: event.type } })
+  } catch {
+    return NextResponse.json({ received: true, duplicate: true }, { status: 200 })
+  }
+
+  // Stripe's event creation time drives the non-regression ordering guard.
+  const eventTime = new Date(event.created * 1000)
+
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session
@@ -46,16 +99,24 @@ export async function POST(req: NextRequest) {
       // If the org already has a customer ID, it must match what Stripe sent.
       // Prevents replayed or crafted events from hijacking another org's billing.
       if (org.stripeCustomerId && org.stripeCustomerId !== (session.customer as string)) {
-        console.error("[stripe webhook] customer mismatch for org", organizationId)
+        logError("stripe webhook", "customer mismatch for org", {
+          organizationId,
+          requestId: requestIdFrom(req.headers),
+        })
         return NextResponse.json({ error: "Customer mismatch" }, { status: 400 })
       }
 
-      await db.organization.update({
-        where: { id: organizationId },
+      await db.organization.updateMany({
+        where: {
+          id: organizationId,
+          OR: [{ stripeEventAt: null }, { stripeEventAt: { lte: eventTime } }],
+        },
         data: {
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
           subscriptionStatus: SubscriptionStatus.ACTIVE,
+          pastDueSince: null,
+          stripeEventAt: eventTime,
         },
       })
       break
@@ -63,35 +124,25 @@ export async function POST(req: NextRequest) {
 
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription
-      const stripeCustomerId = subscription.customer as string
-      const subscriptionStatus = STATUS_MAP[subscription.status] ?? SubscriptionStatus.ACTIVE
-
-      await db.organization.updateMany({
-        where: { stripeCustomerId },
-        data: { subscriptionStatus, stripeSubscriptionId: subscription.id },
-      })
+      const status = STATUS_MAP[subscription.status] ?? SubscriptionStatus.ACTIVE
+      await applyStatus(subscription.customer as string, status, subscription.id, eventTime)
       break
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription
-      const stripeCustomerId = subscription.customer as string
-
-      await db.organization.updateMany({
-        where: { stripeCustomerId },
-        data: { subscriptionStatus: SubscriptionStatus.CANCELED },
-      })
+      await applyStatus(
+        subscription.customer as string,
+        SubscriptionStatus.CANCELED,
+        subscription.id,
+        eventTime,
+      )
       break
     }
 
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice
-      const stripeCustomerId = invoice.customer as string
-
-      await db.organization.updateMany({
-        where: { stripeCustomerId },
-        data: { subscriptionStatus: SubscriptionStatus.PAST_DUE },
-      })
+      await applyStatus(invoice.customer as string, SubscriptionStatus.PAST_DUE, null, eventTime)
       break
     }
 

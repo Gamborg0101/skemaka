@@ -19,9 +19,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const body = await req.json() as {
+  let body: {
     clockIn?: string; clockOut?: string | null
     breakMinutes?: number; shiftId?: string | null; note?: string | null
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
   if (Object.keys(body).length === 0) {

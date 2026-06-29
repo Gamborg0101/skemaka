@@ -1,5 +1,5 @@
 import { db } from "@/lib/prisma"
-import { Prisma } from "@/app/generated/prisma/client"
+import { PrismaClient } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
 import { seedDefaultRoles } from "@/lib/seedDefaultRoles"
 import { recordAudit } from "@/lib/audit"
@@ -9,6 +9,9 @@ import { ServiceError } from "./errors"
 // ── Organization ──────────────────────────────────────────────────────────────
 
 const VALID_CURRENCIES = ["EUR", "USD", "GBP", "DKK", "SEK", "NOK"] as const
+
+/** Length of the free trial granted to a new organization. */
+export const TRIAL_DAYS = 14
 
 export async function createOrg(
   userId: string,
@@ -27,15 +30,25 @@ export async function createOrg(
     slug = `${baseSlug || "org"}-${suffix++}`
   }
 
-  const org = await db.organization.create({
-    data: { name: trimmedName, slug, currency: resolvedCurrency },
-  })
+  const org = await db.$transaction(async (tx) => {
+    // Prisma 7 types the tx callback param as Omit<PrismaClient, ITXClientDenyList>;
+    // tsc cannot see delegate properties through Omit on a class, so cast as done
+    // in app/api/me/account/route.ts.
+    const client = tx as unknown as PrismaClient
 
-  await db.membership.create({
-    data: { userId, organizationId: org.id, role: "MANAGER" },
-  })
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+    const newOrg = await client.organization.create({
+      data: { name: trimmedName, slug, currency: resolvedCurrency, trialEndsAt },
+    })
 
-  await seedDefaultRoles(org.id)
+    await client.membership.create({
+      data: { userId, organizationId: newOrg.id, role: "MANAGER" },
+    })
+
+    await seedDefaultRoles(newOrg.id, client)
+
+    return newOrg
+  })
 
   return serOrg(org)
 }
@@ -153,6 +166,7 @@ export type OrgSettingsPatch = {
   defaultScheduleView?:      "week" | "timeline"
   timeOffEnabled?:           boolean
   availabilityWindowWeeks?:  number
+  timeFormat?:               "12h" | "24h"
 }
 
 export async function updateOrgSettings(
@@ -167,6 +181,7 @@ export async function updateOrgSettings(
   if (patch.defaultScheduleView     !== undefined) merged.defaultScheduleView     = patch.defaultScheduleView
   if (patch.timeOffEnabled          !== undefined) merged.timeOffEnabled          = patch.timeOffEnabled
   if (patch.availabilityWindowWeeks !== undefined) merged.availabilityWindowWeeks = patch.availabilityWindowWeeks
+  if (patch.timeFormat              !== undefined) merged.timeFormat              = patch.timeFormat
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await db.organization.update({ where: { id: orgId }, data: { settings: merged as any } })

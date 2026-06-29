@@ -19,6 +19,7 @@ vi.mock("@/lib/prisma", () => ({
   db: {
     membership: { findFirst: vi.fn() },
     employee: { findFirst: vi.fn() },
+    organization: { findUnique: vi.fn() },
   },
 }))
 
@@ -26,6 +27,7 @@ const mockGetToken = vi.mocked(getToken)
 const mockDecode = vi.mocked(decode)
 const mockMembershipFindFirst = vi.mocked(db.membership.findFirst)
 const mockEmployeeFindFirst = vi.mocked(db.employee.findFirst)
+const mockOrgFindUnique = vi.mocked(db.organization.findUnique)
 
 function req(headers: Record<string, string> = {}) {
   return new NextRequest("http://localhost/api/orgs/org1/employees", { headers })
@@ -44,6 +46,8 @@ beforeEach(() => {
   mockGetToken.mockResolvedValue(null)
   mockDecode.mockResolvedValue(null)
 })
+
+const DAY = 24 * 60 * 60 * 1000
 
 describe("requireAuth", () => {
   it("returns 401 when there is no session token", async () => {
@@ -87,10 +91,13 @@ describe("requireOrgMember — JWT fast path", () => {
     expect(guard).toMatchObject({ userId: "u1", role: "MANAGER", orgId: "org1" })
   })
 
-  it("blocks a cancelled subscription with 402", async () => {
+  it("blocks a cancelled subscription with 402 (confirmed against the DB)", async () => {
     mockGetToken.mockResolvedValue({
       sub: "u1", role: "MANAGER", orgId: "org1", subscriptionStatus: "CANCELED",
     })
+    mockOrgFindUnique.mockResolvedValue({
+      subscriptionStatus: "CANCELED", trialEndsAt: null, pastDueSince: null,
+    } as never)
     expect(await status(await requireOrgMember("org1", req()))).toBe(402)
   })
 
@@ -100,6 +107,76 @@ describe("requireOrgMember — JWT fast path", () => {
     })
     const guard = await requireOrgMember("org1", req(), { allowSuspended: true })
     expect(guard).toMatchObject({ userId: "u1", orgId: "org1" })
+    expect(mockOrgFindUnique).not.toHaveBeenCalled()
+  })
+
+  it("blocks an expired trial with 402 TRIAL_EXPIRED", async () => {
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org1",
+      subscriptionStatus: "TRIALING", trialEndsAt: Date.now() - DAY,
+    })
+    mockOrgFindUnique.mockResolvedValue({
+      subscriptionStatus: "TRIALING", trialEndsAt: new Date(Date.now() - DAY), pastDueSince: null,
+    } as never)
+    const res = await requireOrgMember("org1", req())
+    expect("error" in res && res.error.status).toBe(402)
+    expect("error" in res && (await res.error.json()).code).toBe("TRIAL_EXPIRED")
+  })
+
+  it("allows a trial that is still active without a DB hit", async () => {
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org1",
+      subscriptionStatus: "TRIALING", trialEndsAt: Date.now() + 5 * DAY,
+    })
+    const guard = await requireOrgMember("org1", req())
+    expect(guard).toMatchObject({ userId: "u1", orgId: "org1" })
+    expect(mockOrgFindUnique).not.toHaveBeenCalled()
+  })
+
+  it("blocks PAST_DUE past the grace window with 402 PAST_DUE_EXPIRED", async () => {
+    const pastDueSince = Date.now() - 20 * DAY
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org1",
+      subscriptionStatus: "PAST_DUE", pastDueSince,
+    })
+    mockOrgFindUnique.mockResolvedValue({
+      subscriptionStatus: "PAST_DUE", trialEndsAt: null, pastDueSince: new Date(pastDueSince),
+    } as never)
+    const res = await requireOrgMember("org1", req())
+    expect("error" in res && (await res.error.json()).code).toBe("PAST_DUE_EXPIRED")
+  })
+
+  it("allows PAST_DUE inside the grace window", async () => {
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org1",
+      subscriptionStatus: "PAST_DUE", pastDueSince: Date.now() - 2 * DAY,
+    })
+    const guard = await requireOrgMember("org1", req())
+    expect(guard).toMatchObject({ userId: "u1", orgId: "org1" })
+  })
+
+  it("does NOT block on a stale JWT when the DB shows access restored", async () => {
+    // JWT still says CANCELED, but the customer just resubscribed → DB is ACTIVE.
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org1", subscriptionStatus: "CANCELED",
+    })
+    mockOrgFindUnique.mockResolvedValue({
+      subscriptionStatus: "ACTIVE", trialEndsAt: null, pastDueSince: null,
+    } as never)
+    const guard = await requireOrgMember("org1", req())
+    expect(guard).toMatchObject({ userId: "u1", orgId: "org1" })
+  })
+
+  it("falls back to the DB for a legacy token with no billing claim", async () => {
+    mockGetToken.mockResolvedValue({ sub: "u1", role: "MANAGER", orgId: "org1" })
+    mockOrgFindUnique.mockResolvedValue({
+      subscriptionStatus: "ACTIVE", trialEndsAt: null, pastDueSince: null,
+    } as never)
+    const guard = await requireOrgMember("org1", req())
+    expect(guard).toMatchObject({ userId: "u1", orgId: "org1" })
+    expect(mockOrgFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "org1" } }),
+    )
   })
 })
 
@@ -138,7 +215,18 @@ describe("requireOrgMember — DB slow path (token without orgId)", () => {
 
   it("blocks a cancelled org found via membership with 402", async () => {
     mockMembershipFindFirst.mockResolvedValue({
-      organization: { subscriptionStatus: "CANCELED" },
+      organization: { subscriptionStatus: "CANCELED", trialEndsAt: null, pastDueSince: null },
+    } as never)
+    expect(await status(await requireOrgMember("org1", req()))).toBe(402)
+  })
+
+  it("blocks an expired trial found via membership with 402", async () => {
+    mockMembershipFindFirst.mockResolvedValue({
+      organization: {
+        subscriptionStatus: "TRIALING",
+        trialEndsAt: new Date(Date.now() - DAY),
+        pastDueSince: null,
+      },
     } as never)
     expect(await status(await requireOrgMember("org1", req()))).toBe(402)
   })

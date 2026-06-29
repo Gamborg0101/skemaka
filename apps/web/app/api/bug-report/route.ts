@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { resend } from "@/lib/resend"
 import { db } from "@/lib/prisma"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+import { logWarn, logError, requestIdFrom } from "@/lib/log"
 
 const MAX_MESSAGE = 2000
 const MAX_ERROR_MESSAGE = 500
@@ -30,7 +31,7 @@ function safeHref(raw: string): string | null {
 }
 
 export async function POST(req: NextRequest) {
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "report")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const session = await auth()
@@ -134,23 +135,31 @@ export async function POST(req: NextRequest) {
 
   const superadminEmail = process.env.SUPERADMIN_EMAIL
   if (!superadminEmail) {
-    console.warn("[bug-report] SUPERADMIN_EMAIL is not set — skipping email notification")
+    logWarn("bug-report", "SUPERADMIN_EMAIL is not set — skipping email notification", {
+      requestId: requestIdFrom(req.headers),
+    })
     return NextResponse.json({ ok: true })
   }
 
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "noreply@skemaka.com",
-    to: superadminEmail,
-    subject,
-    html: `
-      <div style="font-family:sans-serif;max-width:620px;margin:0 auto;padding:32px 24px;">
-        <h2 style="font-size:18px;font-weight:600;margin-bottom:4px;">
-          ${errorMessage ? "Crash Report" : "Bug Report"}
-        </h2>
-        ${htmlParts.join("\n")}
-      </div>
-    `,
-  })
+  // The report is already persisted; a failed email must not fail the request or
+  // lose the report. Log and acknowledge.
+  try {
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+      to: superadminEmail,
+      subject,
+      html: `
+        <div style="font-family:sans-serif;max-width:620px;margin:0 auto;padding:32px 24px;">
+          <h2 style="font-size:18px;font-weight:600;margin-bottom:4px;">
+            ${errorMessage ? "Crash Report" : "Bug Report"}
+          </h2>
+          ${htmlParts.join("\n")}
+        </div>
+      `,
+    })
+  } catch (err) {
+    logError("bug-report", err, { requestId: requestIdFrom(req.headers) })
+  }
 
   return NextResponse.json({ ok: true })
 }

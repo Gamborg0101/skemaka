@@ -21,6 +21,7 @@ import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
 import { SickDayDialog } from "@/components/manager/SickDayDialog"
 import type { Shift, Employee, JobRole, ShiftTemplate } from "@/types"
 import { formatTime } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 
 const DEFAULT_START_HOUR = 6
 const DEFAULT_END_HOUR = 23
@@ -75,10 +76,12 @@ interface ChipProps {
   employee: Employee
   missing: number
   over: number
+  scheduled: number
+  contracted: number
   isOverlay?: boolean
 }
 
-function EmployeeChip({ employee, missing, over, isOverlay = false }: ChipProps) {
+function EmployeeChip({ employee, missing, over, scheduled, contracted, isOverlay = false }: ChipProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `chip-${employee.id}`,
     data: { type: "chip", employee },
@@ -98,6 +101,15 @@ function EmployeeChip({ employee, missing, over, isOverlay = false }: ChipProps)
     : missing > 0 ? `–${missing.toFixed(0)}h`
     : "✓"
 
+  // Plain-language explanation of the badge — the "–18h" shorthand is meaningless
+  // to a non-technical manager without it.
+  const badgeTooltip =
+    over > 0
+      ? `${scheduled.toFixed(0)}h scheduled — ${over.toFixed(0)}h over their ${contracted}h contract`
+      : missing > 0
+      ? `${scheduled.toFixed(0)}h scheduled — ${missing.toFixed(0)}h short of their ${contracted}h contract`
+      : `${scheduled.toFixed(0)}h scheduled — right on their ${contracted}h contract`
+
   return (
     <div
       ref={setNodeRef}
@@ -116,9 +128,11 @@ function EmployeeChip({ employee, missing, over, isOverlay = false }: ChipProps)
         <p className="text-xs font-semibold leading-tight truncate text-gray-900 dark:text-gray-100">{employee.name}</p>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight truncate">{employee.jobRole}</p>
       </div>
-      <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0", badgeClass)}>
-        {badgeLabel}
-      </span>
+      <Tooltip content={badgeTooltip} side="top">
+        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 cursor-help", badgeClass)}>
+          {badgeLabel}
+        </span>
+      </Tooltip>
     </div>
   )
 }
@@ -128,6 +142,7 @@ function EmployeeChip({ employee, missing, over, isOverlay = false }: ChipProps)
 interface RowProps {
   employee: Employee
   date: string
+  isClosed: boolean
   shifts: Shift[]
   jobRoles: JobRole[]
   publishedAt?: string | null
@@ -144,13 +159,14 @@ interface RowProps {
 }
 
 function TimelineRow({
-  employee, date, shifts, jobRoles, publishedAt, isEven,
+  employee, date, isClosed, shifts, jobRoles, publishedAt, isEven,
   draggingEmpScheduledHere, todayLine,
   startHour, endHour, totalMinutes, hourMarkers,
   hoverSnap, onShiftClick, onRowClick,
 }: RowProps) {
   const isEmpty = shifts.length === 0
-  const canDrop = draggingEmpScheduledHere === false
+  const canDrop = !isClosed && draggingEmpScheduledHere === false
+  const tf = getOrgSettings().timeFormat
 
   const { setNodeRef, isOver } = useDroppable({
     id: `row-${employee.id}--${date}`,
@@ -165,7 +181,7 @@ function TimelineRow({
           <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{employee.jobRole}</p>
         </div>
-        {isEmpty && (
+        {isEmpty && !isClosed && (
           <Tooltip content="Add shift" side="right">
             <button
               onClick={() => onRowClick(employee.id, date)}
@@ -183,6 +199,7 @@ function TimelineRow({
         ref={setNodeRef}
         className={cn(
           "relative flex-1 h-14 transition-colors",
+          isClosed && "bg-gray-50 dark:bg-gray-800/30",
           isOver && canDrop  && "bg-blue-50 dark:bg-gray-700/25 ring-1 ring-inset ring-blue-300 dark:ring-gray-600",
           isOver && !canDrop && draggingEmpScheduledHere && "bg-red-50 dark:bg-red-900/30 ring-1 ring-inset ring-red-200 dark:ring-red-800",
         )}
@@ -201,6 +218,14 @@ function TimelineRow({
 
         {isEmpty && canDrop && !isOver && (
           <div className="absolute inset-x-2 inset-y-2.5 rounded-md border border-dashed border-gray-300 dark:border-gray-600 pointer-events-none" />
+        )}
+
+        {isClosed && isEmpty && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-[10px] font-medium uppercase tracking-widest text-gray-300 dark:text-gray-600 select-none">
+              Closed
+            </span>
+          </div>
         )}
 
         {shifts.map((shift) => {
@@ -227,7 +252,7 @@ function TimelineRow({
             >
               {!isSick && width > 6 && (
                 <span className={cn("text-[10px] font-semibold truncate whitespace-nowrap", COLOR_TEXT[tag] ?? "text-blue-950")}>
-                  {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
+                  {formatTime(shift.startTime, tf)}–{formatTime(shift.endTime, tf)}
                 </span>
               )}
             </button>
@@ -271,6 +296,7 @@ function TimelineRow({
 
 interface DaySectionProps {
   date: string
+  isClosed: boolean
   employees: Employee[]
   allShifts: Shift[]
   jobRoles: JobRole[]
@@ -288,7 +314,7 @@ interface DaySectionProps {
 }
 
 const DaySection = memo(function DaySection({
-  date, employees, allShifts, jobRoles, publishedAt, draggingEmp,
+  date, isClosed, employees, allShifts, jobRoles, publishedAt, draggingEmp,
   startHour, endHour, totalMinutes, hourMarkers,
   activeRowId, hoverSnap, currentTime, onShiftClick, onRowClick,
 }: DaySectionProps) {
@@ -313,6 +339,11 @@ const DaySection = memo(function DaySection({
           {isToday && (
             <span className="text-[10px] font-bold px-1.5 py-px bg-blue-600 text-white rounded-full">
               Today
+            </span>
+          )}
+          {isClosed && (
+            <span className="text-[10px] font-bold px-1.5 py-px bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 rounded-full uppercase tracking-wide">
+              Closed
             </span>
           )}
         </div>
@@ -350,6 +381,7 @@ const DaySection = memo(function DaySection({
             key={emp.id}
             employee={emp}
             date={date}
+            isClosed={isClosed}
             shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
             jobRoles={jobRoles}
             publishedAt={publishedAt}
@@ -435,6 +467,13 @@ export function ShiftTimeline({
     [startHour, endHour]
   )
 
+  // Days the store is closed (no bookings allowed). `hours` is index 0=Mon…6=Sun;
+  // convert each date's JS weekday (0=Sun) to that Monday-based index.
+  const storeHours = getOrgSettings().hours
+  const closedDates = new Set(
+    dates.filter((d) => !storeHours[(new Date(d + "T12:00:00").getDay() + 6) % 7]?.isOpen)
+  )
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   function snapTimeFromPointer(pointerX: number, rowRect: { left: number; width: number }): { time: string; pct: number } {
@@ -479,6 +518,7 @@ export function ShiftTimeline({
     const drop = over.data.current
     if (drag?.type === "chip" && drop?.type === "row") {
       const targetDate = drop.date as string
+      if (closedDates.has(targetDate)) return  // store closed that day — no booking
       const alreadyScheduled = shifts.some(
         (s) => s.employeeId === drag.employee.id && s.date === targetDate
       )
@@ -502,9 +542,23 @@ export function ShiftTimeline({
 
         {/* Employee chips */}
         <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shrink-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
-            Drag to schedule · weekly hours
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              Drag a name onto a day to add a shift
+            </p>
+            {/* Legend — explains the hours badge colours */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400 dark:text-gray-500">
+              <span className="inline-flex items-center gap-1">
+                <span className="size-2 rounded-full bg-green-400" /> Hours met
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="size-2 rounded-full bg-amber-400" /> Under contract
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="size-2 rounded-full bg-orange-400" /> Over contract
+              </span>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
             {employees.map((emp) => {
               const scheduled = scheduledHoursMap[emp.id] ?? 0
@@ -515,6 +569,8 @@ export function ShiftTimeline({
                   employee={emp}
                   missing={Math.max(0, contracted - scheduled)}
                   over={Math.max(0, scheduled - contracted)}
+                  scheduled={scheduled}
+                  contracted={contracted}
                 />
               )
             })}
@@ -529,6 +585,7 @@ export function ShiftTimeline({
                 {i > 0 && <div className="h-3 bg-gray-100 dark:bg-gray-800 border-y border-gray-200 dark:border-gray-700" />}
                 <DaySection
                   date={date}
+                  isClosed={closedDates.has(date)}
                   employees={employees}
                   allShifts={shifts}
                   jobRoles={jobRoles}
@@ -545,9 +602,10 @@ export function ShiftTimeline({
                     if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
                     else setEditDialog({ open: true, shift })
                   }}
-                  onRowClick={(empId, d) =>
+                  onRowClick={(empId, d) => {
+                    if (closedDates.has(d)) return  // store closed — no booking
                     setAddDialog({ open: true, employeeId: empId, defaultStartTime: "09:00", date: d })
-                  }
+                  }}
                 />
               </div>
             ))}
@@ -561,6 +619,8 @@ export function ShiftTimeline({
             employee={draggingEmp}
             missing={Math.max(0, draggingEmp.contractedHours - (scheduledHoursMap[draggingEmp.id] ?? 0))}
             over={Math.max(0, (scheduledHoursMap[draggingEmp.id] ?? 0) - draggingEmp.contractedHours)}
+            scheduled={scheduledHoursMap[draggingEmp.id] ?? 0}
+            contracted={draggingEmp.contractedHours}
             isOverlay
           />
         )}

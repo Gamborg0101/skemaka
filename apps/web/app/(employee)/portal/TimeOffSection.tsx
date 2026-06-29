@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import type { TimeOffRequest } from "@/types"
+import { fetchAllPages } from "@/lib/pagination"
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING:  "bg-amber-100 text-amber-700",
@@ -35,9 +36,8 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/orgs/${orgId}/time-off`)
-      .then((r) => r.json())
-      .then((d: { data?: TimeOffRequest[] }) => { if (d.data) setRequests(d.data) })
+    fetchAllPages<TimeOffRequest>(`/api/orgs/${orgId}/time-off`)
+      .then((all) => setRequests(all))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [orgId])

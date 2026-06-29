@@ -1,6 +1,17 @@
-/** Format a 24h time string "09:00" → "9:00 AM" */
-export function formatTime(t: string): string {
+import { getTimeFormat, type TimeFormat } from "./timeFormat"
+
+/**
+ * Format a wall-clock "HH:MM" string per the org's clock setting.
+ *   • "24h" (default, EU/Denmark): "09:00" / "14:30" — no AM/PM.
+ *   • "12h" (US):                  "9:00 AM" / "2:30 PM".
+ * Defaults to the org-wide setting (lib/timeFormat singleton); pass an explicit
+ * format to override.
+ */
+export function formatTime(t: string, format: TimeFormat = getTimeFormat()): string {
   const [h, m] = t.split(":").map(Number)
+  if (format === "24h") {
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  }
   const period = h >= 12 ? "PM" : "AM"
   const hour = h === 0 ? 12 : h > 12 ? h - 12 : h
   return `${hour}:${String(m).padStart(2, "0")} ${period}`
@@ -56,12 +67,12 @@ export function elapsedSince(isoTimestamp: string): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
-/** ISO timestamp → "9:03 AM" */
-export function formatTimestamp(iso: string): string {
+/** ISO timestamp → "9:03 AM" (12h) or "09:03" (24h), per the org's clock setting. */
+export function formatTimestamp(iso: string, format: TimeFormat = getTimeFormat()): string {
   return new Date(iso).toLocaleTimeString("en-GB", {
-    hour: "numeric",
+    hour: format === "24h" ? "2-digit" : "numeric",
     minute: "2-digit",
-    hour12: true,
+    hour12: format === "12h",
   })
 }
 

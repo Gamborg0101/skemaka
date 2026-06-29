@@ -34,6 +34,7 @@ import { db } from "@/lib/prisma"
 import { PrismaClient } from "@/app/generated/prisma/client"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { createHash } from "crypto"
+import { logError, requestIdFrom } from "@/lib/log"
 
 // ---------------------------------
 // Constants
@@ -90,8 +91,8 @@ interface AppleClaims {
 // ---------------------------------
 
 export async function POST(req: NextRequest) {
-  // 1. Rate-limit (fails open when Redis is not configured)
-  const { success } = await rateLimitRequest(getClientIp(req.headers))
+  // 1. Rate-limit
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "auth")
   if (!success) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
     claims = payload as unknown as AppleClaims
   } catch (err) {
-    console.error("[apple/native] jwtVerify failed:", err)
+    logError("apple/native", err, { requestId: requestIdFrom(req.headers), stage: "jwtVerify" })
     return NextResponse.json({ error: "Invalid or expired identity token" }, { status: 401 })
   }
 
@@ -217,7 +218,7 @@ export async function POST(req: NextRequest) {
       return newUser.id
     })
   } catch (err) {
-    console.error("[apple/native] user resolution failed:", err)
+    logError("apple/native", err, { requestId: requestIdFrom(req.headers), stage: "userResolution" })
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 

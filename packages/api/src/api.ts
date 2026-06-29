@@ -43,6 +43,29 @@ export type OpenRequestResult = {
 type Wrapped<T>  = { data: T }
 type Paginated<T> = { data: T[]; meta: { total: number; limit: number; offset: number } }
 
+/**
+ * Walk every page of a paginated list endpoint and return the full result set.
+ * Consumes the `{ data, meta }` envelope correctly so large lists are never
+ * silently truncated (vs. guessing a single "big enough" limit).
+ */
+async function getAllPages<T>(
+  client: ApiClient,
+  path: string,
+  pageSize = 200,
+): Promise<T[]> {
+  const sep = path.includes("?") ? "&" : "?"
+  const all: T[] = []
+  let offset = 0
+  for (let safety = 0; safety < 10_000; safety++) {
+    const res = await client.get<Paginated<T>>(`${path}${sep}limit=${pageSize}&offset=${offset}`)
+    const data = res.data ?? []
+    all.push(...data)
+    offset += res.meta?.limit ?? pageSize
+    if (all.length >= (res.meta?.total ?? all.length) || data.length === 0) break
+  }
+  return all
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export type MobileSession = {
@@ -83,6 +106,8 @@ export type CurrentUser = {
   email: string
   phone: string | null
   jobRole: string
+  /** Org-wide clock format. "24h" (EU default) or "12h" (US AM/PM). */
+  timeFormat: "12h" | "24h"
 }
 
 /**
@@ -95,6 +120,16 @@ export async function getCurrentUser(
   orgId: string,
 ): Promise<CurrentUser> {
   return client.get<CurrentUser>(`/api/orgs/${orgId}/me`)
+}
+
+/**
+ * Permanently deletes the authenticated user's own account. The caller MUST
+ * sign out once this resolves. Throws `ApiError` with status 409 and a
+ * human-readable message if the caller is the sole manager of an org (they
+ * must add another manager or delete the org first).
+ */
+export async function deleteAccount(client: ApiClient): Promise<void> {
+  return client.del("/api/me/account")
 }
 
 // ─── Shifts ───────────────────────────────────────────────────────────────────
@@ -263,10 +298,10 @@ export async function getMyTimeOff(
   orgId: string,
   employeeId: string,
 ): Promise<TimeOffRequest[]> {
-  const res = await client.get<Paginated<TimeOffRequest>>(
-    `/api/orgs/${orgId}/time-off?employeeId=${employeeId}&limit=50`,
+  return getAllPages<TimeOffRequest>(
+    client,
+    `/api/orgs/${orgId}/time-off?employeeId=${employeeId}`,
   )
-  return res.data ?? []
 }
 
 export type TimeOffInput = {
@@ -382,17 +417,13 @@ export async function deleteManagedShift(
 }
 
 /**
- * Lists all active employees in the org.  Uses a high limit to load the full
- * roster in one request — rosters larger than 500 are extremely rare.
+ * Lists every employee in the org, paging through the full roster.
  */
 export async function listEmployees(
   client: ApiClient,
   orgId: string,
 ): Promise<Employee[]> {
-  const res = await client.get<Paginated<Employee>>(
-    `/api/orgs/${orgId}/employees?limit=500`,
-  )
-  return res.data ?? []
+  return getAllPages<Employee>(client, `/api/orgs/${orgId}/employees`)
 }
 
 /**
@@ -403,10 +434,7 @@ export async function getAllTimeOff(
   client: ApiClient,
   orgId: string,
 ): Promise<TimeOffRequest[]> {
-  const res = await client.get<Paginated<TimeOffRequest>>(
-    `/api/orgs/${orgId}/time-off?limit=200`,
-  )
-  const items = res.data ?? []
+  const items = await getAllPages<TimeOffRequest>(client, `/api/orgs/${orgId}/time-off`)
   // Pending first, then by start date descending
   return [...items].sort((a, b) => {
     if (a.status === "PENDING" && b.status !== "PENDING") return -1
@@ -440,8 +468,8 @@ export async function getAllAvailabilitySubmissions(
   orgId: string,
   requestId: string,
 ): Promise<AvailabilitySubmission[]> {
-  const res = await client.get<Paginated<AvailabilitySubmission>>(
-    `/api/orgs/${orgId}/availability/${requestId}/submissions?limit=500`,
+  return getAllPages<AvailabilitySubmission>(
+    client,
+    `/api/orgs/${orgId}/availability/${requestId}/submissions`,
   )
-  return res.data ?? []
 }

@@ -123,7 +123,7 @@ export default async function MyShiftsPage({
   const employee = await db.employee.findUnique({
     where: { id: selectedId },
     include: {
-      organization: { select: { name: true } },
+      organization: { select: { name: true, settings: true } },
       shifts: {
         where: {
           date: {
@@ -138,6 +138,7 @@ export default async function MyShiftsPage({
 
   if (!employee) redirect("/my-shifts")
 
+  const tf = (employee.organization.settings as { timeFormat?: "12h" | "24h" } | null)?.timeFormat ?? "24h"
   const shifts: DbShift[] = employee.shifts
   const shiftDates = shifts.map((s) => s.date)
 
@@ -269,7 +270,7 @@ export default async function MyShiftsPage({
                   {/* Time — hero */}
                   <div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-none">
-                      {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
+                      {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
                       {hours}

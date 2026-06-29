@@ -4,28 +4,41 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import type { Employee, Schedule, TimeOffRequest } from "@/types";
 import { useShiftMutations } from "@/lib/useShiftMutations";
+import { fetchAllPages } from "@/lib/pagination";
 
 export function useScheduleData(orgId: string, weekStart: string) {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [approvedTimeOff, setApprovedTimeOff] = useState<TimeOffRequest[]>([]);
 
   useEffect(() => {
-    fetch(`/api/orgs/${orgId}/employees`)
-      .then((r) => r.json())
-      .then((data: { data?: Employee[] }) => {
-        if (data.data) setEmployees(data.data);
-      })
+    // The grid needs every employee, so page through the full list.
+    fetchAllPages<Employee>(`/api/orgs/${orgId}/employees`)
+      .then((all) => setEmployees(all))
       .catch(() => toast.error("Failed to load employees"));
   }, [orgId]);
 
+  // Track which (orgId, weekStart) pair the current schedule data corresponds to.
+  // If the key has changed we treat the data as stale and show loading immediately
+  // in render — this avoids calling setState synchronously inside an effect.
+  // Starts empty (never matches a real key) so the first mount is loading.
+  const [fetchedKey, setFetchedKey] = useState("");
+  const currentKey = `${orgId}__${weekStart}`;
+  // Derive loading/error from whether the fetched key is current.
+  // We reset loadError optimistically when the key changes.
+  const [loadError, setLoadError] = useState(false);
+
+  // When the key changes in render, reset stale error flag so the old error
+  // badge doesn't flash while the new request is in flight.
+  if (currentKey !== fetchedKey && loadError) {
+    setLoadError(false);
+  }
+
+  const loading = currentKey !== fetchedKey;
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
 
     fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
       .then((r) => r.json())
@@ -34,15 +47,14 @@ export function useScheduleData(orgId: string, weekStart: string) {
         // Return null when no schedule exists — don't auto-create.
         // The schedule is created lazily when the user adds their first shift.
         setSchedule(data.data ?? null);
+        setFetchedKey(`${orgId}__${weekStart}`);
       })
       .catch(() => {
         if (!cancelled) {
           setLoadError(true);
+          setFetchedKey(`${orgId}__${weekStart}`);
           toast.error("Failed to load schedule");
         }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
 
     return () => {
@@ -67,16 +79,45 @@ export function useScheduleData(orgId: string, weekStart: string) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/orgs/${orgId}/time-off?status=APPROVED&weekStart=${weekStart}`)
-      .then((r) => r.json())
-      .then((data: { data?: TimeOffRequest[] }) => {
-        if (!cancelled && data.data) setApprovedTimeOff(data.data);
+    fetchAllPages<TimeOffRequest>(
+      `/api/orgs/${orgId}/time-off?status=APPROVED&weekStart=${weekStart}`,
+    )
+      .then((all) => {
+        if (!cancelled) setApprovedTimeOff(all);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [weekStart, orgId]);
+
+  // Magic-moment: fill an empty week in one click (starter defaults or a copy of
+  // the previous week). On success, swap in the returned populated schedule.
+  const [generating, setGenerating] = useState(false);
+  const generateWeek = useCallback(
+    async (mode: "starter" | "copyPrevious") => {
+      setGenerating(true);
+      try {
+        const r = await fetch(`/api/orgs/${orgId}/schedules/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ weekStart, mode }),
+        });
+        const res = (await r.json()) as { data?: Schedule; error?: string };
+        if (res.data) {
+          setSchedule(res.data);
+          toast.success(mode === "copyPrevious" ? "Copied last week's schedule" : "Starter schedule created");
+        } else {
+          toast.error(res.error ?? "Failed to generate schedule");
+        }
+      } catch {
+        toast.error("Failed to generate schedule");
+      } finally {
+        setGenerating(false);
+      }
+    },
+    [orgId, weekStart],
+  );
 
   const handlePublish = async () => {
     if (!schedule) return;
@@ -124,6 +165,8 @@ export function useScheduleData(orgId: string, weekStart: string) {
     employees,
     approvedTimeOff,
     publishing,
+    generating,
+    generateWeek,
     handlePublish,
     handleShiftMove,
     handleShiftCreate,

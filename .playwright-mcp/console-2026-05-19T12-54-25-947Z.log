@@ -1,2 +1,0 @@
-[     109ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/09r7_next_dist_0x9v~yo._.js:2477
-[     563ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/mobile/complete?redirect=exp://test:0

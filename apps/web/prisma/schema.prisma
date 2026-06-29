@@ -67,6 +67,9 @@ model Organization {
   stripeCustomerId        String?
   stripeSubscriptionId    String?
   subscriptionStatus      SubscriptionStatus       @default(TRIALING)
+  trialEndsAt             DateTime?
+  pastDueSince            DateTime?
+  stripeEventAt           DateTime?
   currency                String                   @default("EUR")
   settings                Json?
   createdAt               DateTime                 @default(now())
@@ -130,6 +133,7 @@ model Employee {
   name                    String
   email                   String
   phone                   String?
+  smsConsentAt            DateTime?
   jobRole                 String
   hourlyWage              Decimal                  @db.Decimal(10, 2)
   wageBaseAmount          Decimal?                 @db.Decimal(12, 4)
@@ -331,6 +335,26 @@ model BugReport {
   @@index([organizationId])
   @@index([userId])
   @@index([createdAt])
+}
+
+/// Idempotency ledger for Stripe webhook deliveries. The event id is the PK so a
+/// replayed/duplicated delivery hits a unique-constraint violation and is skipped.
+/// Purged after 90 days by the cleanup cron (see lib/cleanup.ts).
+model ProcessedStripeEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// SMS suppression list for carrier/legal opt-out (STOP) compliance. Keyed by the
+/// E.164-normalized phone number so a single STOP suppresses every message to that
+/// number regardless of which employee record(s) it belongs to. A START/UNSTOP reply
+/// removes the row (re-subscribe). Checked centrally in lib/sms.ts before every send.
+model SmsOptOut {
+  phone     String   @id
+  createdAt DateTime @default(now())
 }
 
 enum UserRole {

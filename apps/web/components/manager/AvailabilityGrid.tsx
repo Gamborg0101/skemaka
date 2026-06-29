@@ -4,6 +4,7 @@ import React from "react"
 import { Plus, CalendarCheck } from "lucide-react"
 import type { AvailabilityRequest, Employee, AvailabilitySubmission, AvailabilityDay, Shift } from "@/types"
 import { getWeekDays, formatTime } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 
 interface AvailabilityGridProps {
   request: AvailabilityRequest
@@ -25,12 +26,13 @@ function DayCell({
   noSubmission?: boolean
   onBook?: () => void
 }) {
+  const tf = getOrgSettings().timeFormat
   if (existingShift) {
     return (
       <div className="h-full min-h-12 rounded bg-blue-50 dark:bg-slate-800/60 border border-blue-200 dark:border-slate-600 flex flex-col items-center justify-center gap-0.5 px-1">
         <CalendarCheck className="size-3.5 text-blue-500 dark:text-slate-300" />
         <span className="text-[10px] font-semibold text-blue-700 dark:text-slate-200 tabular-nums">
-          {formatTime(existingShift.startTime)}–{formatTime(existingShift.endTime)}
+          {formatTime(existingShift.startTime, tf)}–{formatTime(existingShift.endTime, tf)}
         </span>
       </div>
     )
@@ -64,7 +66,7 @@ function DayCell({
     >
       <span className="text-xs font-semibold text-green-700 dark:text-green-300 tabular-nums">
         {day.startTime && day.endTime
-          ? `${formatTime(day.startTime)}–${formatTime(day.endTime)}`
+          ? `${formatTime(day.startTime, tf)}–${formatTime(day.endTime, tf)}`
           : "Full day"}
       </span>
       <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">

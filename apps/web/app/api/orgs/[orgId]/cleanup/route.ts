@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { previewCleanup, runCleanupForOrg } from "@/lib/cleanup"
+import { logInfo, requestIdFrom } from "@/lib/log"
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
@@ -26,7 +28,10 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
   const result = await runCleanupForOrg(orgId)
-  console.log(`[cleanup] org=${orgId}`, result)
+  logInfo("cleanup", "org cleanup completed", { orgId, result, requestId: requestIdFrom(req.headers) })
   return NextResponse.json({ data: result })
 }

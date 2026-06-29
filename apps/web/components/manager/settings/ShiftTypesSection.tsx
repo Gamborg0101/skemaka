@@ -15,6 +15,7 @@ import {
 import { Tooltip } from "@/components/ui/tooltip"
 import { TimePicker } from "@/components/manager/TimePicker"
 import { formatTime } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
 import { useOptimisticList } from "@/lib/useOptimisticList"
@@ -30,7 +31,8 @@ const BREAK_OPTIONS = [
 ]
 
 function formatTemplateSummary(t: ShiftTemplate) {
-  const times = `${formatTime(t.startTime)}–${formatTime(t.endTime)}`
+  const tf = getOrgSettings().timeFormat
+  const times = `${formatTime(t.startTime, tf)}–${formatTime(t.endTime, tf)}`
   const brk = t.breakMinutes > 0 ? ` · ${t.breakMinutes}m break` : ""
   const role = t.jobRole ? ` · ${t.jobRole}` : ""
   return `${times}${brk}${role}`

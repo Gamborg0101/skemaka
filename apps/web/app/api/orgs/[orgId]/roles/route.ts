@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import * as orgService from "@/lib/services/orgService"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 
@@ -26,7 +27,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  const body = await req.json() as { name?: string; color?: string }
+  const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
+  if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
+  let body: { name?: string; color?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
   if (!body.name?.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 })
   if (!body.color?.trim()) return NextResponse.json({ error: "color is required" }, { status: 400 })
   if (body.name.trim().length > 100) return NextResponse.json({ error: "name must be at most 100 characters" }, { status: 400 })
