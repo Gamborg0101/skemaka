@@ -8,10 +8,10 @@ export const E2E = {
   orgActive: "e2e_org_active",
   orgOther: "e2e_org_other",
   orgExpired: "e2e_org_expired",
-  // Manager users
-  managerActive: "managerA@e2e.test",
-  managerOther: "managerB@e2e.test",
-  managerExpired: "managerExpired@e2e.test",
+  // Manager users (lowercase — the auth provider lowercases the email before lookup)
+  managerActive: "manager-a@e2e.test",
+  managerOther: "manager-b@e2e.test",
+  managerExpired: "manager-expired@e2e.test",
   // Claim flow
   claimer: "claimer@e2e.test",
   inviteToken: "e2e-invite-token-001",
