@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Share } from "lucide-react"
+import { Check, Share, Download } from "lucide-react"
 import { useInstallPrompt } from "./useInstallPrompt"
 
 /**
@@ -38,8 +38,8 @@ export function InstallPrompt() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon-192.png" alt="" className="size-12 rounded-xl shadow-sm" />
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Add Skemaka to your phone</h3>
-          <p className="text-xs text-gray-500">One-tap access — no app store, no download.</p>
+          <h3 className="text-sm font-semibold text-gray-900">Add Skemaka to your device</h3>
+          <p className="text-xs text-gray-500">One-tap access from your home screen or desktop.</p>
         </div>
       </div>
 
@@ -52,9 +52,10 @@ export function InstallPrompt() {
         ) : canInstall ? (
           <button
             onClick={handleInstall}
-            className="w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex w-full items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Install app
+            <Download className="size-4" />
+            Install Skemaka
           </button>
         ) : isIOS ? (
           <ol className="space-y-2.5 text-sm text-gray-600">
@@ -80,16 +81,22 @@ export function InstallPrompt() {
             </li>
           </ol>
         ) : (
-          <div className="space-y-1.5 text-sm text-gray-600">
-            <p>Open <strong className="text-gray-900">skemaka.com</strong> on your phone, then:</p>
-            <p>
-              <strong className="text-gray-900">iPhone:</strong> tap Share, then{" "}
-              <strong className="text-gray-900">Add to Home Screen</strong>.
-            </p>
-            <p>
-              <strong className="text-gray-900">Android:</strong> tap the ⋮ menu, then{" "}
-              <strong className="text-gray-900">Add to Home screen</strong>.
-            </p>
+          <div className="space-y-3 text-sm text-gray-600">
+            <p>Open <strong className="text-gray-900">skemaka.com</strong> in your browser, then:</p>
+            <ul className="space-y-2">
+              <li className="flex gap-2">
+                <strong className="w-20 shrink-0 text-gray-900">iPhone</strong>
+                <span>Tap Share, then Add to Home Screen.</span>
+              </li>
+              <li className="flex gap-2">
+                <strong className="w-20 shrink-0 text-gray-900">Android</strong>
+                <span>Tap the ⋮ menu, then Add to Home screen.</span>
+              </li>
+              <li className="flex gap-2">
+                <strong className="w-20 shrink-0 text-gray-900">Computer</strong>
+                <span>Click the install icon in the address bar.</span>
+              </li>
+            </ul>
           </div>
         )}
       </div>
