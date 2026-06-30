@@ -24,6 +24,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
           <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
           <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
           <Link href="/subprocessors" className="hover:text-gray-600 transition-colors">Sub-processors</Link>
+          <Link href="/support" className="hover:text-gray-600 transition-colors">Support</Link>
         </div>
       </footer>
     </div>

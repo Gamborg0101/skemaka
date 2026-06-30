@@ -3,13 +3,20 @@
 Paste-ready content for submitting the Skemaka iOS app (bundle `com.skemaka.app`, v1.0.0).
 Grounded in the actual codebase as of June 2026. Sections marked **⚠️ HUMAN PREP** require action only you can take.
 
+> **Status (June 2026):** the iOS App Store path is **deferred** — we're shipping as an
+> installable **PWA** (`skemaka.com`, Add to Home Screen) to avoid the $99/yr Apple
+> Developer fee until there's paying demand. This pack stays ready for when you enroll.
+
 ---
 
 ## 0. Human-prep checklist (do these before submitting)
 
-- [ ] **Apple Developer Program** enrolled; **"Sign in with Apple" capability** enabled on App ID `com.skemaka.app`.
-- [ ] Fill `eas.json` submit creds: `appleId`, `ascAppId`, `appleTeamId`.
-- [ ] **Set the production API URL** — replace `https://REPLACE-WITH-PRODUCTION-DOMAIN` in `eas.json` (`build.production.env.EXPO_PUBLIC_API_URL`, and `build.preview` for device QA) with the deployed web domain. Without this the build talks to `localhost` and every request fails on-device.
+- [ ] **Apple Developer Program** — **not enrolled yet** (deferred; PWA in use). When ready, enroll as Organization (needs a D-U-N-S number for Skemaka ApS), then **enable "Sign in with Apple" capability** on App ID `com.skemaka.app` and **create the app record in App Store Connect**.
+- [ ] Fill `eas.json` submit creds (you're enrolled but have no app record yet):
+  - `appleTeamId` — developer.apple.com → Membership details → Team ID (available now).
+  - `ascAppId` — App Store Connect → create the app for `com.skemaka.app` → its Apple ID (a numeric id), available after the app record exists.
+  - `appleId` — the Apple account email you sign in to App Store Connect with.
+- [x] **Production API URL set** — `eas.json` `EXPO_PUBLIC_API_URL` = `https://skemaka.com` (preview + production). Confirm the web app is actually deployed and reachable there before building.
 - [ ] **Seed a Google demo MANAGER account** (e.g. `appreview@skemaka.app`) inside an org with realistic sample data: several employees, a published weekly schedule, a couple of pending availability + time-off requests. The reviewer must land in a *populated* manager view.
 - [ ] **Publish/verify the Google OAuth consent screen** (or allowlist the demo email as a Test user) so "Continue with Google" isn't blocked for the reviewer.
 - [ ] Put the demo creds in App Store Connect's structured **Sign-In Information** fields *and* the review-notes placeholders; set a **Support email/URL**.
@@ -60,11 +67,11 @@ WHERE TO FIND KEY FEATURES (as the demo manager)
 - Profile tab:      account details and Sign Out / Delete account.
 
 CONTACT
-Trouble signing in or reaching the demo data? Contact <<SUPPORT_EMAIL>> and we
+Trouble signing in or reaching the demo data? Contact gamborgc@gmail.com and we
 will respond promptly.
 ```
 
-⚠️ **HUMAN PREP:** set `<<DEMO_EMAIL>>`, `<<DEMO_PASSWORD>>`, `<<SUPPORT_EMAIL>>`; also enter the demo creds in the structured Sign-In Information fields.
+⚠️ **HUMAN PREP:** set `<<DEMO_EMAIL>>` and `<<DEMO_PASSWORD>>` (support email is already filled in as `gamborgc@gmail.com`); also enter the demo creds in the structured Sign-In Information fields.
 
 ---
 
@@ -153,11 +160,33 @@ Sign in securely with Google or Sign in with Apple. Your manager invites you to 
 ```
 
 - **Screenshots** (from the populated demo account): 1) Login, 2) Manager schedule, 3) Employee "My Shifts" + clock widget, 4) Availability, 5) Time Off, 6) Team. Sizes: **6.9" iPhone (required)**, 6.5" iPhone (fallback). App is phone-only (`supportsTablet: false`) — **no iPad screenshots required.**
-- **Privacy Policy URL:** `https://<your-domain>/privacy` · **Support URL:** `https://<your-domain>/terms` (or a `/support` page).
+- **Privacy Policy URL:** `https://skemaka.com/privacy` · **Support URL:** `https://skemaka.com/support` (dedicated support page with contact email — now live in the web app).
 
 ---
 
-## 7. Apple references
+## 7. Build & submit (EAS)
+
+Run from `apps/mobile/`. Requires `eas-cli` (`npm i -g eas-cli`) and `eas login`.
+
+```bash
+# one-time: link this project to your EAS account (creates the EAS project id)
+eas init
+
+# create the App Store Connect app record + capabilities interactively
+#   (or do it manually in App Store Connect first, then fill eas.json submit creds)
+eas build --platform ios --profile production      # builds the .ipa in the cloud
+eas submit --platform ios --profile production      # uploads the build to App Store Connect
+```
+
+Notes:
+- `appVersionSource: remote` + `autoIncrement: true` means EAS manages the build number — you don't bump it by hand.
+- Bump the marketing version (`app.json` → `expo.version`, currently `1.0.0`) only for user-facing releases.
+- First `eas build` will prompt to generate a Distribution certificate + provisioning profile — let EAS manage them.
+- The build uses `EXPO_PUBLIC_API_URL=https://skemaka.com`; make sure the web app is deployed there first or every on-device request fails.
+
+---
+
+## 8. Apple references
 - App privacy details: https://developer.apple.com/app-store/app-privacy-details/ · data types: `#data-types`
 - Tracking / ATT: https://developer.apple.com/app-store/user-privacy-and-data-use/
 - Accessibility Nutrition Labels: https://developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels/

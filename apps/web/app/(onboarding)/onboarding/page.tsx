@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Check, ChevronRight } from "lucide-react"
+import { InstallPrompt } from "@/components/pwa/InstallPrompt"
 
-type Step = 1 | 2
+type Step = 1 | 2 | 3
 
 const CURRENCIES = [
   { code: "EUR", label: "Euro (€)" },
@@ -20,6 +21,7 @@ const DEFAULT_ROLES = ["Waiter", "Chef", "Bartender", "Manager", "Host", "Cashie
 const STEPS = [
   { n: 1 as Step, label: "Your business" },
   { n: 2 as Step, label: "Your team" },
+  { n: 3 as Step, label: "Get the app" },
 ]
 
 // Explicit text + placeholder colors so inputs don't inherit the themed
@@ -151,7 +153,7 @@ export default function OnboardingPage() {
           {step === 1 && (
             <form onSubmit={handleCreateOrg} className="space-y-5">
               <div>
-                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 1 of 2</p>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 1 of 3</p>
                 <h2 className="text-lg font-semibold text-gray-900 mt-1">Set up your workspace</h2>
                 <p className="text-sm text-gray-500 mt-1">Name your business and pick a currency. Next, you&apos;ll add your team.</p>
               </div>
@@ -204,7 +206,7 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 2 of 2</p>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 2 of 3</p>
                 <h2 className="text-lg font-semibold text-gray-900 mt-1">Add your team</h2>
                 <p className="text-sm text-gray-500 mt-1">
                   Add employees now, or go straight to your schedule and add them later.
@@ -279,10 +281,33 @@ export default function OnboardingPage() {
               </div>
 
               <button
+                onClick={() => setStep(3)}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {addedEmployees.length > 0 ? "Continue" : "Skip — continue"}
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ── Step 3: Install the app ── */}
+          {step === 3 && (
+            <div className="space-y-5">
+              <div>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 3 of 3</p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">Get the app</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Add Skemaka to your phone for one-tap access. You can always do this later.
+                </p>
+              </div>
+
+              <InstallPrompt />
+
+              <button
                 onClick={() => router.push("/schedule")}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {addedEmployees.length > 0 ? "Go to schedule" : "Skip — go to schedule"}
+                Finish — go to schedule
                 <ChevronRight className="size-4" />
               </button>
             </div>
