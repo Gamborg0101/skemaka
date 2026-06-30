@@ -51,7 +51,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     async function fetchContext(retries = 3, delayMs = 1500) {
       for (let i = 0; i < retries; i++) {
         try {
-          const r = await fetch("/api/me/context")
+          const r = await fetch("/api/me/context", { cache: "no-store" })
           if (r.status === 404) { if (!cancelled) setState("onboarding"); return }
           if (!r.ok) {
             if (i < retries - 1) await new Promise((res) => setTimeout(res, delayMs * (i + 1)))

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { ManagerShell } from "@/components/manager/ManagerShell"
 import { OrgProvider } from "@/lib/orgContext"
+import { BfcacheGuard } from "@/components/BfcacheGuard"
 
 export default async function ManagerLayout({
   children,
@@ -29,6 +30,7 @@ export default async function ManagerLayout({
 
   return (
     <OrgProvider>
+      <BfcacheGuard />
       <ManagerShell>{children}</ManagerShell>
     </OrgProvider>
   )

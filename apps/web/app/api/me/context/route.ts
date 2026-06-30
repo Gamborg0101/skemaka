@@ -11,8 +11,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No organization found" }, { status: 404 })
   }
 
+  // No caching: this endpoint is the single source of truth for "does this user
+  // have an org?". A cached response means that right after creating or leaving
+  // an org the app reads stale membership state — causing onboarding ⇄ app
+  // redirect bounces. Always reflect the live DB.
   return NextResponse.json(
     { data: ctx },
-    { headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" } },
+    { headers: { "Cache-Control": "no-store" } },
   )
 }

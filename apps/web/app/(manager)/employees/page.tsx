@@ -73,6 +73,7 @@ export default function EmployeesPage() {
           `/api/orgs/${orgId}/employees?status=${activeTab}`,
           PAGE_SIZE,
           offset,
+          { cache: "no-store" },
         )
         if (cancelled) return
         const m = meta as typeof meta & { activeCount: number; inactiveCount: number }

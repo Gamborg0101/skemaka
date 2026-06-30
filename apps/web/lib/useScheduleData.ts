@@ -14,7 +14,9 @@ export function useScheduleData(orgId: string, weekStart: string) {
 
   useEffect(() => {
     // The grid needs every employee, so page through the full list.
-    fetchAllPages<Employee>(`/api/orgs/${orgId}/employees`)
+    // Bypass the browser HTTP cache (the route sets a max-age/SWR window) so a
+    // just-added employee shows up immediately instead of after ~1–5 min.
+    fetchAllPages<Employee>(`/api/orgs/${orgId}/employees`, 200, { cache: "no-store" })
       .then((all) => setEmployees(all))
       .catch(() => toast.error("Failed to load employees"));
   }, [orgId]);
@@ -40,7 +42,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`)
+    fetch(`/api/orgs/${orgId}/schedules?weekStart=${weekStart}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data: { data: Schedule | null }) => {
         if (cancelled) return;
