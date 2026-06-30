@@ -9,6 +9,7 @@ import { PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS } from "@/lib/pri
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
 import { DEMO_FLAGS, demoWeekSummary } from "@/lib/demo/demoData"
+import { LogoLockup } from "@/components/brand/Logo"
 
 const cost = demoWeekSummary()
 
@@ -90,7 +91,7 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -top-40 left-1/4 size-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
 
         <nav className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <span className="text-lg font-bold text-white tracking-tight">Skemaka</span>
+          <LogoLockup className="text-white [--logo-accent:#60a5fa]" wordClassName="text-lg" />
           <div className="flex items-center gap-5">
             <Link href="/demo" className="text-sm font-medium text-white/60 hover:text-white transition-colors">See the demo</Link>
             <Link href="/login" className="text-sm font-medium text-white/60 hover:text-white transition-colors">Sign in →</Link>
@@ -415,7 +416,7 @@ export default async function HomePage() {
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
-          <span className="font-semibold text-gray-900 tracking-tight">Skemaka</span>
+          <LogoLockup className="text-slate-900" markClassName="size-6" wordClassName="text-sm font-semibold" />
           <nav className="flex items-center gap-6">
             <Link href="/demo" className="hover:text-gray-600 transition-colors">Demo</Link>
             <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>

@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useOrg } from "@/lib/orgContext"
+import { LogoMark } from "@/components/brand/Logo"
 
 const BASE_NAV_ITEMS = [
   { label: "Schedule",     short: "Schedule", href: "/schedule",     icon: CalendarDays, always: true },
@@ -66,10 +67,10 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
       <aside className="hidden md:flex flex-col shrink-0 bg-gray-900 dark:bg-gray-950 w-14 lg:w-60 transition-[width] duration-200">
         {/* Logo */}
         <div className="flex h-14 items-center justify-center lg:justify-start px-2 lg:px-4 border-b border-white/10 gap-2">
-          <span className="text-lg font-bold tracking-tight text-white lg:flex-1">
-            <span className="lg:hidden">S</span>
-            <span className="hidden lg:inline">Skemaka</span>
-          </span>
+          <div className="flex items-center gap-2 text-white lg:flex-1 [--logo-accent:#60a5fa]">
+            <LogoMark className="size-7 shrink-0" />
+            <span className="hidden lg:inline text-lg font-bold tracking-tight">Skemaka</span>
+          </div>
           {onCollapse && (
             <button
               onClick={onCollapse}
