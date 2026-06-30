@@ -12,14 +12,53 @@ export function useScheduleData(orgId: string, weekStart: string) {
   const [publishing, setPublishing] = useState(false);
   const [approvedTimeOff, setApprovedTimeOff] = useState<TimeOffRequest[]>([]);
 
-  useEffect(() => {
-    // The grid needs every employee, so page through the full list.
-    // Bypass the browser HTTP cache (the route sets a max-age/SWR window) so a
-    // just-added employee shows up immediately instead of after ~1–5 min.
-    fetchAllPages<Employee>(`/api/orgs/${orgId}/employees`, 200, { cache: "no-store" })
-      .then((all) => setEmployees(all))
-      .catch(() => toast.error("Failed to load employees"));
+  // The grid needs every employee, so page through the full list. Bypass the
+  // browser HTTP cache (the route sets a max-age/SWR window) so a just-added
+  // employee shows up immediately instead of after ~1–5 min.
+  //
+  // Retry on transient failure: the first authenticated request after org
+  // creation (onboarding → schedule) hits the slow-path membership/billing
+  // lookup on a possibly-cold Neon connection. Without retries one flaky call
+  // left `employees` empty — so a freshly added employee never appeared on the
+  // schedule and couldn't be assigned a shift. OrgProvider already retries the
+  // context load for the same reason; this brings the roster fetch to parity.
+  const loadEmployees = useCallback(async () => {
+    for (let i = 0; i < 3; i++) {
+      try {
+        const all = await fetchAllPages<Employee>(
+          `/api/orgs/${orgId}/employees`,
+          200,
+          { cache: "no-store" },
+        );
+        setEmployees(all);
+        return;
+      } catch {
+        if (i < 2) await new Promise((res) => setTimeout(res, 1000 * (i + 1)));
+      }
+    }
+    toast.error("Failed to load employees");
   }, [orgId]);
+
+  useEffect(() => {
+    loadEmployees();
+  }, [loadEmployees]);
+
+  // Self-heal a stale/empty roster: refetch when the tab regains focus or the
+  // page is restored (including from the back/forward cache). Covers an employee
+  // added in another tab and any first-load race on the onboarding hand-off.
+  useEffect(() => {
+    const refetch = () => {
+      if (document.visibilityState === "visible") loadEmployees();
+    };
+    window.addEventListener("focus", refetch);
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("pageshow", refetch);
+    return () => {
+      window.removeEventListener("focus", refetch);
+      document.removeEventListener("visibilitychange", refetch);
+      window.removeEventListener("pageshow", refetch);
+    };
+  }, [loadEmployees]);
 
   // Track which (orgId, weekStart) pair the current schedule data corresponds to.
   // If the key has changed we treat the data as stale and show loading immediately
