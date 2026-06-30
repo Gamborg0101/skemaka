@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, Share, Download } from "lucide-react"
+import Link from "next/link"
+import { Check, Share, Download, ExternalLink } from "lucide-react"
 import { useInstallPrompt } from "./useInstallPrompt"
 
 /**
@@ -81,23 +82,20 @@ export function InstallPrompt() {
             </li>
           </ol>
         ) : (
-          <div className="space-y-3 text-sm text-gray-600">
-            <p>Open <strong className="text-gray-900">skemaka.com</strong> in your browser, then:</p>
-            <ul className="space-y-2">
-              <li className="flex gap-2">
-                <strong className="w-20 shrink-0 text-gray-900">iPhone</strong>
-                <span>Tap Share, then Add to Home Screen.</span>
-              </li>
-              <li className="flex gap-2">
-                <strong className="w-20 shrink-0 text-gray-900">Android</strong>
-                <span>Tap the ⋮ menu, then Add to Home screen.</span>
-              </li>
-              <li className="flex gap-2">
-                <strong className="w-20 shrink-0 text-gray-900">Computer</strong>
-                <span>Click the install icon in the address bar.</span>
-              </li>
-            </ul>
-          </div>
+          <p className="text-sm text-gray-600">
+            Skemaka installs straight from your browser in a few taps — the steps differ by device.
+          </p>
+        )}
+
+        {!installed && (
+          <Link
+            href="/install"
+            target="_blank"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+          >
+            See step-by-step install instructions
+            <ExternalLink className="size-3.5" />
+          </Link>
         )}
       </div>
     </div>
