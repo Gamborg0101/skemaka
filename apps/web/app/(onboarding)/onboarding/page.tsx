@@ -2,21 +2,31 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Check, ChevronRight } from "lucide-react"
+import { Check, ChevronRight, Info } from "lucide-react"
 import { InstallPrompt } from "@/components/pwa/InstallPrompt"
 
 type Step = 1 | 2 | 3
 
 const CURRENCIES = [
-  { code: "EUR", label: "Euro (€)" },
-  { code: "USD", label: "US Dollar ($)" },
-  { code: "GBP", label: "British Pound (£)" },
-  { code: "DKK", label: "Danish Krone (kr)" },
-  { code: "SEK", label: "Swedish Krona (kr)" },
-  { code: "NOK", label: "Norwegian Krone (kr)" },
+  { code: "EUR", label: "Euro (€)", symbol: "€" },
+  { code: "USD", label: "US Dollar ($)", symbol: "$" },
+  { code: "GBP", label: "British Pound (£)", symbol: "£" },
+  { code: "DKK", label: "Danish Krone (kr)", symbol: "kr" },
+  { code: "SEK", label: "Swedish Krona (kr)", symbol: "kr" },
+  { code: "NOK", label: "Norwegian Krone (kr)", symbol: "kr" },
 ]
 
-const DEFAULT_ROLES = ["Waiter", "Chef", "Bartender", "Manager", "Host", "Cashier"]
+// Fallback only. The real options are fetched from the org right after it's
+// created (see handleCreateOrg), so the dropdown always matches the job roles
+// actually seeded in the database. Mirrors lib/seedDefaultRoles.ts.
+const FALLBACK_ROLES = ["Staff", "Shift lead", "Manager"]
+
+// Cycled through when a user adds a custom role inline, so new roles get varied
+// colors. Must be valid color tags (see lib/validate.ts VALID_COLOR_TAGS).
+const ROLE_COLORS = ["blue", "purple", "green", "orange", "yellow", "rose"]
+
+// Sentinel option value that triggers the inline "add a role" input.
+const ADD_ROLE = "__add_role__"
 
 const STEPS = [
   { n: 1 as Step, label: "Your business" },
@@ -48,7 +58,12 @@ export default function OnboardingPage() {
   // Step 2
   const [empName, setEmpName] = useState("")
   const [empEmail, setEmpEmail] = useState("")
-  const [empRole, setEmpRole] = useState(DEFAULT_ROLES[0])
+  const [empRole, setEmpRole] = useState(FALLBACK_ROLES[0])
+  const [availableRoles, setAvailableRoles] = useState<string[]>(FALLBACK_ROLES)
+  const [addingRole, setAddingRole] = useState(false)
+  const [newRole, setNewRole] = useState("")
+  const [savingRole, setSavingRole] = useState(false)
+  const [roleError, setRoleError] = useState<string | null>(null)
   const [empWage, setEmpWage] = useState("")
   const [addedEmployees, setAddedEmployees] = useState<string[]>([])
   const [addingEmp, setAddingEmp] = useState(false)
@@ -75,7 +90,24 @@ export default function OnboardingPage() {
       })
       const data = await r.json() as { data?: { id: string }; error?: string }
       if (!r.ok) throw new Error(data.error ?? "Failed to create workspace")
-      setOrgId(data.data!.id)
+      const newOrgId = data.data!.id
+      setOrgId(newOrgId)
+      // Load the org's actual job roles so the Team step only offers roles that
+      // exist in the DB — otherwise the employee create is rejected with
+      // "Job role X does not exist in this organization".
+      try {
+        const rr = await fetch(`/api/orgs/${newOrgId}/roles`, { cache: "no-store" })
+        if (rr.ok) {
+          const rd = await rr.json() as { data?: { name: string }[] }
+          const names = (rd.data ?? []).map((x) => x.name)
+          if (names.length > 0) {
+            setAvailableRoles(names)
+            setEmpRole(names[0])
+          }
+        }
+      } catch {
+        // keep FALLBACK_ROLES — they mirror the seed, so they still exist
+      }
       setStep(2)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
@@ -121,6 +153,40 @@ export default function OnboardingPage() {
       setEmpError(err instanceof Error ? err.message : "Failed to add employee")
     } finally {
       setAddingEmp(false)
+    }
+  }
+
+  // Create a custom job role on the spot (e.g. "Sales associate") so the product
+  // fits any industry, not just restaurants. The role is persisted immediately
+  // so the employee create below accepts it.
+  async function handleAddRole() {
+    const name = newRole.trim()
+    if (!orgId || !name) return
+    const dupe = availableRoles.find((r) => r.toLowerCase() === name.toLowerCase())
+    if (dupe) {
+      setEmpRole(dupe)
+      setAddingRole(false)
+      setNewRole("")
+      return
+    }
+    setSavingRole(true)
+    setRoleError(null)
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color: ROLE_COLORS[availableRoles.length % ROLE_COLORS.length] }),
+      })
+      const data = (await r.json()) as { data?: { name: string }; error?: string }
+      if (!r.ok) throw new Error(data.error ?? "Failed to add role")
+      setAvailableRoles((prev) => [...prev, name])
+      setEmpRole(name)
+      setAddingRole(false)
+      setNewRole("")
+    } catch (err) {
+      setRoleError(err instanceof Error ? err.message : "Failed to add role")
+    } finally {
+      setSavingRole(false)
     }
   }
 
@@ -264,25 +330,66 @@ export default function OnboardingPage() {
                     <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Job role</label>
                     <select
                       value={empRole}
-                      onChange={(e) => setEmpRole(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value === ADD_ROLE) { setAddingRole(true); setRoleError(null) }
+                        else setEmpRole(e.target.value)
+                      }}
                       className={SELECT_CLASS}
                     >
-                      {DEFAULT_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                      {availableRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+                      <option value={ADD_ROLE}>+ Add a role…</option>
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Hourly wage</label>
-                    <input
-                      type="number"
-                      value={empWage}
-                      onChange={(e) => { setEmpWage(e.target.value); setEmpError(null) }}
-                      placeholder="15.00"
-                      min="0"
-                      step="0.01"
-                      className={INPUT_CLASS}
-                    />
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                        {CURRENCIES.find((c) => c.code === currency)?.symbol ?? ""}
+                      </span>
+                      <input
+                        type="number"
+                        value={empWage}
+                        onChange={(e) => { setEmpWage(e.target.value); setEmpError(null) }}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className={`${INPUT_CLASS} pl-9`}
+                      />
+                    </div>
                   </div>
                 </div>
+                {addingRole && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">New role</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newRole}
+                        onChange={(e) => { setNewRole(e.target.value); setRoleError(null) }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRole() } }}
+                        placeholder="e.g. Sales associate"
+                        className={INPUT_CLASS}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddRole}
+                        disabled={savingRole || !newRole.trim()}
+                        className="shrink-0 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {savingRole ? "Adding…" : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAddingRole(false); setNewRole(""); setRoleError(null) }}
+                        className="shrink-0 px-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {roleError && <p className="text-xs text-red-600">{roleError}</p>}
+                  </div>
+                )}
                 {empError && <p className="text-xs text-red-600">{empError}</p>}
                 <button
                   onClick={handleAddEmployee}
@@ -328,7 +435,10 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-gray-600">You can change any of this later in Settings.</p>
+      <div className="mt-5 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm">
+        <Info className="size-4 shrink-0 text-blue-500" />
+        You can change any of this later in Settings.
+      </div>
     </div>
   )
 }
