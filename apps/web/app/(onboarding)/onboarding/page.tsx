@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Check, ChevronRight, Info } from "lucide-react"
+import { Check, ChevronRight, Info, ShieldCheck } from "lucide-react"
 import { InstallPrompt } from "@/components/pwa/InstallPrompt"
 
 type Step = 1 | 2 | 3
@@ -62,9 +62,9 @@ const ROLE_COLORS = ["blue", "purple", "green", "orange", "yellow", "rose"]
 const ADD_ROLE = "__add_role__"
 
 const STEPS = [
-  { n: 1 as Step, label: "Your business" },
-  { n: 2 as Step, label: "Your team" },
-  { n: 3 as Step, label: "Get the app" },
+  { n: 1 as Step, label: "Your business", desc: "Name, country & currency" },
+  { n: 2 as Step, label: "Your team", desc: "Add employees (optional)" },
+  { n: 3 as Step, label: "Get the app", desc: "Install on your phone" },
 ]
 
 // Explicit text + placeholder colors so inputs don't inherit the themed
@@ -262,41 +262,89 @@ export default function OnboardingPage() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="size-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-900">
+        <div className="size-6 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex flex-col items-center justify-center px-4 py-12">
-      <div className="mb-8 text-2xl font-bold text-gray-900 tracking-tight">Skemaka</div>
+    <div className="min-h-screen bg-white lg:grid lg:grid-cols-[minmax(0,440px)_1fr]">
+      {/* ── Brand panel (desktop) ── */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950 px-10 py-12 text-white lg:flex">
+        {/* soft decorative glows */}
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-blue-500/20 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -left-20 bottom-0 size-72 rounded-full bg-blue-600/10 blur-3xl" />
 
-      <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* Step indicator */}
-        <div className="flex border-b border-gray-100">
-          {STEPS.map(({ n, label }) => (
-            <div
-              key={n}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors border-b-2 ${
-                step === n
-                  ? "border-blue-600 text-blue-600"
-                  : step > n
-                  ? "border-transparent text-green-600"
-                  : "border-transparent text-gray-400"
-              }`}
-            >
-              <span className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                step > n ? "bg-green-100" : step === n ? "bg-blue-100" : "bg-gray-100"
-              }`}>
-                {step > n ? <Check className="size-3" /> : n}
-              </span>
-              {label}
-            </div>
-          ))}
+        <div className="relative">
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/skemaka-mark-white.svg" alt="" className="size-8" />
+            <span className="text-lg font-bold tracking-tight">Skemaka</span>
+          </div>
+
+          <h1 className="mt-16 text-3xl font-bold leading-tight tracking-tight">
+            Schedule your team<br />in minutes.
+          </h1>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-300">
+            Set up your workspace, add your staff, and build next week&rsquo;s rota — all in a few clicks.
+          </p>
+
+          <ol className="mt-12 space-y-5">
+            {STEPS.map(({ n, label, desc }) => {
+              const done = step > n
+              const active = step === n
+              return (
+                <li key={n} className="flex items-start gap-3.5">
+                  <span
+                    className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-colors ${
+                      done
+                        ? "border-blue-400 bg-blue-400 text-slate-900"
+                        : active
+                        ? "border-blue-400 bg-blue-400/15 text-white"
+                        : "border-white/20 text-slate-400"
+                    }`}
+                  >
+                    {done ? <Check className="size-3.5" /> : n}
+                  </span>
+                  <div>
+                    <p className={`text-sm font-semibold ${active || done ? "text-white" : "text-slate-400"}`}>{label}</p>
+                    <p className="text-xs text-slate-400">{desc}</p>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
         </div>
 
-        <div className="p-8">
+        <div className="relative flex items-center gap-2 text-xs text-slate-400">
+          <ShieldCheck className="size-4 text-blue-400" />
+          14-day free trial · no card required
+        </div>
+      </aside>
+
+      {/* ── Form panel ── */}
+      <main className="flex min-h-screen flex-col">
+        {/* Mobile brand header + progress */}
+        <div className="bg-gradient-to-r from-slate-900 to-blue-950 px-5 py-5 text-white lg:hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/skemaka-mark-white.svg" alt="" className="size-6" />
+              <span className="text-base font-bold tracking-tight">Skemaka</span>
+            </div>
+            <span className="text-xs font-medium text-slate-300">Step {step} of 3</span>
+          </div>
+          <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/15">
+            <div
+              className="h-full rounded-full bg-blue-400 transition-all duration-300"
+              style={{ width: `${(step / STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-1 items-start justify-center px-5 py-10 sm:px-10 lg:items-center">
+          <div className="w-full max-w-md">
           {/* ── Step 1: Workspace ── */}
           {step === 1 && (
             <form onSubmit={handleCreateOrg} className="space-y-5">
@@ -536,13 +584,13 @@ export default function OnboardingPage() {
               </button>
             </div>
           )}
+          <div className="mt-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600">
+            <Info className="size-4 shrink-0 text-blue-500" />
+            You can change any of this later in Settings.
+          </div>
+          </div>
         </div>
-      </div>
-
-      <div className="mt-5 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm">
-        <Info className="size-4 shrink-0 text-blue-500" />
-        You can change any of this later in Settings.
-      </div>
+      </main>
     </div>
   )
 }
