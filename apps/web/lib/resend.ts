@@ -120,6 +120,20 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }:
           </a>
         </div>
         ` : ""}
+        <div style="margin-top: 24px; padding: 16px 18px; background: #0f172a; border-radius: 8px;">
+          <p style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0 0 10px;">
+            Add Skemaka to your phone
+          </p>
+          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 6px;">
+            Get a Skemaka app icon on your home screen — no app store, no download:
+          </p>
+          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 4px;">
+            <strong style="color:#ffffff;">iPhone</strong> (in Safari): tap the Share icon, then <strong style="color:#ffffff;">Add to Home Screen</strong>.
+          </p>
+          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0;">
+            <strong style="color:#ffffff;">Android</strong> (in Chrome): tap the menu (&#8942;), then <strong style="color:#ffffff;">Install app</strong>.
+          </p>
+        </div>
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
           These links are personal to you — please don't share them.
         </p>

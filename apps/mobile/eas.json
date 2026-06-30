@@ -11,13 +11,13 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REPLACE-WITH-PRODUCTION-DOMAIN"
+        "EXPO_PUBLIC_API_URL": "https://skemaka.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REPLACE-WITH-PRODUCTION-DOMAIN"
+        "EXPO_PUBLIC_API_URL": "https://skemaka.com"
       },
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.0"
