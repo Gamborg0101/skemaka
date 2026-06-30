@@ -52,10 +52,11 @@ export default function OnboardingPage() {
   const [empWage, setEmpWage] = useState("")
   const [addedEmployees, setAddedEmployees] = useState<string[]>([])
   const [addingEmp, setAddingEmp] = useState(false)
+  const [empError, setEmpError] = useState<string | null>(null)
 
   // If user already has an org, redirect them away
   useEffect(() => {
-    fetch("/api/me/context")
+    fetch("/api/me/context", { cache: "no-store" })
       .then((r) => { if (r.ok) router.replace("/schedule") })
       .catch(() => {})
       .finally(() => setChecking(false))
@@ -85,9 +86,15 @@ export default function OnboardingPage() {
 
   async function handleAddEmployee() {
     if (!orgId || !empName.trim() || !empEmail.trim()) return
+    const wage = parseFloat(empWage)
+    if (!(wage > 0)) {
+      setEmpError("Enter an hourly wage greater than 0.")
+      return
+    }
     setAddingEmp(true)
+    setEmpError(null)
     try {
-      await fetch(`/api/orgs/${orgId}/employees`, {
+      const r = await fetch(`/api/orgs/${orgId}/employees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -95,18 +102,23 @@ export default function OnboardingPage() {
           email: empEmail.trim(),
           phone: null,
           jobRole: empRole,
-          hourlyWage: parseFloat(empWage) || 0,
+          hourlyWage: wage,
           employmentType: "FULL_TIME",
           contractedHours: 37,
           notes: null,
         }),
       })
+      const data = (await r.json()) as { error?: string }
+      // Surface failures instead of silently pretending the employee was added —
+      // otherwise a rejected POST (e.g. invalid wage) shows "added" but nothing
+      // is persisted, and the employee never appears in Employees.
+      if (!r.ok) throw new Error(data.error ?? "Failed to add employee")
       setAddedEmployees((prev) => [...prev, empName.trim()])
       setEmpName("")
       setEmpEmail("")
       setEmpWage("")
-    } catch {
-      // non-critical — employee can be added later
+    } catch (err) {
+      setEmpError(err instanceof Error ? err.message : "Failed to add employee")
     } finally {
       setAddingEmp(false)
     }
@@ -263,7 +275,7 @@ export default function OnboardingPage() {
                     <input
                       type="number"
                       value={empWage}
-                      onChange={(e) => setEmpWage(e.target.value)}
+                      onChange={(e) => { setEmpWage(e.target.value); setEmpError(null) }}
                       placeholder="15.00"
                       min="0"
                       step="0.01"
@@ -271,9 +283,10 @@ export default function OnboardingPage() {
                     />
                   </div>
                 </div>
+                {empError && <p className="text-xs text-red-600">{empError}</p>}
                 <button
                   onClick={handleAddEmployee}
-                  disabled={addingEmp || !empName.trim() || !empEmail.trim()}
+                  disabled={addingEmp || !empName.trim() || !empEmail.trim() || !(parseFloat(empWage) > 0)}
                   className="w-full text-sm font-medium py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   {addingEmp ? "Adding…" : "+ Add employee"}
@@ -284,7 +297,7 @@ export default function OnboardingPage() {
                 onClick={() => setStep(3)}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {addedEmployees.length > 0 ? "Continue" : "Skip — continue"}
+                {addedEmployees.length > 0 ? "Continue" : "Add later"}
                 <ChevronRight className="size-4" />
               </button>
             </div>

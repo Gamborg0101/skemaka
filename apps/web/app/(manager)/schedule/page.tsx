@@ -12,6 +12,7 @@ import { WeekPicker } from "@/components/manager/WeekPicker"
 import { useOrg } from "@/lib/orgContext"
 import { useScheduleData } from "@/lib/useScheduleData"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { Schedule } from "@/types"
 
 export default function SchedulePage() {
   const { orgId, jobRoles, shiftTemplates } = useOrg()
@@ -27,6 +28,20 @@ export default function SchedulePage() {
     generating, generateWeek,
     handlePublish, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
   } = useScheduleData(orgId, weekStart)
+
+  // A schedule is created lazily (on first shift add), so it can be null even
+  // after loading finishes — e.g. a brand-new org with employees but no shifts.
+  // Render the (empty) week grid against this placeholder instead of crashing.
+  const placeholderSchedule = useMemo<Schedule>(() => ({
+    id: "",
+    organizationId: orgId,
+    weekStart,
+    isDuplicate: false,
+    sourceScheduleId: null,
+    createdAt: "",
+    updatedAt: "",
+    shifts: [],
+  }), [orgId, weekStart])
 
   const navigateWeek = (direction: -1 | 1) => {
     setWeekStart((ws) => addDays(ws, direction * 7))
@@ -363,7 +378,7 @@ export default function SchedulePage() {
           </div>
         ) : viewMode === "week" ? (
           <WeeklyScheduleGrid
-            schedule={schedule!}
+            schedule={schedule ?? placeholderSchedule}
             employees={employees}
             jobRoles={jobRoles}
             shiftTemplates={shiftTemplates}

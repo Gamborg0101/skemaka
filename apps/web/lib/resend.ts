@@ -102,40 +102,39 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }:
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
         <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
         <p style="color: #555; margin-bottom: 8px;">
-          You've been added as a team member at <strong>${orgName}</strong>.
+          You've been added as a team member at <strong>${orgName}</strong> on Skemaka.
         </p>
         <p style="color: #555; margin-bottom: 24px;">
-          Click the button below to view your shifts and submit your availability. No password required.
+          To get started, create your account below. Once you're in, you can view your shifts,
+          submit your availability, and request time off.
         </p>
-        <a href="${inviteUrl}" style="display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
-          View my shifts
+        <a href="${joinUrl ?? inviteUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
+          Create my account
         </a>
-        ${joinUrl ? `
-        <div style="margin-top: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-          <p style="color: #374151; font-size: 14px; margin: 0 0 12px;">
-            <strong>Create your account</strong> to see your shifts in the app and get availability notifications.
-          </p>
-          <a href="${joinUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
-            Create my account
-          </a>
-        </div>
-        ` : ""}
-        <div style="margin-top: 24px; padding: 16px 18px; background: #0f172a; border-radius: 8px;">
+
+        <div style="margin-top: 28px; padding: 18px; background: #0f172a; border-radius: 8px;">
           <p style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0 0 10px;">
             Add Skemaka to your phone
           </p>
-          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 6px;">
-            Get a Skemaka app icon on your home screen — no app store, no download:
+          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 12px;">
+            Skemaka works like an app on your phone. Here's how to add it to your home screen:
           </p>
-          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 4px;">
-            <strong style="color:#ffffff;">iPhone</strong> (in Safari): tap the Share icon, then <strong style="color:#ffffff;">Add to Home Screen</strong>.
+          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.75; margin: 0 0 12px;">
+            <strong style="color:#ffffff;">On iPhone</strong> (using Safari):<br>
+            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in Safari.<br>
+            2. Tap the <strong style="color:#ffffff;">Share</strong> icon at the bottom of the screen.<br>
+            3. Tap <strong style="color:#ffffff;">Add to Home Screen</strong>, then tap <strong style="color:#ffffff;">Add</strong>.
           </p>
-          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0;">
-            <strong style="color:#ffffff;">Android</strong> (in Chrome): tap the menu (&#8942;), then <strong style="color:#ffffff;">Install app</strong>.
+          <p style="color: #cbd5e1; font-size: 13px; line-height: 1.75; margin: 0;">
+            <strong style="color:#ffffff;">On Android</strong> (using Chrome):<br>
+            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in Chrome.<br>
+            2. Tap the <strong style="color:#ffffff;">&#8942;</strong> menu in the top-right corner.<br>
+            3. Tap <strong style="color:#ffffff;">Add to Home screen</strong>.
           </p>
         </div>
+
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
-          These links are personal to you — please don't share them.
+          This link is personal to you — please don't share it.
         </p>
       </div>
     `,

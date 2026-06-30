@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
+import { BfcacheGuard } from "@/components/BfcacheGuard"
 
 export default async function PortalLayout({
   children,
@@ -12,5 +13,10 @@ export default async function PortalLayout({
     redirect("/login")
   }
 
-  return <>{children}</>
+  return (
+    <>
+      <BfcacheGuard />
+      {children}
+    </>
+  )
 }
