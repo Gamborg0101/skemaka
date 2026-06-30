@@ -16,6 +16,39 @@ const CURRENCIES = [
   { code: "NOK", label: "Norwegian Krone (kr)", symbol: "kr" },
 ]
 
+// Country drives the currency + time-format defaults. Limited to countries whose
+// currency we support today (see VALID_CURRENCIES in orgService). "Other" lets
+// anyone proceed with sensible EUR defaults.
+const COUNTRIES: { code: string; name: string; currency: string; timeFormat: "12h" | "24h" }[] = [
+  { code: "DK", name: "Denmark",        currency: "DKK", timeFormat: "24h" },
+  { code: "SE", name: "Sweden",         currency: "SEK", timeFormat: "24h" },
+  { code: "NO", name: "Norway",         currency: "NOK", timeFormat: "24h" },
+  { code: "GB", name: "United Kingdom", currency: "GBP", timeFormat: "24h" },
+  { code: "US", name: "United States",  currency: "USD", timeFormat: "12h" },
+  { code: "IE", name: "Ireland",        currency: "EUR", timeFormat: "24h" },
+  { code: "DE", name: "Germany",        currency: "EUR", timeFormat: "24h" },
+  { code: "FR", name: "France",         currency: "EUR", timeFormat: "24h" },
+  { code: "ES", name: "Spain",          currency: "EUR", timeFormat: "24h" },
+  { code: "IT", name: "Italy",          currency: "EUR", timeFormat: "24h" },
+  { code: "NL", name: "Netherlands",    currency: "EUR", timeFormat: "24h" },
+  { code: "BE", name: "Belgium",        currency: "EUR", timeFormat: "24h" },
+  { code: "AT", name: "Austria",        currency: "EUR", timeFormat: "24h" },
+  { code: "PT", name: "Portugal",       currency: "EUR", timeFormat: "24h" },
+  { code: "FI", name: "Finland",        currency: "EUR", timeFormat: "24h" },
+  { code: "OTHER", name: "Other",       currency: "EUR", timeFormat: "24h" },
+]
+
+// Optional — tailors the starter job roles (see lib/seedDefaultRoles.ts).
+const INDUSTRIES = [
+  { value: "",            label: "Select (optional)" },
+  { value: "restaurant",  label: "Restaurant" },
+  { value: "cafe",        label: "Café / Bar" },
+  { value: "retail",      label: "Retail / Store" },
+  { value: "hospitality", label: "Hotel / Hospitality" },
+  { value: "healthcare",  label: "Healthcare / Clinic" },
+  { value: "other",       label: "Other" },
+]
+
 // Fallback only. The real options are fetched from the org right after it's
 // created (see handleCreateOrg), so the dropdown always matches the job roles
 // actually seeded in the database. Mirrors lib/seedDefaultRoles.ts.
@@ -50,7 +83,12 @@ export default function OnboardingPage() {
 
   // Step 1
   const [orgName, setOrgName] = useState("")
+  const [country, setCountry] = useState("")
   const [currency, setCurrency] = useState("EUR")
+  const [industry, setIndustry] = useState("")
+  // Captured silently from the browser — no question asked.
+  const [timezone, setTimezone] = useState("")
+  const [locale, setLocale] = useState("")
 
   // After step 1
   const [orgId, setOrgId] = useState<string | null>(null)
@@ -77,16 +115,48 @@ export default function OnboardingPage() {
       .finally(() => setChecking(false))
   }, [router])
 
+  // Capture timezone + locale silently, and pre-select the country (and thus
+  // currency) from the browser locale's region so the user usually doesn't have
+  // to change anything.
+  useEffect(() => {
+    try {
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone ?? "")
+    } catch { /* ignore */ }
+    const loc = typeof navigator !== "undefined" ? navigator.language : ""
+    setLocale(loc)
+    const region = loc.split("-")[1]?.toUpperCase()
+    const match = COUNTRIES.find((c) => c.code === region)
+    if (match) {
+      setCountry(match.code)
+      setCurrency(match.currency)
+    }
+  }, [])
+
+  function handleCountryChange(code: string) {
+    setCountry(code)
+    const c = COUNTRIES.find((x) => x.code === code)
+    if (c) setCurrency(c.currency)
+  }
+
   async function handleCreateOrg(e: React.FormEvent) {
     e.preventDefault()
-    if (!orgName.trim()) return
+    if (!orgName.trim() || !country) return
     setLoading(true)
     setError(null)
     try {
+      const timeFormat = COUNTRIES.find((c) => c.code === country)?.timeFormat ?? "24h"
       const r = await fetch("/api/orgs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: orgName.trim(), currency }),
+        body: JSON.stringify({
+          name: orgName.trim(),
+          currency,
+          country,
+          timezone,
+          locale,
+          industry: industry || undefined,
+          timeFormat,
+        }),
       })
       const data = await r.json() as { data?: { id: string }; error?: string }
       if (!r.ok) throw new Error(data.error ?? "Failed to create workspace")
@@ -233,7 +303,7 @@ export default function OnboardingPage() {
               <div>
                 <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 1 of 3</p>
                 <h2 className="text-lg font-semibold text-gray-900 mt-1">Set up your workspace</h2>
-                <p className="text-sm text-gray-500 mt-1">Name your business and pick a currency. Next, you&apos;ll add your team.</p>
+                <p className="text-sm text-gray-500 mt-1">A few details about your business. Next, you&apos;ll add your team.</p>
               </div>
 
               <div className="space-y-1.5">
@@ -251,17 +321,51 @@ export default function OnboardingPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                    Country
+                  </label>
+                  <select
+                    value={country}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className={SELECT_CLASS}
+                    required
+                  >
+                    <option value="" disabled>Select…</option>
+                    {COUNTRIES.map(({ code, name }) => (
+                      <option key={code} value={code}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                    Currency
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className={SELECT_CLASS}
+                  >
+                    {CURRENCIES.map(({ code, label }) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                  Currency
+                  Industry <span className="normal-case font-normal text-gray-400">(optional — tailors your starter roles)</span>
                 </label>
                 <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
                   className={SELECT_CLASS}
                 >
-                  {CURRENCIES.map(({ code, label }) => (
-                    <option key={code} value={code}>{label}</option>
+                  {INDUSTRIES.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
               </div>
@@ -270,7 +374,7 @@ export default function OnboardingPage() {
 
               <button
                 type="submit"
-                disabled={loading || !orgName.trim()}
+                disabled={loading || !orgName.trim() || !country}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? "Creating…" : (

@@ -50,6 +50,14 @@ export interface Organization {
   name: string
   slug: string
   currency: string
+  /** ISO 3166-1 alpha-2 country code, e.g. "DK". Null for legacy orgs. */
+  country?: string | null
+  /** BCP 47 locale captured at signup, e.g. "da-DK". Drives future language layers. */
+  locale?: string | null
+  /** IANA timezone, e.g. "Europe/Copenhagen". */
+  timezone?: string | null
+  /** Business industry, tailors seeded roles, e.g. "restaurant". */
+  industry?: string | null
   settings?: OrgScheduleSettings | null
   subscriptionStatus: SubscriptionStatus
   createdAt: string

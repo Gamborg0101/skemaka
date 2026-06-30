@@ -1,5 +1,5 @@
 import { db } from "@/lib/prisma"
-import { PrismaClient } from "@/app/generated/prisma/client"
+import { PrismaClient, Prisma } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
 import { seedDefaultRoles } from "@/lib/seedDefaultRoles"
 import { recordAudit } from "@/lib/audit"
@@ -13,14 +13,30 @@ const VALID_CURRENCIES = ["EUR", "USD", "GBP", "DKK", "SEK", "NOK"] as const
 /** Length of the free trial granted to a new organization. */
 export const TRIAL_DAYS = 14
 
+export interface CreateOrgInput {
+  name: string
+  currency?: string
+  country?: string
+  timezone?: string
+  locale?: string
+  industry?: string
+  timeFormat?: "12h" | "24h"
+}
+
 export async function createOrg(
   userId: string,
-  name: string,
-  currency?: string,
+  input: CreateOrgInput,
 ): Promise<Organization> {
+  const { name, currency, country, timezone, locale, industry, timeFormat } = input
   const trimmedName     = name.trim()
   const resolvedCurrency = currency && (VALID_CURRENCIES as readonly string[]).includes(currency) ? currency : "EUR"
   const baseSlug        = trimmedName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+
+  // country / locale / timezone / industry are first-class columns on the org
+  // (see schema). timeFormat is a schedule display preference and stays in the
+  // settings JSON, where updateOrgSettings + the orgSettings singleton read it.
+  const settings: Record<string, string> = {}
+  if (timeFormat) settings.timeFormat = timeFormat
 
   let slug   = baseSlug || "org"
   let suffix = 1
@@ -38,14 +54,21 @@ export async function createOrg(
 
     const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
     const newOrg = await client.organization.create({
-      data: { name: trimmedName, slug, currency: resolvedCurrency, trialEndsAt },
+      data: {
+        name: trimmedName, slug, currency: resolvedCurrency, trialEndsAt,
+        ...(country  && { country }),
+        ...(locale   && { locale }),
+        ...(timezone && { timezone }),
+        ...(industry && { industry }),
+        ...(Object.keys(settings).length > 0 && { settings: settings as Prisma.InputJsonObject }),
+      },
     })
 
     await client.membership.create({
       data: { userId, organizationId: newOrg.id, role: "MANAGER" },
     })
 
-    await seedDefaultRoles(newOrg.id, client)
+    await seedDefaultRoles(newOrg.id, client, industry)
 
     return newOrg
   })

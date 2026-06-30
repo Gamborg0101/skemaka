@@ -71,6 +71,10 @@ model Organization {
   pastDueSince            DateTime?
   stripeEventAt           DateTime?
   currency                String                   @default("EUR")
+  country                 String?
+  locale                  String?
+  timezone                String?
+  industry                String?
   settings                Json?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt

@@ -80,6 +80,8 @@ export function serSchedule(s: {
 
 export function serOrg(o: {
   id: string; name: string; slug: string; currency: string
+  country?: string | null; locale?: string | null
+  timezone?: string | null; industry?: string | null
   settings?: unknown
   subscriptionStatus: string
   createdAt: Date; updatedAt: Date
@@ -89,6 +91,10 @@ export function serOrg(o: {
     name: o.name,
     slug: o.slug,
     currency: o.currency,
+    country: o.country ?? null,
+    locale: o.locale ?? null,
+    timezone: o.timezone ?? null,
+    industry: o.industry ?? null,
     settings: (o.settings as Organization["settings"]) ?? null,
     subscriptionStatus: o.subscriptionStatus as Organization["subscriptionStatus"],
     createdAt: o.createdAt.toISOString(),
