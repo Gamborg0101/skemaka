@@ -80,11 +80,17 @@ export function InstallPrompt() {
             </li>
           </ol>
         ) : (
-          <p className="text-sm text-gray-600">
-            On your phone, open <strong className="text-gray-900">skemaka.com</strong> in the
-            browser and choose <strong className="text-gray-900">Add to Home Screen</strong> —
-            via the Share menu on iPhone, or the ⋮ menu on Android.
-          </p>
+          <div className="space-y-1.5 text-sm text-gray-600">
+            <p>Open <strong className="text-gray-900">skemaka.com</strong> on your phone, then:</p>
+            <p>
+              <strong className="text-gray-900">iPhone:</strong> tap Share, then{" "}
+              <strong className="text-gray-900">Add to Home Screen</strong>.
+            </p>
+            <p>
+              <strong className="text-gray-900">Android:</strong> tap the ⋮ menu, then{" "}
+              <strong className="text-gray-900">Add to Home screen</strong>.
+            </p>
+          </div>
         )}
       </div>
     </div>

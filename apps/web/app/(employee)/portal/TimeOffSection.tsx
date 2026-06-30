@@ -9,9 +9,9 @@ import type { TimeOffRequest } from "@/types"
 import { fetchAllPages } from "@/lib/pagination"
 
 const STATUS_STYLE: Record<string, string> = {
-  PENDING:  "bg-amber-100 text-amber-700",
-  APPROVED: "bg-green-100 text-green-700",
-  DENIED:   "bg-red-100 text-red-700",
+  PENDING:  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  APPROVED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  DENIED:   "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 }
 
 function formatDateRange(start: string, end: string) {
@@ -71,11 +71,11 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="px-4 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <CalendarOff className="size-4 text-gray-400" />
-          <h2 className="text-sm font-semibold text-gray-800">Time Off</h2>
+          <CalendarOff className="size-4 text-gray-400 dark:text-gray-500" />
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Time Off</h2>
         </div>
         {!showForm && (
           <Button size="sm" variant="outline" onClick={() => setShowForm(true)}>
@@ -86,10 +86,10 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="px-4 py-4 border-b border-gray-100 space-y-3 bg-gray-50">
+        <form onSubmit={handleSubmit} className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 space-y-3 bg-gray-50 dark:bg-gray-800/60">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">From</label>
               <input
                 type="date"
                 required
@@ -98,29 +98,29 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
                   setStartDate(e.target.value)
                   if (endDate && e.target.value > endDate) setEndDate(e.target.value)
                 }}
-                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">To</label>
               <input
                 type="date"
                 required
                 min={startDate}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Reason (optional)</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reason (optional)</label>
             <textarea
               rows={2}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. holiday, appointment…"
-              className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex gap-2">
@@ -135,7 +135,7 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
       )}
 
       {loading ? (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-gray-100 dark:divide-gray-800">
           {Array.from({ length: 3 }).map((_, i) => (
             <li key={i} className="px-4 py-3 flex items-center justify-between gap-3">
               <div>
@@ -148,19 +148,19 @@ export function TimeOffSection({ orgId }: TimeOffSectionProps) {
         </ul>
       ) : requests.length === 0 && !showForm ? (
         <div className="px-4 py-6 text-center">
-          <p className="text-sm text-gray-400">No time off requests yet.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">No time off requests yet.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-gray-100 dark:divide-gray-800">
           {requests.map((r) => (
             <li key={r.id} className="px-4 py-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-gray-800">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                   {formatDateRange(r.startDate, r.endDate)}
                 </p>
-                {r.reason && <p className="text-xs text-gray-500 mt-0.5">{r.reason}</p>}
+                {r.reason && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{r.reason}</p>}
                 {r.reviewNote && (
-                  <p className="text-xs text-gray-400 mt-0.5 italic">Note: {r.reviewNote}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 italic">Note: {r.reviewNote}</p>
                 )}
               </div>
               <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[r.status]}`}>

@@ -78,10 +78,10 @@ export default async function EmployeePortalPage() {
 
   if (!employee) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
         <div className="text-center max-w-sm">
-          <p className="text-2xl font-bold text-gray-900 mb-2">No employee profile</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No employee profile</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Ask your manager to add you as an employee so your shifts appear here.
           </p>
         </div>
@@ -135,7 +135,7 @@ export default async function EmployeePortalPage() {
   const weeks = groupByWeek(employee.shifts)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-10">
       {/* Back bar — only for managers */}
       {isManager && (
         <div className="bg-gray-900 px-4 py-2.5 flex items-center gap-2">
@@ -150,20 +150,20 @@ export default async function EmployeePortalPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           {employee.organization.name}
         </p>
-        <h1 className="text-2xl font-bold text-gray-900 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
           Hi {employee.name.split(" ")[0]}
         </h1>
-        <p className="text-sm text-gray-500 mt-0.5">{employee.jobRole}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{employee.jobRole}</p>
       </div>
 
       {/* Shift list */}
       <div className="px-4 py-5 max-w-lg mx-auto space-y-6">
         {weeks.length === 0 && (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-gray-400 dark:text-gray-500">
             <p className="text-lg font-medium">No upcoming shifts</p>
             <p className="text-sm mt-1">Check back when your schedule is published.</p>
           </div>
@@ -176,11 +176,11 @@ export default async function EmployeePortalPage() {
                 {formatWeekLabel(weekStart)}
               </h2>
               {publishedWeeks.has(weekStart) ? (
-                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-green-100 text-green-700">
+                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
                   Published
                 </span>
               ) : (
-                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-gray-100 text-gray-400">
+                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
                   Pending
                 </span>
               )}
@@ -196,12 +196,12 @@ export default async function EmployeePortalPage() {
                 return (
                   <div
                     key={shift.id}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+                    className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden"
                   >
                     <div className="px-4 py-4 space-y-3">
                       {/* Date + role badge */}
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-gray-900">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">
                           {formatShiftDate(shift.date)}
                         </p>
                         <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${tagClass}`}>
@@ -210,36 +210,36 @@ export default async function EmployeePortalPage() {
                       </div>
 
                       {/* Time */}
-                      <div className="flex items-center gap-1.5 text-gray-600">
-                        <Clock className="size-4 shrink-0 text-gray-400" />
+                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                        <Clock className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
                         <span className="text-sm font-medium">
                           {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
                         </span>
-                        <span className="text-sm text-gray-400">
+                        <span className="text-sm text-gray-400 dark:text-gray-500">
                           · {hours}h
                           {shift.breakMinutes > 0 && ` (incl. ${shift.breakMinutes}m break)`}
                         </span>
                       </div>
 
                       {/* Location */}
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <MapPin className="size-4 shrink-0 text-gray-400" />
+                      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                        <MapPin className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
                         <span className="text-sm">{employee.organization.name}</span>
                       </div>
 
                       {/* Notes */}
                       {shift.notes && (
-                        <p className="text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 rounded-lg px-3 py-2">
                           {shift.notes}
                         </p>
                       )}
 
                       {/* Co-workers */}
                       {coworkers.length > 0 && (
-                        <div className="pt-1 border-t border-gray-100">
+                        <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
                           <div className="flex items-center gap-1.5 mb-2">
-                            <Users className="size-3.5 text-gray-400" />
-                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                            <Users className="size-3.5 text-gray-400 dark:text-gray-500" />
+                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                               Working with you
                             </span>
                           </div>
@@ -249,8 +249,8 @@ export default async function EmployeePortalPage() {
                                 <div className={`size-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${avatarColor(cw.name)}`}>
                                   {getInitials(cw.name)}
                                 </div>
-                                <span className="text-sm text-gray-700">{cw.name}</span>
-                                <span className="text-xs text-gray-400">· {cw.jobRole}</span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{cw.name}</span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">· {cw.jobRole}</span>
                               </div>
                             ))}
                           </div>

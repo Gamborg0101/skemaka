@@ -32,6 +32,16 @@ interface AvailabilityInviteOptions {
   deadline: string
 }
 
+interface ShiftAssignedOptions {
+  to: string
+  name: string
+  orgName: string
+  dateLabel: string
+  startTime: string
+  endTime: string
+  jobRole: string
+}
+
 export async function sendAvailabilityInviteEmail({
   to,
   name,
@@ -120,21 +130,53 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }:
             Skemaka works like an app on your phone. Here's how to add it to your home screen:
           </p>
           <p style="color: #cbd5e1; font-size: 13px; line-height: 1.75; margin: 0 0 12px;">
-            <strong style="color:#ffffff;">On iPhone</strong> (using Safari):<br>
-            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in Safari.<br>
-            2. Tap the <strong style="color:#ffffff;">Share</strong> icon at the bottom of the screen.<br>
+            <strong style="color:#ffffff;">On iPhone</strong>:<br>
+            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in your browser.<br>
+            2. Tap the <strong style="color:#ffffff;">Share</strong> icon.<br>
             3. Tap <strong style="color:#ffffff;">Add to Home Screen</strong>, then tap <strong style="color:#ffffff;">Add</strong>.
           </p>
           <p style="color: #cbd5e1; font-size: 13px; line-height: 1.75; margin: 0;">
-            <strong style="color:#ffffff;">On Android</strong> (using Chrome):<br>
-            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in Chrome.<br>
-            2. Tap the <strong style="color:#ffffff;">&#8942;</strong> menu in the top-right corner.<br>
+            <strong style="color:#ffffff;">On Android</strong>:<br>
+            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in your browser.<br>
+            2. Tap the <strong style="color:#ffffff;">&#8942;</strong> menu.<br>
             3. Tap <strong style="color:#ffffff;">Add to Home screen</strong>.
           </p>
         </div>
 
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
           This link is personal to you — please don't share it.
+        </p>
+      </div>
+    `,
+  })
+}
+
+/**
+ * Sent when a manager adds a single shift to an already-published week — i.e. a
+ * one-off assignment outside the normal publish/roll-out flow. The whole-week
+ * publish notifies the team separately; this is a direct heads-up to the one
+ * affected employee.
+ */
+export async function sendShiftAssignedEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole,
+}: ShiftAssignedOptions) {
+  return getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    to,
+    subject: `New shift on ${dateLabel} — ${orgName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <p style="color: #555; margin-bottom: 20px;">
+          You've been given a new shift at <strong>${orgName}</strong>.
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111;">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151;">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #999; font-size: 13px;">
+          Open Skemaka to see your full schedule.
         </p>
       </div>
     `,
