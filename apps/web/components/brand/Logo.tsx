@@ -25,11 +25,11 @@ export function LogoMark({ className }: { className?: string }) {
       {/* header strip (rounded top, squared bottom) */}
       <rect x="7" y="11" width="34" height="8" rx="6.5" fill="currentColor" />
       <rect x="7" y="14.5" width="34" height="4.5" fill="currentColor" />
-      {/* date dots — even square grid, centred in the body; top-left accented */}
-      <circle cx="20" cy="25.2" r="3" fill="var(--logo-accent, #2563eb)" />
-      <circle cx="28" cy="25.2" r="3" fill="currentColor" opacity="0.35" />
-      <circle cx="20" cy="33.2" r="3" fill="currentColor" opacity="0.35" />
-      <circle cx="28" cy="33.2" r="3" fill="currentColor" opacity="0.35" />
+      {/* date dots — evenly spaced 2×2 grid, centred in the body; top-left accented */}
+      <circle cx="18.9" cy="25.2" r="3" fill="var(--logo-accent, #2563eb)" />
+      <circle cx="29.1" cy="25.2" r="3" fill="currentColor" opacity="0.35" />
+      <circle cx="18.9" cy="33.2" r="3" fill="currentColor" opacity="0.35" />
+      <circle cx="29.1" cy="33.2" r="3" fill="currentColor" opacity="0.35" />
     </svg>
   )
 }
