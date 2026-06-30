@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus, X, Sparkles, Copy } from "lucide-react"
+import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus, X, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { WeeklyScheduleGrid } from "@/components/manager/WeeklyScheduleGrid"
@@ -25,7 +25,6 @@ export default function SchedulePage() {
 
   const {
     schedule, loading, employees, approvedTimeOff, publishing,
-    generating, generateWeek,
     handlePublish, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
   } = useScheduleData(orgId, weekStart)
 
@@ -294,36 +293,19 @@ export default function SchedulePage() {
 
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
         {!loading && !hintDismissed && employees.length > 0 && (schedule?.shifts ?? []).length === 0 && (
-          <div className="mx-4 mt-4 flex flex-col gap-3 rounded-xl border border-blue-100 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3 sm:flex-row sm:items-center">
-            <span className="text-sm text-blue-800 dark:text-gray-300 flex-1">
-              <span className="font-semibold">Start your week in one click.</span>{" "}
-              Generate a starter schedule or copy last week — then tweak. Or click any empty cell to add a shift manually.
+          <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3">
+            <Sparkles className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <span className="flex-1 text-sm text-blue-900 dark:text-gray-300">
+              <span className="font-semibold">Build your first schedule.</span>{" "}
+              Click any empty cell in the grid to add a shift.
             </span>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                size="sm"
-                onClick={() => generateWeek("starter")}
-                disabled={generating}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Sparkles className="size-4" /> Generate starter week
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => generateWeek("copyPrevious")}
-                disabled={generating}
-              >
-                <Copy className="size-4" /> Copy last week
-              </Button>
-              <button
-                onClick={() => setHintDismissed(true)}
-                aria-label="Dismiss"
-                className="shrink-0 text-blue-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => setHintDismissed(true)}
+              aria-label="Dismiss"
+              className="shrink-0 text-blue-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+            >
+              <X className="size-4" />
+            </button>
           </div>
         )}
         {loading ? (

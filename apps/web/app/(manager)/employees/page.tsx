@@ -283,7 +283,17 @@ export default function EmployeesPage() {
                 >
                   <TableCell>
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-50">{emp.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-gray-900 dark:text-gray-50">{emp.name}</p>
+                        {emp.isActive && !emp.userId && (
+                          <Tooltip content="Hasn't created their account yet — they won't get shift notifications until they do.">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/30 px-1.5 py-px text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                              <span className="size-1.5 rounded-full bg-amber-500" />
+                              Not activated
+                            </span>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{emp.phone ?? "—"}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">{emp.jobRole}</p>
                     </div>

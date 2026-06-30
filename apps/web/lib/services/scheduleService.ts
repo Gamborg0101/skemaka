@@ -8,6 +8,7 @@ import {
   sendShiftUpdatedSms,
 } from "@/lib/sms"
 import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
+import { sendShiftAssignedEmail } from "@/lib/resend"
 import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -464,12 +465,21 @@ export async function createShift(
   const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag } = input
 
   const dateUTC = new Date(date + "T00:00:00Z")
-  const [employeeInOrg, existing] = await Promise.all([
-    db.employee.findFirst({ where: { id: employeeId, organizationId: orgId }, select: { id: true } }),
+  const [employeeInOrg, existing, scheduleRow] = await Promise.all([
+    db.employee.findFirst({
+      where: { id: employeeId, organizationId: orgId },
+      select: { id: true, name: true, email: true, organization: { select: { name: true } } },
+    }),
     db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC }, select: { id: true }, orderBy: { createdAt: "asc" } }),
+    db.schedule.findFirst({ where: { id: scheduleId, organizationId: orgId }, select: { publishedAt: true } }),
   ])
   if (!employeeInOrg) throw new ServiceError("Employee not found", "NOT_FOUND")
   if (existing) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+
+  // A one-off shift added to an already-published week (i.e. not part of a bulk
+  // publish roll-out). Captured before the create, because adding the shift
+  // resets the schedule to draft (clearing publishedAt) just below.
+  const addedToPublishedWeek = scheduleRow?.publishedAt != null
 
   const shift = await db.shift.create({
     data: {
@@ -500,6 +510,25 @@ export async function createShift(
       payload: { shiftId: shift.id, scheduleId, employeeId, date, jobRole },
     },
   }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
+
+  // Email the affected employee directly when this is a late addition to an
+  // already-published week — they were already notified of the published
+  // schedule, so a new shift is news to them. Fire-and-forget; never block or
+  // fail the create on a mail error.
+  if (addedToPublishedWeek && employeeInOrg.email) {
+    const dateLabel = new Date(date + "T12:00:00Z").toLocaleDateString("en-GB", {
+      weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
+    })
+    void sendShiftAssignedEmail({
+      to: employeeInOrg.email,
+      name: employeeInOrg.name,
+      orgName: employeeInOrg.organization.name,
+      dateLabel,
+      startTime,
+      endTime,
+      jobRole,
+    }).catch((err) => console.error("[ShiftEmail] Failed to send shift-assigned email:", err))
+  }
 
   return serShift(shift)
 }
