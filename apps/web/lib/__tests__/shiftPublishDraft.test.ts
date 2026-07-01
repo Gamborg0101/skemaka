@@ -23,6 +23,7 @@ vi.mock("@/lib/prisma", () => ({
       delete: vi.fn(),
     },
     schedule: {
+      findFirst: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
     },
@@ -143,6 +144,9 @@ describe("createShift drop-to-draft", () => {
   it("returns a published schedule to draft via the conditional updateMany", async () => {
     vi.mocked(db.employee.findFirst).mockResolvedValue({ id: "emp_1" } as never)
     vi.mocked(db.shift.findFirst).mockResolvedValue(null as never)
+    // createShift reads the schedule's publishedAt (for the late-add email path);
+    // an employee with no email keeps this test focused on the updateMany reset.
+    vi.mocked(db.schedule.findFirst).mockResolvedValue({ publishedAt: new Date("2026-06-15T10:00:00Z") } as never)
     vi.mocked(db.shift.create).mockResolvedValue(shiftRow() as never)
 
     await createShift(ORG, SCHEDULE, {
