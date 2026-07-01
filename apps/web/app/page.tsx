@@ -5,7 +5,7 @@ import {
   Check, X, ShieldCheck, Lock, Download, AlertTriangle, GripVertical, Send,
   Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare,
 } from "lucide-react"
-import { PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS } from "@/lib/pricing"
+import { PRICE_PER_EMPLOYEE_MONTHLY, MONTHLY_MINIMUM, PLAN_CURRENCY, TRIAL_DAYS, formatPrice } from "@/lib/pricing"
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
 import { DEMO_FLAGS, demoWeekSummary } from "@/lib/demo/demoData"
@@ -56,7 +56,7 @@ const FAQS = [
   },
   {
     q: "What does it actually cost?",
-    a: `${PLAN_CURRENCY}${PRICE_PER_EMPLOYEE_MONTHLY} per active employee per month. Deactivate someone for the season and you stop paying for them. No tiers, no setup fee.`,
+    a: `${PLAN_CURRENCY}${formatPrice(PRICE_PER_EMPLOYEE_MONTHLY)} per active employee per month, from ${PLAN_CURRENCY}${MONTHLY_MINIMUM}/mo. Deactivate someone for the season and you stop paying for them. No tiers, no setup fee — and we set up your first schedule with you, free.`,
   },
   {
     q: "Can I export hours for payroll?",
@@ -117,7 +117,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            {TRIAL_DAYS} days free · then {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY} per active employee/mo · no card needed
+            {TRIAL_DAYS} days free · then {PLAN_CURRENCY}{formatPrice(PRICE_PER_EMPLOYEE_MONTHLY)} per active employee/mo, from {PLAN_CURRENCY}{MONTHLY_MINIMUM}/mo · no card needed
           </p>
         </div>
 
@@ -329,8 +329,8 @@ export default async function HomePage() {
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Pay for who&apos;s working</h2>
             <p className="mt-3 text-base text-gray-500">
-              <span className="font-semibold text-gray-900">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY} per active employee / month.</span>{" "}
-              No tiers, no setup fee, cancel anytime.
+              <span className="font-semibold text-gray-900">{PLAN_CURRENCY}{formatPrice(PRICE_PER_EMPLOYEE_MONTHLY)} per active employee / month, from {PLAN_CURRENCY}{MONTHLY_MINIMUM}/mo.</span>{" "}
+              No tiers, no setup fee — and we set up your first schedule with you, free.
             </p>
           </div>
 
@@ -338,10 +338,10 @@ export default async function HomePage() {
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               <div className="bg-slate-900 px-8 py-7 text-center">
                 <div className="flex items-end justify-center gap-1">
-                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}</span>
+                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{formatPrice(PRICE_PER_EMPLOYEE_MONTHLY)}</span>
                   <span className="text-white/40 pb-1.5 text-base">/ employee / mo</span>
                 </div>
-                <p className="mt-2 text-sm text-white/35">{TRIAL_DAYS} days free — billed only for active staff</p>
+                <p className="mt-2 text-sm text-white/35">from {PLAN_CURRENCY}{MONTHLY_MINIMUM}/mo · {TRIAL_DAYS} days free — billed only for active staff</p>
               </div>
               <div className="px-8 py-6 space-y-2.5">
                 {[
@@ -362,6 +362,7 @@ export default async function HomePage() {
                   Start {TRIAL_DAYS}-day free trial
                 </Link>
                 <p className="mt-3 text-center text-xs text-gray-400">No credit card required</p>
+                <p className="mt-1.5 text-center text-xs font-medium text-gray-500">We set up your first schedule with you — free.</p>
               </div>
             </div>
 

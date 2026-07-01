@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { CreditCard, Receipt, Zap, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
+import { CreditCard, Receipt, Zap, AlertTriangle, CheckCircle, XCircle, Users } from "lucide-react"
 import { useOrg } from "@/lib/orgContext"
+import { PRICE_PER_EMPLOYEE_MONTHLY, MONTHLY_MINIMUM, PLAN_CURRENCY, TRIAL_DAYS, formatPrice } from "@/lib/pricing"
 import type { SubscriptionStatus } from "@/types"
 
 function StatusBanner({ status }: { status: SubscriptionStatus }) {
@@ -118,6 +119,23 @@ export default function BillingPage() {
       </div>
 
       <StatusBanner status={status} />
+
+      {/* Plan summary — the figures here must match what checkout charges. */}
+      <div className="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+            <Users className="size-4 text-gray-500 dark:text-gray-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {PLAN_CURRENCY}{formatPrice(PRICE_PER_EMPLOYEE_MONTHLY)} per active employee / month
+            </p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {PLAN_CURRENCY}{MONTHLY_MINIMUM}/mo minimum · billed only for active staff · {TRIAL_DAYS}-day free trial · free onboarding
+            </p>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 px-4 py-3 text-sm text-red-700 dark:text-red-300">

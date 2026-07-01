@@ -1,19 +1,24 @@
 "use client"
 
 import { useState } from "react"
-import { PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, monthlyTotal } from "@/lib/pricing"
+import { PRICE_PER_EMPLOYEE_MONTHLY, MONTHLY_MINIMUM, PLAN_CURRENCY, monthlyTotal, formatPrice } from "@/lib/pricing"
 
 const MIN = 1
 const MAX = 60
 
+// Largest staff count still covered by the monthly minimum (below this the floor
+// applies). 19 / 3.5 → 5, so 1–5 staff all land on the €19 minimum.
+const MIN_COVERS = Math.floor(MONTHLY_MINIMUM / PRICE_PER_EMPLOYEE_MONTHLY)
+
 /**
  * Interactive "what will I pay?" estimator. Mirrors the exact billing formula:
- * active employees × {@link PRICE_PER_EMPLOYEE_MONTHLY}. Pure client state — no
- * network, safe to render anywhere on the marketing page.
+ * {@link monthlyTotal} = max(minimum, active employees × per-employee rate).
+ * Pure client state — no network, safe to render anywhere on the marketing page.
  */
 export function PricingCalculator() {
   const [count, setCount] = useState(8)
   const total = monthlyTotal(count)
+  const atMinimum = count * PRICE_PER_EMPLOYEE_MONTHLY < MONTHLY_MINIMUM
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
@@ -46,14 +51,18 @@ export function PricingCalculator() {
         className="mt-6 flex flex-col items-center gap-1 rounded-xl bg-gray-50 py-6"
       >
         <p className="text-sm text-gray-500 tabular-nums">
-          {count} × {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}
+          {atMinimum
+            ? `${PLAN_CURRENCY}${MONTHLY_MINIMUM}/mo minimum`
+            : `${count} × ${PLAN_CURRENCY}${formatPrice(PRICE_PER_EMPLOYEE_MONTHLY)}`}
         </p>
         <p className="text-4xl font-bold text-gray-900 tabular-nums">
-          {PLAN_CURRENCY}{total}
+          {PLAN_CURRENCY}{formatPrice(total)}
           <span className="ml-1 text-base font-medium text-gray-400">/month</span>
         </p>
         <p className="text-xs text-gray-400">
-          You only pay for active staff — deactivate someone and your bill drops next cycle.
+          {atMinimum
+            ? `Covers up to ${MIN_COVERS} active staff — you only pay more as you grow.`
+            : "You only pay for active staff — deactivate someone and your bill drops next cycle."}
         </p>
       </div>
     </div>
