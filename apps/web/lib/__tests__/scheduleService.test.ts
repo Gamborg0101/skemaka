@@ -11,12 +11,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { db } from "@/lib/prisma"
 import { sendShiftAssignedEmail } from "@/lib/resend"
 import { Prisma } from "@/app/generated/prisma/client"
-import { createShift, getOrCreateSchedule } from "@/lib/services/scheduleService"
+import { createShift, updateShift, getOrCreateSchedule } from "@/lib/services/scheduleService"
 
 vi.mock("@/lib/prisma", () => ({
   db: {
     employee: { findFirst: vi.fn(), findUnique: vi.fn() },
-    shift: { findFirst: vi.fn(), create: vi.fn() },
+    shift: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     schedule: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     schedulingEvent: { create: vi.fn() },
   },
@@ -37,6 +37,7 @@ vi.mock("@/lib/sms", () => ({
 const mockEmpFindFirst = vi.mocked(db.employee.findFirst)
 const mockShiftFindFirst = vi.mocked(db.shift.findFirst)
 const mockShiftCreate = vi.mocked(db.shift.create)
+const mockShiftUpdate = vi.mocked(db.shift.update)
 const mockSchedFindFirst = vi.mocked(db.schedule.findFirst)
 const mockSchedCreate = vi.mocked(db.schedule.create)
 const mockUpdateMany = vi.mocked(db.schedule.updateMany)
@@ -225,5 +226,92 @@ describe("getOrCreateSchedule — creation + race handling", () => {
     mockSchedCreate.mockRejectedValue(new Error("connection reset"))
 
     await expect(getOrCreateSchedule(ORG, DATE)).rejects.toThrow("connection reset")
+  })
+})
+
+describe("updateShift — overlap/block rule on move & reassign", () => {
+  // The shift being edited, as db.shift.findFirst returns it (with the includes
+  // updateShift reads). emp_1 works 2026-06-15.
+  function existingShift(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "shift_1",
+      employeeId: "emp_1",
+      date: new Date(DATE + "T00:00:00Z"),
+      startTime: "09:00",
+      endTime: "17:00",
+      employee: { name: "Ada", phone: null },
+      organization: { name: "Cafe" },
+      schedule: { publishedAt: null },
+      ...overrides,
+    }
+  }
+
+  it("blocks with CONFLICT when moving the shift onto a day the employee already works", async () => {
+    mockShiftFindFirst
+      .mockResolvedValueOnce(existingShift() as never) // the shift being edited
+      .mockResolvedValueOnce({ id: "shift_other" } as never) // the clashing shift
+    mockShiftUpdate.mockResolvedValue(shiftRow() as never)
+
+    await expect(updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "This employee already has a shift on this date",
+    })
+    expect(mockShiftUpdate).not.toHaveBeenCalled()
+  })
+
+  it("blocks with CONFLICT when reassigning to an employee who already works that date", async () => {
+    mockEmpFindFirst.mockResolvedValue({ id: "emp_2" } as never) // target employee exists
+    mockShiftFindFirst
+      .mockResolvedValueOnce(existingShift() as never)
+      .mockResolvedValueOnce({ id: "shift_other" } as never)
+    mockShiftUpdate.mockResolvedValue(shiftRow() as never)
+
+    await expect(updateShift(ORG, "sched_1", "shift_1", { employeeId: "emp_2" })).rejects.toMatchObject({
+      code: "CONFLICT",
+    })
+    expect(mockShiftUpdate).not.toHaveBeenCalled()
+  })
+
+  it("excludes the shift itself from the clash query (queries id: { not })", async () => {
+    mockShiftFindFirst
+      .mockResolvedValueOnce(existingShift() as never)
+      .mockResolvedValueOnce(null as never)
+    mockShiftUpdate.mockResolvedValue(shiftRow() as never)
+
+    await updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })
+
+    expect(mockShiftFindFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: ORG,
+          employeeId: "emp_1",
+          date: new Date("2026-06-16T00:00:00Z"),
+          id: { not: "shift_1" },
+        },
+      }),
+    )
+  })
+
+  it("allows a move to a free day (no clashing shift)", async () => {
+    mockShiftFindFirst
+      .mockResolvedValueOnce(existingShift() as never)
+      .mockResolvedValueOnce(null as never)
+    mockShiftUpdate.mockResolvedValue(shiftRow({ date: new Date("2026-06-16T00:00:00Z") }) as never)
+
+    const result = await updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })
+
+    expect(mockShiftUpdate).toHaveBeenCalledOnce()
+    expect(result.date).toBe("2026-06-16")
+  })
+
+  it("skips the clash query entirely for a timing-only edit", async () => {
+    mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
+    mockShiftUpdate.mockResolvedValue(shiftRow() as never)
+
+    await updateShift(ORG, "sched_1", "shift_1", { startTime: "10:00" })
+
+    // Only the initial "load the shift" lookup — no second clash query.
+    expect(mockShiftFindFirst).toHaveBeenCalledOnce()
+    expect(mockShiftUpdate).toHaveBeenCalledOnce()
   })
 })
