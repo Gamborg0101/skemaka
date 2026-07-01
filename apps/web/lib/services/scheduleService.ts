@@ -568,6 +568,25 @@ export async function updateShift(
     if (!emp) throw new ServiceError("Employee not found", "NOT_FOUND")
   }
 
+  // One shift per employee per date — the same block createShift enforces. A
+  // move/reassign must not land on a day the target employee already works, so
+  // re-check whenever the employee or date changes (excluding this shift itself).
+  const employeeChanges = input.employeeId !== undefined && input.employeeId !== existing.employeeId
+  const dateChanges     = input.date !== undefined && input.date !== existing.date.toISOString().split("T")[0]
+  if (employeeChanges || dateChanges) {
+    const clash = await db.shift.findFirst({
+      where: {
+        organizationId: orgId,
+        employeeId: input.employeeId ?? existing.employeeId,
+        date: input.date ? new Date(input.date + "T00:00:00Z") : existing.date,
+        id: { not: shiftId },
+      },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    })
+    if (clash) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+  }
+
   const shift = await db.shift.update({
     where: { id: shiftId },
     data: {
