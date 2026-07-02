@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Briefcase,
   Send,
+  BadgeCheck,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -357,7 +358,20 @@ export function EmployeeDetailSheet({
 
               <InfoRow icon={Phone} label="Phone">
                 {employee.phone ? (
-                  <span>{employee.phone}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <a href={`tel:${employee.phone}`} className="text-blue-600 hover:underline">
+                      {employee.phone}
+                    </a>
+                    {employee.phoneVerified && (
+                      <span
+                        title="Confirmed by the employee via SMS"
+                        className="inline-flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700"
+                      >
+                        <BadgeCheck className="size-3" />
+                        Verified
+                      </span>
+                    )}
+                  </span>
                 ) : (
                   <span className="text-gray-400">Not set</span>
                 )}

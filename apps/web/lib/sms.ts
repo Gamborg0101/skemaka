@@ -93,6 +93,43 @@ async function send(to: string, body: string): Promise<void> {
   }
 }
 
+/**
+ * Send a one-time phone-verification code. Unlike the notification helpers this
+ * is a transactional message the recipient explicitly triggered (it's the opt-in
+ * moment), so it does NOT append the STOP footer or run the opt-out suppression
+ * check — it must go through even if the number was previously suppressed.
+ * Returns true if Twilio accepted the message, false if SMS isn't configured or
+ * the send failed (callers surface the dev code instead in non-production).
+ */
+export async function sendPhoneVerificationSms({
+  to,
+  code,
+  orgName,
+}: {
+  to: string;
+  code: string;
+  orgName: string;
+}): Promise<boolean> {
+  const client = getClient();
+  const from = process.env.TWILIO_FROM_NUMBER;
+  if (!client || !from) {
+    console.warn("[sms] Twilio not configured — skipping verification SMS");
+    return false;
+  }
+  const recipient = process.env.TWILIO_TO_OVERRIDE ?? to;
+  try {
+    await client.messages.create({
+      body: `Your ${orgName} verification code is ${code}. It expires in 10 minutes.`,
+      from,
+      to: recipient,
+    });
+    return true;
+  } catch (err) {
+    console.error("[sms] Failed to send verification SMS:", err);
+    return false;
+  }
+}
+
 export async function sendShiftUpdatedSms({
   to,
   employeeName,

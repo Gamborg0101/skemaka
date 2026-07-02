@@ -337,6 +337,8 @@ export type ClaimInviteResult = {
   employeeId:     string
   employeeName:   string
   orgName:        string
+  /** Whether this user already has a verified phone (skips the SMS step). */
+  phoneVerified:  boolean
 }
 
 export type ClaimableEmployee = {
@@ -415,6 +417,15 @@ export async function claimInvite(
     throw new ServiceError("This invite has already been claimed", "CONFLICT")
   }
 
+  // A phone the user already verified on any of their employee rows. One person
+  // has one number across every org, so we carry it onto newly-linked records
+  // and skip re-verifying.
+  const verified = await db.employee.findFirst({
+    where: { userId, phoneVerifiedAt: { not: null } },
+    orderBy: { phoneVerifiedAt: "desc" },
+    select: { phone: true, phoneVerifiedAt: true, smsConsentAt: true },
+  })
+
   // Idempotent: already linked to this user
   if (employee.userId === userId) {
     return {
@@ -422,6 +433,7 @@ export async function claimInvite(
       employeeId:     employee.id,
       employeeName:   employee.name,
       orgName:        employee.organization.name,
+      phoneVerified:  !!(employee.phoneVerifiedAt || verified),
     }
   }
 
@@ -431,7 +443,18 @@ export async function claimInvite(
 
     await client.employee.update({
       where: { id: employee.id },
-      data:  { userId },
+      // Carry over an already-verified number so a returning employee joining a
+      // second org doesn't have to verify again (and their new manager sees it).
+      data:  {
+        userId,
+        ...(verified
+          ? {
+              phone:           verified.phone,
+              phoneVerifiedAt: verified.phoneVerifiedAt,
+              smsConsentAt:    verified.smsConsentAt,
+            }
+          : {}),
+      },
     })
 
     // Upsert an EMPLOYEE membership. The update branch is a deliberate no-op so
@@ -448,5 +471,6 @@ export async function claimInvite(
     employeeId:     employee.id,
     employeeName:   employee.name,
     orgName:        employee.organization.name,
+    phoneVerified:  !!verified,
   }
 }
