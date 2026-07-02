@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, memo } from "react"
+import { useState, useMemo, useEffect, useRef, memo } from "react"
 import {
   DndContext,
   DragEndEvent,
@@ -13,13 +13,14 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core"
-import { Plus } from "lucide-react"
+import { Plus, AlertTriangle } from "lucide-react"
 import { cn, getInitials } from "@/lib/utils"
 import { Tooltip } from "@/components/ui/tooltip"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
 import { SickDayDialog } from "@/components/manager/SickDayDialog"
 import type { Shift, Employee, JobRole, ShiftTemplate } from "@/types"
+import type { AvailabilityConflict } from "@/lib/useScheduleData"
 import { formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
 
@@ -49,6 +50,29 @@ const COLOR_TEXT: Record<string, string> = {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number)
+  return h * 60 + m
+}
+
+// Snap a pixel X position (within the time-bars strip) to the nearest 15-minute
+// mark, returning an "HH:MM" string clamped to the visible [startHour, endHour].
+function snapClientXToTime(
+  clientX: number,
+  rect: { left: number; width: number },
+  startHour: number,
+  endHour: number,
+  totalMinutes: number,
+): string {
+  const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+  const snapped = Math.round((fraction * totalMinutes) / 15) * 15
+  let mins = startHour * 60 + snapped
+  mins = Math.max(startHour * 60, Math.min(endHour * 60, mins))
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+}
 
 function toPercent(time: string, startHour: number, totalMinutes: number): number {
   const [h, m] = time.split(":").map(Number)
@@ -125,7 +149,14 @@ function EmployeeChip({ employee, missing, over, scheduled, contracted, isOverla
         <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{getInitials(employee.name)}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold leading-tight truncate text-gray-900 dark:text-gray-100">{employee.name}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-xs font-semibold leading-tight truncate text-gray-900 dark:text-gray-100">{employee.name}</p>
+          {!employee.userId && (
+            <Tooltip content="Has not confirmed their email yet" side="top">
+              <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+            </Tooltip>
+          )}
+        </div>
         <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight truncate">{employee.jobRole}</p>
       </div>
       <Tooltip content={badgeTooltip} side="top">
@@ -148,6 +179,7 @@ interface RowProps {
   publishedAt?: string | null
   isEven: boolean
   draggingEmpScheduledHere: boolean | null
+  conflict: AvailabilityConflict | null
   todayLine: number | null
   startHour: number
   endHour: number
@@ -156,13 +188,14 @@ interface RowProps {
   hoverSnap: { time: string; pct: number } | null
   onShiftClick: (shift: Shift) => void
   onRowClick: (employeeId: string, date: string) => void
+  onShiftResize: (shiftId: string, startTime: string, endTime: string) => void
 }
 
 function TimelineRow({
   employee, date, isClosed, shifts, jobRoles, publishedAt, isEven,
-  draggingEmpScheduledHere, todayLine,
+  draggingEmpScheduledHere, conflict, todayLine,
   startHour, endHour, totalMinutes, hourMarkers,
-  hoverSnap, onShiftClick, onRowClick,
+  hoverSnap, onShiftClick, onRowClick, onShiftResize,
 }: RowProps) {
   const isEmpty = shifts.length === 0
   const canDrop = !isClosed && draggingEmpScheduledHere === false
@@ -173,12 +206,81 @@ function TimelineRow({
     data: { type: "row", employeeId: employee.id, date },
   })
 
+  // The time-bars strip element — measured to convert pointer X → time when
+  // resizing a shift by its edges. Combined with the droppable ref below.
+  const barsRef = useRef<HTMLDivElement | null>(null)
+  const setBarsRef = (node: HTMLDivElement | null) => {
+    barsRef.current = node
+    setNodeRef(node)
+  }
+
+  // Live edge-drag state: which shift/edge is being dragged and the previewed
+  // times. Null when not resizing. Rendered optimistically; committed on release.
+  const [resize, setResize] = useState<{
+    shiftId: string; edge: "start" | "end"; startTime: string; endTime: string
+  } | null>(null)
+
+  const MIN_SHIFT_MINUTES = 15
+
+  const startResize = (e: React.PointerEvent, shift: Shift, edge: "start" | "end") => {
+    // Keep the click from bubbling to the bar (which would open the edit dialog)
+    // and stop dnd-kit's pointer sensor from picking this up.
+    e.preventDefault()
+    e.stopPropagation()
+
+    // Latest previewed times, tracked in a closure so `onUp` can commit them
+    // without reading state inside a setState updater (which runs during render
+    // and must stay side-effect free — calling onShiftResize there triggers a
+    // "setState while rendering" error in the parent).
+    let current = { startTime: shift.startTime, endTime: shift.endTime }
+    setResize({ shiftId: shift.id, edge, startTime: current.startTime, endTime: current.endTime })
+
+    const onMove = (ev: PointerEvent) => {
+      const rect = barsRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const t = snapClientXToTime(ev.clientX, rect, startHour, endHour, totalMinutes)
+      let next = current
+      if (edge === "start") {
+        if (toMinutes(t) <= toMinutes(current.endTime) - MIN_SHIFT_MINUTES) next = { ...current, startTime: t }
+      } else {
+        if (toMinutes(t) >= toMinutes(current.startTime) + MIN_SHIFT_MINUTES) next = { ...current, endTime: t }
+      }
+      if (next === current) return
+      current = next
+      setResize((r) => (r ? { ...r, startTime: current.startTime, endTime: current.endTime } : r))
+    }
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      setResize(null)
+      if (current.startTime !== shift.startTime || current.endTime !== shift.endTime) {
+        onShiftResize(shift.id, current.startTime, current.endTime)
+      }
+    }
+
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+  }
+
   return (
     <div className={cn("flex border-b border-gray-200 dark:border-gray-700", isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50/60 dark:bg-gray-800/40")}>
       {/* Name column */}
       <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-3 flex items-center justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
+            {!employee.userId && (
+              <Tooltip content="Has not confirmed their email yet" side="right">
+                <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+              </Tooltip>
+            )}
+            {conflict && !isEmpty && (
+              <Tooltip content={conflict.type === "timeoff" ? "Scheduled during approved time off" : "Scheduled on a day they marked unavailable"} side="right">
+                <AlertTriangle className="size-3 shrink-0 text-amber-500 cursor-help" aria-label="Availability conflict" />
+              </Tooltip>
+            )}
+          </div>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{employee.jobRole}</p>
         </div>
         {isEmpty && !isClosed && (
@@ -196,7 +298,7 @@ function TimelineRow({
 
       {/* Time bars */}
       <div
-        ref={setNodeRef}
+        ref={setBarsRef}
         className={cn(
           "relative flex-1 h-14 transition-colors",
           isClosed && "bg-gray-50 dark:bg-gray-800/30",
@@ -230,11 +332,18 @@ function TimelineRow({
 
         {shifts.map((shift) => {
           const isSick = shift.colorTag === "sick"
-          const left  = toPercent(shift.startTime, startHour, totalMinutes)
-          const width = isSick ? 100 - left : durationPercent(shift.startTime, shift.endTime, startHour, totalMinutes)
+          // While dragging an edge, render the previewed times optimistically.
+          const r = resize?.shiftId === shift.id ? resize : null
+          const startTime = r ? r.startTime : shift.startTime
+          const endTime = r ? r.endTime : shift.endTime
+          const left  = toPercent(startTime, startHour, totalMinutes)
+          const width = isSick ? 100 - left : durationPercent(startTime, endTime, startHour, totalMinutes)
 
           const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
           const isPublished = !isSick && !!publishedAt && shift.createdAt <= publishedAt
+          // Sick markers span the whole day and aren't time-bounded, so they
+          // don't get resize handles.
+          const canResize = !isSick
 
           return (
             <button
@@ -242,18 +351,42 @@ function TimelineRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onShiftClick(shift) }}
               className={cn(
-                "absolute top-2 bottom-2 rounded-md px-2 flex items-center overflow-hidden shadow-sm transition-all",
+                "group absolute top-2 bottom-2 rounded-md px-2 flex items-center overflow-hidden shadow-sm transition-[background-color,box-shadow]",
                 "border-2",
                 isPublished ? "border-green-500/60" : "border-orange-400/60",
                 COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
               )}
               style={{ left: `${left}%`, width: `${width}%` }}
-              title={`${employee.name} · ${shift.startTime}–${shift.endTime}`}
+              title={`${employee.name} · ${startTime}–${endTime}`}
             >
               {!isSick && width > 6 && (
                 <span className={cn("text-[10px] font-semibold truncate whitespace-nowrap", COLOR_TEXT[tag] ?? "text-blue-950")}>
-                  {formatTime(shift.startTime, tf)}–{formatTime(shift.endTime, tf)}
+                  {formatTime(startTime, tf)}–{formatTime(endTime, tf)}
                 </span>
+              )}
+
+              {canResize && (
+                <>
+                  {/* Left / right edge grips — drag to change start / end time.
+                      Always visible white pills so they read as draggable; the
+                      surrounding span is a wider hit area for easier grabbing. */}
+                  <span
+                    onPointerDown={(e) => startResize(e, shift, "start")}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute inset-y-0 left-0 w-3 cursor-ew-resize flex items-center justify-center touch-none"
+                    aria-label="Drag to change start time"
+                  >
+                    <span className="h-5 w-1 rounded-full bg-white shadow ring-1 ring-black/10 group-hover:h-6 transition-all" />
+                  </span>
+                  <span
+                    onPointerDown={(e) => startResize(e, shift, "end")}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute inset-y-0 right-0 w-3 cursor-ew-resize flex items-center justify-center touch-none"
+                    aria-label="Drag to change end time"
+                  >
+                    <span className="h-5 w-1 rounded-full bg-white shadow ring-1 ring-black/10 group-hover:h-6 transition-all" />
+                  </span>
+                </>
               )}
             </button>
           )
@@ -309,14 +442,16 @@ interface DaySectionProps {
   activeRowId: string | null
   hoverSnap: { time: string; pct: number } | null
   currentTime: Date
+  getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null
   onShiftClick: (shift: Shift) => void
   onRowClick: (employeeId: string, date: string) => void
+  onShiftResize: (shiftId: string, startTime: string, endTime: string) => void
 }
 
 const DaySection = memo(function DaySection({
   date, isClosed, employees, allShifts, jobRoles, publishedAt, draggingEmp,
   startHour, endHour, totalMinutes, hourMarkers,
-  activeRowId, hoverSnap, currentTime, onShiftClick, onRowClick,
+  activeRowId, hoverSnap, currentTime, getConflict, onShiftClick, onRowClick, onShiftResize,
 }: DaySectionProps) {
   const isToday = date === todayStr()
   const todayLine = isToday ? nowPercent(currentTime, startHour, totalMinutes) : null
@@ -389,6 +524,7 @@ const DaySection = memo(function DaySection({
             draggingEmpScheduledHere={
               draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id) : null
             }
+            conflict={getConflict?.(emp.id, date) ?? null}
             todayLine={todayLine}
             startHour={startHour}
             endHour={endHour}
@@ -397,6 +533,7 @@ const DaySection = memo(function DaySection({
             hoverSnap={activeRowId === rowId ? hoverSnap : null}
             onShiftClick={onShiftClick}
             onRowClick={onRowClick}
+            onShiftResize={onShiftResize}
           />
         )
       })}
@@ -413,6 +550,7 @@ interface ShiftTimelineProps {
   jobRoles: JobRole[]
   shiftTemplates: ShiftTemplate[]
   scheduledHoursMap: Record<string, number>
+  getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null
   publishedAt?: string | null
   startHour?: number
   endHour?: number
@@ -437,6 +575,7 @@ export function ShiftTimeline({
   jobRoles,
   shiftTemplates,
   scheduledHoursMap,
+  getConflict,
   publishedAt,
   startHour = DEFAULT_START_HOUR,
   endHour = DEFAULT_END_HOUR,
@@ -598,6 +737,7 @@ export function ShiftTimeline({
                   activeRowId={activeRowId}
                   hoverSnap={hoverSnap}
                   currentTime={currentTime}
+                  getConflict={getConflict}
                   onShiftClick={(shift) => {
                     if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
                     else setEditDialog({ open: true, shift })
@@ -606,6 +746,9 @@ export function ShiftTimeline({
                     if (closedDates.has(d)) return  // store closed — no booking
                     setAddDialog({ open: true, employeeId: empId, defaultStartTime: "09:00", date: d })
                   }}
+                  onShiftResize={(shiftId, startTime, endTime) =>
+                    onShiftUpdate({ id: shiftId, startTime, endTime })
+                  }
                 />
               </div>
             ))}
@@ -635,6 +778,7 @@ export function ShiftTimeline({
         defaultEmployeeId={addDialog.employeeId}
         defaultDate={addDialog.date}
         defaultStartTime={addDialog.defaultStartTime}
+        getConflict={getConflict}
         onShiftCreate={onShiftCreate}
       />
 

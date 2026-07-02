@@ -6,8 +6,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { WeeklyScheduleGrid } from "@/components/manager/WeeklyScheduleGrid"
 import { ShiftTimeline } from "@/components/manager/ShiftTimeline"
+import { CoverRequestsPanel, type CoverFocus } from "@/components/manager/CoverRequestsPanel"
 import { getOrgSettings } from "@/lib/orgSettings"
-import { getMondayOfWeek, addDays, formatDayLabel } from "@/lib/dateUtils"
+import { getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { useOrg } from "@/lib/orgContext"
 import { useScheduleData } from "@/lib/useScheduleData"
@@ -22,9 +23,22 @@ export default function SchedulePage() {
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split("T")[0])
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
   const [hintDismissed, setHintDismissed] = useState(false)
+  // The cover request the manager is reviewing — highlighted on the grid.
+  const [coverFocus, setCoverFocus] = useState<CoverFocus | null>(null)
+
+  const focusCover = (f: CoverFocus | null) => {
+    setCoverFocus(f)
+    if (f) {
+      // Bring the shift's week into view + prefer the week grid so both the
+      // "giving up" and "would cover" cells are visible side by side.
+      const ws = getMondayOfWeek(new Date(f.date + "T12:00:00"))
+      if (ws !== weekStart) setWeekStart(ws)
+      setViewMode("week")
+    }
+  }
 
   const {
-    schedule, loading, employees, approvedTimeOff, publishing,
+    schedule, loading, employees, approvedTimeOff, getConflict, publishing,
     handlePublish, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
   } = useScheduleData(orgId, weekStart)
 
@@ -75,10 +89,17 @@ export default function SchedulePage() {
 
   const timelineDates = useMemo(() => {
     const weekSunday = addDays(weekStart, 6)
-    return Array.from({ length: dayCount }, (_, i) => {
-      const d = addDays(selectedDay, i)
-      return d <= weekSunday ? d : null
-    }).filter(Boolean) as string[]
+    // The window always starts at selectedDay so switching between 1d/3d/5d/7d
+    // keeps the same anchor — the start date never shifts under you. Days that
+    // spill past Sunday are trimmed, so a range near the end of the week simply
+    // shows fewer days rather than dragging the start backward. The start is
+    // clamped to the current week so it never leaves it.
+    let start = selectedDay
+    if (start < weekStart) start = weekStart
+    if (start > weekSunday) start = weekSunday
+    return Array.from({ length: dayCount }, (_, i) => addDays(start, i)).filter(
+      (d) => d <= weekSunday,
+    )
   }, [dayCount, selectedDay, weekStart])
 
   const todayHidden = viewMode === "week"
@@ -155,23 +176,22 @@ export default function SchedulePage() {
   })()
 
   // Shared header elements
+  // Segmented control: dark-blue track, white "thumb" on the selected option so
+  // it's unmistakable which view is active.
+  const segItem = (active: boolean) =>
+    `flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+      active
+        ? "bg-white text-blue-700 shadow-sm"
+        : "text-blue-100 hover:bg-white/10 hover:text-white"
+    }`
+
   const viewToggle = (
-    <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
-      <button
-        onClick={() => setViewMode("week")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-          viewMode === "week" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:text-gray-700"
-        }`}
-      >
+    <div className="flex items-center gap-0.5 rounded-lg bg-blue-900 p-0.5 shrink-0">
+      <button onClick={() => setViewMode("week")} className={segItem(viewMode === "week")}>
         <LayoutGrid className="size-3.5" />
         Week
       </button>
-      <button
-        onClick={() => setViewMode("timeline")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-l border-gray-200 transition-colors ${
-          viewMode === "timeline" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:text-gray-700"
-        }`}
-      >
+      <button onClick={() => setViewMode("timeline")} className={segItem(viewMode === "timeline")}>
         <AlignLeft className="size-3.5" />
         Timeline
       </button>
@@ -179,13 +199,15 @@ export default function SchedulePage() {
   )
 
   const dayCountSelector = viewMode === "timeline" ? (
-    <div className="hidden md:flex rounded-md border border-gray-200 overflow-hidden shrink-0">
-      {([1, 3, 5, 7] as const).map((n, i) => (
+    <div className="hidden md:flex items-center gap-0.5 rounded-lg bg-blue-900 p-0.5 shrink-0">
+      {([1, 3, 5, 7] as const).map((n) => (
         <button
           key={n}
           onClick={() => setDayCount(n)}
-          className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${i > 0 ? "border-l border-gray-200" : ""} ${
-            dayCount === n ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:text-gray-700"
+          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+            dayCount === n
+              ? "bg-white text-blue-700 shadow-sm"
+              : "text-blue-100 hover:bg-white/10 hover:text-white"
           }`}
         >
           {n}d
@@ -200,8 +222,8 @@ export default function SchedulePage() {
         <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label="Previous day">
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="text-sm font-semibold text-gray-700 text-center md:min-w-44">
-          {formatDayLabel(selectedDay)}
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 text-center md:min-w-44">
+          {timelineRangeLabel}
         </span>
         <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label="Next day">
           <ChevronRight className="size-4" />
@@ -213,7 +235,7 @@ export default function SchedulePage() {
         <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label="Previous">
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="text-sm font-semibold text-gray-700 text-center hidden md:block md:min-w-44">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 text-center hidden md:block md:min-w-44">
           {timelineRangeLabel}
         </span>
         <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label="Next">
@@ -292,6 +314,11 @@ export default function SchedulePage() {
       </div>
 
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
+        {!loading && employees.length > 0 && (
+          <div className="px-4 pt-4">
+            <CoverRequestsPanel onFocus={focusCover} />
+          </div>
+        )}
         {!loading && !hintDismissed && employees.length > 0 && (schedule?.shifts ?? []).length === 0 && (
           <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3">
             <Sparkles className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
@@ -343,11 +370,11 @@ export default function SchedulePage() {
         ) : employees.length === 0 ? (
           <div className="flex h-full items-center justify-center px-4">
             <div className="text-center max-w-xs">
-              <div className="size-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+              <div className="size-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center mx-auto mb-4">
                 <Users className="size-8 text-blue-400" />
               </div>
-              <h2 className="text-base font-semibold text-gray-900 mb-1">No employees yet</h2>
-              <p className="text-sm text-gray-500 mb-6">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-50 mb-1">No employees yet</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Add your first employee to start building a schedule.
               </p>
               <Link href="/employees">
@@ -366,6 +393,8 @@ export default function SchedulePage() {
             shiftTemplates={shiftTemplates}
             scheduledHoursMap={scheduledHoursMap}
             approvedTimeOff={approvedTimeOff}
+            getConflict={getConflict}
+            coverFocus={coverFocus}
             publishedAt={schedule?.publishedAt ?? null}
             onShiftMove={handleShiftMove}
             onShiftCreate={handleShiftCreate}
@@ -381,6 +410,7 @@ export default function SchedulePage() {
             jobRoles={jobRoles}
             shiftTemplates={shiftTemplates}
             scheduledHoursMap={scheduledHoursMap}
+            getConflict={getConflict}
             publishedAt={schedule?.publishedAt ?? null}
             startHour={timelineStartHour}
             endHour={timelineEndHour}
