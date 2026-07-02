@@ -65,8 +65,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!weekStart || !deadline) {
     return NextResponse.json({ error: "weekStart and deadline are required" }, { status: 400 })
   }
-  if (!isValidDate(weekStart) || !isValidDate(deadline)) {
-    return NextResponse.json({ error: "weekStart and deadline must be valid dates" }, { status: 400 })
+  if (!isValidDate(weekStart)) {
+    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
+  }
+  // `deadline` is a full ISO datetime (end-of-day) from the client, not a bare
+  // calendar date, so validate it as a parseable timestamp rather than with
+  // isValidDate (which only accepts YYYY-MM-DD). The auto-create path passes a
+  // date-only string, which Date.parse also accepts.
+  if (typeof deadline !== "string" || isNaN(Date.parse(deadline))) {
+    return NextResponse.json({ error: "deadline must be a valid date" }, { status: 400 })
   }
 
   const request = await availabilityService.createAvailabilityRequest(orgId, weekStart, deadline)
