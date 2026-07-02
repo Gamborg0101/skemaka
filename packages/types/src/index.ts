@@ -89,6 +89,7 @@ export interface Employee {
   name: string
   email: string
   phone: string | null
+  phoneVerified: boolean
   jobRole: string
   hourlyWage: number
   employmentType: EmploymentType

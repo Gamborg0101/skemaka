@@ -20,11 +20,24 @@ const MAX_ATTEMPTS = 5
 
 type CodeRecord = { hash: string; attempts: number }
 
+/**
+ * Which one-time-code flow a record belongs to. "claim" is the original email
+ * invite-claim code (keyed by employeeId); "phone" is the SMS phone-verification
+ * code (keyed by userId). The scope namespaces the Redis key so the two never
+ * collide. Defaults to "claim" so existing callers are unchanged.
+ */
+export type CodeScope = "claim" | "phone"
+
 // Dev/test fallback only. Single-process, so it works for `pnpm dev` and e2e.
 const memStore = new Map<string, { rec: CodeRecord; expiresAt: number }>()
 
-function redisKey(employeeId: string): string {
-  return `claim:otp:${employeeId}`
+function redisKey(id: string, scope: CodeScope): string {
+  return `${scope}:otp:${id}`
+}
+
+/** Same namespacing for the in-memory fallback so scopes don't clash there either. */
+function memKey(id: string, scope: CodeScope): string {
+  return `${scope}:${id}`
 }
 
 function hashCode(code: string): string {
@@ -43,50 +56,53 @@ export function generateClaimCode(): string {
   return randomInt(0, 1_000_000).toString().padStart(6, "0")
 }
 
-/** Store (overwriting any prior) the code for an employee. Resets attempts. */
-export async function storeClaimCode(employeeId: string, code: string): Promise<void> {
+/**
+ * Store (overwriting any prior) the code for an id. Resets attempts. `id` is an
+ * employeeId for the "claim" scope and a userId for the "phone" scope.
+ */
+export async function storeClaimCode(id: string, code: string, scope: CodeScope = "claim"): Promise<void> {
   const rec: CodeRecord = { hash: hashCode(code), attempts: 0 }
   const redis = getRedis()
   if (redis) {
-    await redis.set(redisKey(employeeId), rec, { ex: TTL_SECONDS })
+    await redis.set(redisKey(id, scope), rec, { ex: TTL_SECONDS })
     return
   }
-  memStore.set(employeeId, { rec, expiresAt: Date.now() + TTL_SECONDS * 1000 })
+  memStore.set(memKey(id, scope), { rec, expiresAt: Date.now() + TTL_SECONDS * 1000 })
 }
 
 export type VerifyResult = { ok: true } | { ok: false; reason: "expired" | "too_many" | "mismatch" }
 
-async function readRecord(employeeId: string): Promise<CodeRecord | null> {
+async function readRecord(id: string, scope: CodeScope): Promise<CodeRecord | null> {
   const redis = getRedis()
   if (redis) {
-    return (await redis.get<CodeRecord>(redisKey(employeeId))) ?? null
+    return (await redis.get<CodeRecord>(redisKey(id, scope))) ?? null
   }
-  const entry = memStore.get(employeeId)
+  const entry = memStore.get(memKey(id, scope))
   if (!entry) return null
   if (entry.expiresAt <= Date.now()) {
-    memStore.delete(employeeId)
+    memStore.delete(memKey(id, scope))
     return null
   }
   return entry.rec
 }
 
-async function writeRecord(employeeId: string, rec: CodeRecord): Promise<void> {
+async function writeRecord(id: string, rec: CodeRecord, scope: CodeScope): Promise<void> {
   const redis = getRedis()
   if (redis) {
-    await redis.set(redisKey(employeeId), rec, { ex: TTL_SECONDS })
+    await redis.set(redisKey(id, scope), rec, { ex: TTL_SECONDS })
     return
   }
-  const entry = memStore.get(employeeId)
+  const entry = memStore.get(memKey(id, scope))
   if (entry) entry.rec = rec
 }
 
-async function clearRecord(employeeId: string): Promise<void> {
+async function clearRecord(id: string, scope: CodeScope): Promise<void> {
   const redis = getRedis()
   if (redis) {
-    await redis.del(redisKey(employeeId))
+    await redis.del(redisKey(id, scope))
     return
   }
-  memStore.delete(employeeId)
+  memStore.delete(memKey(id, scope))
 }
 
 /**
@@ -94,25 +110,25 @@ async function clearRecord(employeeId: string): Promise<void> {
  * and on exhausting the attempt cap, so a verified or burned code cannot be
  * reused.
  */
-export async function verifyClaimCode(employeeId: string, code: string): Promise<VerifyResult> {
-  const rec = await readRecord(employeeId)
+export async function verifyClaimCode(id: string, code: string, scope: CodeScope = "claim"): Promise<VerifyResult> {
+  const rec = await readRecord(id, scope)
   if (!rec) return { ok: false, reason: "expired" }
 
   if (rec.attempts >= MAX_ATTEMPTS) {
-    await clearRecord(employeeId)
+    await clearRecord(id, scope)
     return { ok: false, reason: "too_many" }
   }
 
   if (hashesEqual(rec.hash, hashCode(code))) {
-    await clearRecord(employeeId)
+    await clearRecord(id, scope)
     return { ok: true }
   }
 
   rec.attempts += 1
   if (rec.attempts >= MAX_ATTEMPTS) {
-    await clearRecord(employeeId)
+    await clearRecord(id, scope)
     return { ok: false, reason: "too_many" }
   }
-  await writeRecord(employeeId, rec)
+  await writeRecord(id, rec, scope)
   return { ok: false, reason: "mismatch" }
 }

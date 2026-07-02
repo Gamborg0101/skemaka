@@ -137,6 +137,7 @@ model Employee {
   name                    String
   email                   String
   phone                   String?
+  phoneVerifiedAt         DateTime?
   smsConsentAt            DateTime?
   jobRole                 String
   hourlyWage              Decimal                  @db.Decimal(10, 2)

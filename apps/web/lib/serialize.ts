@@ -6,6 +6,7 @@ import type { Employee, EmbeddedEmployee, Shift, Schedule, Organization, JobRole
 export function serEmployee(e: {
   id: string; organizationId: string; userId: string | null
   name: string; email: string; phone: string | null; jobRole: string
+  phoneVerifiedAt?: Date | null
   hourlyWage: { toNumber(): number } | number
   employmentType: string; contractedHours: number; notes: string | null
   isActive: boolean
@@ -20,6 +21,7 @@ export function serEmployee(e: {
     name: e.name,
     email: e.email,
     phone: e.phone,
+    phoneVerified: e.phoneVerifiedAt != null,
     jobRole: e.jobRole,
     hourlyWage: typeof e.hourlyWage === "number" ? e.hourlyWage : e.hourlyWage.toNumber(),
     employmentType: e.employmentType as EmploymentType,

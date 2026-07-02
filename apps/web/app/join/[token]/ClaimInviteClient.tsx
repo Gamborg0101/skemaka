@@ -12,7 +12,7 @@ type State =
   | { status: "requesting" }
   | { status: "enterCode"; emailHint: string; error?: string }
   | { status: "submitting"; emailHint: string }
-  | { status: "success"; orgName: string }
+  | { status: "success"; orgName: string; phoneVerified?: boolean }
   | { status: "error"; message: string }
 
 // Step 1: ask the server to email a verification code to the employee's address.
@@ -69,10 +69,13 @@ export function ClaimInviteClient({ token }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, code }),
       })
-      const body = (await res.json()) as { data?: { orgName: string }; error?: string }
+      const body = (await res.json()) as {
+        data?: { orgName: string; phoneVerified?: boolean }
+        error?: string
+      }
 
       if (res.ok && body.data) {
-        setState({ status: "success", orgName: body.data.orgName })
+        setState({ status: "success", orgName: body.data.orgName, phoneVerified: body.data.phoneVerified })
         return
       }
       setState({ status: "enterCode", emailHint, error: body.error ?? "Incorrect code." })
@@ -135,7 +138,24 @@ export function ClaimInviteClient({ token }: Props) {
           </>
         )}
 
-        {state.status === "success" && (
+        {state.status === "success" && state.phoneVerified === false && (
+          <>
+            <CheckCircle className="size-10 text-green-500 mx-auto mb-4" />
+            <h1 className="text-lg font-semibold text-gray-900 mb-1">One more step</h1>
+            <p className="text-sm text-gray-500 mb-6">
+              Your account is linked to <strong>{state.orgName}</strong>. Verify your phone so
+              they can reach you about shifts.
+            </p>
+            <Link
+              href="/verify-phone"
+              className="inline-flex items-center justify-center w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Verify my phone
+            </Link>
+          </>
+        )}
+
+        {state.status === "success" && state.phoneVerified !== false && (
           <>
             <CheckCircle className="size-10 text-green-500 mx-auto mb-4" />
             <h1 className="text-lg font-semibold text-gray-900 mb-1">You&apos;re all set!</h1>
