@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       select: { id: true, name: true, email: true, phone: true, jobRole: true },
       orderBy: { createdAt: "asc" },
     }),
-    db.organization.findUnique({ where: { id: orgId }, select: { settings: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { settings: true, industry: true } }),
   ])
 
   if (!employee) {
@@ -26,5 +26,5 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
   const timeFormat = (org?.settings as { timeFormat?: "12h" | "24h" } | null)?.timeFormat ?? "24h"
 
-  return NextResponse.json({ ...employee, timeFormat })
+  return NextResponse.json({ ...employee, timeFormat, industry: org?.industry ?? null })
 }

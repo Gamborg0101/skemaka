@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock, MapPin, Users, ArrowLeft } from "lucide-react"
 import { getMondayOfWeek, formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
 import { getInitials } from "@/lib/utils"
+import { pickShiftQuote } from "@/types"
 import { TimeOffSection } from "./TimeOffSection"
 
 function formatShiftDate(date: Date): string {
@@ -67,7 +68,7 @@ export default async function EmployeePortalPage() {
   const employee = await db.employee.findFirst({
     where: { email: session.user.email, isActive: true },
     include: {
-      organization: { select: { name: true, settings: true } },
+      organization: { select: { name: true, settings: true, industry: true } },
       shifts: {
         where: { date: { gte: currentWeekStart } },
         orderBy: { date: "asc" },
@@ -227,10 +228,14 @@ export default async function EmployeePortalPage() {
                         <span className="text-sm">{employee.organization.name}</span>
                       </div>
 
-                      {/* Notes */}
-                      {shift.notes && (
+                      {/* Notes — the manager's note, or a friendly fallback line */}
+                      {shift.notes ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 rounded-lg px-3 py-2">
                           {shift.notes}
+                        </p>
+                      ) : (
+                        <p className="text-sm italic text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg px-3 py-2 leading-relaxed">
+                          &ldquo;{pickShiftQuote(shift.id, employee.organization.industry)}&rdquo;
                         </p>
                       )}
 
