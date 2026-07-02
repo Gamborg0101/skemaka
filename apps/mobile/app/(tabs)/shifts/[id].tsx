@@ -5,7 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { LoadingState } from "@/components/feedback/LoadingState"
 import { useMyShifts } from "@/hooks/useShifts"
+import { useCurrentUser } from "@/hooks/useEmployee"
 import { formatTime, shiftDuration, formatDateLong, isToday } from "@/lib/utils"
+import { pickShiftQuote } from "@skemaka/types"
 
 export default function ShiftDetailScreen() {
   const router = useRouter()
@@ -13,6 +15,7 @@ export default function ShiftDetailScreen() {
 
   const { data: shifts, isLoading } = useMyShifts(week)
   const shift = shifts?.find((s) => s.id === id)
+  const { data: currentUser } = useCurrentUser()
 
   if (isLoading) return <LoadingState label="Loading shift…" />
 
@@ -91,15 +94,19 @@ export default function ShiftDetailScreen() {
           <Text className="text-base font-semibold text-ink">{shift.jobRole}</Text>
         </View>
 
-        {/* Notes */}
-        {shift.notes ? (
-          <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4">
-            <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
-              Notes
-            </Text>
+        {/* Notes — the manager's note, or a friendly fallback line */}
+        <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4">
+          <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
+            Notes
+          </Text>
+          {shift.notes ? (
             <Text className="text-sm text-ink leading-relaxed">{shift.notes}</Text>
-          </View>
-        ) : null}
+          ) : (
+            <Text className="text-sm italic text-ink-muted leading-relaxed">
+              &ldquo;{pickShiftQuote(shift.id, currentUser?.industry)}&rdquo;
+            </Text>
+          )}
+        </View>
 
         {/* Clock in/out widget — today's shift only */}
         {isShiftToday && <ClockWidget todayShift={shift} />}

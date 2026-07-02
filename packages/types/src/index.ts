@@ -1,3 +1,6 @@
+// Shared, framework-agnostic helpers (runtime, not just types).
+export { pickShiftQuote } from "./quotes"
+
 // ─── Shift templates ──────────────────────────────────────────────────────────
 
 export interface ShiftTemplate {

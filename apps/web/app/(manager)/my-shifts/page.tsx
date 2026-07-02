@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { CoworkerList } from "@/components/manager/CoworkerList"
 import { EmployeePicker } from "@/components/manager/EmployeePicker"
 import { MyShiftsWeekNav } from "@/components/manager/MyShiftsWeekNav"
+import { pickShiftQuote } from "@/types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,40 +22,6 @@ type DbShift = {
   breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
 }
 type Coworker = { name: string; jobRole: string }
-
-const POSITIVE_NOTES = [
-  "Hope it's a smooth one.",
-  "Have a good shift.",
-  "See you out there.",
-  "Good luck today.",
-  "Hope the coffee's strong.",
-  "Enjoy the shift.",
-  "Stay sharp.",
-  "Have a solid one.",
-  "Make it count.",
-  "Hope the day flies by.",
-  "You know what to do.",
-  "Have a good one.",
-  "Keep it smooth out there.",
-  "Hope it's a quiet one.",
-  "Enjoy your day.",
-  "Stay on your feet.",
-  "Have a decent shift.",
-  "Hope things run smoothly.",
-  "Good day to be in the building.",
-  "Another one down after this.",
-  "Hope the team's on form today.",
-  "Take it one order at a time.",
-  "Have a good one out there.",
-  "Hope the shift goes quick.",
-  "Enjoy it while it lasts.",
-]
-
-function pickNote(shiftId: string): string {
-  let hash = 0
-  for (const c of shiftId) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff
-  return POSITIVE_NOTES[hash % POSITIVE_NOTES.length]
-}
 
 const ACCENT: Record<string, { badge: string }> = {
   blue:   { badge: "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" },
@@ -123,7 +90,7 @@ export default async function MyShiftsPage({
   const employee = await db.employee.findUnique({
     where: { id: selectedId },
     include: {
-      organization: { select: { name: true, settings: true } },
+      organization: { select: { name: true, settings: true, industry: true } },
       shifts: {
         where: {
           date: {
@@ -287,7 +254,7 @@ export default async function MyShiftsPage({
                       ? "text-gray-500 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50"
                       : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40"
                   )}>
-                    &ldquo;{shift.notes ?? pickNote(shift.id)}&rdquo;
+                    &ldquo;{shift.notes ?? pickShiftQuote(shift.id, employee.organization.industry)}&rdquo;
                   </p>
 
                   {/* Coworkers */}

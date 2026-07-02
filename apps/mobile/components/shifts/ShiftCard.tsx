@@ -2,15 +2,17 @@ import { Pressable, View, Text } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { formatTime, shiftDuration, isToday, isShiftDone } from "@/lib/utils"
-import type { Shift } from "@skemaka/types"
+import { pickShiftQuote, type Shift } from "@skemaka/types"
 
 type Props = {
   shift: Shift
   onPress?: () => void
   compact?: boolean
+  /** Org industry — tailors the fallback quote shown when a shift has no note. */
+  industry?: string | null
 }
 
-export function ShiftCard({ shift, onPress, compact = false }: Props) {
+export function ShiftCard({ shift, onPress, compact = false, industry }: Props) {
   const today = isToday(shift.date)
   const done  = isShiftDone(shift.date, shift.endTime)
   const start = formatTime(shift.startTime)
@@ -52,9 +54,15 @@ export function ShiftCard({ shift, onPress, compact = false }: Props) {
         </View>
       </View>
 
-      {!compact && shift.notes ? (
+      {!compact ? (
         <View className="mt-3 pt-3 border-t border-line/40">
-          <Text className="text-sm text-ink-secondary leading-relaxed">{shift.notes}</Text>
+          {shift.notes ? (
+            <Text className="text-sm text-ink-secondary leading-relaxed">{shift.notes}</Text>
+          ) : (
+            <Text className="text-sm italic text-ink-muted leading-relaxed">
+              &ldquo;{pickShiftQuote(shift.id, industry)}&rdquo;
+            </Text>
+          )}
         </View>
       ) : null}
     </View>

@@ -108,6 +108,8 @@ export type CurrentUser = {
   jobRole: string
   /** Org-wide clock format. "24h" (EU default) or "12h" (US AM/PM). */
   timeFormat: "12h" | "24h"
+  /** Org industry (lowercase), drives industry-relevant shift quotes. Null if unset. */
+  industry: string | null
 }
 
 /**

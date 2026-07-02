@@ -78,7 +78,7 @@ export default function ShiftsScreen() {
 }
 
 function EmployeeShiftsScreen() {
-  const { isError: userError, refetch: refetchUser } = useCurrentUser()
+  const { data: currentUser, isError: userError, refetch: refetchUser } = useCurrentUser()
   const router = useRouter()
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
 
@@ -170,6 +170,7 @@ function EmployeeShiftsScreen() {
             </View>
             <ShiftCard
               shift={item.shift}
+              industry={currentUser?.industry}
               onPress={() =>
                 router.push(`/(tabs)/shifts/${item.shift.id}?week=${selectedWeek}`)
               }
