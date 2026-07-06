@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { isSuperadmin } from "@/lib/platform"
+import type { Prisma } from "@/app/generated/prisma/client"
 
 async function requireSuperadmin() {
   const session = await auth()
@@ -12,11 +13,30 @@ async function requireSuperadmin() {
   return { ok: true }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const guard = await requireSuperadmin()
   if ("error" in guard) return guard.error
 
+  const params = req.nextUrl.searchParams
+  const organizationId = params.get("organizationId")
+  const status = params.get("status") // "OPEN" | "RESOLVED" | null (=all)
+  const q = params.get("q")?.trim()
+
+  const where: Prisma.BugReportWhereInput = {}
+  if (organizationId) where.organizationId = organizationId
+  if (status === "OPEN" || status === "RESOLVED") where.status = status
+  if (q) {
+    where.OR = [
+      { message: { contains: q, mode: "insensitive" } },
+      { errorMessage: { contains: q, mode: "insensitive" } },
+      { userEmail: { contains: q, mode: "insensitive" } },
+      { userName: { contains: q, mode: "insensitive" } },
+      { url: { contains: q, mode: "insensitive" } },
+    ]
+  }
+
   const reports = await db.bugReport.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     take: 300,
   })
@@ -24,6 +44,7 @@ export async function GET() {
   const data = reports.map((r) => ({
     ...r,
     createdAt: r.createdAt.toISOString(),
+    resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : null,
   }))
 
   return NextResponse.json(

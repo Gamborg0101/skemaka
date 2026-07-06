@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
@@ -104,7 +105,7 @@ export default function PlatformOrgsPage() {
                 <th className="px-4 py-3 text-right">Employees</th>
                 <th className="px-4 py-3 text-right">Shifts</th>
                 <th className="px-4 py-3 text-right">Managers</th>
-                <th className="px-4 py-3 text-right">Errors</th>
+                <th className="px-4 py-3 text-right">Open bugs</th>
                 <th className="px-4 py-3 text-right">Joined</th>
                 <th className="px-4 py-3 text-right"></th>
               </tr>
@@ -135,9 +136,16 @@ export default function PlatformOrgsPage() {
                     <td className="px-4 py-3 text-right tabular-nums text-gray-700">{org._count.shifts}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-gray-700">{org._count.memberships}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      <span className={org._count.bugReports > 0 ? "text-red-600 font-semibold" : "text-gray-400"}>
-                        {org._count.bugReports}
-                      </span>
+                      {org._count.bugReports > 0 ? (
+                        <Link
+                          href={`/platform/errors?org=${org.id}&status=OPEN`}
+                          className="text-red-600 font-semibold hover:underline"
+                        >
+                          {org._count.bugReports}
+                        </Link>
+                      ) : (
+                        <span className="text-gray-400">0</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500 text-xs">{timeAgo(org.createdAt)}</td>
                     <td className="px-4 py-3 text-right">

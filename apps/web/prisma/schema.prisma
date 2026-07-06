@@ -337,11 +337,15 @@ model BugReport {
   errorStack     String?
   url            String?
   component      String?
+  status         BugStatus     @default(OPEN)
+  resolvedAt     DateTime?
   createdAt      DateTime      @default(now())
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([status])
   @@index([userId])
   @@index([createdAt])
 }
@@ -407,6 +411,11 @@ enum CoverRequestStatus {
   APPROVED
   DENIED
   CANCELLED
+}
+
+enum BugStatus {
+  OPEN
+  RESOLVED
 }
 
 // An employee offers up one of their shifts for a teammate to cover. Teammates

@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 
 const NAV = [
   { label: "Organisations", href: "/platform", icon: LayoutDashboard },
+  { label: "Bug reports", href: "/platform/errors", icon: Bug },
   { label: "Audit log", href: "/platform/audit", icon: ScrollText },
-  { label: "Errors", href: "/platform/errors", icon: Bug },
 ]
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
