@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import { authConfig } from "@/auth.config"
+import { isSuperadmin } from "@/lib/platform"
 import { NextResponse } from "next/server"
 
 const { auth } = NextAuth(authConfig)
@@ -45,8 +46,10 @@ export default auth((req) => {
       }
       return NextResponse.redirect(new URL("/login", req.nextUrl.origin))
     }
-    const userEmail = session?.user?.email
-    if (userEmail !== process.env.SUPERADMIN_EMAIL) {
+    // Case-insensitive + trimmed, matching isSuperadmin used everywhere else —
+    // a strict compare here silently bounced the super admin when the Vercel env
+    // value differed in casing/whitespace from their Google email.
+    if (!isSuperadmin(session?.user?.email)) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
       }
