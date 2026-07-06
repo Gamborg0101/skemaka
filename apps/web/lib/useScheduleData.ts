@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import type { Employee, Schedule, TimeOffRequest } from "@/types";
 import { useShiftMutations } from "@/lib/useShiftMutations";
 import { fetchAllPages } from "@/lib/pagination";
+
+/** Why an employee shouldn't be scheduled on a given day (soft warning). */
+export type AvailabilityConflict = { type: "timeoff" | "unavailable" };
 
 export function useScheduleData(orgId: string, weekStart: string) {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [approvedTimeOff, setApprovedTimeOff] = useState<TimeOffRequest[]>([]);
+  const [unavailable, setUnavailable] = useState<{ employeeId: string; date: string }[]>([]);
 
   // The grid needs every employee, so page through the full list. Bypass the
   // browser HTTP cache (the route sets a max-age/SWR window) so a just-added
@@ -25,8 +29,10 @@ export function useScheduleData(orgId: string, weekStart: string) {
   const loadEmployees = useCallback(async () => {
     for (let i = 0; i < 3; i++) {
       try {
+        // Active only: deactivated staff (and the manager when "include me in the
+        // schedule" is off) shouldn't appear as assignable rows/chips.
         const all = await fetchAllPages<Employee>(
-          `/api/orgs/${orgId}/employees`,
+          `/api/orgs/${orgId}/employees?status=active`,
           200,
           { cache: "no-store" },
         );
@@ -132,6 +138,39 @@ export function useScheduleData(orgId: string, weekStart: string) {
     };
   }, [weekStart, orgId]);
 
+  // Days employees marked unavailable for this week (best-effort; empty when no
+  // availability was collected). Powers the soft conflict warning in the scheduler.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/orgs/${orgId}/availability/conflicts?weekStart=${weekStart}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((res: { data?: { employeeId: string; date: string }[] }) => {
+        if (!cancelled) setUnavailable(res.data ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [weekStart, orgId]);
+
+  // Fast lookup: is (employee, date) a conflict? Approved time-off takes
+  // precedence over self-reported unavailability in the message.
+  const unavailableSet = useMemo(
+    () => new Set(unavailable.map((u) => `${u.employeeId}__${u.date}`)),
+    [unavailable],
+  );
+  const getConflict = useCallback(
+    (employeeId: string, date: string): AvailabilityConflict | null => {
+      const onLeave = approvedTimeOff.some(
+        (r) => r.employeeId === employeeId && date >= r.startDate.slice(0, 10) && date <= r.endDate.slice(0, 10),
+      );
+      if (onLeave) return { type: "timeoff" };
+      if (unavailableSet.has(`${employeeId}__${date}`)) return { type: "unavailable" };
+      return null;
+    },
+    [approvedTimeOff, unavailableSet],
+  );
+
   // Magic-moment: fill an empty week in one click (starter defaults or a copy of
   // the previous week). On success, swap in the returned populated schedule.
   const [generating, setGenerating] = useState(false);
@@ -174,7 +213,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
         setSchedule((s) =>
           s ? { ...s, publishedAt: res.data!.publishedAt } : s,
         );
-        toast.success("Schedule published — employees notified by SMS");
+        toast.success("Schedule published — your team can see it now");
       } else {
         toast.error(res.error ?? "Failed to publish schedule");
       }
@@ -205,6 +244,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     loadError,
     employees,
     approvedTimeOff,
+    getConflict,
     publishing,
     generating,
     generateWeek,

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -100,7 +101,12 @@ export function AddEmployeeDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const partTimeHoursOk = employmentType !== "PART_TIME" || !!contractedHours
-    if (!name || !email || !phone || !jobRole || !hourlyWage || !partTimeHoursOk) return
+    // The Select fields (Job Role, contracted hours) have no native browser
+    // validation, so a silent early-return leaves the manager confused. Point
+    // them at what's missing.
+    if (!jobRole) { toast.error("Pick a job role"); return }
+    if (!partTimeHoursOk) { toast.error("Set contracted hours for part-time staff"); return }
+    if (!name || !email || !phone || !hourlyWage) return
 
     onEmployeeAdd({
       name: name.trim(),
@@ -134,7 +140,7 @@ export function AddEmployeeDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="emp-name">Name</Label>
+            <Label htmlFor="emp-name">Name <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-name"
               placeholder="Full name"
@@ -145,7 +151,7 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-email">Email</Label>
+            <Label htmlFor="emp-email">Email <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-email"
               type="email"
@@ -157,7 +163,7 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-phone">Phone</Label>
+            <Label htmlFor="emp-phone">Phone <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-phone"
               type="tel"
@@ -170,7 +176,7 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-role">Job Role</Label>
+            <Label htmlFor="emp-role">Job Role <span className="text-rose-500">*</span></Label>
             <Select value={jobRole} onValueChange={(val) => setJobRole(val ?? "")}>
               <SelectTrigger id="emp-role" className="w-full">
                 <SelectValue placeholder="Select a role" />
@@ -186,7 +192,7 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-wage">Hourly Wage ({getCurrencySymbol()})</Label>
+            <Label htmlFor="emp-wage">Hourly Wage ({getCurrencySymbol()}) <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-wage"
               type="number"

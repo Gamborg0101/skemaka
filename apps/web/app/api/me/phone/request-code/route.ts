@@ -77,7 +77,18 @@ export async function POST(req: NextRequest) {
 
     const code = generateClaimCode()
     await storeClaimCode(guard.userId, code, "phone")
-    await sendPhoneVerificationSms({ to: phone, code, orgName: employee.organization.name })
+    const delivered = await sendPhoneVerificationSms({ to: phone, code, orgName: employee.organization.name })
+
+    // In production a failed/unconfigured send must not be reported as "sent" —
+    // otherwise the user waits forever for a code that will never arrive. In
+    // dev/e2e we proceed regardless, since devCode lets the flow complete
+    // without a real handset.
+    if (!delivered && process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "We couldn't send a code to that number. Check it and try again." },
+        { status: 502 },
+      )
+    }
 
     return NextResponse.json({
       data: {

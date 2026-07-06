@@ -19,10 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { TimePicker } from "@/components/manager/TimePicker"
+import { AlertTriangle } from "lucide-react"
 import { formatTime, formatDayLabel, grossShiftMinutes } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
 import { cn } from "@/lib/utils"
 import type { Employee, JobRole, ShiftTemplate } from "@/types"
+import type { AvailabilityConflict } from "@/lib/useScheduleData"
 
 interface AddShiftDialogProps {
   open: boolean
@@ -34,6 +36,8 @@ interface AddShiftDialogProps {
   defaultDate?: string
   defaultStartTime?: string
   defaultEndTime?: string
+  /** Soft availability warning: returns why this employee shouldn't work this day. */
+  getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null
   onShiftCreate: (data: {
     employeeId: string
     date: string
@@ -43,7 +47,7 @@ interface AddShiftDialogProps {
     jobRole: string
     notes: string | null
     colorTag: string | null
-  }) => void | Promise<void>
+  }) => void | boolean | Promise<void | boolean>
 }
 
 export function AddShiftDialog({
@@ -57,6 +61,7 @@ export function AddShiftDialog({
   defaultStartTime = "09:00",
   defaultEndTime = "17:00",
   onShiftCreate,
+  getConflict,
 }: AddShiftDialogProps) {
   const [employeeId, setEmployeeId] = useState(defaultEmployeeId)
   const [startTime, setStartTime] = useState("09:00")
@@ -130,7 +135,7 @@ export function AddShiftDialog({
     setSubmitting(true)
     const colorTag = jobRoles.find((r) => r.name === selectedRole)?.color ?? "gray"
     try {
-      await onShiftCreate({
+      const result = await onShiftCreate({
         employeeId,
         date: defaultDate,
         startTime,
@@ -140,7 +145,10 @@ export function AddShiftDialog({
         notes: notes.trim() || null,
         colorTag,
       })
-      onOpenChange(false)
+      // Keep the dialog open when the create explicitly failed so the manager
+      // can adjust and retry without re-entering everything. Legacy creators
+      // that return void are treated as success (close).
+      if (result !== false) onOpenChange(false)
     } catch {
       // onShiftCreate handles its own error toasts — just re-enable the button
     } finally {
@@ -161,6 +169,24 @@ export function AddShiftDialog({
             )}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Soft availability warning — the manager can still schedule anyway. */}
+        {(() => {
+          const conflict = getConflict && employeeId && defaultDate ? getConflict(employeeId, defaultDate) : null
+          if (!conflict) return null
+          const empName = employees.find((e) => e.id === employeeId)?.name ?? "This person"
+          return (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              <span>
+                {conflict.type === "timeoff"
+                  ? `${empName} is on approved time off this day.`
+                  : `${empName} marked this day as unavailable.`}{" "}
+                You can still schedule them.
+              </span>
+            </div>
+          )
+        })()}
 
         {/* Shift type presets */}
         {shiftTemplates.length > 0 && (

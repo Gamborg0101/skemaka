@@ -44,9 +44,10 @@ export function useShiftMutations(
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: newDate, employeeId: newEmployeeId }),
-      }).then((r) => {
-        if (r.ok) toast.success("Shift moved")
-        else { rollbackShift(shiftId, prev); toast.error("Failed to move shift") }
+      }).then(async (r) => {
+        if (r.ok) { toast.success("Shift moved"); return }
+        const msg = await r.json().then((b) => b.error).catch(() => null)
+        rollbackShift(shiftId, prev); toast.error(msg ?? "Failed to move shift")
       }).catch(() => { rollbackShift(shiftId, prev); toast.error("Failed to move shift") })
     },
     [schedule, orgId, patchShift, rollbackShift]
@@ -65,14 +66,18 @@ export function useShiftMutations(
         ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(optimistic)
-      fetch(`/api/orgs/${orgId}/schedules/${activeSchedule.id}/shifts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then((r) => r.json()).then((res: { data?: Shift }) => {
-        if (res.data) { replaceShift(tempId, res.data); toast.success("Shift added") }
-        else { deleteShift(tempId); toast.error("Failed to add shift") }
-      }).catch(() => { deleteShift(tempId); toast.error("Failed to add shift") })
+      try {
+        const r = await fetch(`/api/orgs/${orgId}/schedules/${activeSchedule.id}/shifts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+        const res = (await r.json()) as { data?: Shift; error?: string }
+        if (res.data) { replaceShift(tempId, res.data); toast.success("Shift added"); return true }
+        deleteShift(tempId); toast.error(res.error ?? "Failed to add shift"); return false
+      } catch {
+        deleteShift(tempId); toast.error("Failed to add shift"); return false
+      }
     },
     [ensureSchedule, orgId, appendShift, replaceShift, deleteShift]
   )
@@ -86,9 +91,10 @@ export function useShiftMutations(
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then((r) => {
-        if (r.ok) toast.success("Shift updated")
-        else { rollbackShift(data.id!, prev); toast.error("Failed to update shift") }
+      }).then(async (r) => {
+        if (r.ok) { toast.success("Shift updated"); return }
+        const msg = await r.json().then((b) => b.error).catch(() => null)
+        rollbackShift(data.id!, prev); toast.error(msg ?? "Failed to update shift")
       }).catch(() => { rollbackShift(data.id!, prev); toast.error("Failed to update shift") })
     },
     [schedule, orgId, patchShift, rollbackShift]
@@ -123,14 +129,14 @@ export function useShiftMutations(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId, date, startTime: "00:00", endTime: "00:00", breakMinutes: 0, jobRole: "Sick Day", colorTag: "sick" }),
-      }).then((r) => r.json()).then((res: { data?: Shift }) => {
+      }).then((r) => r.json()).then((res: { data?: Shift; error?: string }) => {
         if (res.data) {
           replaceShift(tempId, res.data)
           const emp = employees.find((e) => e.id === employeeId)
           toast.success(`Sick day registered${emp ? ` for ${emp.name}` : ""}`)
         } else {
           deleteShift(tempId)
-          toast.error("Failed to register sick day")
+          toast.error(res.error ?? "Failed to register sick day")
         }
       }).catch(() => { deleteShift(tempId); toast.error("Failed to register sick day") })
     },

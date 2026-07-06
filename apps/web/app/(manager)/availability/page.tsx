@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AvailabilityGrid } from "@/components/manager/AvailabilityGrid"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
+import { SendAvailabilityDialog } from "@/components/manager/SendAvailabilityDialog"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
 import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel } from "@/lib/dateUtils"
@@ -35,6 +36,7 @@ export default function AvailabilityPage() {
   const [initialLoaded, setInitialLoaded] = useState(false)
   const loading = !initialLoaded
   const [sending, setSending] = useState(false)
+  const [sendDialogOpen, setSendDialogOpen] = useState(false)
   const [bookDialog, setBookDialog] = useState<{
     open: boolean; employeeId: string; date: string; startTime: string; endTime: string
   }>({ open: false, employeeId: "", date: "", startTime: "09:00", endTime: "17:00" })
@@ -158,25 +160,25 @@ export default function AvailabilityPage() {
     [scheduleId, weekStart, orgId]
   )
 
-  const handleSendRequest = async () => {
+  const handleSendRequest = async (deadline: string) => {
     setSending(true)
-    const deadlineDate = new Date()
-    deadlineDate.setHours(23, 59, 59, 0)
-    const deadline = deadlineDate.toISOString()
-
     try {
       const res = await fetch(`/api/orgs/${orgId}/availability`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weekStart, deadline }),
       })
-      if (!res.ok) throw new Error()
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(json.error ?? "Failed to send availability request")
+        return
+      }
       const newReq: AvailabilityRequest = { ...json.data, submissions: [] }
       setAllRequests((prev) => [newReq, ...prev].sort((a, b) =>
         new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
       ))
       setRequest(newReq)
+      setSendDialogOpen(false)
       toast.success("Availability request sent to all active employees")
     } catch {
       toast.error("Failed to send availability request")
@@ -208,13 +210,13 @@ export default function AvailabilityPage() {
           {deadline && <p className="text-xs text-gray-500">· Deadline: {deadline}</p>}
         </div>
         <Button
-          onClick={handleSendRequest}
+          onClick={() => setSendDialogOpen(true)}
           disabled={sending || !!request}
           className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
           size="sm"
         >
           <Send className="size-4" />
-          {sending ? "Sending..." : request ? "Request sent" : "Send Availability Request"}
+          {request ? "Request sent" : "Send Availability Request"}
         </Button>
       </div>
       {/* Mobile header */}
@@ -234,13 +236,13 @@ export default function AvailabilityPage() {
             )}
           </div>
           <Button
-            onClick={handleSendRequest}
+            onClick={() => setSendDialogOpen(true)}
             disabled={sending || !!request}
             className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
             size="sm"
           >
             <Send className="size-4" />
-            {sending ? "Sending..." : request ? "Request sent" : "Send"}
+            {request ? "Request sent" : "Send"}
           </Button>
         </div>
         {deadline && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Deadline: {deadline}</p>}
@@ -313,6 +315,16 @@ export default function AvailabilityPage() {
         defaultStartTime={bookDialog.startTime}
         defaultEndTime={bookDialog.endTime}
         onShiftCreate={handleShiftCreate}
+      />
+
+      <SendAvailabilityDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        weekStart={weekStart}
+        weekLabel={`Week ${getISOWeek(weekStart)} · ${formatWeekLabel(weekStart)}`}
+        employeeCount={employees.filter((e) => e.isActive).length}
+        sending={sending}
+        onConfirm={handleSendRequest}
       />
       </div>
     </div>

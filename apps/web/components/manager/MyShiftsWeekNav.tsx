@@ -4,19 +4,11 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WeekPicker } from "@/components/manager/WeekPicker"
-import { addDays, getMondayOfWeek, getISOWeek } from "@/lib/dateUtils"
+import { addDays, getMondayOfWeek } from "@/lib/dateUtils"
 
 interface MyShiftsWeekNavProps {
   weekStart: string
   employeeParam?: string
-}
-
-function formatInterval(weekStart: string): string {
-  const start = new Date(weekStart + "T12:00:00Z")
-  const end = new Date(weekStart + "T12:00:00Z")
-  end.setUTCDate(end.getUTCDate() + 6)
-  const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
-  return `${fmt(start)} – ${fmt(end)}`
 }
 
 export function MyShiftsWeekNav({ weekStart, employeeParam }: MyShiftsWeekNavProps) {
@@ -51,24 +43,18 @@ export function MyShiftsWeekNav({ weekStart, employeeParam }: MyShiftsWeekNavPro
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">
-          {formatInterval(weekStart)}
-        </span>
-        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-          W{getISOWeek(weekStart)}
-        </span>
-        {weekStart !== currentWeek && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(currentWeek)}
-            className="text-xs text-gray-500"
-          >
-            Today
-          </Button>
-        )}
-      </div>
+      {/* The WeekPicker button already shows "W{n} · range", so no separate
+          interval label here — it read as a duplicated week label. */}
+      {weekStart !== currentWeek && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(currentWeek)}
+          className="text-xs text-gray-500"
+        >
+          Today
+        </Button>
+      )}
     </div>
   )
 }

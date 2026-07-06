@@ -70,24 +70,30 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
+  if (!body.startDate || !body.endDate) {
+    return NextResponse.json({ error: "startDate and endDate are required" }, { status: 400 })
+  }
+
   let resolvedEmployeeId: string
 
-  if (isManager) {
-    if (!body.employeeId || !body.startDate || !body.endDate) {
-      return NextResponse.json(
-        { error: "employeeId, startDate, and endDate are required" },
-        { status: 400 },
-      )
+  if (body.employeeId) {
+    // Creating a request on behalf of another employee — manager-only.
+    if (!isManager) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     const emp = await getEmployeeById(orgId, body.employeeId)
     if (!emp) return NextResponse.json({ error: "Employee not found" }, { status: 404 })
     resolvedEmployeeId = body.employeeId
   } else {
-    if (!body.startDate || !body.endDate) {
-      return NextResponse.json({ error: "startDate and endDate are required" }, { status: 400 })
-    }
+    // Self-service request (portal) — resolve the caller's own employee record.
+    // Works for plain employees and for managers who are also employees.
     const emp = await getEmployeeByUserId(orgId, guard.userId)
-    if (!emp) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    if (!emp) {
+      return NextResponse.json(
+        { error: "No employee record found for your account. Specify an employee." },
+        { status: 403 },
+      )
+    }
     resolvedEmployeeId = emp.id
   }
 
