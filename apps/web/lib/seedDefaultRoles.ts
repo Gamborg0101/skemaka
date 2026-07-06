@@ -89,6 +89,15 @@ function rolesForIndustry(industry?: string) {
   return (industry && ROLES_BY_INDUSTRY[industry]) || DEFAULT_JOB_ROLES
 }
 
+// Generic, role-agnostic shift-type presets so a new restaurant's Shift Types
+// section isn't empty on day one. Each is a per-org copy (like job roles), so
+// deleting one only affects that restaurant. jobRole "" means "any role".
+export const DEFAULT_SHIFT_TEMPLATES = [
+  { name: "Morning",   startTime: "07:00", endTime: "15:00", breakMinutes: 30, sortOrder: 0 },
+  { name: "Afternoon", startTime: "11:00", endTime: "19:00", breakMinutes: 30, sortOrder: 1 },
+  { name: "Evening",   startTime: "15:00", endTime: "23:00", breakMinutes: 0,  sortOrder: 2 },
+]
+
 // Accepts an optional Prisma transaction client so it can be called inside a
 // $transaction block. Falls back to the global db client when not in a transaction.
 // `industry` (when given) selects an industry-specific starter role set.
@@ -101,5 +110,18 @@ export async function seedDefaultRoles(
   await c.jobRole.createMany({
     skipDuplicates: true,
     data: rolesForIndustry(industry).map((r) => ({ ...r, organizationId })),
+  })
+}
+
+// Accepts an optional Prisma transaction client so it can run inside the org-
+// creation transaction. skipDuplicates keeps it idempotent for backfills.
+export async function seedDefaultShiftTemplates(
+  organizationId: string,
+  client?: PrismaClient,
+) {
+  const c = client ?? db
+  await c.shiftTemplate.createMany({
+    skipDuplicates: true,
+    data: DEFAULT_SHIFT_TEMPLATES.map((t) => ({ ...t, jobRole: "", colorTag: null, organizationId })),
   })
 }
