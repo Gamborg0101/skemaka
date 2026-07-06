@@ -30,7 +30,8 @@ export async function GET() {
           employees: { where: { isActive: true } },
           shifts: true,
           memberships: true,
-          bugReports: true,
+          // Open bugs only — the actionable count surfaced on the overview.
+          bugReports: { where: { status: "OPEN" } },
         },
       },
     },
