@@ -57,6 +57,13 @@ const eslintConfig = defineConfig([
     "app/generated/**",
   ]),
   {
+    // Advisory perf rule (React docs: "not recommended", not incorrect) newly
+    // enabled by the eslint-config-next preset. It flags common, safe patterns
+    // (seed derived state on open, kick off a fetch on mount) across the repo.
+    // Keep it as a warning so it guides without failing CI; fix opportunistically.
+    rules: { "react-hooks/set-state-in-effect": "warn" },
+  },
+  {
     // Dark-mode-aware surfaces only. Route-group parens are escaped so minimatch
     // treats them literally rather than as an extglob group.
     files: ["app/\\(manager\\)/**/*.tsx", "components/manager/**/*.tsx"],

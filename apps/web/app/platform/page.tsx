@@ -60,7 +60,7 @@ export default function PlatformOrgsPage() {
       })
       if (!r.ok) { setOpening(null); return }
       // Full navigation so the manager UI boots with the acting-org context.
-      window.location.href = "/schedule"
+      window.location.assign("/schedule")
     } catch {
       setOpening(null)
     }

@@ -24,7 +24,7 @@ export function SuperAdminBanner() {
       // inert for non-super-admins, and they can retry from there.
     }
     // Full navigation so OrgProvider refetches context (back to their own org).
-    window.location.href = "/platform"
+    window.location.assign("/platform")
   }
 
   return (
