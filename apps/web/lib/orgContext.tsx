@@ -16,6 +16,8 @@ interface OrgContextValue {
   setTimeOffEnabled: React.Dispatch<React.SetStateAction<boolean>>
   availabilityWindowWeeks: number
   setAvailabilityWindowWeeks: React.Dispatch<React.SetStateAction<number>>
+  /** True when a super admin is viewing/editing this org via "acting-as". */
+  acting: boolean
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null)
@@ -44,6 +46,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [shiftTemplates, setShiftTemplates] = useState<ShiftTemplate[]>([])
   const [timeOffEnabled, setTimeOffEnabled] = useState(true)
   const [availabilityWindowWeeks, setAvailabilityWindowWeeks] = useState(1)
+  const [acting, setActing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -58,12 +61,13 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             else if (!cancelled) setState("error")
             continue
           }
-          const data = await r.json() as { data?: { org: Organization; jobRoles: JobRole[]; shiftTemplates: ShiftTemplate[] } }
+          const data = await r.json() as { data?: { org: Organization; jobRoles: JobRole[]; shiftTemplates: ShiftTemplate[]; acting?: boolean } }
           if (cancelled) return
           if (data.data) {
             setOrg(data.data.org)
             setJobRoles(data.data.jobRoles)
             setShiftTemplates(data.data.shiftTemplates)
+            setActing(data.data.acting === true)
             const { org } = data.data
             const enabled = org.settings?.timeOffEnabled !== false
             setTimeOffEnabled(enabled)
@@ -72,6 +76,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
               currency: org.currency,
               timeOffEnabled: enabled,
               timeFormat: org.settings?.timeFormat ?? "24h",
+              includeManagerInSchedule: org.settings?.includeManagerInSchedule === true,
               ...(org.settings?.hours ? { hours: org.settings.hours as DayHours[] } : {}),
               ...(org.settings?.defaultScheduleView
                 ? { defaultScheduleView: org.settings.defaultScheduleView }
@@ -94,8 +99,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   // Must be called unconditionally before any early returns — Rules of Hooks.
   const ctxValue = useMemo(
-    () => org ? { orgId: org.id, org, jobRoles, setJobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks } : null,
-    [org, jobRoles, shiftTemplates, timeOffEnabled, availabilityWindowWeeks]
+    () => org ? { orgId: org.id, org, jobRoles, setJobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks, acting } : null,
+    [org, jobRoles, shiftTemplates, timeOffEnabled, availabilityWindowWeeks, acting]
   )
 
   if (state === "loading") {

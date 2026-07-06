@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose, UserCircle, CalendarX2, Sun, Moon, Monitor } from "lucide-react"
+import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose, UserCircle, CalendarX2, Sun, Moon, Monitor, Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BugReportDialog } from "@/components/manager/BugReportDialog"
 import {
@@ -28,6 +28,8 @@ const BASE_NAV_ITEMS = [
 
 interface ManagerSidebarProps {
   onCollapse?: () => void
+  /** Show the super-admin "Platform" entry (only the super admin sees it). */
+  superAdmin?: boolean
 }
 
 function ThemeToggle() {
@@ -55,7 +57,7 @@ function ThemeToggle() {
   )
 }
 
-export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
+export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { org, timeOffEnabled } = useOrg()
@@ -133,6 +135,15 @@ export function ManagerSidebar({ onCollapse }: ManagerSidebarProps) {
               <DropdownMenuItem onClick={() => router.push("/billing")}>
                 Billing
               </DropdownMenuItem>
+              {superAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/platform")}>
+                    <Shield className="size-4 text-red-500" />
+                    Platform
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"

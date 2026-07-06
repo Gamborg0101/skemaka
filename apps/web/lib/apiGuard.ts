@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { db } from "@/lib/prisma"
 import { canAccessOrg, type BillingBlock, type BillingSnapshot } from "@/lib/billing"
+import { isSuperadmin } from "@/lib/platform"
+import { writeAudit } from "@/lib/services/auditService"
 import type { UserRole, SubscriptionStatus } from "@/types"
 
 type GuardOptions = { allowSuspended?: boolean }
@@ -11,6 +13,8 @@ export type AuthGuard = {
   role: UserRole
   orgId?: string
   subscriptionStatus?: SubscriptionStatus
+  email?: string | null
+  name?: string | null
 }
 
 /** JWT timestamp claims are stored as epoch millis; decode back to a Date. */
@@ -108,6 +112,8 @@ export async function requireAuth(req: NextRequest): Promise<{ error: Response }
     role: (token.role as UserRole) ?? "EMPLOYEE",
     orgId: token.orgId as string | undefined,
     subscriptionStatus: token.subscriptionStatus as SubscriptionStatus | undefined,
+    email: (token.email as string | null | undefined) ?? null,
+    name: (token.name as string | null | undefined) ?? null,
   }
 }
 
@@ -125,7 +131,30 @@ export async function requireOrgMember(
   const role              = (token.role as UserRole) ?? "EMPLOYEE"
   const tokenOrgId        = token.orgId as string | undefined
   const subscriptionStatus = token.subscriptionStatus as SubscriptionStatus | undefined
+  const email             = (token.email as string | null | undefined) ?? null
+  const name              = (token.name as string | null | undefined) ?? null
   const { allowSuspended = false } = options
+
+  // Super-admin cross-restaurant access. Fires only when the super admin targets
+  // a restaurant that ISN'T their own (their own org still runs the normal path
+  // below, billing and all). Bypasses membership + billing so the super admin can
+  // help any customer, including past-due ones. Isolation is unaffected: the
+  // caller still operates strictly on `orgId` — this only authorizes, it never
+  // changes which org is targeted. Every mutation is audited (fire-and-forget).
+  if (isSuperadmin(email) && tokenOrgId !== orgId) {
+    const method = req.method.toUpperCase()
+    if (method !== "GET" && method !== "HEAD") {
+      void writeAudit({
+        actorUserId:    userId,
+        actorEmail:     email!,
+        organizationId: orgId,
+        action:         "MUTATE",
+        method,
+        path:           req.nextUrl.pathname,
+      })
+    }
+    return { userId, role: "ADMIN", orgId, subscriptionStatus: undefined, email, name }
+  }
 
   // Fast path: orgId is cached in the JWT — no DB roundtrip on the happy path.
   if (tokenOrgId) {
@@ -145,7 +174,7 @@ export async function requireOrgMember(
       const blocked = await enforceBilling(orgId, snapshot)
       if (blocked) return blocked
     }
-    return { userId, role, orgId: tokenOrgId, subscriptionStatus }
+    return { userId, role, orgId: tokenOrgId, subscriptionStatus, email, name }
   }
 
   // Slow path: check manager membership first (covers new managers whose token
@@ -172,6 +201,8 @@ export async function requireOrgMember(
       role: "MANAGER",
       orgId,
       subscriptionStatus: membership.organization.subscriptionStatus as SubscriptionStatus,
+      email,
+      name,
     }
   }
 
@@ -202,5 +233,7 @@ export async function requireOrgMember(
     role: "EMPLOYEE" as UserRole,
     orgId,
     subscriptionStatus: employee.organization.subscriptionStatus as SubscriptionStatus,
+    email,
+    name,
   }
 }
