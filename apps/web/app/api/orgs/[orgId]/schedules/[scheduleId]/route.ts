@@ -77,8 +77,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const schedule = await scheduleService.publishSchedule(orgId, scheduleId)
-    return NextResponse.json({ data: schedule })
+    const { schedule, notified } = await scheduleService.publishSchedule(orgId, scheduleId)
+    return NextResponse.json({ data: schedule, notified })
   } catch (err) {
     if (err instanceof ServiceError) {
       return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
