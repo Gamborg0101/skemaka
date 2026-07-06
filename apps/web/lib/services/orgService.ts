@@ -3,6 +3,7 @@ import { PrismaClient, Prisma } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
 import { seedDefaultRoles } from "@/lib/seedDefaultRoles"
 import { recordAudit } from "@/lib/audit"
+import { syncSubscriptionQuantitySafe } from "./billingService"
 import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings } from "@/types"
 import { ServiceError } from "./errors"
 
@@ -21,13 +22,17 @@ export interface CreateOrgInput {
   locale?: string
   industry?: string
   timeFormat?: "12h" | "24h"
+  // Identity claims from the caller's JWT. Used to self-heal a missing User row
+  // before the membership FK is written (e.g. a session whose User was deleted).
+  userEmail?: string | null
+  userName?: string | null
 }
 
 export async function createOrg(
   userId: string,
   input: CreateOrgInput,
 ): Promise<Organization> {
-  const { name, currency, country, timezone, locale, industry, timeFormat } = input
+  const { name, currency, country, timezone, locale, industry, timeFormat, userEmail, userName } = input
   const trimmedName     = name.trim()
   const resolvedCurrency = currency && (VALID_CURRENCIES as readonly string[]).includes(currency) ? currency : "EUR"
   const baseSlug        = trimmedName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
@@ -62,6 +67,17 @@ export async function createOrg(
         ...(industry && { industry }),
         ...(Object.keys(settings).length > 0 && { settings: settings as Prisma.InputJsonObject }),
       },
+    })
+
+    // Ensure the User row exists before the membership FK references it. With the
+    // JWT strategy the caller's id comes straight from the token, so a session
+    // whose User was deleted (or a token that predates the row) would otherwise
+    // fail the membership insert with an opaque FK violation. Upsert by id is a
+    // no-op when the user already exists.
+    await client.user.upsert({
+      where:  { id: userId },
+      update: {},
+      create: { id: userId, email: userEmail ?? null, name: userName ?? null },
     })
 
     await client.membership.create({
@@ -184,12 +200,51 @@ export async function updateOrgCurrency(
   return serOrg(updated!)
 }
 
+export interface UpdateOrgProfileInput {
+  name?:       string
+  country?:    string
+  timezone?:   string
+  locale?:     string
+  industry?:   string
+  timeFormat?: "12h" | "24h"
+}
+
+/**
+ * Update an org's descriptive profile (name/country/locale/timezone/industry) and
+ * the timeFormat display preference. Currency is handled separately by
+ * updateOrgCurrency because it also runs FX conversion on existing wages. Used by
+ * the onboarding "back" flow so returning to step 1 edits the org instead of
+ * creating a duplicate. Changing industry here does NOT re-seed job roles.
+ */
+export async function updateOrgProfile(
+  orgId: string,
+  input: UpdateOrgProfileInput,
+): Promise<Organization> {
+  const data: Prisma.OrganizationUpdateInput = {}
+  if (input.name     !== undefined) data.name     = input.name.trim()
+  if (input.country  !== undefined) data.country  = input.country
+  if (input.timezone !== undefined) data.timezone = input.timezone
+  if (input.locale   !== undefined) data.locale   = input.locale
+  if (input.industry !== undefined) data.industry = input.industry
+
+  if (input.timeFormat !== undefined) {
+    const org     = await db.organization.findUnique({ where: { id: orgId }, select: { settings: true } })
+    const current = (org?.settings as OrgScheduleSettings) ?? {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data.settings = { ...current, timeFormat: input.timeFormat } as any
+  }
+
+  const updated = await db.organization.update({ where: { id: orgId }, data })
+  return serOrg(updated)
+}
+
 export type OrgSettingsPatch = {
   hours?:                    Array<{ isOpen: boolean; openTime: string; closeTime: string }>
   defaultScheduleView?:      "week" | "timeline"
   timeOffEnabled?:           boolean
   availabilityWindowWeeks?:  number
   timeFormat?:               "12h" | "24h"
+  includeManagerInSchedule?: boolean
 }
 
 export async function updateOrgSettings(
@@ -205,11 +260,102 @@ export async function updateOrgSettings(
   if (patch.timeOffEnabled          !== undefined) merged.timeOffEnabled          = patch.timeOffEnabled
   if (patch.availabilityWindowWeeks !== undefined) merged.availabilityWindowWeeks = patch.availabilityWindowWeeks
   if (patch.timeFormat              !== undefined) merged.timeFormat              = patch.timeFormat
+  if (patch.includeManagerInSchedule !== undefined) merged.includeManagerInSchedule = patch.includeManagerInSchedule
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await db.organization.update({ where: { id: orgId }, data: { settings: merged as any } })
 
   return merged
+}
+
+/**
+ * Sync the manager's own Employee record with the "include me in the schedule"
+ * setting. Enabling creates (or reactivates) a self-linked Employee so the
+ * manager appears as a schedulable chip; disabling deactivates it, preserving
+ * any shift history. Idempotent — safe to call on every settings save.
+ */
+export async function syncManagerEmployee(
+  orgId: string,
+  manager: { userId: string; email?: string | null; name?: string | null },
+  enabled: boolean,
+): Promise<void> {
+  // The manager's self-record is the Employee linked to their user account.
+  const existing = await db.employee.findFirst({
+    where: { organizationId: orgId, userId: manager.userId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, isActive: true },
+  })
+
+  if (!enabled) {
+    // Soft-deactivate so past shifts and labor-cost history stay intact.
+    if (existing && existing.isActive) {
+      await db.employee.update({ where: { id: existing.id }, data: { isActive: false } })
+      syncSubscriptionQuantitySafe(orgId)  // one fewer active seat
+    }
+    return
+  }
+
+  if (existing) {
+    if (!existing.isActive) {
+      await db.employee.update({ where: { id: existing.id }, data: { isActive: true } })
+      syncSubscriptionQuantitySafe(orgId)  // one more active seat
+    }
+    return
+  }
+
+  // No self-record yet — create one. Prefer a "Manager" role, else the first
+  // role that exists, so the employee passes the job-role integrity check.
+  const managerRole = await db.jobRole.findFirst({
+    where: { organizationId: orgId, name: "Manager" },
+    select: { name: true },
+  })
+  const anyRole = managerRole ?? await db.jobRole.findFirst({
+    where: { organizationId: orgId },
+    orderBy: { name: "asc" },
+    select: { name: true },
+  })
+  const jobRole = anyRole?.name ?? "Manager"
+
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { currency: true } })
+
+  // A manager may already exist as an employee by email (added before linking);
+  // reuse that row and link it rather than creating a duplicate.
+  const email = manager.email?.toLowerCase().trim()
+  const byEmail = email
+    ? await db.employee.findUnique({ where: { organizationId_email: { organizationId: orgId, email } }, select: { id: true } })
+    : null
+
+  if (byEmail) {
+    await db.employee.update({
+      where: { id: byEmail.id },
+      data:  { userId: manager.userId, isActive: true },
+    })
+    syncSubscriptionQuantitySafe(orgId)
+    return
+  }
+
+  await db.employee.create({
+    data: {
+      organizationId:   orgId,
+      userId:           manager.userId,
+      name:             manager.name?.trim() || email || "Manager",
+      // Fall back to a synthetic address only if the manager somehow has no email
+      // (email is NOT NULL-unique per org on Employee).
+      email:            email || `manager+${manager.userId}@no-email.local`,
+      phone:            null,
+      jobRole,
+      hourlyWage:       0,
+      wageBaseAmount:   0,
+      wageBaseCurrency: org?.currency ?? "EUR",
+      employmentType:   "FULL_TIME",
+      contractedHours:  0,
+      notes:            null,
+      // The manager already has account access, so no invite is needed.
+      inviteToken:      crypto.randomUUID(),
+      inviteExpiry:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  })
+  syncSubscriptionQuantitySafe(orgId)
 }
 
 // ── Org context for the current user ─────────────────────────────────────────
@@ -236,6 +382,27 @@ export async function getOrgContext(userId: string): Promise<OrgContext | null> 
   if (!membership) return null
 
   const { organization: o } = membership
+  return {
+    org:            serOrg(o),
+    jobRoles:       o.jobRoles.map(serJobRole),
+    shiftTemplates: o.shiftTemplates.map(serShiftTemplate),
+  }
+}
+
+/**
+ * Org context for an arbitrary restaurant by id, independent of membership.
+ * Used by the super-admin "acting-as" switch — callers MUST authorize the caller
+ * as super admin before using this (it performs no membership check).
+ */
+export async function getOrgContextById(orgId: string): Promise<OrgContext | null> {
+  const o = await db.organization.findUnique({
+    where: { id: orgId },
+    include: {
+      jobRoles:       { orderBy: { name: "asc" } },
+      shiftTemplates: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+    },
+  })
+  if (!o) return null
   return {
     org:            serOrg(o),
     jobRoles:       o.jobRoles.map(serJobRole),

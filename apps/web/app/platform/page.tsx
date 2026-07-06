@@ -41,6 +41,7 @@ function timeAgo(iso: string) {
 export default function PlatformOrgsPage() {
   const [orgs, setOrgs] = useState<OrgRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [opening, setOpening] = useState<string | null>(null)
 
   useEffect(() => {
     fetch("/api/platform/orgs")
@@ -48,6 +49,22 @@ export default function PlatformOrgsPage() {
       .then((d: { data?: OrgRow[] }) => { if (d.data) setOrgs(d.data) })
       .finally(() => setLoading(false))
   }, [])
+
+  async function manage(orgId: string) {
+    setOpening(orgId)
+    try {
+      const r = await fetch("/api/platform/act-as", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId }),
+      })
+      if (!r.ok) { setOpening(null); return }
+      // Full navigation so the manager UI boots with the acting-org context.
+      window.location.href = "/schedule"
+    } catch {
+      setOpening(null)
+    }
+  }
 
   const paying  = orgs.filter((o) => o.subscriptionStatus === "ACTIVE").length
   const trialing = orgs.filter((o) => o.subscriptionStatus === "TRIALING").length
@@ -89,6 +106,7 @@ export default function PlatformOrgsPage() {
                 <th className="px-4 py-3 text-right">Managers</th>
                 <th className="px-4 py-3 text-right">Errors</th>
                 <th className="px-4 py-3 text-right">Joined</th>
+                <th className="px-4 py-3 text-right"></th>
               </tr>
             </thead>
             <tbody>
@@ -122,6 +140,15 @@ export default function PlatformOrgsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500 text-xs">{timeAgo(org.createdAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => manage(org.id)}
+                        disabled={opening !== null}
+                        className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
+                      >
+                        {opening === org.id ? "Opening…" : "Manage"}
+                      </button>
+                    </td>
                   </tr>
                 )
               })}

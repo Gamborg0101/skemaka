@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Bug, Shield } from "lucide-react"
+import { LayoutDashboard, Bug, Shield, ScrollText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const NAV = [
   { label: "Organisations", href: "/platform", icon: LayoutDashboard },
+  { label: "Audit log", href: "/platform/audit", icon: ScrollText },
   { label: "Errors", href: "/platform/errors", icon: Bug },
 ]
 

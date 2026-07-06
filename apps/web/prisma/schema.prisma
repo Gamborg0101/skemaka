@@ -90,6 +90,7 @@ model Organization {
   shiftTemplates          ShiftTemplate[]
   timeEntries             TimeEntry[]
   timeOffRequests         TimeOffRequest[]
+  coverRequests           ShiftCoverRequest[]
 
   @@index([slug])
   @@index([stripeCustomerId])
@@ -157,6 +158,8 @@ model Employee {
   organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user                    User?                    @relation(fields: [userId], references: [id])
   shifts                  Shift[]
+  coverRequestsMade       ShiftCoverRequest[]      @relation("CoverRequester")
+  coverRequestsClaimed    ShiftCoverRequest[]      @relation("CoverClaimer")
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -202,6 +205,7 @@ model Shift {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   schedule       Schedule     @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   timeEntries    TimeEntry[]
+  coverRequests  ShiftCoverRequest[]
 
   @@index([scheduleId])
   @@index([organizationId])
@@ -395,4 +399,61 @@ enum TimeOffStatus {
   PENDING
   APPROVED
   DENIED
+}
+
+enum CoverRequestStatus {
+  OPEN
+  CLAIMED
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
+// An employee offers up one of their shifts for a teammate to cover. Teammates
+// claim it; a manager approves (reassigns the shift) or denies. One active
+// (OPEN/CLAIMED) request per shift is enforced in coverService, not the DB, so
+// historical DENIED/CANCELLED rows can coexist.
+model ShiftCoverRequest {
+  id                  String             @id @default(cuid())
+  organizationId      String
+  shiftId             String
+  requesterEmployeeId String
+  claimedByEmployeeId String?
+  status              CoverRequestStatus @default(OPEN)
+  note                String?
+  resolvedByUserId    String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  resolvedAt          DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  shift        Shift        @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  requester    Employee     @relation("CoverRequester", fields: [requesterEmployeeId], references: [id], onDelete: Cascade)
+  claimedBy    Employee?    @relation("CoverClaimer", fields: [claimedByEmployeeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([shiftId])
+  @@index([requesterEmployeeId])
+}
+
+/// Immutable audit trail of super-admin ("platform") activity across restaurants.
+/// Intentionally has NO foreign keys — rows must survive org/user deletion so the
+/// record of what the super admin did is never lost. Org/actor identity is
+/// snapshotted as plain strings at write time.
+model SuperAdminAudit {
+  id             String   @id @default(cuid())
+  actorUserId    String?
+  actorEmail     String
+  organizationId String?
+  orgName        String?
+  action         String   // ENTER | EXIT | MUTATE
+  method         String?  // HTTP method for MUTATE rows
+  path           String?  // request path for MUTATE rows
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([organizationId])
+  @@index([actorEmail])
 }
