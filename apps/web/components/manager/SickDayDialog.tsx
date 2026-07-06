@@ -43,8 +43,8 @@ export function SickDayDialog({
             <AlertTriangle className="size-5 text-rose-500" />
           </div>
           <div>
-            <p className="font-semibold text-gray-900">{employee.name}</p>
-            <p className="text-sm text-gray-500">{date}</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-50">{employee.name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{date}</p>
           </div>
         </div>
         <DialogFooter>

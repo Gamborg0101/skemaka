@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Check, ChevronRight, Info, ShieldCheck } from "lucide-react"
+import { Check, ChevronRight, ChevronLeft, Info, ShieldCheck } from "lucide-react"
 import { InstallPrompt } from "@/components/pwa/InstallPrompt"
 
 type Step = 1 | 2 | 3
@@ -46,6 +46,12 @@ const INDUSTRIES = [
   { value: "retail",      label: "Retail / Store" },
   { value: "hospitality", label: "Hotel / Hospitality" },
   { value: "healthcare",  label: "Healthcare / Clinic" },
+  { value: "salon",       label: "Salon / Spa" },
+  { value: "fitness",     label: "Gym / Fitness" },
+  { value: "warehouse",   label: "Warehouse / Logistics" },
+  { value: "cleaning",    label: "Cleaning services" },
+  { value: "childcare",   label: "Childcare / Daycare" },
+  { value: "security",    label: "Security services" },
   { value: "other",       label: "Other" },
 ]
 
@@ -145,6 +151,29 @@ export default function OnboardingPage() {
     setError(null)
     try {
       const timeFormat = COUNTRIES.find((c) => c.code === country)?.timeFormat ?? "24h"
+
+      // If the org already exists (user went back to step 1 to fix something),
+      // update it in place instead of creating a duplicate.
+      if (orgId) {
+        const r = await fetch(`/api/orgs/${orgId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: orgName.trim(),
+            currency,
+            country,
+            timezone,
+            locale,
+            industry: industry || undefined,
+            timeFormat,
+          }),
+        })
+        const data = await r.json() as { error?: string }
+        if (!r.ok) throw new Error(data.error ?? "Failed to update workspace")
+        setStep(2)
+        return
+      }
+
       const r = await fetch("/api/orgs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -287,7 +316,7 @@ export default function OnboardingPage() {
             Schedule your team<br />in minutes.
           </h1>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-300">
-            Set up your workspace, add your staff, and build next week&rsquo;s rota — all in a few clicks.
+            Set up your workspace, add your staff, and build next week&rsquo;s schedule — all in a few clicks.
           </p>
 
           <ol className="mt-12 space-y-5">
@@ -425,8 +454,8 @@ export default function OnboardingPage() {
                 disabled={loading || !orgName.trim() || !country}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? "Creating…" : (
-                  <>Create workspace <ChevronRight className="size-4" /></>
+                {loading ? (orgId ? "Saving…" : "Creating…") : (
+                  <>{orgId ? "Save & continue" : "Create workspace"} <ChevronRight className="size-4" /></>
                 )}
               </button>
             </form>
@@ -552,13 +581,22 @@ export default function OnboardingPage() {
                 </button>
               </div>
 
-              <button
-                onClick={() => setStep(3)}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                {addedEmployees.length > 0 ? "Continue" : "Add later"}
-                <ChevronRight className="size-4" />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setError(null) }}
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <ChevronLeft className="size-4" /> Back
+                </button>
+                <button
+                  onClick={() => setStep(3)}
+                  className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {addedEmployees.length > 0 ? "Continue" : "Add later"}
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -575,13 +613,22 @@ export default function OnboardingPage() {
 
               <InstallPrompt />
 
-              <button
-                onClick={() => router.push("/schedule")}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Finish — go to schedule
-                <ChevronRight className="size-4" />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <ChevronLeft className="size-4" /> Back
+                </button>
+                <button
+                  onClick={() => router.push("/schedule")}
+                  className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Finish — go to schedule
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
             </div>
           )}
           <div className="mt-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600">

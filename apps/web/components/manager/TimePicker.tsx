@@ -10,7 +10,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")
 const MINUTES = ["00", "15", "30", "45"]
 
 const selectClass =
-  "h-9 rounded-md border border-gray-200 bg-white px-2 pr-7 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer appearance-none"
+  "h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 pr-7 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer appearance-none"
 
 export function TimePicker({ value, onChange, id }: TimePickerProps) {
   const [rawHour, rawMinute] = value.split(":")

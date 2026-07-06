@@ -441,7 +441,7 @@ async function main() {
     baristaClose:        "Close the espresso machine, clean steam wands.",
     kitchenPrep:         "Prep for lunch service starts at 10:00.",
     kitchenClose:        "Deep-clean ovens and fridges before leaving.",
-    coverNote:           "Covering for a colleague — check the rota board.",
+    coverNote:           "Covering for a colleague — check the schedule.",
     holidayReturn:       "Back from holiday — review this week's menu changes.",
     stockCheck:          "Pre-weekend stock check with delivery at 08:00.",
     trainingNote:        "New menu item training during first hour.",
@@ -889,11 +889,11 @@ async function main() {
     await db.availabilityDay.deleteMany({ where: { submissionId: sub.subId } })
     await db.availabilityDay.createMany({
       data: sub.days.map((d) => ({
-        submissionId:   sub.subId,
-        date:           weekDay(w_next, d.offset),
-        isAvailable:    d.isAvailable,
-        preferredStart: d.isAvailable ? (d.preferredStart ?? null) : null,
-        preferredEnd:   d.isAvailable ? (d.preferredEnd   ?? null) : null,
+        submissionId: sub.subId,
+        date:         weekDay(w_next, d.offset),
+        isAvailable:  d.isAvailable,
+        startTime:    d.isAvailable ? (d.preferredStart ?? null) : null,
+        endTime:      d.isAvailable ? (d.preferredEnd   ?? null) : null,
       })),
     })
   }

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable } from "react-native"
+import { View, Text, ScrollView, Pressable, Alert } from "react-native"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -6,7 +6,8 @@ import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { LoadingState } from "@/components/feedback/LoadingState"
 import { useMyShifts } from "@/hooks/useShifts"
 import { useCurrentUser } from "@/hooks/useEmployee"
-import { formatTime, shiftDuration, formatDateLong, isToday } from "@/lib/utils"
+import { useCoverRequests, useOfferCover, useCancelCover } from "@/hooks/useCover"
+import { formatTime, shiftDuration, formatDateLong, isToday, todayISO } from "@/lib/utils"
 import { pickShiftQuote } from "@skemaka/types"
 
 export default function ShiftDetailScreen() {
@@ -16,6 +17,13 @@ export default function ShiftDetailScreen() {
   const { data: shifts, isLoading } = useMyShifts(week)
   const shift = shifts?.find((s) => s.id === id)
   const { data: currentUser } = useCurrentUser()
+
+  const { data: cover } = useCoverRequests()
+  const offer = useOfferCover()
+  const cancel = useCancelCover()
+  const myCover = cover?.mine.find(
+    (r) => r.shiftId === id && (r.status === "OPEN" || r.status === "CLAIMED"),
+  )
 
   if (isLoading) return <LoadingState label="Loading shift…" />
 
@@ -107,6 +115,61 @@ export default function ShiftDetailScreen() {
             </Text>
           )}
         </View>
+
+        {/* Cover — upcoming shifts only */}
+        {shift.date >= todayISO() && (
+          <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4 gap-3">
+            <View>
+              <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
+                Can&apos;t make it?
+              </Text>
+              {myCover ? (
+                <Text className="text-sm text-ink-secondary">
+                  {myCover.status === "CLAIMED"
+                    ? "A teammate offered to cover — waiting for manager approval."
+                    : "This shift is offered for cover. Teammates have been notified."}
+                </Text>
+              ) : (
+                <Text className="text-sm text-ink-secondary">
+                  Offer this shift up and let a teammate claim it (your manager approves the swap).
+                </Text>
+              )}
+            </View>
+
+            {myCover ? (
+              <Pressable
+                disabled={cancel.isPending}
+                onPress={() =>
+                  cancel.mutate(myCover.id, {
+                    onError: (e) => Alert.alert("Couldn't withdraw", e instanceof Error ? e.message : "Try again"),
+                  })
+                }
+                accessibilityRole="button"
+                className="h-11 rounded-xl border border-line items-center justify-center active:opacity-60 disabled:opacity-40"
+              >
+                <Text className="text-sm font-semibold text-ink-secondary">
+                  {cancel.isPending ? "Withdrawing…" : "Withdraw offer"}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                disabled={offer.isPending}
+                onPress={() =>
+                  offer.mutate(
+                    { shiftId: shift.id },
+                    { onError: (e) => Alert.alert("Couldn't offer shift", e instanceof Error ? e.message : "Try again") },
+                  )
+                }
+                accessibilityRole="button"
+                className="h-11 rounded-xl bg-brand items-center justify-center active:opacity-80 disabled:opacity-40"
+              >
+                <Text className="text-sm font-semibold text-white">
+                  {offer.isPending ? "Offering…" : "Offer for cover"}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
 
         {/* Clock in/out widget — today's shift only */}
         {isShiftToday && <ClockWidget todayShift={shift} />}

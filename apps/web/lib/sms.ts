@@ -1,3 +1,4 @@
+import "server-only";
 import twilio from "twilio";
 import { db } from "@/lib/prisma";
 
@@ -271,5 +272,103 @@ export async function sendShiftCancelledSms({
   await send(
     to,
     `Hi ${employeeName}, your shift at ${orgName} on ${when} has been cancelled. Contact your manager if you have questions.`,
+  );
+}
+
+// ─── Shift cover requests ─────────────────────────────────────────────────────
+
+export async function sendCoverOfferedSms({
+  to,
+  employeeName,
+  orgName,
+  date,
+  startTime,
+  endTime,
+  jobRole,
+}: {
+  to: string;
+  employeeName: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  jobRole: string;
+}): Promise<void> {
+  const when = formatShiftDate(date, startTime, endTime);
+  await send(
+    to,
+    `Hi ${employeeName}, a ${jobRole} shift at ${orgName} needs cover: ${when}. Open the app to claim it.`,
+  );
+}
+
+export async function sendCoverClaimedSms({
+  to,
+  requesterName,
+  claimerName,
+  orgName,
+  date,
+  startTime,
+  endTime,
+}: {
+  to: string;
+  requesterName: string;
+  claimerName: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}): Promise<void> {
+  const when = formatShiftDate(date, startTime, endTime);
+  await send(
+    to,
+    `Hi ${requesterName}, ${claimerName} offered to cover your ${orgName} shift on ${when}. Awaiting manager approval.`,
+  );
+}
+
+export async function sendCoverApprovedSms({
+  to,
+  name,
+  orgName,
+  date,
+  startTime,
+  endTime,
+  role,
+}: {
+  to: string;
+  name: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  role: "requester" | "claimer";
+}): Promise<void> {
+  const when = formatShiftDate(date, startTime, endTime);
+  await send(
+    to,
+    role === "requester"
+      ? `Hi ${name}, your ${orgName} shift on ${when} is now covered. You're off the hook.`
+      : `Hi ${name}, you're confirmed to cover the ${orgName} shift on ${when}.`,
+  );
+}
+
+export async function sendCoverDeniedSms({
+  to,
+  name,
+  orgName,
+  date,
+  startTime,
+  endTime,
+}: {
+  to: string;
+  name: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}): Promise<void> {
+  const when = formatShiftDate(date, startTime, endTime);
+  await send(
+    to,
+    `Hi ${name}, the cover request for the ${orgName} shift on ${when} was not approved — the shift stands as scheduled.`,
   );
 }

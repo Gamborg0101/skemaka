@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Skemaka",
     short_name: "Skemaka",
     description:
-      "Staff scheduling for restaurants — build the weekly rota, share shifts, and track availability from your phone.",
+      "Staff scheduling for restaurants — build the weekly schedule, share shifts, and track availability from your phone.",
     start_url: "/login",
     scope: "/",
     display: "standalone",

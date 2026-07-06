@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 
@@ -42,21 +42,40 @@ async function requestVerificationCode(token: string): Promise<State> {
   }
 }
 
+// Seconds the user must wait before the resend button re-arms. Keeps a slow
+// first email from turning into a burst of duplicate codes (each new code
+// invalidates the previous), while still giving a clear escape hatch.
+const RESEND_COOLDOWN = 20
+
 export function ClaimInviteClient({ token }: Props) {
   const [state, setState] = useState<State>({ status: "requesting" })
   const [code, setCode] = useState("")
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN)
 
   // Resend (user-triggered): show the spinner immediately, then re-request.
   const requestCode = useCallback(() => {
     setState({ status: "requesting" })
+    setCooldown(RESEND_COOLDOWN)
     void requestVerificationCode(token).then(setState)
   }, [token])
 
   // On mount the initial state is already "requesting"; kick off the request and
-  // apply the result inside the promise callback.
+  // apply the result inside the promise callback. The ref guards against React's
+  // double-invoke of effects (Strict Mode / remount) — two mount requests would
+  // generate two codes and silently invalidate the one in the first email.
+  const requested = useRef(false)
   useEffect(() => {
+    if (requested.current) return
+    requested.current = true
     void requestVerificationCode(token).then(setState)
   }, [token])
+
+  // Tick the resend cooldown down to zero once a code has been sent.
+  useEffect(() => {
+    if (state.status !== "enterCode" || cooldown <= 0) return
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [state.status, cooldown])
 
   // Step 2: submit the code to link the account.
   async function submitCode() {
@@ -130,10 +149,10 @@ export function ClaimInviteClient({ token }: Props) {
             </button>
             <button
               onClick={() => void requestCode()}
-              disabled={state.status === "submitting"}
+              disabled={state.status === "submitting" || cooldown > 0}
               className="mt-3 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
             >
-              Resend code
+              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
             </button>
           </>
         )}

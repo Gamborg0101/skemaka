@@ -90,42 +90,42 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
         onClick={() => setOpen(o => !o)}
         className={cn(
           "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors select-none",
-          open ? "bg-blue-50 text-blue-700" : "hover:bg-gray-100 text-gray-700"
+          open ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
         )}
       >
         <span className="text-sm font-bold tabular-nums">W{isoWeek}</span>
-        {!dayMode && <span className="text-sm text-gray-500 hidden sm:block">{formatWeekLabel(weekStart)}</span>}
+        <span className="text-sm text-gray-500 hidden sm:block">{formatWeekLabel(weekStart)}</span>
       </button>
 
       {/* Calendar dropdown */}
       {open && (
-        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 w-72">
+        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-72">
           {/* Month header */}
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={prevMonth}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label="Previous month"
             >
-              <ChevronLeft className="size-4 text-gray-500" />
+              <ChevronLeft className="size-4 text-gray-500 dark:text-gray-400" />
             </button>
-            <span className="text-sm font-semibold text-gray-800">
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
               {MONTH_NAMES[viewMonth]} {viewYear}
             </span>
             <button
               onClick={nextMonth}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label="Next month"
             >
-              <ChevronRight className="size-4 text-gray-500" />
+              <ChevronRight className="size-4 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
           {/* Column headers */}
           <div className="grid grid-cols-[1.75rem_repeat(7,1fr)] mb-1">
-            <div className="text-[10px] font-medium text-gray-300 text-center">Wk</div>
+            <div className="text-[10px] font-medium text-gray-300 dark:text-gray-600 text-center">Wk</div>
             {DAY_HEADERS.map(d => (
-              <div key={d} className="text-[10px] font-medium text-gray-400 text-center">{d}</div>
+              <div key={d} className="text-[10px] font-medium text-gray-400 dark:text-gray-500 text-center">{d}</div>
             ))}
           </div>
 
@@ -140,13 +140,13 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
                   key={week[0]}
                   className={cn(
                     "grid grid-cols-[1.75rem_repeat(7,1fr)] rounded-lg",
-                    isWeekSelected && "bg-blue-50"
+                    isWeekSelected && "bg-blue-50 dark:bg-blue-950/40"
                   )}
                 >
                   {/* Week number */}
                   <div className={cn(
                     "text-[10px] font-medium flex items-center justify-center",
-                    (isWeekSelected || isDayInWeek) ? "text-blue-500" : "text-gray-300"
+                    (isWeekSelected || isDayInWeek) ? "text-blue-500" : "text-gray-300 dark:text-gray-600"
                   )}>
                     {wk}
                   </div>
@@ -163,12 +163,12 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
                         onClick={() => handleDayClick(day)}
                         className={cn(
                           "py-1 flex items-center justify-center rounded-md transition-colors",
-                          isWeekSelected ? "hover:bg-blue-100" : "hover:bg-gray-100"
+                          isWeekSelected ? "hover:bg-blue-100 dark:hover:bg-blue-900/40" : "hover:bg-gray-100 dark:hover:bg-gray-800"
                         )}
                       >
                         <span className={cn(
                           "text-xs w-6 h-6 flex items-center justify-center rounded-full font-medium",
-                          inMonth ? "text-gray-700" : "text-gray-300",
+                          inMonth ? "text-gray-700 dark:text-gray-200" : "text-gray-300 dark:text-gray-600",
                           isToday && !isDaySelected && "ring-2 ring-blue-400 font-bold",
                           isWeekSelected && isToday && "ring-blue-500",
                           isDaySelected && "bg-blue-500 text-white",

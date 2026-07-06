@@ -140,3 +140,19 @@
     background-color: oklch(0.145 0 0); /* matches --background in .dark */
   }
 }
+
+/*
+ * Kill the browser autofill tint. Chrome/Safari paint recognized fields
+ * (email, etc.) with a grey/blue background when they offer to autofill.
+ * The inset box-shadow trick keeps our own white background + dark text.
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset;
+  box-shadow: 0 0 0 1000px white inset;
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  transition: background-color 9999s ease-in-out 0s;
+}

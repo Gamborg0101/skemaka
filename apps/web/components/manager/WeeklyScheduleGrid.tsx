@@ -33,6 +33,8 @@ import type {
   ShiftTemplate,
   TimeOffRequest,
 } from "@/types";
+import type { AvailabilityConflict } from "@/lib/useScheduleData";
+import type { CoverFocus } from "@/components/manager/CoverRequestsPanel";
 import { getOrgSettings } from "@/lib/orgSettings";
 
 interface WeeklyScheduleGridProps {
@@ -42,6 +44,8 @@ interface WeeklyScheduleGridProps {
   shiftTemplates: ShiftTemplate[];
   scheduledHoursMap: Record<string, number>;
   approvedTimeOff?: TimeOffRequest[];
+  getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null;
+  coverFocus?: CoverFocus | null;
   publishedAt?: string | null;
   onShiftMove: (
     shiftId: string,
@@ -105,6 +109,8 @@ interface DroppableCellProps {
   isWeekend: boolean;
   isClosed: boolean;
   isTimeOff: boolean;
+  conflict: AvailabilityConflict | null;
+  coverRole: "source" | "dest" | null;
   isToday: boolean;
   onAddClick: (employeeId: string, date: string) => void;
   onShiftClick: (shift: Shift) => void;
@@ -122,6 +128,8 @@ function DroppableCell({
   isWeekend,
   isClosed,
   isTimeOff,
+  conflict,
+  coverRole,
   isToday,
   onAddClick,
   onShiftClick,
@@ -130,6 +138,22 @@ function DroppableCell({
   const { setNodeRef, isOver } = useDroppable({ id: cellId });
 
   const isEmpty = shifts.length === 0;
+
+  // Cover-request highlight ring + corner label (source = giving up, dest = would cover).
+  const coverRing =
+    coverRole === "source" ? "ring-2 ring-inset ring-amber-500 dark:ring-amber-400"
+    : coverRole === "dest" ? "ring-2 ring-inset ring-green-500 dark:ring-green-400"
+    : "";
+  const coverBadge = coverRole && (
+    <span
+      className={cn(
+        "absolute -top-px left-0 z-20 rounded-br-md px-1.5 py-0.5 text-[10px] font-bold text-white",
+        coverRole === "source" ? "bg-amber-500" : "bg-green-600",
+      )}
+    >
+      {coverRole === "source" ? "Giving up" : "Would cover"}
+    </span>
+  );
 
   if (isClosed) {
     return (
@@ -154,8 +178,9 @@ function DroppableCell({
     return (
       <div
         ref={setNodeRef}
-        className="relative min-h-16 border-r border-b border-gray-200 dark:border-gray-700 bg-rose-50/60 dark:bg-rose-950/30"
+        className={cn("relative min-h-16 border-r border-b border-gray-200 dark:border-gray-700 bg-rose-50/60 dark:bg-rose-950/30", coverRing)}
       >
+        {coverBadge}
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 dark:text-rose-700 select-none">
             Time Off
@@ -185,8 +210,20 @@ function DroppableCell({
               : isToday
                 ? "bg-blue-50/20 dark:bg-gray-700/10"
                 : "bg-white dark:bg-gray-900",
+        coverRing,
       )}
     >
+      {coverBadge}
+      {conflict && !isEmpty && (
+        <Tooltip
+          content={conflict.type === "timeoff" ? "Scheduled during approved time off" : "Scheduled on a day they marked unavailable"}
+          side="top"
+        >
+          <span className="absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/60 cursor-help">
+            <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-300" />
+          </span>
+        </Tooltip>
+      )}
       <div className="space-y-1">
         {shifts.map((shift) => (
           <ShiftCard
@@ -241,6 +278,8 @@ export function WeeklyScheduleGrid({
   shiftTemplates,
   scheduledHoursMap,
   approvedTimeOff = [],
+  getConflict,
+  coverFocus,
   publishedAt,
   onShiftMove,
   onShiftCreate,
@@ -364,9 +403,11 @@ export function WeeklyScheduleGrid({
     )
       return;
 
+    // Soft warning (not a block): the manager can move a shift onto a time-off /
+    // unavailable day, but we flag it so it isn't done by accident. The cell keeps
+    // a ⚠ badge afterward.
     if (isTimeOffDay(newEmployeeId, newDate)) {
-      toast.error("This employee has approved time off on that day");
-      return;
+      toast.warning("Heads up: this employee has approved time off that day");
     }
 
     onShiftMove(shiftId, newDate, newEmployeeId);
@@ -471,9 +512,16 @@ export function WeeklyScheduleGrid({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">
-                        {employee.name}
-                      </p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">
+                          {employee.name}
+                        </p>
+                        {!employee.userId && (
+                          <Tooltip content="Has not confirmed their email yet" side="top">
+                            <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {employee.jobRole}
                       </p>
@@ -661,9 +709,16 @@ export function WeeklyScheduleGrid({
             {employees.map((employee) => (
               <React.Fragment key={employee.id}>
                 <div className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800/80 border-b border-r border-gray-200 dark:border-gray-700 px-3 py-2 flex flex-col justify-center min-h-16">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">
-                    {employee.name}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">
+                      {employee.name}
+                    </p>
+                    {!employee.userId && (
+                      <Tooltip content="Has not confirmed their email yet" side="top">
+                        <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+                      </Tooltip>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {employee.jobRole}
                   </p>
@@ -698,6 +753,14 @@ export function WeeklyScheduleGrid({
                     const date = toISODate(day);
                     const cellId = `${employee.id}__${date}`;
                     const cellShifts = getShiftsForCell(employee.id, date);
+                    const coverRole =
+                      coverFocus && coverFocus.date === date
+                        ? employee.id === coverFocus.requesterEmployeeId
+                          ? "source"
+                          : employee.id === coverFocus.claimedByEmployeeId
+                            ? "dest"
+                            : null
+                        : null;
                     return (
                       <DroppableCell
                         key={cellId}
@@ -711,6 +774,8 @@ export function WeeklyScheduleGrid({
                         isWeekend={di >= 5}
                         isClosed={closedDays[di]}
                         isTimeOff={isTimeOffDay(employee.id, date)}
+                        conflict={getConflict?.(employee.id, date) ?? null}
+                        coverRole={coverRole}
                         isToday={toISODate(day) === toISODate(new Date())}
                         onAddClick={openAddDialog}
                         onShiftClick={openEditDialog}
@@ -754,6 +819,7 @@ export function WeeklyScheduleGrid({
         shiftTemplates={shiftTemplates}
         defaultEmployeeId={addDialog.employeeId}
         defaultDate={addDialog.date}
+        getConflict={getConflict}
         onShiftCreate={onShiftCreate}
       />
 

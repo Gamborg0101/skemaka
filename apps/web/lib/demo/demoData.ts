@@ -103,8 +103,8 @@ export const DEMO_TIME_OFF: { staffId: string; day: number; reason: string }[] =
  * but listed explicitly so the demo can highlight them without re-deriving.
  */
 export const DEMO_FLAGS: DemoFlag[] = [
-  { staffId: "tom", day: 4, note: "Tom is on approved leave on Friday — but he's on the rota." },
-  { staffId: "lena", day: 6, note: "Lena marked Saturday as unavailable — but she's on the rota." },
+  { staffId: "tom", day: 4, note: "Tom is on approved leave on Friday — but he's on the schedule." },
+  { staffId: "lena", day: 6, note: "Lena marked Saturday as unavailable — but she's on the schedule." },
 ]
 
 // ── Derived helpers (pure) ──────────────────────────────────────────────────────
