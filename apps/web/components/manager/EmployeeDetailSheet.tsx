@@ -84,7 +84,7 @@ function InfoRow({
       </div>
       <div className="min-w-0">
         <p className="text-xs text-gray-400 leading-none mb-0.5">{label}</p>
-        <div className="text-sm text-gray-800">{children}</div>
+        <div className="text-sm text-gray-800 dark:text-gray-100">{children}</div>
       </div>
     </div>
   )
@@ -214,7 +214,7 @@ export function EmployeeDetailSheet({
               {getInitials(employee.name)}
             </div>
             <div className="min-w-0 flex-1 pt-1">
-              <SheetTitle className="text-base font-semibold text-gray-900 leading-tight">
+              <SheetTitle className="text-base font-semibold text-gray-900 dark:text-gray-50 leading-tight">
                 {employee.name}
               </SheetTitle>
               <p className="text-sm text-gray-500 mt-0.5">{employee.jobRole}</p>
@@ -396,7 +396,7 @@ export function EmployeeDetailSheet({
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
                       Notes
                     </p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                       {employee.notes}
                     </p>
                   </div>
@@ -405,14 +405,23 @@ export function EmployeeDetailSheet({
 
               <Separator />
 
-              {/* Sick days */}
-              <div className="flex items-center gap-2.5 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2.5">
-                <AlertTriangle className="size-4 text-rose-400 shrink-0" />
-                <p className="text-sm text-rose-700">
-                  <span className="font-medium">{sickDaysThisMonth}</span>{" "}
-                  sick {sickDaysThisMonth === 1 ? "day" : "days"} this month
-                </p>
-              </div>
+              {/* Sick days — only alarm-styled when there's actually a sick day */}
+              {sickDaysThisMonth > 0 ? (
+                <div className="flex items-center gap-2.5 rounded-lg border border-rose-100 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 px-3 py-2.5">
+                  <AlertTriangle className="size-4 text-rose-400 shrink-0" />
+                  <p className="text-sm text-rose-700 dark:text-rose-300">
+                    <span className="font-medium">{sickDaysThisMonth}</span>{" "}
+                    sick {sickDaysThisMonth === 1 ? "day" : "days"} this month
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 px-3 py-2.5">
+                  <AlertTriangle className="size-4 text-gray-300 dark:text-gray-600 shrink-0" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No sick days this month
+                  </p>
+                </div>
+              )}
 
               {/* Invite */}
               {employee.isActive && (

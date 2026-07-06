@@ -197,20 +197,57 @@ export default async function LoginPage({
             </p>
           </div>
 
-          <form
-            action={async () => {
-              "use server";
-              await signIn("google", { redirectTo });
-            }}
-          >
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+          <div className="space-y-4">
+            <form
+              action={async () => {
+                "use server";
+                await signIn("google", { redirectTo });
+              }}
             >
-              <GoogleIcon />
-              Continue with Google
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+              >
+                <GoogleIcon />
+                Continue with Google
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+              <span className="text-[11px] font-medium uppercase tracking-widest text-gray-400 dark:text-gray-600">
+                or
+              </span>
+              <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
+            </div>
+
+            {/* Email magic link — the path invited staff use (no Google needed) */}
+            <form
+              action={async (formData: FormData) => {
+                "use server";
+                const email = String(formData.get("email") ?? "").trim();
+                if (!email) return;
+                await signIn("resend", { email, redirectTo });
+              }}
+              className="space-y-2.5"
+            >
+              <input
+                type="email"
+                name="email"
+                required
+                autoComplete="email"
+                placeholder="you@restaurant.com"
+                className="w-full h-11 px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-colors"
+              />
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-2 h-11 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white shadow-sm transition-colors"
+              >
+                Email me a sign-in link
+              </button>
+            </form>
+          </div>
 
           <p className="text-center text-xs text-gray-400 dark:text-gray-500">
             By signing in you agree to our{" "}

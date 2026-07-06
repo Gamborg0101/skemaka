@@ -55,7 +55,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!isValidTime(startTime) || !isValidTime(endTime)) {
     return NextResponse.json({ error: "startTime and endTime must be HH:MM" }, { status: 400 })
   }
-  if (!timesAreDifferent(startTime, endTime)) {
+  // Sick days are zero-duration day markers (00:00–00:00) — they carry no hours
+  // and are excluded from all hours/cost math — so the differ check doesn't apply.
+  if (colorTag !== "sick" && !timesAreDifferent(startTime, endTime)) {
     return NextResponse.json({ error: "startTime and endTime must differ" }, { status: 400 })
   }
   if (!isNonNegativeInt(breakMinutes ?? 0)) {

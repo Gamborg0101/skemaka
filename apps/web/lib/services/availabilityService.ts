@@ -101,6 +101,29 @@ export async function createAvailabilityRequest(
     },
   })
 
+  // The availability link is keyed on Employee.inviteToken, which resolveInviteToken
+  // requires to be unexpired. inviteExpiry is only set at invite time (+7 days), so
+  // any request sent more than a week after an employee was invited would email a
+  // dead link. Refresh the window (and mint a token for anyone missing one) so the
+  // link is guaranteed valid for this cycle. Identity-claiming is separately gated
+  // by an emailed 6-digit code, so a longer token window is not a hijack risk.
+  const linkExpiry = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000)
+  const active = await db.employee.findMany({
+    where: { organizationId: orgId, isActive: true },
+    select: { id: true, inviteToken: true },
+  })
+  await db.$transaction(
+    active.map((emp) =>
+      db.employee.update({
+        where: { id: emp.id },
+        data: {
+          inviteToken:  emp.inviteToken ?? crypto.randomUUID(),
+          inviteExpiry: linkExpiry,
+        },
+      }),
+    ),
+  )
+
   const [org, employees] = await Promise.all([
     db.organization.findUnique({ where: { id: orgId }, select: { name: true } }),
     db.employee.findMany({
@@ -228,6 +251,40 @@ export async function submitAvailability(
       endTime:      d.isAvailable ? (d.endTime   ?? null) : null,
     })),
   })
+}
+
+/**
+ * Read-only: the (employeeId, date) pairs an employee marked *unavailable* for a
+ * given week, so the scheduler can flag conflicts when assigning shifts. Unlike
+ * getOrCreateForWeek this never creates a request — it just reads what's there,
+ * returning [] when no availability was collected for the week.
+ */
+export async function getWeekUnavailability(
+  orgId: string,
+  weekStart: string,
+): Promise<{ employeeId: string; date: string }[]> {
+  const request = await db.availabilityRequest.findFirst({
+    where: { organizationId: orgId, weekStart: new Date(weekStart) },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  })
+  if (!request) return []
+
+  const submissions = await db.availabilitySubmission.findMany({
+    where: { requestId: request.id, organizationId: orgId },
+    select: {
+      employeeId: true,
+      days: { where: { isAvailable: false }, select: { date: true } },
+    },
+  })
+
+  const out: { employeeId: string; date: string }[] = []
+  for (const s of submissions) {
+    for (const d of s.days) {
+      out.push({ employeeId: s.employeeId, date: d.date.toISOString().slice(0, 10) })
+    }
+  }
+  return out
 }
 
 export async function getEmployeeIdForUser(

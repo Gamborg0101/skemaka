@@ -82,7 +82,11 @@ beforeEach(() => {
 
 describe("claimInvite", () => {
   it("happy path: links user and creates EMPLOYEE membership", async () => {
-    mockEmployeeFindFirst.mockResolvedValue(makeEmployee())
+    // First findFirst resolves the invite employee; the second is the
+    // "already-verified phone on another org" lookup — null for a fresh user.
+    mockEmployeeFindFirst
+      .mockResolvedValueOnce(makeEmployee())
+      .mockResolvedValueOnce(null)
 
     const result = await claimInvite("tok-abc", "user-1")
 
@@ -91,6 +95,7 @@ describe("claimInvite", () => {
       employeeId:     "emp-1",
       employeeName:   "Alice",
       orgName:        "Test Café",
+      phoneVerified:  false,
     })
 
     expect(mockTransaction).toHaveBeenCalledOnce()
