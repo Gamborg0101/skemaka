@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
+import { isSuperadmin } from "@/lib/platform"
 
 async function requireSuperadmin() {
   const session = await auth()
   if (!session?.user?.email) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }
-  if (session.user.email !== process.env.SUPERADMIN_EMAIL) {
+  if (!isSuperadmin(session.user.email)) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
   }
   return { ok: true }

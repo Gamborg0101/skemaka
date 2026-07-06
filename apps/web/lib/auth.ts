@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { db } from "@/lib/prisma"
 import { authConfig } from "@/auth.config"
+import { isSuperadmin } from "@/lib/platform"
 import type { UserRole, SubscriptionStatus } from "@/types"
 
 /**
@@ -182,7 +183,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       // Superadmin is identified by email, not membership — restore it last so a
       // re-validation that downgraded role to EMPLOYEE can't strip ADMIN.
-      if (token.email === process.env.SUPERADMIN_EMAIL) {
+      if (isSuperadmin(token.email as string | null | undefined)) {
         token.role = "ADMIN"
       }
       token.role ??= "EMPLOYEE"
