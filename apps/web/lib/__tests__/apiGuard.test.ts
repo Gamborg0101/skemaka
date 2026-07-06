@@ -4,7 +4,7 @@
  * These guards are the security boundary for every /api/orgs/[orgId]/* route:
  * a regression here means cross-org data access or a paywall bypass.
  */
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest"
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from "vitest"
 import { NextRequest } from "next/server"
 import { getToken, decode } from "next-auth/jwt"
 import { db } from "@/lib/prisma"
@@ -20,6 +20,7 @@ vi.mock("@/lib/prisma", () => ({
     membership: { findFirst: vi.fn() },
     employee: { findFirst: vi.fn() },
     organization: { findUnique: vi.fn() },
+    superAdminAudit: { create: vi.fn().mockResolvedValue({}) },
   },
 }))
 
@@ -241,5 +242,44 @@ describe("requireManagerRole", () => {
   it("allows MANAGER and ADMIN", () => {
     expect(requireManagerRole({ userId: "u1", role: "MANAGER" })).toBeNull()
     expect(requireManagerRole({ userId: "u1", role: "ADMIN" })).toBeNull()
+  })
+})
+
+describe("requireOrgMember — super-admin cross-restaurant bypass", () => {
+  const ORIGINAL = process.env.SUPERADMIN_EMAIL
+  beforeEach(() => { process.env.SUPERADMIN_EMAIL = "boss@example.com" })
+  afterEach(() => { process.env.SUPERADMIN_EMAIL = ORIGINAL })
+
+  it("lets the super admin into an org they are NOT a member of, as ADMIN, no billing block", async () => {
+    mockGetToken.mockResolvedValue({ sub: "sa", role: "ADMIN", orgId: "own-org", email: "boss@example.com" })
+    const guard = await requireOrgMember("other-org", req())
+    expect(guard).toMatchObject({ userId: "sa", role: "ADMIN", orgId: "other-org" })
+    // The bypass authorizes without touching membership/billing.
+    expect(mockMembershipFindFirst).not.toHaveBeenCalled()
+  })
+
+  it("matches the super-admin email case-insensitively", async () => {
+    mockGetToken.mockResolvedValue({ sub: "sa", role: "ADMIN", orgId: "own-org", email: "BOSS@Example.com" })
+    expect(await requireOrgMember("other-org", req())).toMatchObject({ role: "ADMIN", orgId: "other-org" })
+  })
+
+  it("does NOT bypass for the super admin's OWN org — normal billing still applies", async () => {
+    mockGetToken.mockResolvedValue({
+      sub: "sa", role: "ADMIN", orgId: "own-org", email: "boss@example.com",
+      subscriptionStatus: "CANCELED", trialEndsAt: null, pastDueSince: null,
+    })
+    mockOrgFindUnique.mockResolvedValue({ subscriptionStatus: "CANCELED", trialEndsAt: null, pastDueSince: null } as never)
+    expect(await status(await requireOrgMember("own-org", req()))).toBe(402)
+  })
+
+  it("does NOT bypass when SUPERADMIN_EMAIL is unset", async () => {
+    delete process.env.SUPERADMIN_EMAIL
+    mockGetToken.mockResolvedValue({ sub: "sa", role: "ADMIN", orgId: "own-org", email: "boss@example.com" })
+    expect(await status(await requireOrgMember("other-org", req()))).toBe(403)
+  })
+
+  it("does NOT bypass for a non-super-admin — a different org is still 403", async () => {
+    mockGetToken.mockResolvedValue({ sub: "u1", role: "MANAGER", orgId: "own-org", email: "regular@example.com", subscriptionStatus: "ACTIVE" })
+    expect(await status(await requireOrgMember("other-org", req()))).toBe(403)
   })
 })
