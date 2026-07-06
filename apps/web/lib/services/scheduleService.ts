@@ -3,12 +3,13 @@ import { serSchedule, serShift, serEmployee } from "@/lib/serialize"
 import { Prisma } from "@/app/generated/prisma/client"
 import {
   sendSchedulePublishedSms,
+  sendRollOutSms,
   sendShiftAssignedSms,
   sendShiftCancelledSms,
   sendShiftUpdatedSms,
 } from "@/lib/sms"
 import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
-import { sendShiftAssignedEmail } from "@/lib/resend"
+import { sendShiftAssignedEmail, sendShiftsRolledOutEmail } from "@/lib/resend"
 import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -364,16 +365,22 @@ export async function copyPreviousWeek(orgId: string, weekStart: string): Promis
   return serSchedule(result!)
 }
 
+export interface PublishResult {
+  schedule: Schedule
+  /** How many distinct employees with shifts were notified (email + any SMS). */
+  notified: number
+}
+
 export async function publishSchedule(
   orgId: string,
   scheduleId: string,
-): Promise<Schedule> {
+): Promise<PublishResult> {
   const schedule = await db.schedule.findFirst({
     where: { id: scheduleId, organizationId: orgId },
     include: {
       shifts: {
         where: { colorTag: { not: "sick" } },
-        include: { employee: { select: { id: true, name: true, phone: true } } },
+        include: { employee: { select: { id: true, name: true, phone: true, email: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
       organization: { select: { name: true, settings: true } },
@@ -391,11 +398,11 @@ export async function publishSchedule(
     include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
   })
 
-  const byEmployee = new Map<string, { name: string; phone: string | null; lines: string[] }>()
+  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; lines: string[] }>()
   for (const shift of schedule.shifts) {
     const emp = shift.employee
     if (!byEmployee.has(emp.id)) {
-      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, lines: [] })
+      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, email: emp.email, lines: [] })
     }
     const day = new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
     byEmployee.get(emp.id)!.lines.push(`${day} ${formatTime(shift.startTime, tf)}–${formatTime(shift.endTime, tf)}`)
@@ -403,13 +410,120 @@ export async function publishSchedule(
 
   const weekLabel = formatWeekLabel(schedule.weekStart.toISOString().split("T")[0])
   const orgName = schedule.organization.name
-  for (const { name, phone, lines } of byEmployee.values()) {
+  // Notify everyone who got a shift: email always (reliable), SMS when a phone
+  // is on file and Twilio is configured. Fire-and-forget so a slow/failed send
+  // never blocks the roll-out.
+  for (const { name, phone, email, lines } of byEmployee.values()) {
+    if (email) {
+      void sendShiftsRolledOutEmail({ to: email, name: name.split(" ")[0], orgName, periodLabel: weekLabel }).catch(() => {})
+    }
     if (phone) {
       void sendSchedulePublishedSms({ to: phone, employeeName: name.split(" ")[0], orgName, weekLabel, shiftLines: lines })
     }
   }
 
-  return serSchedule(updated)
+  return { schedule: serSchedule(updated), notified: byEmployee.size }
+}
+
+// ── Multi-week roll-out ─────────────────────────────────────────────────────
+
+export interface PendingRolloutWeek {
+  weekStart: string        // YYYY-MM-DD (Monday)
+  shiftCount: number
+  employeeIds: string[]    // distinct employees with a real shift that week
+}
+
+/** Draft (unpublished) weeks that have at least one real shift, oldest first. */
+export async function getPendingRollout(orgId: string): Promise<PendingRolloutWeek[]> {
+  const schedules = await db.schedule.findMany({
+    where: { organizationId: orgId, publishedAt: null },
+    include: {
+      shifts: { where: { colorTag: { not: "sick" } }, select: { employeeId: true } },
+    },
+    orderBy: { weekStart: "asc" },
+  })
+  return schedules
+    .filter((s) => s.shifts.length > 0)
+    .map((s) => ({
+      weekStart: s.weekStart.toISOString().split("T")[0],
+      shiftCount: s.shifts.length,
+      employeeIds: [...new Set(s.shifts.map((sh) => sh.employeeId))],
+    }))
+}
+
+export interface RollOutResult {
+  weeks: number
+  notified: number
+  periodLabel: string
+}
+
+/**
+ * Roll out every draft week that has shifts within [fromWeek, toWeek] (inclusive,
+ * Monday YYYY-MM-DD). Publishes them all in one shot and notifies each affected
+ * employee ONCE (email always; SMS when a number is on file) that the roll-out
+ * for the whole period is ready.
+ */
+export async function rollOut(
+  orgId: string,
+  fromWeek: string,
+  toWeek: string,
+): Promise<RollOutResult> {
+  // Match by the same normalized week key getPendingRollout returns (the
+  // Prisma-stored weekStart has mixed time components across legacy rows, so a
+  // raw DateTime range is unreliable; YYYY-MM-DD string compare is exact).
+  const weekKey = (d: Date) => d.toISOString().split("T")[0]
+
+  const schedules = await db.schedule.findMany({
+    where: { organizationId: orgId, publishedAt: null },
+    include: {
+      shifts: {
+        where: { colorTag: { not: "sick" } },
+        include: { employee: { select: { id: true, name: true, phone: true, email: true } } },
+      },
+    },
+    orderBy: { weekStart: "asc" },
+  })
+
+  const toPublish = schedules.filter((s) => {
+    const k = weekKey(s.weekStart)
+    return s.shifts.length > 0 && k >= fromWeek && k <= toWeek
+  })
+  if (toPublish.length === 0) {
+    throw new ServiceError("No draft weeks with shifts to roll out", "CONFLICT")
+  }
+
+  await db.schedule.updateMany({
+    where: { id: { in: toPublish.map((s) => s.id) } },
+    data: { publishedAt: new Date() },
+  })
+
+  // One notification per employee across the whole period.
+  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null }>()
+  for (const s of toPublish) {
+    for (const shift of s.shifts) {
+      const e = shift.employee
+      if (!byEmployee.has(e.id)) byEmployee.set(e.id, { name: e.name, phone: e.phone, email: e.email })
+    }
+  }
+
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true } })
+  const orgName = org?.name ?? ""
+  // Period spans the first rolled week's Monday to the last rolled week's Sunday.
+  const firstMonday = toPublish[0].weekStart
+  const lastMonday  = toPublish[toPublish.length - 1].weekStart
+  const lastSunday  = new Date(lastMonday.getTime() + 6 * 24 * 60 * 60 * 1000)
+  const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
+  const periodLabel = toPublish.length === 1
+    ? formatWeekLabel(firstMonday.toISOString().split("T")[0])
+    : `${fmt(firstMonday)} – ${fmt(lastSunday)}`
+
+  for (const { name, phone, email } of byEmployee.values()) {
+    const first = name.split(" ")[0]
+    if (email) void sendShiftsRolledOutEmail({ to: email, name: first, orgName, periodLabel }).catch(() => {})
+    if (phone) void sendRollOutSms({ to: phone, employeeName: first, orgName, periodLabel })
+  }
+
+  return { weeks: toPublish.length, notified: byEmployee.size, periodLabel }
 }
 
 // ── Shifts ────────────────────────────────────────────────────────────────────

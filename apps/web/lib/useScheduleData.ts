@@ -71,6 +71,9 @@ export function useScheduleData(orgId: string, weekStart: string) {
   // in render — this avoids calling setState synchronously inside an effect.
   // Starts empty (never matches a real key) so the first mount is loading.
   const [fetchedKey, setFetchedKey] = useState("");
+  // Bumped to force a background re-fetch of the current week (e.g. after a
+  // multi-week roll-out publishes it) without flipping the loading state.
+  const [reloadNonce, setReloadNonce] = useState(0);
   const currentKey = `${orgId}__${weekStart}`;
   // Derive loading/error from whether the fetched key is current.
   // We reset loadError optimistically when the key changes.
@@ -107,7 +110,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     return () => {
       cancelled = true;
     };
-  }, [weekStart, orgId]);
+  }, [weekStart, orgId, reloadNonce]);
 
   // Lazily creates the schedule for a week on first shift add. Returns the
   // schedule (existing or newly created) so callers can immediately use its id.
@@ -208,17 +211,22 @@ export function useScheduleData(orgId: string, weekStart: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ published: true }),
       });
-      const res = (await r.json()) as { data?: Schedule; error?: string };
+      const res = (await r.json()) as { data?: Schedule; notified?: number; error?: string };
       if (res.data) {
         setSchedule((s) =>
           s ? { ...s, publishedAt: res.data!.publishedAt } : s,
         );
-        toast.success("Schedule published — your team can see it now");
+        const n = res.notified ?? 0;
+        toast.success(
+          n > 0
+            ? `Schedule rolled out — ${n} ${n === 1 ? "person" : "people"} notified`
+            : "Schedule rolled out — your team can see it now",
+        );
       } else {
-        toast.error(res.error ?? "Failed to publish schedule");
+        toast.error(res.error ?? "Failed to roll out schedule");
       }
     } catch {
-      toast.error("Failed to publish schedule");
+      toast.error("Failed to roll out schedule");
     } finally {
       setPublishing(false);
     }
@@ -249,6 +257,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     generating,
     generateWeek,
     handlePublish,
+    reloadSchedule: () => setReloadNonce((n) => n + 1),
     handleShiftMove,
     handleShiftCreate,
     handleShiftUpdate,

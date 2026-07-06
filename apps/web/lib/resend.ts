@@ -204,3 +204,38 @@ export async function sendShiftAssignedEmail({
     `,
   })
 }
+
+interface ShiftsRolledOutOptions {
+  to: string
+  name: string
+  orgName: string
+  periodLabel: string
+}
+
+/** Sent to every employee with a shift when a manager rolls out the schedule. */
+export async function sendShiftsRolledOutEmail({
+  to, name, orgName, periodLabel,
+}: ShiftsRolledOutOptions) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://skemaka.com"
+  return getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    to,
+    subject: "New shifts in Skemaka",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <p style="color: #555; margin-bottom: 20px;">
+          <strong>${orgName}</strong> just rolled out the schedule for <strong>${periodLabel}</strong>.
+          Open Skemaka to see your shifts.
+        </p>
+        <a href="${appUrl}/portal"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px;">
+          View my shifts
+        </a>
+        <p style="color: #999; font-size: 13px; margin-top: 24px;">
+          You're receiving this because you have shifts at ${orgName} on Skemaka.
+        </p>
+      </div>
+    `,
+  })
+}

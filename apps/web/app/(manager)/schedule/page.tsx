@@ -10,6 +10,7 @@ import { CoverRequestsPanel, type CoverFocus } from "@/components/manager/CoverR
 import { getOrgSettings } from "@/lib/orgSettings"
 import { getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
+import { RollOutDialog } from "@/components/manager/RollOutDialog"
 import { useOrg } from "@/lib/orgContext"
 import { useScheduleData } from "@/lib/useScheduleData"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -23,6 +24,7 @@ export default function SchedulePage() {
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split("T")[0])
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
   const [hintDismissed, setHintDismissed] = useState(false)
+  const [rollOutOpen, setRollOutOpen] = useState(false)
   // The cover request the manager is reviewing — highlighted on the grid.
   const [coverFocus, setCoverFocus] = useState<CoverFocus | null>(null)
 
@@ -38,8 +40,8 @@ export default function SchedulePage() {
   }
 
   const {
-    schedule, loading, employees, approvedTimeOff, getConflict, publishing,
-    handlePublish, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
+    schedule, loading, employees, approvedTimeOff, getConflict,
+    reloadSchedule, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
   } = useScheduleData(orgId, weekStart)
 
   // A schedule is created lazily (on first shift add), so it can be null even
@@ -256,17 +258,30 @@ export default function SchedulePage() {
     </>
   )
 
+  // Status of the week currently in view (informational; the roll-out itself
+  // spans every draft week, handled in the dialog).
+  const isRolledOut = !!schedule?.publishedAt
+  const hasDraftShifts = !isRolledOut && (schedule?.shifts?.length ?? 0) > 0
+
   const publishBtn = (
-    <Button
-      size="sm"
-      onClick={handlePublish}
-      disabled={publishing || !schedule || !!schedule.publishedAt}
-      className={schedule?.publishedAt
-        ? "bg-green-50 border border-green-200 text-green-700 hover:bg-green-50 shrink-0"
-        : "bg-blue-600 hover:bg-blue-700 text-white shrink-0"}
-    >
-      {schedule?.publishedAt ? "Published ✓" : publishing ? "Publishing…" : "Publish"}
-    </Button>
+    <div className="flex items-center gap-2 shrink-0">
+      {isRolledOut ? (
+        <span className="hidden sm:inline-flex items-center rounded-full bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:text-green-300">
+          Rolled out
+        </span>
+      ) : hasDraftShifts ? (
+        <span className="hidden sm:inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+          Draft
+        </span>
+      ) : null}
+      <Button
+        size="sm"
+        onClick={() => setRollOutOpen(true)}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        Roll out
+      </Button>
+    </div>
   )
 
   return (
@@ -420,6 +435,13 @@ export default function SchedulePage() {
           />
         )}
       </div>
+
+      <RollOutDialog
+        open={rollOutOpen}
+        onOpenChange={setRollOutOpen}
+        orgId={orgId}
+        onRolledOut={() => reloadSchedule()}
+      />
     </div>
   )
 }

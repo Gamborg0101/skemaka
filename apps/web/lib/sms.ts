@@ -196,6 +196,28 @@ export async function sendSchedulePublishedSms({
   );
 }
 
+/**
+ * Sent once per employee when a manager rolls out a (possibly multi-week)
+ * schedule. Summary only — the per-shift detail lives in the app, which the
+ * roll-out may span months of.
+ */
+export async function sendRollOutSms({
+  to,
+  employeeName,
+  orgName,
+  periodLabel,
+}: {
+  to: string;
+  employeeName: string;
+  orgName: string;
+  periodLabel: string;
+}): Promise<void> {
+  await send(
+    to,
+    `Hi ${employeeName}! New shifts in Skemaka — ${orgName} rolled out the schedule for ${periodLabel}. Open the app to see your shifts.`,
+  );
+}
+
 export async function sendTimeOffApprovedSms({
   to,
   employeeName,
