@@ -1,7 +1,7 @@
 import { db } from "@/lib/prisma"
 import { PrismaClient, Prisma } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
-import { seedDefaultRoles } from "@/lib/seedDefaultRoles"
+import { seedDefaultRoles, seedDefaultShiftTemplates } from "@/lib/seedDefaultRoles"
 import { recordAudit } from "@/lib/audit"
 import { syncSubscriptionQuantitySafe } from "./billingService"
 import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings } from "@/types"
@@ -85,6 +85,7 @@ export async function createOrg(
     })
 
     await seedDefaultRoles(newOrg.id, client, industry)
+    await seedDefaultShiftTemplates(newOrg.id, client)
 
     return newOrg
   })
