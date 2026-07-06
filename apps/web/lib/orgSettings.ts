@@ -17,6 +17,7 @@ export interface OrgSettings {
   currency: string   // ISO 4217 code e.g. "EUR", "USD"
   timeOffEnabled: boolean
   timeFormat: "12h" | "24h"  // "24h" = 14:00 (EU default), "12h" = 2:00 PM (US)
+  includeManagerInSchedule: boolean  // manager appears as a schedulable person
 }
 
 export const SUPPORTED_CURRENCIES = [
@@ -48,6 +49,7 @@ let _settings: OrgSettings = {
   currency: "EUR",
   timeOffEnabled: true,
   timeFormat: "24h",
+  includeManagerInSchedule: false,
 }
 
 export function getOrgSettings(): OrgSettings {
@@ -57,6 +59,7 @@ export function getOrgSettings(): OrgSettings {
     currency: _settings.currency,
     timeOffEnabled: _settings.timeOffEnabled,
     timeFormat: _settings.timeFormat,
+    includeManagerInSchedule: _settings.includeManagerInSchedule,
   }
 }
 

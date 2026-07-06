@@ -309,7 +309,7 @@ export default function EmployeesPage() {
                         View
                       </Button>
                       <Tooltip content="Edit employee">
-                        <Button variant="ghost" size="icon-sm" onClick={() => openSheetInEditMode(emp)} className="text-gray-500 hover:text-gray-700 min-w-[36px] min-h-[36px]">
+                        <Button variant="ghost" size="icon-sm" onClick={() => openSheetInEditMode(emp)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 min-w-[36px] min-h-[36px]">
                           <Pencil className="size-3.5" />
                         </Button>
                       </Tooltip>
@@ -398,7 +398,7 @@ export default function EmployeesPage() {
             <DialogTitle>Remove employee?</DialogTitle>
             <DialogDescription>
               This will permanently remove{" "}
-              <span className="font-medium text-gray-900">{deleteTarget?.name}</span>{" "}
+              <span className="font-medium text-gray-900 dark:text-gray-50">{deleteTarget?.name}</span>{" "}
               from the system. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>

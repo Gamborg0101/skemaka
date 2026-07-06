@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 import { CoworkerList } from "@/components/manager/CoworkerList"
 import { EmployeePicker } from "@/components/manager/EmployeePicker"
 import { MyShiftsWeekNav } from "@/components/manager/MyShiftsWeekNav"
+import { OfferCoverButton } from "@/components/employee/OfferCoverButton"
+import { CoverPoolPanel } from "@/components/employee/CoverPoolPanel"
 import { pickShiftQuote } from "@/types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -129,6 +131,18 @@ export default async function MyShiftsPage({
 
   const nextShiftId = shifts.find((s) => s.date >= today)?.id
 
+  // Which of my shifts are already up for cover (to seed the per-shift button).
+  const myActiveCover = viewingSelf
+    ? await db.shiftCoverRequest.findMany({
+        where: { requesterEmployeeId: selfEmployee.id, status: { in: ["OPEN", "CLAIMED"] } },
+        select: { id: true, shiftId: true, status: true },
+      })
+    : []
+  const coverByShift = new Map<string, { id: string; status: "OPEN" | "CLAIMED" }>()
+  for (const c of myActiveCover) {
+    coverByShift.set(c.shiftId, { id: c.id, status: c.status as "OPEN" | "CLAIMED" })
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Desktop header */}
@@ -177,6 +191,7 @@ export default async function MyShiftsPage({
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
+      {viewingSelf && <CoverPoolPanel orgId={selfEmployee.organizationId} />}
       {shifts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-base font-medium">No shifts this week</p>
@@ -259,6 +274,17 @@ export default async function MyShiftsPage({
 
                   {/* Coworkers */}
                   {coworkers.length > 0 && <CoworkerList coworkers={coworkers} />}
+
+                  {/* Offer this shift up for a teammate to cover (own upcoming shifts only) */}
+                  {viewingSelf && shift.date >= today && (
+                    <div className="mt-auto pt-1">
+                      <OfferCoverButton
+                        orgId={selfEmployee.organizationId}
+                        shiftId={shift.id}
+                        initial={coverByShift.get(shift.id) ?? null}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )

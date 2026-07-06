@@ -1,7 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, monthlyTotal } from "@/lib/pricing"
+import { TrendingDown } from "lucide-react"
+import {
+  PRICE_PER_EMPLOYEE_MONTHLY,
+  PLAN_CURRENCY,
+  monthlyTotal,
+  breakEvenLabourHoursPerMonth,
+  ROI_ASSUMED_HOURLY_WAGE,
+} from "@/lib/pricing"
 
 const MIN = 1
 const MAX = 60
@@ -14,6 +21,9 @@ const MAX = 60
 export function PricingCalculator() {
   const [count, setCount] = useState(8)
   const total = monthlyTotal(count)
+  // Break-even framing: how little avoided over-scheduling covers the bill.
+  const breakEvenHrs = breakEvenLabourHoursPerMonth(count)
+  const breakEvenMinPerWeek = Math.round((breakEvenHrs * 12 / 52) * 60)
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
@@ -54,6 +64,19 @@ export function PricingCalculator() {
         </p>
         <p className="text-xs text-gray-400">
           You only pay for active staff — deactivate someone and your bill drops next cycle.
+        </p>
+      </div>
+
+      {/* Break-even: reframes the price as a return, not just a cost. */}
+      <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+        <TrendingDown className="mt-0.5 size-4 shrink-0 text-green-600" />
+        <p className="text-xs leading-relaxed text-green-900">
+          <span className="font-semibold">Pays for itself easily.</span>{" "}
+          At ~{PLAN_CURRENCY}{ROI_ASSUMED_HOURLY_WAGE}/hr, trimming just{" "}
+          <span className="font-semibold tabular-nums">
+            {breakEvenMinPerWeek} min
+          </span>{" "}
+          of over-scheduling a week covers the whole bill — the live wage total helps you find it.
         </p>
       </div>
     </div>

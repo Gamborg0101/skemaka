@@ -27,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     timeOffEnabled?: boolean
     availabilityWindowWeeks?: number
     timeFormat?: string
+    includeManagerInSchedule?: boolean
   }
   try {
     body = await req.json()
@@ -34,8 +35,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined && body.timeFormat === undefined) {
+  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined && body.timeFormat === undefined && body.includeManagerInSchedule === undefined) {
     return NextResponse.json({ error: "No settings fields provided" }, { status: 400 })
+  }
+  if (body.includeManagerInSchedule !== undefined && typeof body.includeManagerInSchedule !== "boolean") {
+    return NextResponse.json({ error: "includeManagerInSchedule must be a boolean" }, { status: 400 })
   }
   if (body.timeFormat !== undefined && !VALID_TIME_FORMATS.has(body.timeFormat)) {
     return NextResponse.json({ error: "timeFormat must be '12h' or '24h'" }, { status: 400 })
@@ -72,7 +76,18 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     timeOffEnabled:           body.timeOffEnabled,
     availabilityWindowWeeks:  body.availabilityWindowWeeks,
     timeFormat:               body.timeFormat as "12h" | "24h" | undefined,
+    includeManagerInSchedule: body.includeManagerInSchedule,
   })
+
+  // Adding/removing the manager as a schedulable person is a side effect of the
+  // toggle — sync their self-linked Employee record to match.
+  if (body.includeManagerInSchedule !== undefined) {
+    await orgService.syncManagerEmployee(
+      orgId,
+      { userId: guard.userId, email: guard.email, name: guard.name },
+      body.includeManagerInSchedule,
+    )
+  }
 
   return NextResponse.json({ data: merged })
 }

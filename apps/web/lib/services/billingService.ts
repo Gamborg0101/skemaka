@@ -48,3 +48,19 @@ export function syncSubscriptionQuantitySafe(orgId: string): void {
     console.error("[billing] subscription quantity sync failed for org", orgId, err),
   )
 }
+
+/**
+ * Cancel a Stripe subscription so a deleted org stops billing immediately.
+ * Best-effort: a Stripe outage must not block account/org deletion — we log and
+ * return false so the caller can proceed. No-op for a null id (trialing orgs).
+ */
+export async function cancelSubscriptionSafe(subscriptionId: string | null): Promise<boolean> {
+  if (!subscriptionId) return true
+  try {
+    await stripe.subscriptions.cancel(subscriptionId)
+    return true
+  } catch (err) {
+    console.error("[billing] failed to cancel subscription", subscriptionId, err)
+    return false
+  }
+}

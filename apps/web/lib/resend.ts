@@ -1,3 +1,4 @@
+import "server-only"
 import { Resend } from "resend"
 
 let _resend: Resend | null = null
@@ -81,8 +82,29 @@ interface ClaimCodeOptions {
   code: string
 }
 
+/**
+ * Retry a Resend send a few times before giving up. Transient failures
+ * (network blips, brief Resend 5xx) would otherwise leave the caller thinking a
+ * code was sent when it never left the building — the classic "I had to press
+ * send again" bug. Short, bounded backoff keeps the request responsive.
+ */
+async function sendWithRetry<T>(send: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await send()
+    } catch (err) {
+      lastErr = err
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 250 * (i + 1)))
+      }
+    }
+  }
+  throw lastErr
+}
+
 export async function sendClaimCodeEmail({ to, name, orgName, code }: ClaimCodeOptions) {
-  return getResend().emails.send({
+  return sendWithRetry(() => getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
     subject: `Your Skemaka verification code: ${code}`,
@@ -100,7 +122,7 @@ export async function sendClaimCodeEmail({ to, name, orgName, code }: ClaimCodeO
         </p>
       </div>
     `,
-  })
+  }))
 }
 
 export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }: InviteEmailOptions) {

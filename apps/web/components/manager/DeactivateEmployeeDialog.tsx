@@ -67,25 +67,25 @@ export function DeactivateEmployeeDialog({
           <div className="mt-0.5 size-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
             <AlertTriangle className="size-4 text-amber-500" />
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             {employee.name} will be hidden from the schedule and cannot be assigned new shifts.
           </p>
         </div>
 
         {upcomingShifts.length > 0 && (
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
-            <label className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-200 bg-white">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <label className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors border-b border-gray-200 dark:border-gray-700">
               <input
                 type="checkbox"
                 className="size-4 rounded border-gray-300 accent-red-600"
                 checked={deleteShifts}
                 onChange={(e) => setDeleteShifts(e.target.checked)}
               />
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
                 Also delete {upcomingShifts.length} upcoming shift{upcomingShifts.length !== 1 ? "s" : ""}
               </span>
             </label>
-            <ul className="divide-y divide-gray-100 bg-gray-50">
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700 bg-gray-50 dark:bg-gray-900/40">
               {upcomingShifts.map((shift) => (
                 <li
                   key={shift.id}
@@ -94,7 +94,7 @@ export function DeactivateEmployeeDialog({
                     deleteShifts ? "opacity-40" : "opacity-100"
                   )}
                 >
-                  <span className="flex items-center gap-1.5 text-gray-700">
+                  <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
                     <Calendar className="size-3 shrink-0 text-gray-400" />
                     {fmtDate(shift.date)}
                   </span>

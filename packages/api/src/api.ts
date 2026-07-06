@@ -21,6 +21,7 @@ import type {
   AvailabilitySubmission,
   AvailabilityDay,
   DayHours,
+  CoverRequest,
 } from "@skemaka/types"
 
 export const DEFAULT_ORG_HOURS: DayHours[] = [
@@ -474,4 +475,86 @@ export async function getAllAvailabilitySubmissions(
     client,
     `/api/orgs/${orgId}/availability/${requestId}/submissions`,
   )
+}
+
+// ─── Shift cover requests (swap pool) ─────────────────────────────────────────
+
+export type CoverLists = { pool: CoverRequest[]; mine: CoverRequest[] }
+
+/** Employee view: the open pool they can claim + their own requests/claims. */
+export async function getMyCoverRequests(
+  client: ApiClient,
+  orgId: string,
+): Promise<CoverLists> {
+  const res = await client.get<Wrapped<CoverLists>>(`/api/orgs/${orgId}/cover-requests`)
+  return res.data
+}
+
+/** Manager view: all pending (OPEN + CLAIMED) requests to review. */
+export async function getPendingCoverRequests(
+  client: ApiClient,
+  orgId: string,
+): Promise<CoverRequest[]> {
+  const res = await client.get<Wrapped<CoverRequest[]>>(`/api/orgs/${orgId}/cover-requests?scope=manager`)
+  return res.data
+}
+
+/** Offer up one of my own shifts for cover. */
+export async function createCoverRequest(
+  client: ApiClient,
+  orgId: string,
+  shiftId: string,
+  note?: string | null,
+): Promise<CoverRequest> {
+  const res = await client.post<Wrapped<CoverRequest>>(
+    `/api/orgs/${orgId}/cover-requests`,
+    { shiftId, note: note ?? null },
+  )
+  return res.data
+}
+
+/** Offer to cover an open request (pending manager approval). */
+export async function claimCoverRequest(
+  client: ApiClient,
+  orgId: string,
+  requestId: string,
+): Promise<CoverRequest> {
+  const res = await client.post<Wrapped<CoverRequest>>(
+    `/api/orgs/${orgId}/cover-requests/${requestId}/claim`,
+  )
+  return res.data
+}
+
+/** Withdraw my own cover request. */
+export async function cancelCoverRequest(
+  client: ApiClient,
+  orgId: string,
+  requestId: string,
+): Promise<CoverRequest> {
+  const res = await client.del(`/api/orgs/${orgId}/cover-requests/${requestId}`)
+  return res as unknown as CoverRequest
+}
+
+/** Manager: approve a claimed request (reassigns the shift). */
+export async function approveCoverRequest(
+  client: ApiClient,
+  orgId: string,
+  requestId: string,
+): Promise<CoverRequest> {
+  const res = await client.post<Wrapped<CoverRequest>>(
+    `/api/orgs/${orgId}/cover-requests/${requestId}/approve`,
+  )
+  return res.data
+}
+
+/** Manager: deny a cover request (shift stays as scheduled). */
+export async function denyCoverRequest(
+  client: ApiClient,
+  orgId: string,
+  requestId: string,
+): Promise<CoverRequest> {
+  const res = await client.post<Wrapped<CoverRequest>>(
+    `/api/orgs/${orgId}/cover-requests/${requestId}/deny`,
+  )
+  return res.data
 }

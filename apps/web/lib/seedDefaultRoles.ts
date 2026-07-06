@@ -46,6 +46,43 @@ const ROLES_BY_INDUSTRY: Record<string, { name: string; color: string }[]> = {
     { name: "Assistant",    color: "orange" },
     { name: "Manager",      color: "green"  },
   ],
+  salon: [
+    { name: "Stylist",      color: "blue"   },
+    { name: "Therapist",    color: "purple" },
+    { name: "Receptionist", color: "yellow" },
+    { name: "Manager",      color: "green"  },
+  ],
+  fitness: [
+    { name: "Trainer",    color: "blue"   },
+    { name: "Instructor", color: "purple" },
+    { name: "Front desk", color: "yellow" },
+    { name: "Manager",    color: "green"  },
+  ],
+  warehouse: [
+    { name: "Picker",            color: "blue"   },
+    { name: "Packer",            color: "yellow" },
+    { name: "Forklift operator", color: "orange" },
+    { name: "Shift lead",        color: "purple" },
+    { name: "Manager",           color: "green"  },
+  ],
+  cleaning: [
+    { name: "Cleaner",    color: "blue"   },
+    { name: "Team lead",  color: "purple" },
+    { name: "Supervisor", color: "orange" },
+    { name: "Manager",    color: "green"  },
+  ],
+  childcare: [
+    { name: "Educator",  color: "blue"   },
+    { name: "Assistant", color: "orange" },
+    { name: "Cook",      color: "yellow" },
+    { name: "Manager",   color: "green"  },
+  ],
+  security: [
+    { name: "Guard",       color: "blue"   },
+    { name: "Supervisor",  color: "purple" },
+    { name: "Dispatcher",  color: "orange" },
+    { name: "Manager",     color: "green"  },
+  ],
 }
 
 function rolesForIndustry(industry?: string) {

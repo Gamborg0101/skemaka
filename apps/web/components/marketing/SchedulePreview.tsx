@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react"
 
-// A real, in-DOM preview of a Friday dinner-service rota — rendered live rather
+// A real, in-DOM preview of a Friday dinner-service schedule — rendered live rather
 // than shipped as a screenshot, so it can never go stale and never shows seed/
 // placeholder names. The cast matches the /demo restaurant ("The Copper Pan").
 

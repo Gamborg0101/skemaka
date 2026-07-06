@@ -10,12 +10,13 @@ import { EmptyState } from "@/components/feedback/EmptyState"
 import { ErrorState } from "@/components/feedback/ErrorState"
 import { Divider } from "@/components/ui/Divider"
 import { ManagerScheduleView } from "@/components/schedule/ManagerScheduleView"
+import { CoverPool } from "@/components/cover/CoverPool"
 import { RefreshButton } from "@/components/ui/RefreshButton"
 import { useMyShifts } from "@/hooks/useShifts"
 import { useCurrentUser } from "@/hooks/useEmployee"
 import { useAuthStore } from "@/store/authStore"
 import { isToday, todayISO, formatWeekday, formatDate } from "@/lib/utils"
-import { currentWeek, weekDays, weekRangeLabel, offsetWeek } from "@/lib/dates"
+import { currentWeek, weekDays, weekRangeLabel, offsetWeek, isPast } from "@/lib/dates"
 import type { Shift } from "@skemaka/types"
 
 type DayRow = { date: string; shift: Shift }
@@ -70,6 +71,31 @@ function WeekNav({
   )
 }
 
+type Tab = "upcoming" | "past"
+
+function ShiftTabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  return (
+    <View className="flex-row bg-elevated rounded-xl p-1">
+      {(["upcoming", "past"] as const).map((t) => {
+        const active = t === tab
+        return (
+          <Pressable
+            key={t}
+            onPress={() => onChange(t)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            className={`flex-1 items-center py-2 rounded-lg ${active ? "bg-brand" : ""}`}
+          >
+            <Text className={`text-sm font-semibold ${active ? "text-white" : "text-ink-secondary"}`}>
+              {t === "upcoming" ? "Upcoming" : "Past"}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}
+
 export default function ShiftsScreen() {
   const { activeView } = useAuthStore()
   if (activeView === "MANAGER") return <ManagerScheduleView />
@@ -81,6 +107,7 @@ function EmployeeShiftsScreen() {
   const { data: currentUser, isError: userError, refetch: refetchUser } = useCurrentUser()
   const router = useRouter()
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
+  const [tab, setTab] = useState<Tab>("upcoming")
 
   const { data: shifts, isLoading, isFetching, refetch } = useMyShifts(selectedWeek)
 
@@ -96,12 +123,21 @@ function EmployeeShiftsScreen() {
   }
 
   const isCurrentWeek = selectedWeek === currentWeek()
-  const todayShift = isCurrentWeek ? (shifts?.find((s) => s.date === todayISO()) ?? null) : null
+  const isUpcoming = tab === "upcoming"
+  // The clock widget + cover pool are forward-looking, so they only belong on
+  // the Upcoming tab for the current week.
+  const todayShift = isUpcoming && isCurrentWeek
+    ? (shifts?.find((s) => s.date === todayISO()) ?? null)
+    : null
 
   const dayRows: DayRow[] = shifts
     ? weekDays(selectedWeek)
         .map((date) => ({ date, shift: shifts.find((s) => s.date === date) }))
         .filter((d): d is DayRow => d.shift !== undefined)
+        // "Past" = strictly before today. Upcoming shows today onward; Past
+        // shows everything earlier, so a finished shift never clutters the
+        // main list but stays reachable under its own tab.
+        .filter((d) => (isUpcoming ? !isPast(d.date) : isPast(d.date)))
     : []
 
   return (
@@ -109,6 +145,10 @@ function EmployeeShiftsScreen() {
       <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
         <Text className="text-2xl font-bold text-ink">My Shifts</Text>
         <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
+      </View>
+
+      <View className="px-4 pb-3">
+        <ShiftTabs tab={tab} onChange={setTab} />
       </View>
 
       <View className="px-4 pb-3">
@@ -127,21 +167,24 @@ function EmployeeShiftsScreen() {
         onRefresh={() => void refetch()}
         refreshing={isFetching && !isLoading}
         ListHeaderComponent={
-          isCurrentWeek ? (
-            <View className="mb-4">
-              {isLoading ? (
-                <>
-                  <ClockWidgetSkeleton />
-                  <Divider className="mt-4" />
-                </>
-              ) : (
-                <>
-                  <ClockWidget todayShift={todayShift} />
-                  {dayRows.length > 0 && <Divider className="mt-4" />}
-                </>
-              )}
-            </View>
-          ) : null
+          <>
+            {isUpcoming && <CoverPool />}
+            {isUpcoming && isCurrentWeek ? (
+              <View className="mb-4">
+                {isLoading ? (
+                  <>
+                    <ClockWidgetSkeleton />
+                    <Divider className="mt-4" />
+                  </>
+                ) : (
+                  <>
+                    <ClockWidget todayShift={todayShift} />
+                    {dayRows.length > 0 && <Divider className="mt-4" />}
+                  </>
+                )}
+              </View>
+            ) : null}
+          </>
         }
         ListEmptyComponent={
           isLoading ? (
@@ -153,8 +196,12 @@ function EmployeeShiftsScreen() {
           ) : (
             <EmptyState
               icon="📭"
-              title="No shifts this week"
-              description="Your manager hasn't scheduled any shifts for you yet."
+              title={isUpcoming ? "No upcoming shifts" : "No past shifts"}
+              description={
+                isUpcoming
+                  ? "Your manager hasn't scheduled any shifts for you yet."
+                  : "Shifts you've already worked will show up here."
+              }
             />
           )
         }

@@ -28,6 +28,14 @@ export {
   getAllTimeOff,
   reviewTimeOff,
   getAllAvailabilitySubmissions,
+  // Shift cover requests
+  getMyCoverRequests,
+  getPendingCoverRequests,
+  createCoverRequest,
+  claimCoverRequest,
+  cancelCoverRequest,
+  approveCoverRequest,
+  denyCoverRequest,
 } from "./api"
 export type {
   MobileSession,
@@ -40,6 +48,7 @@ export type {
   TimeOffInput,
   ShiftInput,
   OpenRequestResult,
+  CoverLists,
 } from "./api"
 
 export { DEFAULT_ORG_HOURS } from "./api"

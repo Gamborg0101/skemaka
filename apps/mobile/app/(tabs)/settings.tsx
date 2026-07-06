@@ -171,9 +171,13 @@ export default function SettingsScreen() {
 
   function handleDeleteAccount() {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    const canManage = role === "MANAGER" || role === "ADMIN"
+    const message = canManage
+      ? "This permanently deletes your account. Any workspace you're the only manager of — including all staff, schedules and shifts — is deleted too, and billing stops. This can't be undone."
+      : "This permanently deletes your account and removes your access. This can't be undone."
     Alert.alert(
       "Delete account",
-      "This permanently deletes your account and all associated data. This action cannot be undone.",
+      message,
       [
         { text: "Cancel", style: "cancel" },
         {

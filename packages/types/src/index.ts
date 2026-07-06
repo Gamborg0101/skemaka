@@ -45,6 +45,12 @@ export interface OrgScheduleSettings {
   availabilityWindowWeeks?: number
   /** Clock format for shift times. "24h" → 14:00 (EU default), "12h" → 2:00 PM (US). */
   timeFormat?: "12h" | "24h"
+  /**
+   * When true, the manager is added to the schedule as a self-linked Employee so
+   * they can assign themselves shifts. Off by default. Toggling this on/off
+   * activates/deactivates the manager's own Employee record.
+   */
+  includeManagerInSchedule?: boolean
 }
 
 
@@ -258,4 +264,36 @@ export type ApiResult<T> = ApiResponse<T> | ApiError
 export interface AdminOrganizationView extends Organization {
   memberCount: number
   activeEmployeeCount: number
+}
+
+// ─── Shift cover requests (swap pool) ─────────────────────────────────────────
+
+export type CoverRequestStatus = "OPEN" | "CLAIMED" | "APPROVED" | "DENIED" | "CANCELLED"
+
+/**
+ * A cover request as returned by the API — enriched with the shift details and
+ * the requester/claimer names the UI needs, so clients don't have to join.
+ */
+export interface CoverRequest {
+  id: string
+  organizationId: string
+  shiftId: string
+  requesterEmployeeId: string
+  requesterName: string
+  claimedByEmployeeId: string | null
+  claimedByName: string | null
+  status: CoverRequestStatus
+  note: string | null
+  createdAt: string
+  updatedAt: string
+  resolvedAt: string | null
+  // Shift snapshot (the shift may later be reassigned on approval).
+  shift: {
+    id: string
+    date: string
+    startTime: string
+    endTime: string
+    jobRole: string
+    colorTag: string | null
+  }
 }

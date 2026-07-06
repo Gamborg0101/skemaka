@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+import { isValidColorTag } from "@/lib/validate"
 import * as orgService from "@/lib/services/orgService"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!body.name?.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 })
   if (!body.color?.trim()) return NextResponse.json({ error: "color is required" }, { status: 400 })
   if (body.name.trim().length > 100) return NextResponse.json({ error: "name must be at most 100 characters" }, { status: 400 })
+  if (!isValidColorTag(body.color.trim())) return NextResponse.json({ error: "Invalid color" }, { status: 400 })
 
   try {
     const role = await orgService.createJobRole(orgId, body.name.trim(), body.color.trim())

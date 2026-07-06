@@ -242,7 +242,7 @@ export function JobRolesSection() {
                       variant="ghost"
                       size="icon-sm"
                       onClick={cancelEdit}
-                      className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/60 shrink-0"
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 shrink-0"
                     >
                       <X className="size-3.5" />
                     </Button>

@@ -3,15 +3,20 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import {
   Check, X, ShieldCheck, Lock, Download, AlertTriangle, GripVertical, Send,
-  Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare,
+  Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare, Clock, Wallet,
 } from "lucide-react"
-import { PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS } from "@/lib/pricing"
+import {
+  PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS,
+  hoursSavedPerMonth, MANUAL_SCHEDULING_MINUTES, SKEMAKA_SCHEDULING_MINUTES,
+} from "@/lib/pricing"
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
 import { DEMO_FLAGS, demoWeekSummary } from "@/lib/demo/demoData"
 import { LogoLockup } from "@/components/brand/Logo"
 
 const cost = demoWeekSummary()
+const savedHrsMonth = hoursSavedPerMonth()
+const manualHrs = Math.round(MANUAL_SCHEDULING_MINUTES / 60)
 
 // ── Trust signals ──────────────────────────────────────────────────────────────
 const TRUST_SIGNALS = [
@@ -74,9 +79,9 @@ const FAQS = [
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export const metadata = {
-  title: "Skemaka — Rota & shift scheduling for restaurants",
+  title: "Skemaka — Staff & shift scheduling for restaurants",
   description:
-    "Build the week's rota, see the wage cost before you publish, and text shifts to your team. Scheduling built for restaurants and cafés.",
+    "Build the week's schedule, see the wage cost before you publish, and text shifts to your team. Scheduling built for restaurants and cafés.",
 }
 
 export default async function HomePage() {
@@ -100,9 +105,9 @@ export default async function HomePage() {
 
         {/* Centred headline */}
         <div className="relative max-w-3xl mx-auto px-6 pt-12 text-center">
-          <p className="text-sm font-semibold text-blue-400 mb-4">Rota software for restaurants &amp; cafés</p>
+          <p className="text-sm font-semibold text-blue-400 mb-4">Scheduling software for restaurants &amp; cafés</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white leading-[1.1] tracking-tight">
-            Do the rota in 20 minutes —<br className="hidden sm:block" /> not on a Sunday night.
+            Do the schedule in 20 minutes —<br className="hidden sm:block" /> not on a Sunday night.
           </h1>
           <p className="mt-5 text-lg text-slate-400 leading-relaxed max-w-xl mx-auto">
             Build the week, watch the wage cost add up as you go, then text everyone their
@@ -174,7 +179,7 @@ export default async function HomePage() {
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-            The rota shouldn&apos;t eat your evening
+            Scheduling shouldn&apos;t eat your evening
           </h2>
           <p className="mt-4 text-lg text-gray-500 leading-relaxed">
             Most places still run it off a spreadsheet and a group chat. So every week you&apos;re
@@ -221,7 +226,7 @@ export default async function HomePage() {
           <div className="mt-12 grid md:grid-cols-3 gap-8">
             {[
               { n: 1, icon: CalendarCheck, t: "Staff send availability", d: "They tap the days they can work from a link. No more asking around." },
-              { n: 2, icon: GripVertical, t: "You build the rota", d: "Drag names onto days. The wage total adds up live, so an expensive week shows up before you publish it." },
+              { n: 2, icon: GripVertical, t: "You build the schedule", d: "Drag names onto days. The wage total adds up live, so an expensive week shows up before you publish it." },
               { n: 3, icon: Send, t: "Publish — everyone knows", d: "One tap texts everyone their shifts and puts them in the app. Nothing on the fridge." },
             ].map(({ n, icon: Icon, t, d }) => (
               <div key={n} className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -243,10 +248,10 @@ export default async function HomePage() {
       <section className="py-20">
         <div className="max-w-5xl mx-auto px-6 space-y-20">
 
-          {/* Build the rota */}
+          {/* Build the schedule */}
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Build the rota by dragging names</h3>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Build the schedule by dragging names</h3>
               <p className="mt-3 text-gray-500 leading-relaxed">
                 Drop people onto shifts. Copy last week and tweak it. It&apos;s the bit you do every
                 week — so it&apos;s built to be fast, not clever.
@@ -305,7 +310,7 @@ export default async function HomePage() {
       <section className="bg-gray-50 py-20 border-y border-gray-100">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">
-            Everything a restaurant rota actually needs
+            Everything a restaurant schedule actually needs
           </h2>
           <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
             {BENEFITS.map(({ icon: Icon, title, text }) => (
@@ -320,6 +325,57 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── What it saves you (time + money) ───────────────────────────────── */}
+      <section className="py-20 border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">
+            What you get back every week
+          </h2>
+          <p className="mt-3 text-center text-base text-gray-500">
+            Your evening — and control of the wage bill.
+          </p>
+          <div className="mt-10 grid md:grid-cols-2 gap-6">
+            {/* Hours */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-7">
+              <div className="flex items-center gap-3">
+                <span className="size-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <Clock className="size-5 text-blue-600" />
+                </span>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Hours back</p>
+              </div>
+              <p className="mt-5 text-3xl font-bold text-gray-900 tracking-tight">
+                ~{manualHrs} hrs <span className="text-gray-300">→</span> {SKEMAKA_SCHEDULING_MINUTES} min
+                <span className="ml-1 text-base font-medium text-gray-400">a week</span>
+              </p>
+              <p className="mt-3 text-sm text-gray-500 leading-relaxed">
+                Copy last week, drag a few names, publish. That&apos;s roughly{" "}
+                <span className="font-semibold text-gray-900">{savedHrsMonth} hours a month</span>{" "}
+                back from the spreadsheet and the group chat.
+              </p>
+            </div>
+            {/* Money */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-7">
+              <div className="flex items-center gap-3">
+                <span className="size-10 rounded-xl bg-green-50 flex items-center justify-center">
+                  <Wallet className="size-5 text-green-600" />
+                </span>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Money kept</p>
+              </div>
+              <p className="mt-5 text-3xl font-bold text-gray-900 tracking-tight">Pays for itself</p>
+              <p className="mt-3 text-sm text-gray-500 leading-relaxed">
+                The wage total adds up as you build, so you catch the expensive week{" "}
+                <span className="font-semibold text-gray-900">before payroll, not after</span>. At{" "}
+                {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}/employee, trimming one over-staffed shift
+                covers months of Skemaka.
+              </p>
+            </div>
+          </div>
+          <p className="mt-6 text-center text-xs text-gray-400">
+            Estimates based on a typical small venue — see your own numbers in the calculator below.
+          </p>
         </div>
       </section>
 
@@ -346,7 +402,7 @@ export default async function HomePage() {
               <div className="px-8 py-6 space-y-2.5">
                 {[
                   "Only pay for active staff",
-                  "Unlimited rotas, shifts & history",
+                  "Unlimited schedules, shifts & history",
                   "Availability, time-off & SMS alerts",
                   "Labour cost + CSV payroll export",
                   "Free staff app (iOS & Android)",
@@ -397,7 +453,7 @@ export default async function HomePage() {
       <section className="bg-slate-900">
         <div className="max-w-3xl mx-auto px-6 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
-            Get next week&apos;s rota off WhatsApp.
+            Get next week&apos;s schedule off WhatsApp.
           </h2>
           <p className="mt-4 text-lg text-slate-400">
             Try it on the demo restaurant, or start free with your own team.

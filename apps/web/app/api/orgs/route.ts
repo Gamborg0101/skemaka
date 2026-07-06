@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
       locale: locale?.trim() || undefined,
       industry: industry?.trim() || undefined,
       timeFormat: normalizedTimeFormat,
+      userEmail: guard.email,
+      userName: guard.name,
     })
     return NextResponse.json({ data: org }, { status: 201 })
   } catch (err) {
