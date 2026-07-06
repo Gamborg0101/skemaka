@@ -351,7 +351,8 @@ function TimelineRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onShiftClick(shift) }}
               className={cn(
-                "group absolute top-2 bottom-2 rounded-md px-2 flex items-center overflow-hidden shadow-sm transition-[background-color,box-shadow]",
+                // px-3.5 keeps the time label clear of the edge resize grips.
+                "group absolute top-2 bottom-2 rounded-md px-3.5 flex items-center overflow-hidden shadow-sm transition-[background-color,box-shadow]",
                 "border-2",
                 isPublished ? "border-green-500/60" : "border-orange-400/60",
                 COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
@@ -376,7 +377,7 @@ function TimelineRow({
                     className="absolute inset-y-0 left-0 w-3 cursor-ew-resize flex items-center justify-center touch-none"
                     aria-label="Drag to change start time"
                   >
-                    <span className="h-5 w-1 rounded-full bg-white shadow ring-1 ring-black/10 group-hover:h-6 transition-all" />
+                    <span className="h-5 w-1 rounded-full bg-white/50 group-hover:bg-white/90 shadow-sm ring-1 ring-black/5 group-hover:h-6 transition-all" />
                   </span>
                   <span
                     onPointerDown={(e) => startResize(e, shift, "end")}
@@ -384,7 +385,7 @@ function TimelineRow({
                     className="absolute inset-y-0 right-0 w-3 cursor-ew-resize flex items-center justify-center touch-none"
                     aria-label="Drag to change end time"
                   >
-                    <span className="h-5 w-1 rounded-full bg-white shadow ring-1 ring-black/10 group-hover:h-6 transition-all" />
+                    <span className="h-5 w-1 rounded-full bg-white/50 group-hover:bg-white/90 shadow-sm ring-1 ring-black/5 group-hover:h-6 transition-all" />
                   </span>
                 </>
               )}
