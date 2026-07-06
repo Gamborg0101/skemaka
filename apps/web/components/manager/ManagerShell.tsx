@@ -13,19 +13,27 @@ export function ManagerShell({ children, superAdmin }: { children: React.ReactNo
   return (
     <TooltipProvider>
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-      {open && <ManagerSidebar onCollapse={() => setOpen(false)} superAdmin={superAdmin} />}
+      {open ? (
+        <ManagerSidebar onCollapse={() => setOpen(false)} superAdmin={superAdmin} />
+      ) : (
+        // Collapsed: a slim rail (in normal flow, not an overlay) so the reopen
+        // button sits beside page content instead of on top of the header. The
+        // h-14 header aligns with each page's title bar.
+        <aside className="hidden md:flex flex-col shrink-0 w-12 bg-gray-900 dark:bg-gray-950">
+          <div className="flex h-14 items-center justify-center border-b border-white/10">
+            <button
+              onClick={() => setOpen(true)}
+              aria-label="Open sidebar"
+              className="flex size-8 items-center justify-center rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <PanelLeftOpen className="size-4" />
+            </button>
+          </div>
+        </aside>
+      )}
 
       <main className="flex-1 overflow-y-auto relative bg-white dark:bg-gray-900">
         <SuperAdminBanner />
-        {!open && (
-          <button
-            onClick={() => setOpen(true)}
-            aria-label="Open sidebar"
-            className="absolute top-3.5 left-3.5 z-20 flex size-8 items-center justify-center rounded-lg bg-gray-900 text-white shadow-md hover:bg-gray-700 transition-colors"
-          >
-            <PanelLeftOpen className="size-4" />
-          </button>
-        )}
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
