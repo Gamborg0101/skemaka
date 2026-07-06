@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Plus, CalendarCheck } from "lucide-react"
+import { Plus, CalendarCheck, Thermometer } from "lucide-react"
 import type { AvailabilityRequest, Employee, AvailabilitySubmission, AvailabilityDay, Shift } from "@/types"
 import { getWeekDays, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
@@ -28,6 +28,18 @@ function DayCell({
 }) {
   const tf = getOrgSettings().timeFormat
   if (existingShift) {
+    // A sick day is a zero-duration marker (00:00–00:00), not a worked shift —
+    // render it as "Sick" rather than a nonsensical "00:00–00:00" time range.
+    if (existingShift.colorTag === "sick") {
+      return (
+        <div className="h-full min-h-12 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex flex-col items-center justify-center gap-0.5 px-1">
+          <Thermometer className="size-3.5 text-rose-500 dark:text-rose-400" />
+          <span className="text-[10px] font-semibold text-rose-700 dark:text-rose-300">
+            Sick
+          </span>
+        </div>
+      )
+    }
     return (
       <div className="h-full min-h-12 rounded bg-blue-50 dark:bg-slate-800/60 border border-blue-200 dark:border-slate-600 flex flex-col items-center justify-center gap-0.5 px-1">
         <CalendarCheck className="size-3.5 text-blue-500 dark:text-slate-300" />
@@ -105,8 +117,13 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
   const getShift = (employeeId: string, date: string): Shift | undefined =>
     shifts.find((s) => s.employeeId === employeeId && s.date === date)
 
+  // A sick-day marker isn't a scheduled working shift, so it shouldn't count
+  // toward "scheduled this week".
   const scheduledCount = employees.filter((emp) =>
-    days.some((date) => getShift(emp.id, date))
+    days.some((date) => {
+      const shift = getShift(emp.id, date)
+      return shift && shift.colorTag !== "sick"
+    })
   ).length
 
   return (
@@ -145,6 +162,10 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2.5 rounded-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" />
           Unavailable
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2.5 rounded-sm bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900" />
+          Sick
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block size-2.5 rounded-sm bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800" />
