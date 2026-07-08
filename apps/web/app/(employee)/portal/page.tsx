@@ -7,6 +7,7 @@ import { getMondayOfWeek, formatWeekLabel, formatTime, calcHours } from "@/lib/d
 import { getInitials } from "@/lib/utils"
 import { pickShiftQuote } from "@/types"
 import { TimeOffSection } from "./TimeOffSection"
+import { EnableNotificationsCard } from "@/components/pwa/EnableNotificationsCard"
 
 function formatShiftDate(date: Date): string {
   return date.toLocaleDateString("en-GB", {
@@ -163,6 +164,7 @@ export default async function EmployeePortalPage() {
 
       {/* Shift list */}
       <div className="px-4 py-5 max-w-lg mx-auto space-y-6">
+        <EnableNotificationsCard />
         {weeks.length === 0 && (
           <div className="text-center py-16 text-gray-400 dark:text-gray-500">
             <p className="text-lg font-medium">No upcoming shifts</p>
