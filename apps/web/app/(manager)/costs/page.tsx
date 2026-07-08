@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LaborCostTable } from "@/components/manager/LaborCostTable"
+import { ExportTimesheetDialog } from "@/components/manager/ExportTimesheetDialog"
 import { getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { toast } from "sonner"
@@ -19,6 +20,7 @@ export default function CostsPage() {
   // loading is derived from key mismatch — avoids calling setState in an effect.
   // Starts empty (never matches a real key) so the first mount is loading.
   const [fetchedKey, setFetchedKey] = useState("")
+  const [exportOpen, setExportOpen] = useState(false)
   const currentKey = `${orgId}__${weekStart}`
   const loading = currentKey !== fetchedKey
 
@@ -65,12 +67,7 @@ export default function CostsPage() {
             <ChevronRight className="size-4" />
           </Button>
           <div className="ml-2 border-l border-gray-200 pl-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!costs || loading}
-              onClick={() => window.open(`/api/orgs/${orgId}/costs?weekStart=${weekStart}&format=csv`)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
               <Download className="size-4 mr-1.5" />
               Export CSV
             </Button>
@@ -85,8 +82,11 @@ export default function CostsPage() {
           <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week"><ChevronLeft className="size-4" /></Button>
           <WeekPicker weekStart={weekStart} onChange={setWeekStart} />
           <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week"><ChevronRight className="size-4" /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => setExportOpen(true)} aria-label="Export timesheet CSV"><Download className="size-4" /></Button>
         </div>
       </div>
+
+      <ExportTimesheetDialog open={exportOpen} onOpenChange={setExportOpen} orgId={orgId} />
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {loading ? (
