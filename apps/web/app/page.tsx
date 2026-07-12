@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import {
   Check, X, ShieldCheck, Lock, Download, AlertTriangle, GripVertical, Send,
   Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare, Clock, Wallet,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/pricing"
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
+import { LangQuerySync, LocaleToggle } from "@/components/marketing/LocaleToggle"
 import { DEMO_FLAGS, demoWeekSummary } from "@/lib/demo/demoData"
 import { LogoLockup } from "@/components/brand/Logo"
 
@@ -18,78 +20,51 @@ const cost = demoWeekSummary()
 const savedHrsMonth = hoursSavedPerMonth()
 const manualHrs = Math.round(MANUAL_SCHEDULING_MINUTES / 60)
 
-// ── Trust signals ──────────────────────────────────────────────────────────────
-const TRUST_SIGNALS = [
-  { icon: Lock, title: "Payments handled by Stripe", description: "Card details never touch our servers." },
-  { icon: ShieldCheck, title: "GDPR-compliant, EU-hosted", description: "Your team's data stays in the EU." },
-  { icon: Download, title: "Your data is yours", description: "Export to CSV or delete everything, anytime." },
-]
-
-// ── The three things people actually use ───────────────────────────────────────
-const BENEFITS = [
-  { icon: Coins, title: "Live wage cost", text: "The week's labour total updates as you place each shift." },
-  { icon: MessageSquare, title: "SMS when you publish", text: "Staff get their shifts texted to them — no group chat." },
-  { icon: CalendarCheck, title: "Availability & time-off", text: "Staff send when they can work; requests land in one place." },
-  { icon: AlertTriangle, title: "Conflict warnings", text: "Rostered someone who's off? Skemaka flags it before publish." },
-  { icon: FileSpreadsheet, title: "CSV for payroll", text: "Export hours and pay for the bookkeeper in one click." },
-  { icon: Smartphone, title: "Free staff app", text: "iPhone and Android. Staff see shifts and clock in." },
-]
-
-// ── Old way vs Skemaka (the contrast) ──────────────────────────────────────────
-const OLD_WAY = [
-  "Build it in a spreadsheet, then photograph it into the group chat",
-  "“Can anyone cover Saturday?” — sent to twelve, one replies",
-  "Find out you overspent on wages only once payroll lands",
-  "Put someone on a day they'd already booked off",
-]
-const NEW_WAY = [
-  "Drag names onto the week — copy last week and tweak in seconds",
-  "Publish once; everyone gets their shifts by text and in the app",
-  "Watch the wage total add up before you commit to the week",
-  "Skemaka flags time-off and availability clashes before you publish",
-]
-
-// ── FAQ ─────────────────────────────────────────────────────────────────────────
-const FAQS = [
-  {
-    q: "How do my staff get their shifts?",
-    a: "You publish, and everyone gets a text with their shifts. They can also open the free app or a web link — no setup from them, no printing.",
-  },
-  {
-    q: "Do staff need to create an account?",
-    a: "No. You add them, they get an invite link. They sign in with Google or Apple and they're in — most are set up in under a minute.",
-  },
-  {
-    q: "What does it actually cost?",
-    a: `${PLAN_CURRENCY}${PRICE_PER_EMPLOYEE_MONTHLY} per active employee per month. Deactivate someone for the season and you stop paying for them. No tiers, no setup fee.`,
-  },
-  {
-    q: "Can I export hours for payroll?",
-    a: "Yes — the labour cost view exports to CSV with hours, wage, and total pay per person, ready for your bookkeeper or payroll software.",
-  },
-  {
-    q: "Is there a contract?",
-    a: `No. ${TRIAL_DAYS} days free with no card, then month to month. Cancel whenever — you keep access until the end of the period.`,
-  },
-  {
-    q: "I run more than one venue.",
-    a: "Each venue is its own workspace today. Multi-venue under one login is on the way — get in touch and we'll set you up.",
-  },
-]
-
 // ── Page ─────────────────────────────────────────────────────────────────────
-export const metadata = {
-  title: "Skemaka — Staff & shift scheduling for restaurants",
-  description:
-    "Build the week's schedule, see the wage cost before you publish, and text shifts to your team. Scheduling built for restaurants and cafés.",
+export async function generateMetadata() {
+  const t = await getTranslations("marketing.meta")
+  return { title: t("title"), description: t("description") }
 }
 
 export default async function HomePage() {
   const session = await auth()
   if (session?.user) redirect("/schedule")
 
+  const t = await getTranslations("marketing")
+  const bold = (chunks: React.ReactNode) => (
+    <span className="font-semibold text-gray-900">{chunks}</span>
+  )
+
+  const trustSignals = [
+    { icon: Lock, title: t("trust.stripeTitle"), description: t("trust.stripeText") },
+    { icon: ShieldCheck, title: t("trust.gdprTitle"), description: t("trust.gdprText") },
+    { icon: Download, title: t("trust.dataTitle"), description: t("trust.dataText") },
+  ]
+  const benefits = [
+    { icon: Coins, title: t("benefits.wageTitle"), text: t("benefits.wageText") },
+    { icon: MessageSquare, title: t("benefits.smsTitle"), text: t("benefits.smsText") },
+    { icon: CalendarCheck, title: t("benefits.availabilityTitle"), text: t("benefits.availabilityText") },
+    { icon: AlertTriangle, title: t("benefits.conflictTitle"), text: t("benefits.conflictText") },
+    { icon: FileSpreadsheet, title: t("benefits.csvTitle"), text: t("benefits.csvText") },
+    { icon: Smartphone, title: t("benefits.appTitle"), text: t("benefits.appText") },
+  ]
+  const oldWay = [t("problem.old1"), t("problem.old2"), t("problem.old3"), t("problem.old4")]
+  const newWay = [t("problem.new1"), t("problem.new2"), t("problem.new3"), t("problem.new4")]
+  // Localized display text for the demo conflict flags rendered below. Keyed
+  // 1:1 with DEMO_FLAGS — update these keys if the demo data changes.
+  const flagNotes = [t("deep.flag1"), t("deep.flag2")]
+  const faqs = [1, 2, 3, 4, 5, 6].map((i) => ({
+    q: t(`faq.q${i}` as `faq.q1`),
+    a: t(`faq.a${i}` as `faq.a1`, {
+      currency: PLAN_CURRENCY,
+      price: PRICE_PER_EMPLOYEE_MONTHLY,
+      days: TRIAL_DAYS,
+    }),
+  }))
+
   return (
     <div className="min-h-dvh bg-white">
+      <LangQuerySync />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="bg-slate-900 relative overflow-hidden">
@@ -98,31 +73,31 @@ export default async function HomePage() {
         <nav className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           <LogoLockup className="text-white [--logo-accent:#60a5fa]" wordClassName="text-lg" />
           <div className="flex items-center gap-5">
-            <Link href="/demo" className="text-sm font-medium text-white/60 hover:text-white transition-colors">See the demo</Link>
-            <Link href="/login" className="text-sm font-medium text-white/60 hover:text-white transition-colors">Sign in →</Link>
+            <LocaleToggle variant="dark" />
+            <Link href="/demo" className="text-sm font-medium text-white/60 hover:text-white transition-colors">{t("nav.demo")}</Link>
+            <Link href="/login" className="text-sm font-medium text-white/60 hover:text-white transition-colors">{t("nav.signIn")}</Link>
           </div>
         </nav>
 
         {/* Centred headline */}
         <div className="relative max-w-3xl mx-auto px-6 pt-12 text-center">
-          <p className="text-sm font-semibold text-blue-400 mb-4">Scheduling software for restaurants &amp; cafés</p>
+          <p className="text-sm font-semibold text-blue-400 mb-4">{t("hero.kicker")}</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white leading-[1.1] tracking-tight">
-            Do the schedule in 20 minutes —<br className="hidden sm:block" /> not on a Sunday night.
+            {t("hero.title1")}<br className="hidden sm:block" /> {t("hero.title2")}
           </h1>
           <p className="mt-5 text-lg text-slate-400 leading-relaxed max-w-xl mx-auto">
-            Build the week, watch the wage cost add up as you go, then text everyone their
-            shifts. Instead of a spreadsheet and chasing cover on WhatsApp.
+            {t("hero.subtitle")}
           </p>
           <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/login" className="inline-flex items-center justify-center h-11 px-7 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
-              Start free trial
+              {t("hero.ctaTrial")}
             </Link>
             <Link href="/demo" className="inline-flex items-center justify-center h-11 px-7 rounded-lg border border-white/15 text-sm font-medium text-white/80 hover:text-white hover:border-white/30 transition-colors">
-              See the demo restaurant →
+              {t("hero.ctaDemo")}
             </Link>
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            {TRIAL_DAYS} days free · then {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY} per active employee/mo · no card needed
+            {t("hero.priceLine", { days: TRIAL_DAYS, currency: PLAN_CURRENCY, price: PRICE_PER_EMPLOYEE_MONTHLY })}
           </p>
         </div>
 
@@ -133,37 +108,37 @@ export default async function HomePage() {
             <div className="hidden sm:flex absolute -right-5 top-9 items-center gap-2 rounded-xl bg-white shadow-xl ring-1 ring-black/5 px-3 py-2">
               <Coins className="size-4 text-emerald-600 shrink-0" />
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-gray-900 leading-none">Wage cost, live</p>
-                <p className="text-[10px] text-gray-400 mt-1">updates as you add shifts</p>
+                <p className="text-[11px] font-semibold text-gray-900 leading-none">{t("hero.wageLiveTitle")}</p>
+                <p className="text-[10px] text-gray-400 mt-1">{t("hero.wageLiveSub")}</p>
               </div>
             </div>
             <div className="hidden sm:flex absolute -left-5 bottom-10 items-center gap-2 rounded-xl bg-white shadow-xl ring-1 ring-black/5 px-3 py-2">
               <AlertTriangle className="size-4 text-red-500 shrink-0" />
               <div className="text-left">
-                <p className="text-[11px] font-semibold text-gray-900 leading-none">Conflict caught</p>
-                <p className="text-[10px] text-gray-400 mt-1">Tom&apos;s on leave — flagged</p>
+                <p className="text-[11px] font-semibold text-gray-900 leading-none">{t("hero.conflictTitle")}</p>
+                <p className="text-[10px] text-gray-400 mt-1">{t("hero.conflictSub")}</p>
               </div>
             </div>
           </div>
 
           {/* Plain legend so the colours are obvious */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
-            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-amber-400" /> Kitchen</span>
-            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-blue-400" /> Front of house</span>
-            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-purple-400" /> Bar</span>
-            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded ring-2 ring-red-500" /> Conflict</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-amber-400" /> {t("hero.legendKitchen")}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-blue-400" /> {t("hero.legendFoh")}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded bg-purple-400" /> {t("hero.legendBar")}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded ring-2 ring-red-500" /> {t("hero.legendConflict")}</span>
           </div>
         </div>
 
         <div className="relative pb-16 text-center">
-          <p className="text-xs text-slate-500">Replaces the spreadsheet, the WhatsApp group, and the printout on the fridge.</p>
+          <p className="text-xs text-slate-500">{t("hero.replaces")}</p>
         </div>
       </div>
 
       {/* ── Trust strip ───────────────────────────────────────────────────── */}
       <div className="border-b border-gray-100 bg-white py-8">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {TRUST_SIGNALS.map(({ icon: Icon, title, description }) => (
+          {trustSignals.map(({ icon: Icon, title, description }) => (
             <div key={title} className="flex items-start gap-3">
               <Icon className="size-5 text-slate-700 shrink-0 mt-0.5" />
               <div>
@@ -179,21 +154,19 @@ export default async function HomePage() {
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Scheduling shouldn&apos;t eat your evening
+            {t("problem.title")}
           </h2>
           <p className="mt-4 text-lg text-gray-500 leading-relaxed">
-            Most places still run it off a spreadsheet and a group chat. So every week you&apos;re
-            guessing who&apos;s free, missing that someone booked Friday off, and only finding out
-            you went over on wages once payroll lands.
+            {t("problem.body")}
           </p>
           <div className="mt-10 grid md:grid-cols-2 gap-6">
             {/* The old way */}
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-7">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                The Sunday-night way
+                {t("problem.oldLabel")}
               </p>
               <ul className="mt-5 space-y-3.5">
-                {OLD_WAY.map((line) => (
+                {oldWay.map((line) => (
                   <li key={line} className="flex items-start gap-3 text-gray-500">
                     <X className="size-4 text-gray-300 shrink-0 mt-0.5" />
                     <span className="text-sm leading-relaxed">{line}</span>
@@ -204,10 +177,10 @@ export default async function HomePage() {
             {/* With Skemaka */}
             <div className="rounded-2xl border-2 border-slate-900 bg-white p-7 shadow-sm">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-900">
-                With Skemaka
+                {t("problem.newLabel")}
               </p>
               <ul className="mt-5 space-y-3.5">
-                {NEW_WAY.map((line) => (
+                {newWay.map((line) => (
                   <li key={line} className="flex items-start gap-3 text-gray-800">
                     <Check className="size-4 text-green-600 shrink-0 mt-0.5" />
                     <span className="text-sm leading-relaxed">{line}</span>
@@ -222,22 +195,22 @@ export default async function HomePage() {
       {/* ── How a week works ───────────────────────────────────────────────── */}
       <section className="bg-gray-50 py-20 border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">How a week works</h2>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">{t("how.title")}</h2>
           <div className="mt-12 grid md:grid-cols-3 gap-8">
             {[
-              { n: 1, icon: CalendarCheck, t: "Staff send availability", d: "They tap the days they can work from a link. No more asking around." },
-              { n: 2, icon: GripVertical, t: "You build the schedule", d: "Drag names onto days. The wage total adds up live, so an expensive week shows up before you publish it." },
-              { n: 3, icon: Send, t: "Publish — everyone knows", d: "One tap texts everyone their shifts and puts them in the app. Nothing on the fridge." },
-            ].map(({ n, icon: Icon, t, d }) => (
+              { n: 1, icon: CalendarCheck, title: t("how.step1Title"), text: t("how.step1Text") },
+              { n: 2, icon: GripVertical, title: t("how.step2Title"), text: t("how.step2Text") },
+              { n: 3, icon: Send, title: t("how.step3Title"), text: t("how.step3Text") },
+            ].map(({ n, icon: Icon, title, text }) => (
               <div key={n} className="rounded-2xl border border-gray-200 bg-white p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="inline-flex items-center justify-center size-9 rounded-lg bg-slate-900 text-white">
                     <Icon className="size-4" />
                   </span>
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Step {n}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{t("how.stepLabel", { n })}</span>
                 </div>
-                <h3 className="text-base font-semibold text-gray-900">{t}</h3>
-                <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{d}</p>
+                <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+                <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{text}</p>
               </div>
             ))}
           </div>
@@ -251,10 +224,9 @@ export default async function HomePage() {
           {/* Build the schedule */}
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Build the schedule by dragging names</h3>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{t("deep.buildTitle")}</h3>
               <p className="mt-3 text-gray-500 leading-relaxed">
-                Drop people onto shifts. Copy last week and tweak it. It&apos;s the bit you do every
-                week — so it&apos;s built to be fast, not clever.
+                {t("deep.buildBody")}
               </p>
             </div>
             <SchedulePreview />
@@ -263,17 +235,16 @@ export default async function HomePage() {
           {/* Wage cost */}
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div className="lg:order-2">
-              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Know the cost before you publish</h3>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{t("deep.costTitle")}</h3>
               <p className="mt-3 text-gray-500 leading-relaxed">
-                Every shift adds to the running wage total. Spot the heavy Saturday while you can
-                still change it — not when payroll lands.
+                {t("deep.costBody")}
               </p>
             </div>
             <div className="lg:order-1 grid grid-cols-3 gap-3">
               {[
-                { label: "This week", value: `${cost.totalHours}h` },
-                { label: "Wage cost", value: `${PLAN_CURRENCY}${cost.totalCost.toLocaleString()}` },
-                { label: "Avg rate", value: `${PLAN_CURRENCY}${cost.avgRate}` },
+                { label: t("deep.statThisWeek"), value: `${cost.totalHours}h` },
+                { label: t("deep.statWageCost"), value: `${PLAN_CURRENCY}${cost.totalCost.toLocaleString()}` },
+                { label: t("deep.statAvgRate"), value: `${PLAN_CURRENCY}${cost.avgRate}` },
               ].map((s) => (
                 <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-4 text-center">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{s.label}</p>
@@ -286,19 +257,18 @@ export default async function HomePage() {
           {/* Catch problems */}
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Catch problems before staff do</h3>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{t("deep.catchTitle")}</h3>
               <p className="mt-3 text-gray-500 leading-relaxed">
-                Put someone on a day they&apos;re off, or one they marked unavailable, and Skemaka
-                tells you — before you publish, not after the complaint.
+                {t("deep.catchBody")}
               </p>
             </div>
             <div className="rounded-xl border border-red-200 bg-red-50 p-4">
               <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
-                <AlertTriangle className="size-4" /> {DEMO_FLAGS.length} things to fix before publishing
+                <AlertTriangle className="size-4" /> {t("deep.conflictsHeader", { count: DEMO_FLAGS.length })}
               </p>
               <ul className="mt-2 space-y-1.5 text-sm text-red-700">
-                {DEMO_FLAGS.map((f) => (
-                  <li key={`${f.staffId}:${f.day}`}>• {f.note}</li>
+                {flagNotes.map((note) => (
+                  <li key={note}>• {note}</li>
                 ))}
               </ul>
             </div>
@@ -310,10 +280,10 @@ export default async function HomePage() {
       <section className="bg-gray-50 py-20 border-y border-gray-100">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">
-            Everything a restaurant schedule actually needs
+            {t("benefits.title")}
           </h2>
           <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
-            {BENEFITS.map(({ icon: Icon, title, text }) => (
+            {benefits.map(({ icon: Icon, title, text }) => (
               <div key={title} className="flex items-start gap-3">
                 <span className="shrink-0 size-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
                   <Icon className="size-4 text-slate-700" />
@@ -332,10 +302,10 @@ export default async function HomePage() {
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">
-            What you get back every week
+            {t("savings.title")}
           </h2>
           <p className="mt-3 text-center text-base text-gray-500">
-            Your evening — and control of the wage bill.
+            {t("savings.subtitle")}
           </p>
           <div className="mt-10 grid md:grid-cols-2 gap-6">
             {/* Hours */}
@@ -344,16 +314,14 @@ export default async function HomePage() {
                 <span className="size-10 rounded-xl bg-blue-50 flex items-center justify-center">
                   <Clock className="size-5 text-blue-600" />
                 </span>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Hours back</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{t("savings.hoursLabel")}</p>
               </div>
               <p className="mt-5 text-3xl font-bold text-gray-900 tracking-tight">
-                ~{manualHrs} hrs <span className="text-gray-300">→</span> {SKEMAKA_SCHEDULING_MINUTES} min
-                <span className="ml-1 text-base font-medium text-gray-400">a week</span>
+                {t("savings.hoursAmount", { hrs: manualHrs })} <span className="text-gray-300">→</span> {t("savings.hoursTo", { min: SKEMAKA_SCHEDULING_MINUTES })}
+                <span className="ml-1 text-base font-medium text-gray-400">{t("savings.perWeek")}</span>
               </p>
               <p className="mt-3 text-sm text-gray-500 leading-relaxed">
-                Copy last week, drag a few names, publish. That&apos;s roughly{" "}
-                <span className="font-semibold text-gray-900">{savedHrsMonth} hours a month</span>{" "}
-                back from the spreadsheet and the group chat.
+                {t.rich("savings.hoursBody", { hours: savedHrsMonth, b: bold })}
               </p>
             </div>
             {/* Money */}
@@ -362,19 +330,20 @@ export default async function HomePage() {
                 <span className="size-10 rounded-xl bg-green-50 flex items-center justify-center">
                   <Wallet className="size-5 text-green-600" />
                 </span>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Money kept</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{t("savings.moneyLabel")}</p>
               </div>
-              <p className="mt-5 text-3xl font-bold text-gray-900 tracking-tight">Pays for itself</p>
+              <p className="mt-5 text-3xl font-bold text-gray-900 tracking-tight">{t("savings.moneyTitle")}</p>
               <p className="mt-3 text-sm text-gray-500 leading-relaxed">
-                The wage total adds up as you build, so you catch the expensive week{" "}
-                <span className="font-semibold text-gray-900">before payroll, not after</span>. At{" "}
-                {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}/employee, trimming one over-staffed shift
-                covers months of Skemaka.
+                {t.rich("savings.moneyBody", {
+                  currency: PLAN_CURRENCY,
+                  price: PRICE_PER_EMPLOYEE_MONTHLY,
+                  b: bold,
+                })}
               </p>
             </div>
           </div>
           <p className="mt-6 text-center text-xs text-gray-400">
-            Estimates based on a typical small venue — see your own numbers in the calculator below.
+            {t("savings.estimateNote")}
           </p>
         </div>
       </section>
@@ -383,10 +352,10 @@ export default async function HomePage() {
       <section className="py-20 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Pay for who&apos;s working</h2>
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{t("pricing.title")}</h2>
             <p className="mt-3 text-base text-gray-500">
-              <span className="font-semibold text-gray-900">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY} per active employee / month.</span>{" "}
-              No tiers, no setup fee, cancel anytime.
+              <span className="font-semibold text-gray-900">{t("pricing.subBold", { currency: PLAN_CURRENCY, price: PRICE_PER_EMPLOYEE_MONTHLY })}</span>{" "}
+              {t("pricing.subRest")}
             </p>
           </div>
 
@@ -395,17 +364,17 @@ export default async function HomePage() {
               <div className="bg-slate-900 px-8 py-7 text-center">
                 <div className="flex items-end justify-center gap-1">
                   <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}</span>
-                  <span className="text-white/40 pb-1.5 text-base">/ employee / mo</span>
+                  <span className="text-white/40 pb-1.5 text-base">{t("pricing.priceUnit")}</span>
                 </div>
-                <p className="mt-2 text-sm text-white/35">{TRIAL_DAYS} days free — billed only for active staff</p>
+                <p className="mt-2 text-sm text-white/35">{t("pricing.trialNote", { days: TRIAL_DAYS })}</p>
               </div>
               <div className="px-8 py-6 space-y-2.5">
                 {[
-                  "Only pay for active staff",
-                  "Unlimited schedules, shifts & history",
-                  "Availability, time-off & SMS alerts",
-                  "Labour cost + CSV payroll export",
-                  "Free staff app (iOS & Android)",
+                  t("pricing.feature1"),
+                  t("pricing.feature2"),
+                  t("pricing.feature3"),
+                  t("pricing.feature4"),
+                  t("pricing.feature5"),
                 ].map((f) => (
                   <div key={f} className="flex items-center gap-3">
                     <Check className="size-4 text-green-600 shrink-0" />
@@ -415,14 +384,14 @@ export default async function HomePage() {
               </div>
               <div className="px-8 pb-7">
                 <Link href="/login" className="flex w-full h-11 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white hover:bg-slate-800 transition-colors">
-                  Start {TRIAL_DAYS}-day free trial
+                  {t("pricing.cta", { days: TRIAL_DAYS })}
                 </Link>
-                <p className="mt-3 text-center text-xs text-gray-400">No credit card required</p>
+                <p className="mt-3 text-center text-xs text-gray-400">{t("pricing.noCard")}</p>
               </div>
             </div>
 
             <div className="lg:pt-2">
-              <p className="text-sm font-semibold text-gray-900 mb-3">What will it cost me?</p>
+              <p className="text-sm font-semibold text-gray-900 mb-3">{t("pricing.calcHeading")}</p>
               <PricingCalculator />
             </div>
           </div>
@@ -433,10 +402,10 @@ export default async function HomePage() {
       <section className="py-20">
         <div className="max-w-2xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center mb-10">
-            Questions owners ask
+            {t("faq.title")}
           </h2>
           <div className="divide-y divide-gray-100 border-y border-gray-100">
-            {FAQS.map(({ q, a }) => (
+            {faqs.map(({ q, a }) => (
               <details key={q} className="group py-4">
                 <summary className="flex items-center justify-between cursor-pointer list-none">
                   <span className="text-sm font-semibold text-gray-900 pr-4">{q}</span>
@@ -453,17 +422,17 @@ export default async function HomePage() {
       <section className="bg-slate-900">
         <div className="max-w-3xl mx-auto px-6 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
-            Get next week&apos;s schedule off WhatsApp.
+            {t("cta.title")}
           </h2>
           <p className="mt-4 text-lg text-slate-400">
-            Try it on the demo restaurant, or start free with your own team.
+            {t("cta.subtitle")}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/login" className="inline-flex items-center justify-center h-12 px-10 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
-              Start free trial
+              {t("cta.trial")}
             </Link>
             <Link href="/demo" className="inline-flex items-center justify-center h-12 px-10 rounded-lg border border-white/15 text-sm font-medium text-white/80 hover:text-white hover:border-white/30 transition-colors">
-              See the demo →
+              {t("cta.demo")}
             </Link>
           </div>
         </div>
@@ -474,9 +443,10 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
           <LogoLockup className="text-slate-900" markClassName="size-6" wordClassName="text-sm font-semibold" />
           <nav className="flex items-center gap-6">
-            <Link href="/demo" className="hover:text-gray-600 transition-colors">Demo</Link>
-            <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
+            <Link href="/demo" className="hover:text-gray-600 transition-colors">{t("footer.demo")}</Link>
+            <Link href="/terms" className="hover:text-gray-600 transition-colors">{t("footer.terms")}</Link>
+            <Link href="/privacy" className="hover:text-gray-600 transition-colors">{t("footer.privacy")}</Link>
+            <LocaleToggle variant="light" />
           </nav>
           <span>© {new Date().getFullYear()} Skemaka ApS</span>
         </div>

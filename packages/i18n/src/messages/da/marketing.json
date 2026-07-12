@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "Skemaka — Vagtplan til restauranter og caféer",
+    "description": "Byg ugens vagtplan, se lønudgiften før du udgiver, og send vagterne på sms til dit hold. Vagtplanlægning bygget til restauranter og caféer."
+  },
+  "nav": {
+    "demo": "Se demoen",
+    "signIn": "Log ind →"
+  },
+  "hero": {
+    "kicker": "Vagtplansystem til restauranter & caféer",
+    "title1": "Lav vagtplanen på 20 minutter —",
+    "title2": "ikke søndag aften.",
+    "subtitle": "Byg ugen, se lønudgiften vokse undervejs, og send alle deres vagter på sms. I stedet for et regneark og jagten på afløsere på WhatsApp.",
+    "ctaTrial": "Start gratis prøveperiode",
+    "ctaDemo": "Se demo-restauranten →",
+    "priceLine": "{days} dage gratis · derefter {currency}{price} pr. aktiv medarbejder/md. · intet kort påkrævet",
+    "wageLiveTitle": "Lønudgift, live",
+    "wageLiveSub": "opdateres når du tilføjer vagter",
+    "conflictTitle": "Konflikt fanget",
+    "conflictSub": "Tom har fri — markeret",
+    "legendKitchen": "Køkken",
+    "legendFoh": "Servering",
+    "legendBar": "Bar",
+    "legendConflict": "Konflikt",
+    "replaces": "Erstatter regnearket, WhatsApp-gruppen og udskriften på køleskabet."
+  },
+  "trust": {
+    "stripeTitle": "Betalinger håndteres af Stripe",
+    "stripeText": "Kortoplysninger rører aldrig vores servere.",
+    "gdprTitle": "GDPR-klar og hostet i EU",
+    "gdprText": "Dit holds data bliver i EU.",
+    "dataTitle": "Dine data er dine",
+    "dataText": "Eksportér til CSV eller slet alt, når som helst."
+  },
+  "problem": {
+    "title": "Vagtplanen skal ikke æde din aften",
+    "body": "De fleste steder kører det stadig i et regneark og en gruppechat. Så hver uge gætter du på, hvem der kan arbejde, overser at nogen har fået fri om fredagen, og opdager først at lønbudgettet skred, når lønnen er kørt.",
+    "oldLabel": "Søndag aften-metoden",
+    "newLabel": "Med Skemaka",
+    "old1": "Byg den i et regneark, og tag et billede til gruppechatten",
+    "old2": "»Kan nogen tage lørdag?« — sendt til tolv, én svarer",
+    "old3": "Opdag først at lønbudgettet skred, når lønnen er kørt",
+    "old4": "Sæt nogen på en dag, de allerede har fået fri",
+    "new1": "Træk navne ind i ugen — kopiér sidste uge og justér på få sekunder",
+    "new2": "Udgiv én gang; alle får deres vagter på sms og i appen",
+    "new3": "Se løntotalen vokse, før du lægger dig fast på ugen",
+    "new4": "Skemaka markerer ferie- og tilgængelighedskonflikter, før du udgiver"
+  },
+  "how": {
+    "title": "Sådan fungerer en uge",
+    "stepLabel": "Trin {n}",
+    "step1Title": "Medarbejderne sender tilgængelighed",
+    "step1Text": "De vælger de dage, de kan arbejde, via et link. Ikke mere rundspørgen.",
+    "step2Title": "Du bygger vagtplanen",
+    "step2Text": "Træk navne ind på dagene. Løntotalen opdateres live, så en dyr uge opdages, før du udgiver den.",
+    "step3Title": "Udgiv — alle ved besked",
+    "step3Text": "Ét tryk sender alle deres vagter på sms og lægger dem i appen. Intet på køleskabet."
+  },
+  "deep": {
+    "buildTitle": "Byg vagtplanen ved at trække navne",
+    "buildBody": "Slip folk ind på vagterne. Kopiér sidste uge og justér. Det er det, du gør hver uge — så det er bygget til at være hurtigt, ikke smart.",
+    "costTitle": "Kend udgiften, før du udgiver",
+    "costBody": "Hver vagt lægger til den løbende løntotal. Fang den dyre lørdag, mens du stadig kan ændre den — ikke når lønnen er kørt.",
+    "statThisWeek": "Denne uge",
+    "statWageCost": "Lønudgift",
+    "statAvgRate": "Gns. timeløn",
+    "catchTitle": "Fang problemerne før dine medarbejdere",
+    "catchBody": "Sætter du nogen på en dag, de har fri eller har meldt sig utilgængelige, siger Skemaka til — før du udgiver, ikke efter klagen.",
+    "conflictsHeader": "{count} ting at rette før udgivelse",
+    "flag1": "Tom har godkendt ferie om fredagen — men han står på vagtplanen.",
+    "flag2": "Lena har meldt sig utilgængelig om lørdagen — men hun står på vagtplanen."
+  },
+  "benefits": {
+    "title": "Alt det, en restaurants vagtplan faktisk har brug for",
+    "wageTitle": "Løbende lønudgift",
+    "wageText": "Ugens løntotal opdateres, mens du placerer vagterne.",
+    "smsTitle": "Sms når du udgiver",
+    "smsText": "Medarbejderne får deres vagter på sms — ingen gruppechat.",
+    "availabilityTitle": "Tilgængelighed & fridage",
+    "availabilityText": "Medarbejderne sender, hvornår de kan arbejde; anmodninger samles ét sted.",
+    "conflictTitle": "Konfliktadvarsler",
+    "conflictText": "Har du sat nogen på, der har fri? Skemaka markerer det før udgivelse.",
+    "csvTitle": "CSV til løn",
+    "csvText": "Eksportér timer og løn til bogholderen med ét klik.",
+    "appTitle": "Gratis medarbejder-app",
+    "appText": "iPhone og Android. Medarbejderne ser vagter og stempler ind."
+  },
+  "savings": {
+    "title": "Det får du tilbage hver uge",
+    "subtitle": "Din aften — og styr på lønbudgettet.",
+    "hoursLabel": "Timer tilbage",
+    "hoursAmount": "~{hrs} timer",
+    "hoursTo": "{min} min",
+    "perWeek": "om ugen",
+    "hoursBody": "Kopiér sidste uge, træk et par navne, udgiv. Det er cirka <b>{hours} timer om måneden</b> tilbage fra regnearket og gruppechatten.",
+    "moneyLabel": "Penge sparet",
+    "moneyTitle": "Tjener sig selv hjem",
+    "moneyBody": "Løntotalen vokser, mens du bygger, så du fanger den dyre uge <b>før lønkørslen, ikke efter</b>. Ved {currency}{price}/medarbejder dækker én sparet overbemandet vagt flere måneders Skemaka.",
+    "estimateNote": "Estimater baseret på et typisk mindre sted — se dine egne tal i beregneren nedenfor."
+  },
+  "pricing": {
+    "title": "Betal for dem, der arbejder",
+    "subBold": "{currency}{price} pr. aktiv medarbejder / måned.",
+    "subRest": "Ingen pakker, intet oprettelsesgebyr, opsig når som helst.",
+    "priceUnit": "/ medarbejder / md.",
+    "trialNote": "{days} dage gratis — du betaler kun for aktive medarbejdere",
+    "feature1": "Betal kun for aktive medarbejdere",
+    "feature2": "Ubegrænsede vagtplaner, vagter & historik",
+    "feature3": "Tilgængelighed, fridage & sms-beskeder",
+    "feature4": "Lønoverblik + CSV-løneksport",
+    "feature5": "Gratis medarbejder-app (iOS & Android)",
+    "cta": "Start {days} dages gratis prøve",
+    "noCard": "Intet betalingskort påkrævet",
+    "calcHeading": "Hvad kommer det til at koste mig?"
+  },
+  "calculator": {
+    "label": "Hvor mange medarbejdere planlægger du for?",
+    "employees": "{count} {count, plural, one {medarbejder} other {medarbejdere}}",
+    "perMonth": "/måned",
+    "activeNote": "Du betaler kun for aktive medarbejdere — deaktivér nogen, og din regning falder næste periode.",
+    "breakEven": "<b>Tjener sig nemt hjem.</b> Ved ~{currency}{wage}/t dækker bare <b>{min} min</b> mindre overbemanding om ugen hele regningen — den løbende løntotal hjælper dig med at finde dem."
+  },
+  "faq": {
+    "title": "Spørgsmål fra ejere",
+    "q1": "Hvordan får mine medarbejdere deres vagter?",
+    "a1": "Du udgiver, og alle får en sms med deres vagter. De kan også åbne den gratis app eller et link — ingen opsætning for dem, intet print.",
+    "q2": "Skal medarbejderne oprette en konto?",
+    "a2": "Nej. Du tilføjer dem, og de får et invitationslink. De logger ind med Google eller Apple, og så er de i gang — de fleste er klar på under et minut.",
+    "q3": "Hvad koster det egentlig?",
+    "a3": "{currency}{price} pr. aktiv medarbejder pr. måned. Deaktivér en sæsonmedarbejder, og du betaler ikke længere for vedkommende. Ingen pakker, intet oprettelsesgebyr.",
+    "q4": "Kan jeg eksportere timer til løn?",
+    "a4": "Ja — lønoverblikket eksporterer til CSV med timer, timeløn og samlet løn pr. person, klar til bogholderen eller lønsystemet.",
+    "q5": "Er der binding?",
+    "a5": "Nej. {days} dage gratis uden kort, derefter måned til måned. Opsig når som helst — du har adgang perioden ud.",
+    "q6": "Jeg har mere end ét sted.",
+    "a6": "Hvert sted er sit eget workspace i dag. Flere steder under ét login er på vej — skriv til os, så sætter vi dig op."
+  },
+  "cta": {
+    "title": "Få næste uges vagtplan ud af WhatsApp.",
+    "subtitle": "Prøv demo-restauranten, eller start gratis med dit eget hold.",
+    "trial": "Start gratis prøveperiode",
+    "demo": "Se demoen →"
+  },
+  "footer": {
+    "demo": "Demo",
+    "terms": "Vilkår",
+    "privacy": "Privatliv"
+  },
+  "preview": {
+    "header": "Fre 12. juni · aftenservice",
+    "wages": "€412 i løn",
+    "roleHeadChef": "Køkkenchef",
+    "roleSousChef": "Souschef",
+    "roleBartender": "Bartender",
+    "roleWaiter": "Tjener",
+    "onLeave": "har fri"
+  }
+}

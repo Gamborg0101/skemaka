@@ -1,0 +1,50 @@
+{
+  "backToDashboard": "Tilbage til overblikket",
+  "hi": "Hej {name}",
+  "noProfile": "Ingen medarbejderprofil",
+  "noProfileHint": "Bed din leder om at tilføje dig som medarbejder, så dine vagter vises her.",
+  "noShifts": "Ingen kommende vagter",
+  "noShiftsHint": "Kig forbi igen, når din vagtplan er udgivet.",
+  "published": "Udgivet",
+  "pending": "Afventer",
+  "inclBreak": "(inkl. {min} min. pause)",
+  "workingWithYou": "På arbejde med dig",
+  "timeOff": {
+    "title": "Fridage",
+    "request": "Anmod",
+    "from": "Fra",
+    "to": "Til",
+    "reasonLabel": "Årsag (valgfrit)",
+    "reasonPlaceholder": "f.eks. ferie, aftale…",
+    "submit": "Send anmodning",
+    "submitting": "Sender…",
+    "noRequests": "Ingen anmodninger om fri endnu.",
+    "note": "Note: {note}",
+    "statusPending": "Afventer",
+    "statusApproved": "Godkendt",
+    "statusDenied": "Afvist",
+    "errSubmit": "Anmodningen kunne ikke sendes",
+    "successSubmit": "Anmodning om fri sendt"
+  },
+  "push": {
+    "title": "Få besked om nye vagtplaner",
+    "body": "Vi giver denne enhed besked, når dine vagter udgives.",
+    "enable": "Slå til",
+    "enabling": "Slår til…",
+    "dismiss": "Afvis notifikationsprompt"
+  },
+  "availability": {
+    "linkNotFound": "Linket blev ikke fundet",
+    "linkNotFoundHint": "Linket kan være udløbet, eller der er ingen åben tilgængelighedsanmodning lige nu. Bed din leder om at sende invitationen igen.",
+    "allDone": "Færdig!",
+    "allDoneHint": "Din tilgængelighed er sendt. Din leder bygger vagtplanen og giver dig besked om dine vagter.",
+    "hi": "Hej {name},",
+    "shareIntro": "Del din tilgængelighed for ugen fra <b>{week}</b>.",
+    "available": "Ledig",
+    "notAvailable": "Ikke ledig",
+    "preferredStart": "Foretrukket start (valgfrit)",
+    "preferredEnd": "Foretrukket slut (valgfrit)",
+    "submit": "Send tilgængelighed",
+    "submitting": "Sender…"
+  }
+}

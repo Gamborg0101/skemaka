@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "Skemaka — Staff & shift scheduling for restaurants",
+    "description": "Build the week's schedule, see the wage cost before you publish, and text shifts to your team. Scheduling built for restaurants and cafés."
+  },
+  "nav": {
+    "demo": "See the demo",
+    "signIn": "Sign in →"
+  },
+  "hero": {
+    "kicker": "Scheduling software for restaurants & cafés",
+    "title1": "Do the schedule in 20 minutes —",
+    "title2": "not on a Sunday night.",
+    "subtitle": "Build the week, watch the wage cost add up as you go, then text everyone their shifts. Instead of a spreadsheet and chasing cover on WhatsApp.",
+    "ctaTrial": "Start free trial",
+    "ctaDemo": "See the demo restaurant →",
+    "priceLine": "{days} days free · then {currency}{price} per active employee/mo · no card needed",
+    "wageLiveTitle": "Wage cost, live",
+    "wageLiveSub": "updates as you add shifts",
+    "conflictTitle": "Conflict caught",
+    "conflictSub": "Tom's on leave — flagged",
+    "legendKitchen": "Kitchen",
+    "legendFoh": "Front of house",
+    "legendBar": "Bar",
+    "legendConflict": "Conflict",
+    "replaces": "Replaces the spreadsheet, the WhatsApp group, and the printout on the fridge."
+  },
+  "trust": {
+    "stripeTitle": "Payments handled by Stripe",
+    "stripeText": "Card details never touch our servers.",
+    "gdprTitle": "GDPR-compliant, EU-hosted",
+    "gdprText": "Your team's data stays in the EU.",
+    "dataTitle": "Your data is yours",
+    "dataText": "Export to CSV or delete everything, anytime."
+  },
+  "problem": {
+    "title": "Scheduling shouldn't eat your evening",
+    "body": "Most places still run it off a spreadsheet and a group chat. So every week you're guessing who's free, missing that someone booked Friday off, and only finding out you went over on wages once payroll lands.",
+    "oldLabel": "The Sunday-night way",
+    "newLabel": "With Skemaka",
+    "old1": "Build it in a spreadsheet, then photograph it into the group chat",
+    "old2": "“Can anyone cover Saturday?” — sent to twelve, one replies",
+    "old3": "Find out you overspent on wages only once payroll lands",
+    "old4": "Put someone on a day they'd already booked off",
+    "new1": "Drag names onto the week — copy last week and tweak in seconds",
+    "new2": "Publish once; everyone gets their shifts by text and in the app",
+    "new3": "Watch the wage total add up before you commit to the week",
+    "new4": "Skemaka flags time-off and availability clashes before you publish"
+  },
+  "how": {
+    "title": "How a week works",
+    "stepLabel": "Step {n}",
+    "step1Title": "Staff send availability",
+    "step1Text": "They tap the days they can work from a link. No more asking around.",
+    "step2Title": "You build the schedule",
+    "step2Text": "Drag names onto days. The wage total adds up live, so an expensive week shows up before you publish it.",
+    "step3Title": "Publish — everyone knows",
+    "step3Text": "One tap texts everyone their shifts and puts them in the app. Nothing on the fridge."
+  },
+  "deep": {
+    "buildTitle": "Build the schedule by dragging names",
+    "buildBody": "Drop people onto shifts. Copy last week and tweak it. It's the bit you do every week — so it's built to be fast, not clever.",
+    "costTitle": "Know the cost before you publish",
+    "costBody": "Every shift adds to the running wage total. Spot the heavy Saturday while you can still change it — not when payroll lands.",
+    "statThisWeek": "This week",
+    "statWageCost": "Wage cost",
+    "statAvgRate": "Avg rate",
+    "catchTitle": "Catch problems before staff do",
+    "catchBody": "Put someone on a day they're off, or one they marked unavailable, and Skemaka tells you — before you publish, not after the complaint.",
+    "conflictsHeader": "{count} things to fix before publishing",
+    "flag1": "Tom is on approved leave on Friday — but he's on the schedule.",
+    "flag2": "Lena marked Saturday as unavailable — but she's on the schedule."
+  },
+  "benefits": {
+    "title": "Everything a restaurant schedule actually needs",
+    "wageTitle": "Live wage cost",
+    "wageText": "The week's labour total updates as you place each shift.",
+    "smsTitle": "SMS when you publish",
+    "smsText": "Staff get their shifts texted to them — no group chat.",
+    "availabilityTitle": "Availability & time-off",
+    "availabilityText": "Staff send when they can work; requests land in one place.",
+    "conflictTitle": "Conflict warnings",
+    "conflictText": "Rostered someone who's off? Skemaka flags it before publish.",
+    "csvTitle": "CSV for payroll",
+    "csvText": "Export hours and pay for the bookkeeper in one click.",
+    "appTitle": "Free staff app",
+    "appText": "iPhone and Android. Staff see shifts and clock in."
+  },
+  "savings": {
+    "title": "What you get back every week",
+    "subtitle": "Your evening — and control of the wage bill.",
+    "hoursLabel": "Hours back",
+    "hoursAmount": "~{hrs} hrs",
+    "hoursTo": "{min} min",
+    "perWeek": "a week",
+    "hoursBody": "Copy last week, drag a few names, publish. That's roughly <b>{hours} hours a month</b> back from the spreadsheet and the group chat.",
+    "moneyLabel": "Money kept",
+    "moneyTitle": "Pays for itself",
+    "moneyBody": "The wage total adds up as you build, so you catch the expensive week <b>before payroll, not after</b>. At {currency}{price}/employee, trimming one over-staffed shift covers months of Skemaka.",
+    "estimateNote": "Estimates based on a typical small venue — see your own numbers in the calculator below."
+  },
+  "pricing": {
+    "title": "Pay for who's working",
+    "subBold": "{currency}{price} per active employee / month.",
+    "subRest": "No tiers, no setup fee, cancel anytime.",
+    "priceUnit": "/ employee / mo",
+    "trialNote": "{days} days free — billed only for active staff",
+    "feature1": "Only pay for active staff",
+    "feature2": "Unlimited schedules, shifts & history",
+    "feature3": "Availability, time-off & SMS alerts",
+    "feature4": "Labour cost + CSV payroll export",
+    "feature5": "Free staff app (iOS & Android)",
+    "cta": "Start {days}-day free trial",
+    "noCard": "No credit card required",
+    "calcHeading": "What will it cost me?"
+  },
+  "calculator": {
+    "label": "How many staff do you schedule?",
+    "employees": "{count} {count, plural, one {employee} other {employees}}",
+    "perMonth": "/month",
+    "activeNote": "You only pay for active staff — deactivate someone and your bill drops next cycle.",
+    "breakEven": "<b>Pays for itself easily.</b> At ~{currency}{wage}/hr, trimming just <b>{min} min</b> of over-scheduling a week covers the whole bill — the live wage total helps you find it."
+  },
+  "faq": {
+    "title": "Questions owners ask",
+    "q1": "How do my staff get their shifts?",
+    "a1": "You publish, and everyone gets a text with their shifts. They can also open the free app or a web link — no setup from them, no printing.",
+    "q2": "Do staff need to create an account?",
+    "a2": "No. You add them, they get an invite link. They sign in with Google or Apple and they're in — most are set up in under a minute.",
+    "q3": "What does it actually cost?",
+    "a3": "{currency}{price} per active employee per month. Deactivate someone for the season and you stop paying for them. No tiers, no setup fee.",
+    "q4": "Can I export hours for payroll?",
+    "a4": "Yes — the labour cost view exports to CSV with hours, wage, and total pay per person, ready for your bookkeeper or payroll software.",
+    "q5": "Is there a contract?",
+    "a5": "No. {days} days free with no card, then month to month. Cancel whenever — you keep access until the end of the period.",
+    "q6": "I run more than one venue.",
+    "a6": "Each venue is its own workspace today. Multi-venue under one login is on the way — get in touch and we'll set you up."
+  },
+  "cta": {
+    "title": "Get next week's schedule off WhatsApp.",
+    "subtitle": "Try it on the demo restaurant, or start free with your own team.",
+    "trial": "Start free trial",
+    "demo": "See the demo →"
+  },
+  "footer": {
+    "demo": "Demo",
+    "terms": "Terms",
+    "privacy": "Privacy"
+  },
+  "preview": {
+    "header": "Fri 12 June · dinner service",
+    "wages": "€412 wages",
+    "roleHeadChef": "Head chef",
+    "roleSousChef": "Sous chef",
+    "roleBartender": "Bartender",
+    "roleWaiter": "Waiter",
+    "onLeave": "on leave"
+  }
+}

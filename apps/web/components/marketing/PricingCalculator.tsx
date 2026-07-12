@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { TrendingDown } from "lucide-react"
+import { useTranslations } from "next-intl"
 import {
   PRICE_PER_EMPLOYEE_MONTHLY,
   PLAN_CURRENCY,
@@ -19,6 +20,7 @@ const MAX = 60
  * network, safe to render anywhere on the marketing page.
  */
 export function PricingCalculator() {
+  const t = useTranslations("marketing.calculator")
   const [count, setCount] = useState(8)
   const total = monthlyTotal(count)
   // Break-even framing: how little avoided over-scheduling covers the bill.
@@ -29,10 +31,10 @@ export function PricingCalculator() {
     <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
       <div className="flex items-baseline justify-between gap-4">
         <label htmlFor="emp-count" className="text-sm font-medium text-gray-700">
-          How many staff do you schedule?
+          {t("label")}
         </label>
         <span className="text-sm font-semibold text-gray-900 tabular-nums">
-          {count} {count === 1 ? "employee" : "employees"}
+          {t("employees", { count })}
         </span>
       </div>
 
@@ -60,10 +62,10 @@ export function PricingCalculator() {
         </p>
         <p className="text-4xl font-bold text-gray-900 tabular-nums">
           {PLAN_CURRENCY}{total}
-          <span className="ml-1 text-base font-medium text-gray-400">/month</span>
+          <span className="ml-1 text-base font-medium text-gray-400">{t("perMonth")}</span>
         </p>
         <p className="text-xs text-gray-400">
-          You only pay for active staff — deactivate someone and your bill drops next cycle.
+          {t("activeNote")}
         </p>
       </div>
 
@@ -71,12 +73,12 @@ export function PricingCalculator() {
       <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
         <TrendingDown className="mt-0.5 size-4 shrink-0 text-green-600" />
         <p className="text-xs leading-relaxed text-green-900">
-          <span className="font-semibold">Pays for itself easily.</span>{" "}
-          At ~{PLAN_CURRENCY}{ROI_ASSUMED_HOURLY_WAGE}/hr, trimming just{" "}
-          <span className="font-semibold tabular-nums">
-            {breakEvenMinPerWeek} min
-          </span>{" "}
-          of over-scheduling a week covers the whole bill — the live wage total helps you find it.
+          {t.rich("breakEven", {
+            currency: PLAN_CURRENCY,
+            wage: ROI_ASSUMED_HOURLY_WAGE,
+            min: breakEvenMinPerWeek,
+            b: (chunks) => <span className="font-semibold tabular-nums">{chunks}</span>,
+          })}
         </p>
       </div>
     </div>

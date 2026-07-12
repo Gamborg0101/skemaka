@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Geist_Mono } from "next/font/google"
+import { NextIntlClientProvider } from "next-intl"
+import { getLocale } from "next-intl/server"
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/providers"
 import { RegisterSW } from "@/components/pwa/RegisterSW"
@@ -35,22 +37,25 @@ export const viewport: Viewport = {
   themeColor: "#0F172A",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full">
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <NextIntlClientProvider>
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
+        </NextIntlClientProvider>
         <RegisterSW />
       </body>
     </html>

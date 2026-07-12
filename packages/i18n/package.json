@@ -1,5 +1,5 @@
 {
-  "name": "@skemaka/types",
+  "name": "@skemaka/i18n",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -12,10 +12,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'No linting for types package'"
-  },
-  "dependencies": {
-    "@skemaka/i18n": "workspace:*"
+    "lint": "echo 'No linting for i18n package'"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

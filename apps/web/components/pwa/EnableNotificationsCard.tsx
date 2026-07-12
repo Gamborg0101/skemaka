@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useTranslations } from "next-intl"
 import { Bell, X } from "lucide-react"
 import { usePushSubscription } from "./usePushSubscription"
 
@@ -13,6 +14,7 @@ const DISMISS_KEY = "skemaka.pushPromptDismissed"
  * one tap and the card gets out of the way permanently.
  */
 export function EnableNotificationsCard() {
+  const t = useTranslations("portal.push")
   const { status, subscribe } = usePushSubscription()
   const [dismissed, setDismissed] = useState(true) // assume dismissed until localStorage read
   const [busy, setBusy] = useState(false)
@@ -39,10 +41,10 @@ export function EnableNotificationsCard() {
       <Bell className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Get notified about new schedules
+          {t("title")}
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          We&apos;ll ping this device when your shifts are published.
+          {t("body")}
         </p>
       </div>
       <button
@@ -50,11 +52,11 @@ export function EnableNotificationsCard() {
         disabled={busy}
         className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
       >
-        {busy ? "Enabling…" : "Enable"}
+        {busy ? t("enabling") : t("enable")}
       </button>
       <button
         onClick={dismiss}
-        aria-label="Dismiss notification prompt"
+        aria-label={t("dismiss")}
         className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
         <X className="size-4" />

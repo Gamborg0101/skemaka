@@ -59,18 +59,21 @@ export function getWeekDays(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 }
 
-/** "12 May – 18 May" style label for a week. Noon-anchored to stay on the correct local date. */
-export function formatWeekLabel(weekStart: string): string {
+/**
+ * "12 May – 18 May" style label for a week. Noon-anchored to stay on the correct
+ * local date. `locale` is a BCP 47 tag (see LOCALE_TAGS in @skemaka/i18n).
+ */
+export function formatWeekLabel(weekStart: string, locale = "en-GB"): string {
   const start = new Date(weekStart + "T12:00:00")
   const end = new Date(weekStart + "T12:00:00")
   end.setDate(end.getDate() + 6)
   const fmt = (d: Date) =>
-    d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+    d.toLocaleDateString(locale, { day: "numeric", month: "short" })
   return `${fmt(start)} – ${fmt(end)}`
 }
 
-export function formatDayLabel(isoDate: string): string {
-  return new Date(isoDate + "T12:00:00").toLocaleDateString("en-GB", {
+export function formatDayLabel(isoDate: string, locale = "en-GB"): string {
+  return new Date(isoDate + "T12:00:00").toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
