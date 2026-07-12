@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus, X, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -17,6 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { Schedule } from "@/types"
 
 export default function SchedulePage() {
+  const t = useTranslations("manager.schedule")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const { orgId, jobRoles, shiftTemplates } = useOrg()
 
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
@@ -168,8 +172,8 @@ export default function SchedulePage() {
     const fmt = (iso: string) => {
       const d = new Date(iso + "T12:00:00")
       return [
-        d.toLocaleDateString("en-GB", { weekday: "short" }),
-        d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+        d.toLocaleDateString(localeTag, { weekday: "short" }),
+        d.toLocaleDateString(localeTag, { day: "numeric", month: "short" }),
       ].join(" ")
     }
     const first = timelineDates[0]
@@ -191,11 +195,11 @@ export default function SchedulePage() {
     <div className="flex items-center gap-0.5 rounded-lg bg-blue-900 p-0.5 shrink-0">
       <button onClick={() => setViewMode("week")} className={segItem(viewMode === "week")}>
         <LayoutGrid className="size-3.5" />
-        Week
+        {t("week")}
       </button>
       <button onClick={() => setViewMode("timeline")} className={segItem(viewMode === "timeline")}>
         <AlignLeft className="size-3.5" />
-        Timeline
+        {t("timeline")}
       </button>
     </div>
   )
@@ -212,7 +216,7 @@ export default function SchedulePage() {
               : "text-blue-100 hover:bg-white/10 hover:text-white"
           }`}
         >
-          {n}d
+          {t("days", { n })}
         </button>
       ))}
     </div>
@@ -221,26 +225,26 @@ export default function SchedulePage() {
   const navControls = viewMode === "timeline" ? (
     dayCount === 1 ? (
       <>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label="Previous day">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label={t("prevDay")}>
           <ChevronLeft className="size-4" />
         </Button>
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 text-center md:min-w-44">
           {timelineRangeLabel}
         </span>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label="Next day">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label={t("nextDay")}>
           <ChevronRight className="size-4" />
         </Button>
         <WeekPicker weekStart={weekStart} onChange={jumpToDay} dayMode selectedDay={selectedDay} />
       </>
     ) : (
       <>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label="Previous">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(-1)} aria-label={t("prev")}>
           <ChevronLeft className="size-4" />
         </Button>
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 text-center hidden md:block md:min-w-44">
           {timelineRangeLabel}
         </span>
-        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label="Next">
+        <Button variant="outline" size="icon-sm" onClick={() => navigateDay(1)} aria-label={t("next")}>
           <ChevronRight className="size-4" />
         </Button>
         <WeekPicker weekStart={weekStart} onChange={jumpToWeek} />
@@ -248,11 +252,11 @@ export default function SchedulePage() {
     )
   ) : (
     <>
-      <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week">
+      <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label={t("prevWeek")}>
         <ChevronLeft className="size-4" />
       </Button>
       <WeekPicker weekStart={weekStart} onChange={jumpToWeek} />
-      <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week">
+      <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label={t("nextWeek")}>
         <ChevronRight className="size-4" />
       </Button>
     </>
@@ -267,11 +271,11 @@ export default function SchedulePage() {
     <div className="flex items-center gap-2 shrink-0">
       {isRolledOut ? (
         <span className="hidden sm:inline-flex items-center rounded-full bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:text-green-300">
-          Rolled out
+          {t("rolledOut")}
         </span>
       ) : hasDraftShifts ? (
         <span className="hidden sm:inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
-          Draft
+          {t("draft")}
         </span>
       ) : null}
       <Button
@@ -279,7 +283,7 @@ export default function SchedulePage() {
         onClick={() => setRollOutOpen(true)}
         className="bg-blue-600 hover:bg-blue-700 text-white"
       >
-        Roll out
+        {t("rollOut")}
       </Button>
     </div>
   )
@@ -288,7 +292,7 @@ export default function SchedulePage() {
     <div className="flex flex-col h-full">
       {/* Desktop header — single row (md+) */}
       <div className="hidden md:flex items-center gap-2 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50 shrink-0">Schedule</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50 shrink-0">{t("title")}</h1>
         {viewToggle}
         <div className="flex-1" />
         <Button
@@ -297,7 +301,7 @@ export default function SchedulePage() {
           onClick={goToToday}
           className={todayHidden ? "opacity-0 pointer-events-none" : ""}
         >
-          Today
+          {t("today")}
         </Button>
         {dayCountSelector}
         {navControls}
@@ -338,12 +342,12 @@ export default function SchedulePage() {
           <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3">
             <Sparkles className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
             <span className="flex-1 text-sm text-blue-900 dark:text-gray-300">
-              <span className="font-semibold">Build your first schedule.</span>{" "}
-              Click any empty cell in the grid to add a shift.
+              <span className="font-semibold">{t("hintBold")}</span>{" "}
+              {t("hintRest")}
             </span>
             <button
               onClick={() => setHintDismissed(true)}
-              aria-label="Dismiss"
+              aria-label={t("dismiss")}
               className="shrink-0 text-blue-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
               <X className="size-4" />
@@ -388,14 +392,14 @@ export default function SchedulePage() {
               <div className="size-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center mx-auto mb-4">
                 <Users className="size-8 text-blue-400" />
               </div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-50 mb-1">No employees yet</h2>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-50 mb-1">{t("noEmployees")}</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                Add your first employee to start building a schedule.
+                {t("noEmployeesHint")}
               </p>
               <Link href="/employees">
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                   <UserPlus className="size-4" />
-                  Add your first employee
+                  {t("addFirstEmployee")}
                 </Button>
               </Link>
             </div>
