@@ -10,6 +10,27 @@
 
 ---
 
+## 0. Owner todo — in order
+
+1. [ ] **Merge PR #11 and #8**, then **#9** (retargets to `main` automatically).
+       Vercel deploys `main` to prod.
+2. [ ] **Stripe (live mode):** create the volume-tiered monthly price —
+       tier 1 (up to 5 units) flat €19.00, tier 2 (6+ units) €3.50/unit —
+       set it as `STRIPE_PRICE_ID` in Vercel, then mark **#10** ready and merge.
+       Decide: existing €3 subscribers grandfathered or moved (§4).
+3. [ ] **Web push live:** `npx web-push generate-vapid-keys` → set both keys in
+       Vercel (§2), then `cd apps/web && npx prisma db push` against prod Neon
+       to create `PushSubscription` (§3).
+4. [ ] **One-time verifications (~30 min):** Stripe webhook 200s, crons
+       registered, forced 429, Resend deliverability, Google OAuth consent
+       published, test-login vars absent (§2, §4, §5).
+5. [ ] **Backup drill:** confirm Neon PITR, restore once to a scratch branch,
+       commit `docs/restore-runbook.md` (§3).
+
+SMS registration (§5) and the App Store submission (§6) can trail the web launch.
+
+---
+
 ## 1. Code in flight — merge order
 
 | PR | What | Prerequisite before merge |
