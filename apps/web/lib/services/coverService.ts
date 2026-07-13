@@ -1,5 +1,6 @@
 import { db } from "@/lib/prisma"
 import { PrismaClient, $Enums } from "@/app/generated/prisma/client"
+import { resolveRecipientLocale } from "@/lib/messages"
 import { ServiceError } from "./errors"
 import {
   sendCoverOfferedSms,
@@ -119,7 +120,7 @@ export async function createCoverRequest(
   })
 
   // Notify eligible teammates: active, same job role, not the requester, opted in.
-  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true } })
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } })
   const teammates = await db.employee.findMany({
     where: {
       organizationId: orgId,
@@ -129,7 +130,7 @@ export async function createCoverRequest(
       phone: { not: null },
       smsConsentAt: { not: null },
     },
-    select: { name: true, phone: true },
+    select: { name: true, phone: true, locale: true },
   })
   const date = shift.date.toISOString().slice(0, 10)
   for (const t of teammates) {
@@ -142,6 +143,7 @@ export async function createCoverRequest(
         startTime: shift.startTime,
         endTime: shift.endTime,
         jobRole: shift.jobRole,
+        locale: resolveRecipientLocale(t.locale, org?.locale),
       }),
     )
   }
@@ -176,8 +178,8 @@ export async function claimCoverRequest(
 
   // Tell the requester someone stepped up (pending manager approval).
   const [org, requester] = await Promise.all([
-    db.organization.findUnique({ where: { id: orgId }, select: { name: true } }),
-    db.employee.findUnique({ where: { id: req.requesterEmployeeId }, select: { name: true, phone: true, smsConsentAt: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } }),
+    db.employee.findUnique({ where: { id: req.requesterEmployeeId }, select: { name: true, phone: true, smsConsentAt: true, locale: true } }),
   ])
   if (requester?.phone && requester.smsConsentAt) {
     notify(
@@ -189,6 +191,7 @@ export async function claimCoverRequest(
         date: req.shift.date.toISOString().slice(0, 10),
         startTime: req.shift.startTime,
         endTime: req.shift.endTime,
+        locale: resolveRecipientLocale(requester.locale, org?.locale),
       }),
     )
   }
@@ -223,17 +226,17 @@ export async function approveCoverRequest(
     })
   })
 
-  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true } })
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } })
   const [requester, claimer] = await Promise.all([
-    db.employee.findUnique({ where: { id: req.requesterEmployeeId }, select: { name: true, phone: true, smsConsentAt: true } }),
-    db.employee.findUnique({ where: { id: claimedById }, select: { name: true, phone: true, smsConsentAt: true } }),
+    db.employee.findUnique({ where: { id: req.requesterEmployeeId }, select: { name: true, phone: true, smsConsentAt: true, locale: true } }),
+    db.employee.findUnique({ where: { id: claimedById }, select: { name: true, phone: true, smsConsentAt: true, locale: true } }),
   ])
   const date = req.shift.date.toISOString().slice(0, 10)
   if (requester?.phone && requester.smsConsentAt) {
-    notify(sendCoverApprovedSms({ to: requester.phone, name: requester.name, orgName: org?.name ?? "", date, startTime: req.shift.startTime, endTime: req.shift.endTime, role: "requester" }))
+    notify(sendCoverApprovedSms({ to: requester.phone, name: requester.name, orgName: org?.name ?? "", date, startTime: req.shift.startTime, endTime: req.shift.endTime, role: "requester", locale: resolveRecipientLocale(requester.locale, org?.locale) }))
   }
   if (claimer?.phone && claimer.smsConsentAt) {
-    notify(sendCoverApprovedSms({ to: claimer.phone, name: claimer.name, orgName: org?.name ?? "", date, startTime: req.shift.startTime, endTime: req.shift.endTime, role: "claimer" }))
+    notify(sendCoverApprovedSms({ to: claimer.phone, name: claimer.name, orgName: org?.name ?? "", date, startTime: req.shift.startTime, endTime: req.shift.endTime, role: "claimer", locale: resolveRecipientLocale(claimer.locale, org?.locale) }))
   }
 
   return serCover(updated as unknown as CoverRow)
@@ -261,13 +264,13 @@ export async function denyCoverRequest(
     include: COVER_INCLUDE,
   })
 
-  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true } })
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } })
   const date = req.shift.date.toISOString().slice(0, 10)
   const recipients = [req.requesterEmployeeId, req.claimedByEmployeeId].filter(Boolean) as string[]
   for (const empId of recipients) {
-    const emp = await db.employee.findUnique({ where: { id: empId }, select: { name: true, phone: true, smsConsentAt: true } })
+    const emp = await db.employee.findUnique({ where: { id: empId }, select: { name: true, phone: true, smsConsentAt: true, locale: true } })
     if (emp?.phone && emp.smsConsentAt) {
-      notify(sendCoverDeniedSms({ to: emp.phone, name: emp.name, orgName: org?.name ?? "", date, startTime: req.shift.startTime, endTime: req.shift.endTime }))
+      notify(sendCoverDeniedSms({ to: emp.phone, name: emp.name, orgName: org?.name ?? "", date, startTime: req.shift.startTime, endTime: req.shift.endTime, locale: resolveRecipientLocale(emp.locale, org?.locale) }))
     }
   }
 

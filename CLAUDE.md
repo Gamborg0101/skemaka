@@ -163,6 +163,18 @@ cd apps/web && npx prisma generate
 
 ---
 
+## i18n (next-intl + @skemaka/i18n)
+
+- **Catalogs live in `packages/i18n/src/messages/<locale>/<namespace>.json`** — English is the source language; namespaces: `common`, `marketing`, `auth`, `onboarding`, `portal`, `manager`, `dialogs`, `emails`, `sms`. A parity test (`lib/__tests__/i18n.test.ts`) fails CI if any locale's keys or ICU placeholders drift from English.
+- **Adding a string**: add the key to `en/<ns>.json` AND every other locale, then use `useTranslations("<ns>")` (client/RSC) or `getTranslations()` (async server) from next-intl. Never hardcode user-visible copy.
+- **Adding a locale**: extend `SUPPORTED_LOCALES`, `LOCALE_LABELS`, `LOCALE_TAGS` in `packages/i18n/src/locales.ts`, create `messages/<locale>/`, and translate `quotes.ts` (sets must stay 1:1 with English so the deterministic pick aligns).
+- **Locale resolution (UI)**: `NEXT_LOCALE` cookie → `?lang=` (landing, via `LangQuerySync`) → `Accept-Language` (da→da) → `en`. See `lib/locale.ts`. No URL-prefix routing — don't add `/da/...` paths without revisiting `proxy.ts`.
+- **Emails/SMS/push** render server-side via `getMessageTranslator(locale, "emails" | "sms")` in `lib/messages.ts`; recipient language = `resolveRecipientLocale(employee.locale, org.locale)` (falls back to English). Any new notification must resolve + pass `locale`.
+- **Dates**: pass `LOCALE_TAGS[locale]` to `toLocaleDateString`/`formatWeekLabel`/`formatDayLabel` — never hardcode `"en-GB"` in user-facing output.
+- **Still English (deliberate)**: legal pages, `/platform` superadmin pages, the deep manager components (grids/dialogs — follow-up), and the mobile app.
+
+---
+
 ## Patterns to follow
 
 - `serXxx()` helpers in `lib/serialize.ts` must be used before returning Prisma objects in API responses (converts `Decimal` → `number`, `Date` → ISO string).

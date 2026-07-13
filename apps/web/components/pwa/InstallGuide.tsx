@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useTranslations } from "next-intl"
 import {
   ChevronDown,
   MonitorDown,
@@ -18,15 +19,23 @@ type PlatformId = "computer" | "iphone" | "android"
 
 type Platform = {
   id: PlatformId
-  label: string
+  labelKey: "platformComputer" | "platformIphone" | "platformAndroid"
   icon: React.ReactNode
 }
 
 const PLATFORMS: Platform[] = [
-  { id: "computer", label: "Computer", icon: <MonitorDown className="size-5" /> },
-  { id: "iphone", label: "iPhone & iPad", icon: <Share className="size-5" /> },
-  { id: "android", label: "Android", icon: <Plus className="size-5" /> },
+  { id: "computer", labelKey: "platformComputer", icon: <MonitorDown className="size-5" /> },
+  { id: "iphone", labelKey: "platformIphone", icon: <Share className="size-5" /> },
+  { id: "android", labelKey: "platformAndroid", icon: <Plus className="size-5" /> },
 ]
+
+// Shared rich-text renderers for the numbered install steps.
+const richTags = {
+  b: (chunks: React.ReactNode) => <strong className="text-gray-900">{chunks}</strong>,
+  monitor: () => <MonitorDown className="inline size-4 align-text-bottom text-blue-600" />,
+  menu: () => <MoreVertical className="inline size-4 align-text-bottom text-gray-500" />,
+  share: () => <Share className="inline size-4 align-text-bottom text-blue-600" />,
+}
 
 /**
  * Step-by-step install guide with one expandable section per platform.
@@ -35,6 +44,7 @@ const PLATFORMS: Platform[] = [
  * also surfaces a live one-click Install button.
  */
 export function InstallGuide() {
+  const t = useTranslations("onboarding.guide")
   const { canInstall, isInstalled, promptInstall } = useInstallPrompt()
   const [open, setOpen] = useState<PlatformId | null>(null)
   const [justInstalled, setJustInstalled] = useState(false)
@@ -65,7 +75,7 @@ export function InstallGuide() {
       {installed && (
         <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
           <Check className="size-4 shrink-0" />
-          Skemaka is installed — open it from your home screen or desktop.
+          {t("installedBanner")}
         </div>
       )}
 
@@ -85,7 +95,7 @@ export function InstallGuide() {
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 {p.icon}
               </span>
-              <span className="flex-1 text-sm font-semibold text-gray-900">{p.label}</span>
+              <span className="flex-1 text-sm font-semibold text-gray-900">{t(p.labelKey)}</span>
               <ChevronDown
                 className={`size-4 shrink-0 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
               />
@@ -114,6 +124,8 @@ export function InstallGuide() {
  * guide works even when it's being read on a different device than the install.
  */
 function AppAddress() {
+  const t = useTranslations("onboarding.guide")
+  const tCommon = useTranslations("common")
   const [origin, setOrigin] = useState("")
   const [copied, setCopied] = useState(false)
 
@@ -136,7 +148,7 @@ function AppAddress() {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-      <p className="text-xs font-medium text-gray-500">Open Skemaka at this address:</p>
+      <p className="text-xs font-medium text-gray-500">{t("openAt")}</p>
       <div className="mt-2 flex items-center gap-2">
         <Globe className="size-4 shrink-0 text-gray-400" />
         <a
@@ -154,11 +166,11 @@ function AppAddress() {
         >
           {copied ? (
             <>
-              <Check className="size-3.5 text-green-600" /> Copied
+              <Check className="size-3.5 text-green-600" /> {tCommon("copied")}
             </>
           ) : (
             <>
-              <Copy className="size-3.5" /> Copy
+              <Copy className="size-3.5" /> {tCommon("copy")}
             </>
           )}
         </button>
@@ -174,6 +186,7 @@ function ComputerSteps({
   canInstall: boolean
   onInstall: () => void
 }) {
+  const t = useTranslations("onboarding.guide")
   return (
     <div className="space-y-4">
       {canInstall && (
@@ -182,54 +195,45 @@ function ComputerSteps({
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
           <Download className="size-4" />
-          Install Skemaka now
+          {t("installNow")}
         </button>
       )}
       <ol className="space-y-3 text-sm text-gray-600">
-        <Step n={1}>Open Skemaka in <strong className="text-gray-900">Chrome</strong> or <strong className="text-gray-900">Edge</strong>.</Step>
-        <Step n={2}>
-          Click the install icon{" "}
-          <MonitorDown className="inline size-4 align-text-bottom text-blue-600" />{" "}
-          at the right end of the address bar. Don&rsquo;t see it? Open the{" "}
-          <MoreVertical className="inline size-4 align-text-bottom text-gray-500" />{" "}
-          menu (top-right) instead.
-        </Step>
-        <Step n={3}>Choose <strong className="text-gray-900">Install</strong> (or <strong className="text-gray-900">Install Skemaka</strong>).</Step>
-        <Step n={4}>Confirm — Skemaka opens in its own window and is added to your desktop / taskbar.</Step>
+        <Step n={1}>{t.rich("comp1", richTags)}</Step>
+        <Step n={2}>{t.rich("comp2", richTags)}</Step>
+        <Step n={3}>{t.rich("comp3", richTags)}</Step>
+        <Step n={4}>{t.rich("comp4", richTags)}</Step>
       </ol>
       <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
-        On <strong className="text-gray-700">Safari (Mac)</strong>: open the{" "}
-        <strong className="text-gray-700">File</strong> menu and choose{" "}
-        <strong className="text-gray-700">Add to Dock</strong>.
+        {t.rich("compSafariNote", {
+          ...richTags,
+          b: (chunks) => <strong className="text-gray-700">{chunks}</strong>,
+        })}
       </p>
     </div>
   )
 }
 
 function IphoneSteps() {
+  const t = useTranslations("onboarding.guide")
   return (
     <ol className="space-y-3 text-sm text-gray-600">
-      <Step n={1}>Open Skemaka in <strong className="text-gray-900">Safari</strong> (it has to be Safari).</Step>
-      <Step n={2}>
-        Tap the Share icon{" "}
-        <Share className="inline size-4 align-text-bottom text-blue-600" /> in the toolbar.
-      </Step>
-      <Step n={3}>Scroll down and tap <strong className="text-gray-900">Add to Home Screen</strong>.</Step>
-      <Step n={4}>Tap <strong className="text-gray-900">Add</strong> — the Skemaka icon appears on your home screen.</Step>
+      <Step n={1}>{t.rich("ip1", richTags)}</Step>
+      <Step n={2}>{t.rich("ip2", richTags)}</Step>
+      <Step n={3}>{t.rich("ip3", richTags)}</Step>
+      <Step n={4}>{t.rich("ip4", richTags)}</Step>
     </ol>
   )
 }
 
 function AndroidSteps() {
+  const t = useTranslations("onboarding.guide")
   return (
     <ol className="space-y-3 text-sm text-gray-600">
-      <Step n={1}>Open Skemaka in <strong className="text-gray-900">Chrome</strong>.</Step>
-      <Step n={2}>
-        Tap the{" "}
-        <MoreVertical className="inline size-4 align-text-bottom text-gray-500" /> menu (top-right).
-      </Step>
-      <Step n={3}>Tap <strong className="text-gray-900">Add to Home screen</strong> (or <strong className="text-gray-900">Install app</strong>).</Step>
-      <Step n={4}>Tap <strong className="text-gray-900">Install</strong> to confirm.</Step>
+      <Step n={1}>{t.rich("and1", richTags)}</Step>
+      <Step n={2}>{t.rich("and2", richTags)}</Step>
+      <Step n={3}>{t.rich("and3", richTags)}</Step>
+      <Step n={4}>{t.rich("and4", richTags)}</Step>
     </ol>
   )
 }

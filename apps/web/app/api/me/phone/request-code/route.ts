@@ -23,6 +23,7 @@ import { requireAuth } from "@/lib/apiGuard"
 import { db } from "@/lib/prisma"
 import { generateClaimCode, storeClaimCode } from "@/lib/inviteClaimCode"
 import { normalizePhone, sendPhoneVerificationSms } from "@/lib/sms"
+import { resolveRecipientLocale } from "@/lib/messages"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { logError, requestIdFrom } from "@/lib/log"
 
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     const employee = await db.employee.findFirst({
       where: { userId: guard.userId, isActive: true },
       orderBy: { createdAt: "asc" },
-      include: { organization: { select: { name: true } } },
+      include: { organization: { select: { name: true, locale: true } } },
     })
     if (!employee) {
       return NextResponse.json({ error: "No employee record to verify" }, { status: 403 })
@@ -77,7 +78,12 @@ export async function POST(req: NextRequest) {
 
     const code = generateClaimCode()
     await storeClaimCode(guard.userId, code, "phone")
-    const delivered = await sendPhoneVerificationSms({ to: phone, code, orgName: employee.organization.name })
+    const delivered = await sendPhoneVerificationSms({
+      to: phone,
+      code,
+      orgName: employee.organization.name,
+      locale: resolveRecipientLocale(employee.locale, employee.organization.locale),
+    })
 
     // In production a failed/unconfigured send must not be reported as "sent" —
     // otherwise the user waits forever for a code that will never arrive. In

@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { getLocale, getTranslations } from "next-intl/server"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { Clock, MapPin, Users, ArrowLeft } from "lucide-react"
 import { getMondayOfWeek, formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
 import { getInitials } from "@/lib/utils"
@@ -9,8 +11,8 @@ import { pickShiftQuote } from "@/types"
 import { TimeOffSection } from "./TimeOffSection"
 import { EnableNotificationsCard } from "@/components/pwa/EnableNotificationsCard"
 
-function formatShiftDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", {
+function formatShiftDate(date: Date, localeTag: string): string {
+  return date.toLocaleDateString(localeTag, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -55,6 +57,10 @@ export default async function EmployeePortalPage() {
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
 
+  const t = await getTranslations("portal")
+  const locale = (await getLocale()) as Locale
+  const localeTag = LOCALE_TAGS[locale]
+
   const isManager = session.user?.role === "MANAGER" || session.user?.role === "ADMIN"
 
   const today = new Date()
@@ -82,9 +88,9 @@ export default async function EmployeePortalPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
         <div className="text-center max-w-sm">
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No employee profile</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t("noProfile")}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Ask your manager to add you as an employee so your shifts appear here.
+            {t("noProfileHint")}
           </p>
         </div>
       </div>
@@ -146,7 +152,7 @@ export default async function EmployeePortalPage() {
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-3.5" />
-            Back to dashboard
+            {t("backToDashboard")}
           </Link>
         </div>
       )}
@@ -157,7 +163,7 @@ export default async function EmployeePortalPage() {
           {employee.organization.name}
         </p>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-          Hi {employee.name.split(" ")[0]}
+          {t("hi", { name: employee.name.split(" ")[0] })}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{employee.jobRole}</p>
       </div>
@@ -167,8 +173,8 @@ export default async function EmployeePortalPage() {
         <EnableNotificationsCard />
         {weeks.length === 0 && (
           <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-            <p className="text-lg font-medium">No upcoming shifts</p>
-            <p className="text-sm mt-1">Check back when your schedule is published.</p>
+            <p className="text-lg font-medium">{t("noShifts")}</p>
+            <p className="text-sm mt-1">{t("noShiftsHint")}</p>
           </div>
         )}
 
@@ -176,15 +182,15 @@ export default async function EmployeePortalPage() {
           <div key={weekStart}>
             <div className="flex items-center gap-2 mb-3">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                {formatWeekLabel(weekStart)}
+                {formatWeekLabel(weekStart, localeTag)}
               </h2>
               {publishedWeeks.has(weekStart) ? (
                 <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  Published
+                  {t("published")}
                 </span>
               ) : (
                 <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
-                  Pending
+                  {t("pending")}
                 </span>
               )}
             </div>
@@ -205,7 +211,7 @@ export default async function EmployeePortalPage() {
                       {/* Date + role badge */}
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold text-gray-900 dark:text-gray-100">
-                          {formatShiftDate(shift.date)}
+                          {formatShiftDate(shift.date, localeTag)}
                         </p>
                         <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${tagClass}`}>
                           {shift.jobRole}
@@ -220,7 +226,7 @@ export default async function EmployeePortalPage() {
                         </span>
                         <span className="text-sm text-gray-400 dark:text-gray-500">
                           · {hours}h
-                          {shift.breakMinutes > 0 && ` (incl. ${shift.breakMinutes}m break)`}
+                          {shift.breakMinutes > 0 && ` ${t("inclBreak", { min: shift.breakMinutes })}`}
                         </span>
                       </div>
 
@@ -237,7 +243,7 @@ export default async function EmployeePortalPage() {
                         </p>
                       ) : (
                         <p className="text-sm italic text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg px-3 py-2 leading-relaxed">
-                          &ldquo;{pickShiftQuote(shift.id, employee.organization.industry)}&rdquo;
+                          &ldquo;{pickShiftQuote(shift.id, employee.organization.industry, locale)}&rdquo;
                         </p>
                       )}
 
@@ -247,7 +253,7 @@ export default async function EmployeePortalPage() {
                           <div className="flex items-center gap-1.5 mb-2">
                             <Users className="size-3.5 text-gray-400 dark:text-gray-500" />
                             <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                              Working with you
+                              {t("workingWithYou")}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-2">

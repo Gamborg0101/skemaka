@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { Loader2, Phone } from "lucide-react"
 
 interface Props {
@@ -20,6 +21,8 @@ type State =
   | { status: "submitting"; phoneHint: string }
 
 export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
+  const t = useTranslations("auth.verifyPhone")
+  const tCommon = useTranslations("common")
   const router = useRouter()
   const [state, setState] = useState<State>({ status: "enterPhone" })
   const [phone, setPhone] = useState(defaultDialCode)
@@ -52,9 +55,9 @@ export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
         setState({ status: "enterCode", phoneHint: body.data.phone ?? phone })
         return
       }
-      setState({ status: "enterPhone", error: body.error ?? "Couldn't send the code." })
+      setState({ status: "enterPhone", error: body.error ?? t("errSend") })
     } catch {
-      setState({ status: "enterPhone", error: "Network error — please try again." })
+      setState({ status: "enterPhone", error: tCommon("networkError") })
     }
   }
 
@@ -73,10 +76,10 @@ export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
         router.replace("/portal")
         return
       }
-      setState({ status: "enterCode", phoneHint, error: body.error ?? "Incorrect code." })
+      setState({ status: "enterCode", phoneHint, error: body.error ?? tCommon("incorrectCode") })
       setCode("")
     } catch {
-      setState({ status: "enterCode", phoneHint, error: "Network error — please try again." })
+      setState({ status: "enterCode", phoneHint, error: tCommon("networkError") })
     }
   }
 
@@ -90,9 +93,9 @@ export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
             <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-blue-50">
               <Phone className="size-6 text-blue-600" />
             </div>
-            <h1 className="text-lg font-semibold text-gray-900 mb-1">Verify your phone</h1>
+            <h1 className="text-lg font-semibold text-gray-900 mb-1">{t("title")}</h1>
             <p className="text-sm text-gray-500 mb-6">
-              {orgName} needs a number they can reach you on. We&apos;ll text you a 6-digit code.
+              {t("intro", { orgName })}
             </p>
             <input
               type="tel"
@@ -113,16 +116,19 @@ export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
               disabled={state.status === "sending" || phone.trim().length <= 4}
               className="inline-flex items-center justify-center w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {state.status === "sending" ? <Loader2 className="size-4 animate-spin" /> : "Send code"}
+              {state.status === "sending" ? <Loader2 className="size-4 animate-spin" /> : t("sendCode")}
             </button>
           </>
         )}
 
         {(state.status === "enterCode" || state.status === "submitting") && (
           <>
-            <h1 className="text-lg font-semibold text-gray-900 mb-1">Enter your code</h1>
+            <h1 className="text-lg font-semibold text-gray-900 mb-1">{t("codeTitle")}</h1>
             <p className="text-sm text-gray-500 mb-6">
-              We texted a 6-digit code to <strong>{state.phoneHint}</strong>. Enter it to confirm your number.
+              {t.rich("codeIntro", {
+                phone: state.phoneHint,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
             <input
               inputMode="numeric"
@@ -143,21 +149,21 @@ export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
               disabled={state.status === "submitting" || code.length !== 6}
               className="inline-flex items-center justify-center w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {state.status === "submitting" ? <Loader2 className="size-4 animate-spin" /> : "Verify & continue"}
+              {state.status === "submitting" ? <Loader2 className="size-4 animate-spin" /> : t("verifyContinue")}
             </button>
             <button
               onClick={() => void requestCode()}
               disabled={state.status === "submitting" || cooldown > 0}
               className="mt-3 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
             >
-              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+              {cooldown > 0 ? tCommon("resendCodeIn", { s: cooldown }) : tCommon("resendCode")}
             </button>
             <button
               onClick={() => setState({ status: "enterPhone" })}
               disabled={state.status === "submitting"}
               className="mt-2 block w-full text-xs text-gray-400 hover:text-gray-600 disabled:opacity-50"
             >
-              Use a different number
+              {t("differentNumber")}
             </button>
           </>
         )}

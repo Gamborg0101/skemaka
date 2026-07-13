@@ -1,0 +1,17 @@
+{
+  "cancel": "Cancel",
+  "back": "Back",
+  "add": "Add",
+  "adding": "Adding…",
+  "saving": "Saving…",
+  "creating": "Creating…",
+  "continue": "Continue",
+  "or": "or",
+  "copy": "Copy",
+  "copied": "Copied",
+  "networkError": "Network error — please try again.",
+  "incorrectCode": "Incorrect code.",
+  "somethingWentWrong": "Something went wrong.",
+  "resendCode": "Resend code",
+  "resendCodeIn": "Resend code in {s}s"
+}

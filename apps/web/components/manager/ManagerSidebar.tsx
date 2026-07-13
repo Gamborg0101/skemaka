@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useTheme } from "next-themes"
+import { useTranslations } from "next-intl"
 import { CalendarDays, Users, ClipboardList, DollarSign, Settings, Building2, PanelLeftClose, UserCircle, CalendarX2, Sun, Moon, Monitor, Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BugReportDialog } from "@/components/manager/BugReportDialog"
@@ -18,13 +19,13 @@ import { useOrg } from "@/lib/orgContext"
 import { LogoMark } from "@/components/brand/Logo"
 
 const BASE_NAV_ITEMS = [
-  { label: "Schedule",     short: "Schedule", href: "/schedule",     icon: CalendarDays, always: true },
-  { label: "Employees",    short: "Staff",    href: "/employees",    icon: Users,        always: true },
-  { label: "Availability", short: "Avail",    href: "/availability", icon: ClipboardList,always: true },
-  { label: "Labour Cost",   short: "Costs",    href: "/costs",        icon: DollarSign,   always: true },
-  { label: "Time Off",     short: "Time Off", href: "/time-off",     icon: CalendarX2,   always: false },
-  { label: "My Shifts",    short: "Shifts",   href: "/my-shifts",    icon: UserCircle,   always: true },
-]
+  { key: "schedule",     shortKey: "scheduleShort",     href: "/schedule",     icon: CalendarDays, always: true },
+  { key: "employees",    shortKey: "employeesShort",    href: "/employees",    icon: Users,        always: true },
+  { key: "availability", shortKey: "availabilityShort", href: "/availability", icon: ClipboardList,always: true },
+  { key: "costs",        shortKey: "costsShort",        href: "/costs",        icon: DollarSign,   always: true },
+  { key: "timeOff",      shortKey: "timeOffShort",      href: "/time-off",     icon: CalendarX2,   always: false },
+  { key: "myShifts",     shortKey: "myShiftsShort",     href: "/my-shifts",    icon: UserCircle,   always: true },
+] as const
 
 interface ManagerSidebarProps {
   onCollapse?: () => void
@@ -33,12 +34,13 @@ interface ManagerSidebarProps {
 }
 
 function ThemeToggle() {
+  const t = useTranslations("manager.nav")
   const { theme, setTheme } = useTheme()
 
   const options = [
-    { value: "light",  icon: Sun,     label: "Light" },
-    { value: "dark",   icon: Moon,    label: "Dark" },
-    { value: "system", icon: Monitor, label: "System" },
+    { value: "light",  icon: Sun,     label: t("themeLight") },
+    { value: "dark",   icon: Moon,    label: t("themeDark") },
+    { value: "system", icon: Monitor, label: t("themeSystem") },
   ] as const
 
   const current = options.find((o) => o.value === theme) ?? options[2]
@@ -47,8 +49,8 @@ function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(next.value)}
-      aria-label={`Switch to ${next.label} theme`}
-      title={`Theme: ${current.label} — click for ${next.label}`}
+      aria-label={t("themeSwitch", { next: next.label })}
+      title={t("themeTitle", { current: current.label, next: next.label })}
       className="flex w-full items-center justify-center lg:justify-start gap-3 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors"
     >
       <current.icon className="size-4 shrink-0 text-gray-500" />
@@ -58,6 +60,7 @@ function ThemeToggle() {
 }
 
 export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) {
+  const t = useTranslations("manager.nav")
   const pathname = usePathname()
   const router = useRouter()
   const { org, timeOffEnabled } = useOrg()
@@ -76,7 +79,7 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
           {onCollapse && (
             <button
               onClick={onCollapse}
-              aria-label="Collapse sidebar"
+              aria-label={t("collapseSidebar")}
               className="hidden lg:flex size-7 items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
             >
               <PanelLeftClose className="size-4" />
@@ -86,7 +89,8 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
 
         {/* Nav */}
         <nav className="flex-1 px-1.5 lg:px-2 py-3 space-y-0.5">
-          {navItems.map(({ label, href, icon: Icon }) => {
+          {navItems.map(({ key, href, icon: Icon }) => {
+            const label = t(key)
             const active = pathname === href || pathname.startsWith(href + "/")
             return (
               <Link
@@ -123,24 +127,24 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
         {/* Org footer */}
         <div className="p-2 lg:p-3">
           <DropdownMenu>
-            <DropdownMenuTrigger aria-label="Organization settings menu" className="flex w-full items-center justify-center lg:justify-start gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
+            <DropdownMenuTrigger aria-label={t("orgMenu")} className="flex w-full items-center justify-center lg:justify-start gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-400 hover:bg-white/8 hover:text-gray-200 transition-colors">
               <Building2 className="size-4 shrink-0 text-gray-500" />
               <span className="hidden lg:block flex-1 truncate text-left font-medium text-gray-300">{org.name}</span>
               <Settings className="hidden lg:block size-3.5 shrink-0 text-gray-500" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-48">
               <DropdownMenuItem onClick={() => router.push("/settings")}>
-                Organization settings
+                {t("orgSettings")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/billing")}>
-                Billing
+                {t("billing")}
               </DropdownMenuItem>
               {superAdmin && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/platform")}>
                     <Shield className="size-4 text-red-500" />
-                    Platform
+                    {t("platform")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -149,7 +153,7 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
                 variant="destructive"
                 onClick={() => signOut({ redirectTo: "/login" })}
               >
-                Sign out
+                {t("signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -158,7 +162,7 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
 
       {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        {navItems.map(({ short, href, icon: Icon }) => {
+        {navItems.map(({ shortKey, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/")
           return (
             <Link
@@ -170,7 +174,7 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
               )}
             >
               <Icon className="size-5" />
-              {short}
+              {t(shortKey)}
             </Link>
           )
         })}
@@ -182,7 +186,7 @@ export function ManagerSidebar({ onCollapse, superAdmin }: ManagerSidebarProps) 
           )}
         >
           <Settings className="size-5" />
-          Settings
+          {t("settings")}
         </Link>
       </div>
     </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import { Check, Share, Download, ExternalLink } from "lucide-react"
 import { useInstallPrompt } from "./useInstallPrompt"
 
@@ -13,6 +14,7 @@ import { useInstallPrompt } from "./useInstallPrompt"
  * - Anything else → generic instructions.
  */
 export function InstallPrompt() {
+  const t = useTranslations("onboarding.install")
   const { canInstall, isInstalled, promptInstall } = useInstallPrompt()
   const [isIOS, setIsIOS] = useState(false)
   const [standalone, setStandalone] = useState(false)
@@ -39,8 +41,8 @@ export function InstallPrompt() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon-192.png" alt="" className="size-12 rounded-xl shadow-sm" />
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Add Skemaka to your device</h3>
-          <p className="text-xs text-gray-500">One-tap access from your home screen or desktop.</p>
+          <h3 className="text-sm font-semibold text-gray-900">{t("cardTitle")}</h3>
+          <p className="text-xs text-gray-500">{t("cardSub")}</p>
         </div>
       </div>
 
@@ -48,7 +50,7 @@ export function InstallPrompt() {
         {installed ? (
           <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2.5 text-sm text-green-700">
             <Check className="size-4 shrink-0" />
-            Installed — open Skemaka from your home screen.
+            {t("installed")}
           </div>
         ) : canInstall ? (
           <button
@@ -56,34 +58,41 @@ export function InstallPrompt() {
             className="flex w-full items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download className="size-4" />
-            Install Skemaka
+            {t("installBtn")}
           </button>
         ) : isIOS ? (
           <ol className="space-y-2.5 text-sm text-gray-600">
             <li className="flex items-start gap-2.5">
               <Step n={1} />
               <span>
-                Tap the{" "}
-                <Share className="inline size-4 align-text-bottom text-blue-600" />{" "}
-                <strong className="text-gray-900">Share</strong> icon in Safari.
+                {t.rich("ios1", {
+                  icon: () => (
+                    <Share className="inline size-4 align-text-bottom text-blue-600" />
+                  ),
+                  b: (chunks) => <strong className="text-gray-900">{chunks}</strong>,
+                })}
               </span>
             </li>
             <li className="flex items-start gap-2.5">
               <Step n={2} />
               <span>
-                Choose <strong className="text-gray-900">Add to Home Screen</strong>.
+                {t.rich("ios2", {
+                  b: (chunks) => <strong className="text-gray-900">{chunks}</strong>,
+                })}
               </span>
             </li>
             <li className="flex items-start gap-2.5">
               <Step n={3} />
               <span>
-                Tap <strong className="text-gray-900">Add</strong> — done.
+                {t.rich("ios3", {
+                  b: (chunks) => <strong className="text-gray-900">{chunks}</strong>,
+                })}
               </span>
             </li>
           </ol>
         ) : (
           <p className="text-sm text-gray-600">
-            Skemaka installs straight from your browser in a few taps — the steps differ by device.
+            {t("generic")}
           </p>
         )}
 
@@ -93,7 +102,7 @@ export function InstallPrompt() {
             target="_blank"
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
           >
-            See step-by-step install instructions
+            {t("seeSteps")}
             <ExternalLink className="size-3.5" />
           </Link>
         )}

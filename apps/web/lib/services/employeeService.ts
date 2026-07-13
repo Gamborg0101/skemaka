@@ -5,6 +5,7 @@ import { isEmploymentType } from "@/types"
 import type { Employee } from "@/types"
 import type { PaginationParams } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
+import { resolveRecipientLocale } from "@/lib/messages"
 import { recordAudit } from "@/lib/audit"
 import { syncSubscriptionQuantitySafe } from "./billingService"
 import { ServiceError } from "./errors"
@@ -91,7 +92,7 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     ? input.employmentType
     : "PART_TIME"
 
-  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, currency: true } })
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, currency: true, locale: true } })
 
   const employee = await db.employee.create({
     data: {
@@ -120,6 +121,7 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     orgName:   org?.name ?? "",
     inviteUrl: `${appUrl}/portal`,
     joinUrl:   `${appUrl}/join/${employee.inviteToken}`,
+    locale:    resolveRecipientLocale(org?.locale),
   }).catch((err) => console.error("[invite] Resend error:", err))
 
   syncSubscriptionQuantitySafe(orgId)
@@ -316,7 +318,7 @@ export async function refreshInviteToken(orgId: string, employeeId: string): Pro
         inviteExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     }),
-    db.organization.findUnique({ where: { id: orgId }, select: { name: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } }),
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
@@ -327,6 +329,7 @@ export async function refreshInviteToken(orgId: string, employeeId: string): Pro
     orgName:   org?.name ?? "",
     inviteUrl: `${appUrl}/portal`,
     joinUrl:   `${appUrl}/join/${newToken}`,
+    locale:    resolveRecipientLocale(updated.locale, org?.locale),
   }).catch((err) => console.error("[invite] Resend error:", err))
 
   return serEmployee(updated)
@@ -347,6 +350,8 @@ export type ClaimableEmployee = {
   email:               string
   name:                string
   orgName:             string
+  /** Message language for this recipient (employee locale → org locale → en). */
+  locale:              ReturnType<typeof resolveRecipientLocale>
   /** True when the invite is already linked to this same user (claim is idempotent). */
   alreadyLinkedToUser: boolean
 }
@@ -363,7 +368,7 @@ export async function getClaimableEmployee(
 ): Promise<ClaimableEmployee> {
   const employee = await db.employee.findFirst({
     where: { inviteToken: token, isActive: true, inviteExpiry: { gt: new Date() } },
-    include: { organization: { select: { name: true } } },
+    include: { organization: { select: { name: true, locale: true } } },
     orderBy: { createdAt: "asc" },
   })
   if (!employee) {
@@ -378,6 +383,7 @@ export async function getClaimableEmployee(
     email:               employee.email,
     name:                employee.name,
     orgName:             employee.organization.name,
+    locale:              resolveRecipientLocale(employee.locale, employee.organization.locale),
     alreadyLinkedToUser: employee.userId === userId,
   }
 }

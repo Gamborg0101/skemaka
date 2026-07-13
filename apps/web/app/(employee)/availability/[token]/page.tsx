@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, use } from "react"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,23 +19,13 @@ type DayAvailability = {
   preferredEnd: string
 }
 
-const DAY_LABELS: Record<number, string> = {
-  0: "Sunday",
-  1: "Monday",
-  2: "Tuesday",
-  3: "Wednesday",
-  4: "Thursday",
-  5: "Friday",
-  6: "Saturday",
+function getDayLabel(dateStr: string, localeTag: string): string {
+  const label = new Date(dateStr).toLocaleDateString(localeTag, { weekday: "long" })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-function getDayLabel(dateStr: string): string {
-  const d = new Date(dateStr)
-  return DAY_LABELS[d.getDay()] ?? dateStr
-}
-
-function formatDateShort(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-GB", {
+function formatDateShort(dateStr: string, localeTag: string): string {
+  return new Date(dateStr).toLocaleDateString(localeTag, {
     day: "numeric",
     month: "long",
   })
@@ -45,6 +37,8 @@ interface PageProps {
 
 export default function AvailabilityTokenPage({ params }: PageProps) {
   const { token } = use(params)
+  const t = useTranslations("portal.availability")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
 
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -146,10 +140,9 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-gray-100">
             <AlertCircle className="size-8 text-gray-400" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">Link not found</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t("linkNotFound")}</h1>
           <p className="mt-2 text-gray-500">
-            This link may have expired or there&apos;s no open availability request right now.
-            Ask your manager to resend the invite.
+            {t("linkNotFoundHint")}
           </p>
         </div>
       </div>
@@ -163,9 +156,9 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
             <CheckCircle className="size-8 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">All done!</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("allDone")}</h1>
           <p className="mt-2 text-gray-500">
-            Your availability has been submitted. Your manager will build the schedule and let you know your shifts.
+            {t("allDoneHint")}
           </p>
           <p className="mt-6 text-sm text-gray-400">{orgName}</p>
         </div>
@@ -173,7 +166,7 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
     )
   }
 
-  const weekLabel = new Date(request.weekStart).toLocaleDateString("en-GB", {
+  const weekLabel = new Date(request.weekStart).toLocaleDateString(localeTag, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -186,11 +179,13 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
           {orgName}
         </p>
         <h1 className="text-xl font-bold text-gray-900 mt-0.5">
-          Hi {employee.name.split(" ")[0]},
+          {t("hi", { name: employee.name.split(" ")[0] })}
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Share your availability for the week of{" "}
-          <span className="font-medium text-gray-700">{weekLabel}</span>.
+          {t.rich("shareIntro", {
+            week: weekLabel,
+            b: (chunks) => <span className="font-medium text-gray-700">{chunks}</span>,
+          })}
         </p>
       </div>
 
@@ -209,8 +204,8 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
               className="flex w-full items-center justify-between px-4 py-4"
             >
               <div className="text-left">
-                <p className="font-semibold text-gray-900">{getDayLabel(day.date)}</p>
-                <p className="text-sm text-gray-500">{formatDateShort(day.date)}</p>
+                <p className="font-semibold text-gray-900">{getDayLabel(day.date, localeTag)}</p>
+                <p className="text-sm text-gray-500">{formatDateShort(day.date, localeTag)}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span
@@ -219,7 +214,7 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
                     day.isAvailable ? "text-blue-600" : "text-gray-400"
                   )}
                 >
-                  {day.isAvailable ? "Available" : "Not Available"}
+                  {day.isAvailable ? t("available") : t("notAvailable")}
                 </span>
                 <div
                   className={cn(
@@ -241,7 +236,7 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
               <div className="border-t border-gray-100 px-4 py-4 grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor={`start-${day.date}`} className="text-xs text-gray-500">
-                    Preferred start (optional)
+                    {t("preferredStart")}
                   </Label>
                   <Input
                     id={`start-${day.date}`}
@@ -253,7 +248,7 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor={`end-${day.date}`} className="text-xs text-gray-500">
-                    Preferred end (optional)
+                    {t("preferredEnd")}
                   </Label>
                   <Input
                     id={`end-${day.date}`}
@@ -274,7 +269,7 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
             disabled={submitting}
             className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {submitting ? "Submitting..." : "Submit Availability"}
+            {submitting ? t("submitting") : t("submit")}
           </Button>
         </div>
       </form>

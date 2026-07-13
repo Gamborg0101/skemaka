@@ -2,58 +2,62 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { Check, ChevronRight, ChevronLeft, Info, ShieldCheck } from "lucide-react"
 import { InstallPrompt } from "@/components/pwa/InstallPrompt"
 
 type Step = 1 | 2 | 3
 
+// Labels come from the onboarding.currencies catalog, keyed by code.
 const CURRENCIES = [
-  { code: "EUR", label: "Euro (€)", symbol: "€" },
-  { code: "USD", label: "US Dollar ($)", symbol: "$" },
-  { code: "GBP", label: "British Pound (£)", symbol: "£" },
-  { code: "DKK", label: "Danish Krone (kr)", symbol: "kr" },
-  { code: "SEK", label: "Swedish Krona (kr)", symbol: "kr" },
-  { code: "NOK", label: "Norwegian Krone (kr)", symbol: "kr" },
-]
+  { code: "EUR", symbol: "€" },
+  { code: "USD", symbol: "$" },
+  { code: "GBP", symbol: "£" },
+  { code: "DKK", symbol: "kr" },
+  { code: "SEK", symbol: "kr" },
+  { code: "NOK", symbol: "kr" },
+] as const
 
 // Country drives the currency + time-format defaults. Limited to countries whose
 // currency we support today (see VALID_CURRENCIES in orgService). "Other" lets
-// anyone proceed with sensible EUR defaults.
-const COUNTRIES: { code: string; name: string; currency: string; timeFormat: "12h" | "24h" }[] = [
-  { code: "DK", name: "Denmark",        currency: "DKK", timeFormat: "24h" },
-  { code: "SE", name: "Sweden",         currency: "SEK", timeFormat: "24h" },
-  { code: "NO", name: "Norway",         currency: "NOK", timeFormat: "24h" },
-  { code: "GB", name: "United Kingdom", currency: "GBP", timeFormat: "24h" },
-  { code: "US", name: "United States",  currency: "USD", timeFormat: "12h" },
-  { code: "IE", name: "Ireland",        currency: "EUR", timeFormat: "24h" },
-  { code: "DE", name: "Germany",        currency: "EUR", timeFormat: "24h" },
-  { code: "FR", name: "France",         currency: "EUR", timeFormat: "24h" },
-  { code: "ES", name: "Spain",          currency: "EUR", timeFormat: "24h" },
-  { code: "IT", name: "Italy",          currency: "EUR", timeFormat: "24h" },
-  { code: "NL", name: "Netherlands",    currency: "EUR", timeFormat: "24h" },
-  { code: "BE", name: "Belgium",        currency: "EUR", timeFormat: "24h" },
-  { code: "AT", name: "Austria",        currency: "EUR", timeFormat: "24h" },
-  { code: "PT", name: "Portugal",       currency: "EUR", timeFormat: "24h" },
-  { code: "FI", name: "Finland",        currency: "EUR", timeFormat: "24h" },
-  { code: "OTHER", name: "Other",       currency: "EUR", timeFormat: "24h" },
+// anyone proceed with sensible EUR defaults. Names come from the
+// onboarding.countries catalog, keyed by code.
+const COUNTRIES: { code: string; currency: string; timeFormat: "12h" | "24h" }[] = [
+  { code: "DK", currency: "DKK", timeFormat: "24h" },
+  { code: "SE", currency: "SEK", timeFormat: "24h" },
+  { code: "NO", currency: "NOK", timeFormat: "24h" },
+  { code: "GB", currency: "GBP", timeFormat: "24h" },
+  { code: "US", currency: "USD", timeFormat: "12h" },
+  { code: "IE", currency: "EUR", timeFormat: "24h" },
+  { code: "DE", currency: "EUR", timeFormat: "24h" },
+  { code: "FR", currency: "EUR", timeFormat: "24h" },
+  { code: "ES", currency: "EUR", timeFormat: "24h" },
+  { code: "IT", currency: "EUR", timeFormat: "24h" },
+  { code: "NL", currency: "EUR", timeFormat: "24h" },
+  { code: "BE", currency: "EUR", timeFormat: "24h" },
+  { code: "AT", currency: "EUR", timeFormat: "24h" },
+  { code: "PT", currency: "EUR", timeFormat: "24h" },
+  { code: "FI", currency: "EUR", timeFormat: "24h" },
+  { code: "OTHER", currency: "EUR", timeFormat: "24h" },
 ]
 
 // Optional — tailors the starter job roles (see lib/seedDefaultRoles.ts).
+// Labels come from the onboarding.industries catalog.
 const INDUSTRIES = [
-  { value: "",            label: "Select (optional)" },
-  { value: "restaurant",  label: "Restaurant" },
-  { value: "cafe",        label: "Café / Bar" },
-  { value: "retail",      label: "Retail / Store" },
-  { value: "hospitality", label: "Hotel / Hospitality" },
-  { value: "healthcare",  label: "Healthcare / Clinic" },
-  { value: "salon",       label: "Salon / Spa" },
-  { value: "fitness",     label: "Gym / Fitness" },
-  { value: "warehouse",   label: "Warehouse / Logistics" },
-  { value: "cleaning",    label: "Cleaning services" },
-  { value: "childcare",   label: "Childcare / Daycare" },
-  { value: "security",    label: "Security services" },
-  { value: "other",       label: "Other" },
-]
+  { value: "", labelKey: "none" },
+  { value: "restaurant", labelKey: "restaurant" },
+  { value: "cafe", labelKey: "cafe" },
+  { value: "retail", labelKey: "retail" },
+  { value: "hospitality", labelKey: "hospitality" },
+  { value: "healthcare", labelKey: "healthcare" },
+  { value: "salon", labelKey: "salon" },
+  { value: "fitness", labelKey: "fitness" },
+  { value: "warehouse", labelKey: "warehouse" },
+  { value: "cleaning", labelKey: "cleaning" },
+  { value: "childcare", labelKey: "childcare" },
+  { value: "security", labelKey: "security" },
+  { value: "other", labelKey: "other" },
+] as const
 
 // Fallback only. The real options are fetched from the org right after it's
 // created (see handleCreateOrg), so the dropdown always matches the job roles
@@ -68,10 +72,10 @@ const ROLE_COLORS = ["blue", "purple", "green", "orange", "yellow", "rose"]
 const ADD_ROLE = "__add_role__"
 
 const STEPS = [
-  { n: 1 as Step, label: "Your business", desc: "Name, country & currency" },
-  { n: 2 as Step, label: "Your team", desc: "Add employees (optional)" },
-  { n: 3 as Step, label: "Get the app", desc: "Install on your phone" },
-]
+  { n: 1 as Step, labelKey: "step1Label", descKey: "step1Desc" },
+  { n: 2 as Step, labelKey: "step2Label", descKey: "step2Desc" },
+  { n: 3 as Step, labelKey: "step3Label", descKey: "step3Desc" },
+] as const
 
 // Explicit text + placeholder colors so inputs don't inherit the themed
 // (possibly near-white) foreground on these intentionally light-themed pages.
@@ -81,6 +85,8 @@ const SELECT_CLASS =
   "w-full px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
 
 export default function OnboardingPage() {
+  const t = useTranslations("onboarding")
+  const tCommon = useTranslations("common")
   const router = useRouter()
   const [step, setStep] = useState<Step>(1)
   const [checking, setChecking] = useState(true)
@@ -169,7 +175,7 @@ export default function OnboardingPage() {
           }),
         })
         const data = await r.json() as { error?: string }
-        if (!r.ok) throw new Error(data.error ?? "Failed to update workspace")
+        if (!r.ok) throw new Error(data.error ?? t("step1.errUpdate"))
         setStep(2)
         return
       }
@@ -188,7 +194,7 @@ export default function OnboardingPage() {
         }),
       })
       const data = await r.json() as { data?: { id: string }; error?: string }
-      if (!r.ok) throw new Error(data.error ?? "Failed to create workspace")
+      if (!r.ok) throw new Error(data.error ?? t("step1.errCreate"))
       const newOrgId = data.data!.id
       setOrgId(newOrgId)
       // Load the org's actual job roles so the Team step only offers roles that
@@ -209,7 +215,7 @@ export default function OnboardingPage() {
       }
       setStep(2)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+      setError(err instanceof Error ? err.message : tCommon("somethingWentWrong"))
     } finally {
       setLoading(false)
     }
@@ -219,7 +225,7 @@ export default function OnboardingPage() {
     if (!orgId || !empName.trim() || !empEmail.trim()) return
     const wage = parseFloat(empWage)
     if (!(wage > 0)) {
-      setEmpError("Enter an hourly wage greater than 0.")
+      setEmpError(t("step2.wageError"))
       return
     }
     setAddingEmp(true)
@@ -243,13 +249,13 @@ export default function OnboardingPage() {
       // Surface failures instead of silently pretending the employee was added —
       // otherwise a rejected POST (e.g. invalid wage) shows "added" but nothing
       // is persisted, and the employee never appears in Employees.
-      if (!r.ok) throw new Error(data.error ?? "Failed to add employee")
+      if (!r.ok) throw new Error(data.error ?? t("step2.errAddEmployee"))
       setAddedEmployees((prev) => [...prev, empName.trim()])
       setEmpName("")
       setEmpEmail("")
       setEmpWage("")
     } catch (err) {
-      setEmpError(err instanceof Error ? err.message : "Failed to add employee")
+      setEmpError(err instanceof Error ? err.message : t("step2.errAddEmployee"))
     } finally {
       setAddingEmp(false)
     }
@@ -277,13 +283,13 @@ export default function OnboardingPage() {
         body: JSON.stringify({ name, color: ROLE_COLORS[availableRoles.length % ROLE_COLORS.length] }),
       })
       const data = (await r.json()) as { data?: { name: string }; error?: string }
-      if (!r.ok) throw new Error(data.error ?? "Failed to add role")
+      if (!r.ok) throw new Error(data.error ?? t("step2.errAddRole"))
       setAvailableRoles((prev) => [...prev, name])
       setEmpRole(name)
       setAddingRole(false)
       setNewRole("")
     } catch (err) {
-      setRoleError(err instanceof Error ? err.message : "Failed to add role")
+      setRoleError(err instanceof Error ? err.message : t("step2.errAddRole"))
     } finally {
       setSavingRole(false)
     }
@@ -313,14 +319,14 @@ export default function OnboardingPage() {
           </div>
 
           <h1 className="mt-16 text-3xl font-bold leading-tight tracking-tight">
-            Schedule your team<br />in minutes.
+            {t("brand.title1")}<br />{t("brand.title2")}
           </h1>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-300">
-            Set up your workspace, add your staff, and build next week&rsquo;s schedule — all in a few clicks.
+            {t("brand.sub")}
           </p>
 
           <ol className="mt-12 space-y-5">
-            {STEPS.map(({ n, label, desc }) => {
+            {STEPS.map(({ n, labelKey, descKey }) => {
               const done = step > n
               const active = step === n
               return (
@@ -337,8 +343,8 @@ export default function OnboardingPage() {
                     {done ? <Check className="size-3.5" /> : n}
                   </span>
                   <div>
-                    <p className={`text-sm font-semibold ${active || done ? "text-white" : "text-slate-400"}`}>{label}</p>
-                    <p className="text-xs text-slate-400">{desc}</p>
+                    <p className={`text-sm font-semibold ${active || done ? "text-white" : "text-slate-400"}`}>{t(`steps.${labelKey}`)}</p>
+                    <p className="text-xs text-slate-400">{t(`steps.${descKey}`)}</p>
                   </div>
                 </li>
               )
@@ -348,7 +354,7 @@ export default function OnboardingPage() {
 
         <div className="relative flex items-center gap-2 text-xs text-slate-400">
           <ShieldCheck className="size-4 text-blue-400" />
-          14-day free trial · no card required
+          {t("brand.trialNote")}
         </div>
       </aside>
 
@@ -362,7 +368,7 @@ export default function OnboardingPage() {
               <img src="/skemaka-mark-white.svg" alt="" className="size-6" />
               <span className="text-base font-bold tracking-tight">Skemaka</span>
             </div>
-            <span className="text-xs font-medium text-slate-300">Step {step} of 3</span>
+            <span className="text-xs font-medium text-slate-300">{t("brand.stepOf", { step })}</span>
           </div>
           <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/15">
             <div
@@ -378,20 +384,20 @@ export default function OnboardingPage() {
           {step === 1 && (
             <form onSubmit={handleCreateOrg} className="space-y-5">
               <div>
-                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 1 of 3</p>
-                <h2 className="text-lg font-semibold text-gray-900 mt-1">Set up your workspace</h2>
-                <p className="text-sm text-gray-500 mt-1">A few details about your business. Next, you&apos;ll add your team.</p>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">{t("brand.stepOf", { step: 1 })}</p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">{t("step1.title")}</h2>
+                <p className="text-sm text-gray-500 mt-1">{t("step1.sub")}</p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                  Business name
+                  {t("step1.nameLabel")}
                 </label>
                 <input
                   type="text"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="e.g. The Corner Café"
+                  placeholder={t("step1.namePlaceholder")}
                   className={INPUT_CLASS}
                   autoFocus
                   required
@@ -401,7 +407,7 @@ export default function OnboardingPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                    Country
+                    {t("step1.countryLabel")}
                   </label>
                   <select
                     value={country}
@@ -409,24 +415,24 @@ export default function OnboardingPage() {
                     className={SELECT_CLASS}
                     required
                   >
-                    <option value="" disabled>Select…</option>
-                    {COUNTRIES.map(({ code, name }) => (
-                      <option key={code} value={code}>{name}</option>
+                    <option value="" disabled>{t("step1.selectPlaceholder")}</option>
+                    {COUNTRIES.map(({ code }) => (
+                      <option key={code} value={code}>{t(`countries.${code}` as "countries.DK")}</option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                    Currency
+                    {t("step1.currencyLabel")}
                   </label>
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    {CURRENCIES.map(({ code, label }) => (
-                      <option key={code} value={code}>{label}</option>
+                    {CURRENCIES.map(({ code }) => (
+                      <option key={code} value={code}>{t(`currencies.${code}`)}</option>
                     ))}
                   </select>
                 </div>
@@ -434,15 +440,15 @@ export default function OnboardingPage() {
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                  Industry <span className="normal-case font-normal text-gray-400">(optional — tailors your starter roles)</span>
+                  {t("step1.industryLabel")} <span className="normal-case font-normal text-gray-400">{t("step1.industryOptional")}</span>
                 </label>
                 <select
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
                   className={SELECT_CLASS}
                 >
-                  {INDUSTRIES.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
+                  {INDUSTRIES.map(({ value, labelKey }) => (
+                    <option key={value} value={value}>{t(`industries.${labelKey}`)}</option>
                   ))}
                 </select>
               </div>
@@ -454,8 +460,8 @@ export default function OnboardingPage() {
                 disabled={loading || !orgName.trim() || !country}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? (orgId ? "Saving…" : "Creating…") : (
-                  <>{orgId ? "Save & continue" : "Create workspace"} <ChevronRight className="size-4" /></>
+                {loading ? (orgId ? tCommon("saving") : tCommon("creating")) : (
+                  <>{orgId ? t("step1.saveBtn") : t("step1.createBtn")} <ChevronRight className="size-4" /></>
                 )}
               </button>
             </form>
@@ -465,10 +471,10 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 2 of 3</p>
-                <h2 className="text-lg font-semibold text-gray-900 mt-1">Add your team</h2>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">{t("brand.stepOf", { step: 2 })}</p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">{t("step2.title")}</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Add employees now, or go straight to your schedule and add them later.
+                  {t("step2.sub")}
                 </p>
               </div>
 
@@ -477,7 +483,7 @@ export default function OnboardingPage() {
                   {addedEmployees.map((name) => (
                     <div key={name} className="flex items-center gap-2 text-sm text-gray-700">
                       <Check className="size-3.5 text-green-500 shrink-0" />
-                      {name} added
+                      {t("step2.added", { name })}
                     </div>
                   ))}
                 </div>
@@ -485,30 +491,30 @@ export default function OnboardingPage() {
 
               <div className="rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Name</label>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{t("step2.nameLabel")}</label>
                   <input
                     type="text"
                     value={empName}
                     onChange={(e) => setEmpName(e.target.value)}
-                    placeholder="Jane Smith"
+                    placeholder={t("step2.namePlaceholder")}
                     className={INPUT_CLASS}
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
-                    Email <span className="normal-case font-normal text-gray-400">(for shift portal access)</span>
+                    {t("step2.emailLabel")} <span className="normal-case font-normal text-gray-400">{t("step2.emailNote")}</span>
                   </label>
                   <input
                     type="email"
                     value={empEmail}
                     onChange={(e) => setEmpEmail(e.target.value)}
-                    placeholder="jane@example.com"
+                    placeholder={t("step2.emailPlaceholder")}
                     className={INPUT_CLASS}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Job role</label>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{t("step2.roleLabel")}</label>
                     <select
                       value={empRole}
                       onChange={(e) => {
@@ -518,11 +524,11 @@ export default function OnboardingPage() {
                       className={SELECT_CLASS}
                     >
                       {availableRoles.map((r) => <option key={r} value={r}>{r}</option>)}
-                      <option value={ADD_ROLE}>+ Add a role…</option>
+                      <option value={ADD_ROLE}>{t("step2.addRoleOption")}</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Hourly wage</label>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{t("step2.wageLabel")}</label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
                         {CURRENCIES.find((c) => c.code === currency)?.symbol ?? ""}
@@ -541,14 +547,14 @@ export default function OnboardingPage() {
                 </div>
                 {addingRole && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">New role</label>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{t("step2.newRoleLabel")}</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={newRole}
                         onChange={(e) => { setNewRole(e.target.value); setRoleError(null) }}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRole() } }}
-                        placeholder="e.g. Sales associate"
+                        placeholder={t("step2.newRolePlaceholder")}
                         className={INPUT_CLASS}
                         autoFocus
                       />
@@ -558,14 +564,14 @@ export default function OnboardingPage() {
                         disabled={savingRole || !newRole.trim()}
                         className="shrink-0 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
-                        {savingRole ? "Adding…" : "Add"}
+                        {savingRole ? tCommon("adding") : tCommon("add")}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setAddingRole(false); setNewRole(""); setRoleError(null) }}
                         className="shrink-0 px-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
-                        Cancel
+                        {tCommon("cancel")}
                       </button>
                     </div>
                     {roleError && <p className="text-xs text-red-600">{roleError}</p>}
@@ -577,7 +583,7 @@ export default function OnboardingPage() {
                   disabled={addingEmp || !empName.trim() || !empEmail.trim() || !(parseFloat(empWage) > 0)}
                   className="w-full text-sm font-medium py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  {addingEmp ? "Adding…" : "+ Add employee"}
+                  {addingEmp ? tCommon("adding") : t("step2.addEmployee")}
                 </button>
               </div>
 
@@ -587,13 +593,13 @@ export default function OnboardingPage() {
                   onClick={() => { setStep(1); setError(null) }}
                   className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  <ChevronLeft className="size-4" /> Back
+                  <ChevronLeft className="size-4" /> {tCommon("back")}
                 </button>
                 <button
                   onClick={() => setStep(3)}
                   className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  {addedEmployees.length > 0 ? "Continue" : "Add later"}
+                  {addedEmployees.length > 0 ? tCommon("continue") : t("step2.addLater")}
                   <ChevronRight className="size-4" />
                 </button>
               </div>
@@ -604,10 +610,10 @@ export default function OnboardingPage() {
           {step === 3 && (
             <div className="space-y-5">
               <div>
-                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Step 3 of 3</p>
-                <h2 className="text-lg font-semibold text-gray-900 mt-1">Get the app</h2>
+                <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">{t("brand.stepOf", { step: 3 })}</p>
+                <h2 className="text-lg font-semibold text-gray-900 mt-1">{t("step3.title")}</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Add Skemaka to your phone for one-tap access. You can always do this later.
+                  {t("step3.sub")}
                 </p>
               </div>
 
@@ -619,13 +625,13 @@ export default function OnboardingPage() {
                   onClick={() => setStep(2)}
                   className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  <ChevronLeft className="size-4" /> Back
+                  <ChevronLeft className="size-4" /> {tCommon("back")}
                 </button>
                 <button
                   onClick={() => router.push("/schedule")}
                   className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Finish — go to schedule
+                  {t("step3.finish")}
                   <ChevronRight className="size-4" />
                 </button>
               </div>
@@ -633,7 +639,7 @@ export default function OnboardingPage() {
           )}
           <div className="mt-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600">
             <Info className="size-4 shrink-0 text-blue-500" />
-            You can change any of this later in Settings.
+            {t("changeLater")}
           </div>
           </div>
         </div>

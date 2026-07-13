@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const isProd = process.env.NODE_ENV === "production"
 
@@ -30,8 +31,10 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ]
 
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
 const nextConfig: NextConfig = {
-  transpilePackages: ["@skemaka/types", "@skemaka/api", "@skemaka/ui"],
+  transpilePackages: ["@skemaka/types", "@skemaka/api", "@skemaka/ui", "@skemaka/i18n"],
   async headers() {
     return [
       {
@@ -42,4 +45,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);
