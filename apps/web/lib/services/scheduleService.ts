@@ -9,7 +9,7 @@ import {
   sendShiftUpdatedSms,
 } from "@/lib/sms"
 import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
-import { sendShiftAssignedEmail, sendShiftsRolledOutEmail } from "@/lib/resend"
+import { sendShiftAssignedEmail, sendShiftCancelledEmail, sendShiftsRolledOutEmail } from "@/lib/resend"
 import { sendPushToUsers } from "@/lib/push"
 import { getMessageTranslator, recipientLocaleTag, resolveRecipientLocale } from "@/lib/messages"
 import type { Locale } from "@skemaka/i18n"
@@ -340,7 +340,7 @@ export async function copyPreviousWeek(orgId: string, weekStart: string): Promis
 
   const weekDiff = target.getTime() - prior.weekStart.getTime()
   const data = prior.shifts
-    .filter((s) => activeIds.has(s.employeeId) && s.colorTag !== "sick")
+    .filter((s) => activeIds.has(s.employeeId) && s.colorTag !== "sick" && !s.cancelledAt)
     .map((s) => ({
       scheduleId:     schedule.id,
       organizationId: orgId,
@@ -382,7 +382,7 @@ export async function publishSchedule(
     where: { id: scheduleId, organizationId: orgId },
     include: {
       shifts: {
-        where: { colorTag: { not: "sick" } },
+        where: { colorTag: { not: "sick" }, cancelledAt: null },
         include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
@@ -463,7 +463,7 @@ export async function getPendingRollout(orgId: string): Promise<PendingRolloutWe
   const schedules = await db.schedule.findMany({
     where: { organizationId: orgId, publishedAt: null },
     include: {
-      shifts: { where: { colorTag: { not: "sick" } }, select: { employeeId: true } },
+      shifts: { where: { colorTag: { not: "sick" }, cancelledAt: null }, select: { employeeId: true } },
     },
     orderBy: { weekStart: "asc" },
   })
@@ -502,7 +502,7 @@ export async function rollOut(
     where: { organizationId: orgId, publishedAt: null },
     include: {
       shifts: {
-        where: { colorTag: { not: "sick" } },
+        where: { colorTag: { not: "sick" }, cancelledAt: null },
         include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
       },
     },
@@ -636,7 +636,7 @@ export async function createShift(
       where: { id: employeeId, organizationId: orgId },
       select: { id: true, name: true, email: true, locale: true, organization: { select: { name: true, locale: true } } },
     }),
-    db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC }, select: { id: true }, orderBy: { createdAt: "asc" } }),
+    db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC, cancelledAt: null }, select: { id: true }, orderBy: { createdAt: "asc" } }),
     db.schedule.findFirst({ where: { id: scheduleId, organizationId: orgId }, select: { publishedAt: true } }),
   ])
   if (!employeeInOrg) throw new ServiceError("Employee not found", "NOT_FOUND")
@@ -727,6 +727,7 @@ export async function updateShift(
     },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
+  if (existing.cancelledAt) throw new ServiceError("Cancelled shifts cannot be edited", "CONFLICT")
 
   if (input.employeeId !== undefined) {
     const emp = await db.employee.findFirst({
@@ -748,6 +749,7 @@ export async function updateShift(
         employeeId: input.employeeId ?? existing.employeeId,
         date: input.date ? new Date(input.date + "T00:00:00Z") : existing.date,
         id: { not: shiftId },
+        cancelledAt: null,
       },
       select: { id: true },
       orderBy: { createdAt: "asc" },
@@ -865,7 +867,9 @@ export async function deleteShift(
     })
   }
 
-  if (!wasPublished && existing.employee.phone) {
+  // A shift that was already cancelled was already announced as cancelled —
+  // deleting the leftover record must not text the employee a second time.
+  if (!wasPublished && !existing.cancelledAt && existing.employee.phone) {
     void sendShiftCancelledSms({
       to: existing.employee.phone,
       employeeName: existing.employee.name,
@@ -878,6 +882,88 @@ export async function deleteShift(
   }
 }
 
+/**
+ * Cancel a shift: the row is kept as a visible record (struck-through in the
+ * manager grid and the employee portal) and the affected employee is notified
+ * immediately (SMS + email + push). Unlike edit/delete, cancelling never
+ * reverts a published week to draft — the rest of the schedule stands, so no
+ * re-publish blast is needed.
+ */
+export async function cancelShift(
+  orgId: string,
+  scheduleId: string,
+  shiftId: string,
+): Promise<Shift> {
+  const existing = await db.shift.findFirst({
+    where: { id: shiftId, scheduleId, organizationId: orgId },
+    include: {
+      employee: { select: { name: true, phone: true, email: true, userId: true, locale: true } },
+      organization: { select: { name: true, locale: true } },
+    },
+  })
+  if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
+  if (existing.cancelledAt) throw new ServiceError("Shift is already cancelled", "CONFLICT")
+  if (existing.colorTag === "sick") throw new ServiceError("Sick days cannot be cancelled — delete them instead", "CONFLICT")
+
+  const shift = await db.shift.update({
+    where: { id: shiftId },
+    data: { cancelledAt: new Date() },
+  })
+
+  void db.schedulingEvent.create({
+    data: {
+      organizationId: orgId,
+      eventType: "SHIFT_CANCELLED",
+      payload: { shiftId, scheduleId, employeeId: existing.employeeId, date: existing.date.toISOString().split("T")[0] },
+    },
+  }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
+
+  const locale  = resolveRecipientLocale(existing.employee.locale, existing.organization.locale)
+  const date    = existing.date.toISOString().split("T")[0]
+  const orgName = existing.organization.name
+  const firstName = existing.employee.name.split(" ")[0]
+
+  if (existing.employee.phone) {
+    void sendShiftCancelledSms({
+      to: existing.employee.phone,
+      employeeName: firstName,
+      orgName,
+      date,
+      startTime: existing.startTime,
+      endTime: existing.endTime,
+      locale,
+    })
+  }
+  if (existing.employee.email) {
+    const dateLabel = new Date(date + "T12:00:00Z").toLocaleDateString(recipientLocaleTag(locale), {
+      weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
+    })
+    void sendShiftCancelledEmail({
+      to: existing.employee.email,
+      name: firstName,
+      orgName,
+      dateLabel,
+      startTime: existing.startTime,
+      endTime: existing.endTime,
+      jobRole: existing.jobRole,
+      locale,
+    }).catch((err) => console.error("[ShiftEmail] Failed to send shift-cancelled email:", err))
+  }
+  if (existing.employee.userId) {
+    const t = getMessageTranslator(locale, "sms")
+    const dayLabel = new Date(date + "T12:00:00Z").toLocaleDateString(recipientLocaleTag(locale), {
+      weekday: "short", day: "numeric", month: "short", timeZone: "UTC",
+    })
+    void sendPushToUsers([existing.employee.userId], {
+      title: t("push.shiftCancelledTitle"),
+      body: t("push.shiftCancelledBody", { orgName, when: dayLabel }),
+      url: "/portal",
+    })
+  }
+
+  return serShift(shift)
+}
+
 // ── Labor costs ───────────────────────────────────────────────────────────────
 
 export async function getLaborCosts(orgId: string, weekStart: string): Promise<WeeklyLaborCost> {
@@ -885,7 +971,7 @@ export async function getLaborCosts(orgId: string, weekStart: string): Promise<W
     where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
     include: {
       shifts: {
-        where: { colorTag: { not: "sick" } },
+        where: { colorTag: { not: "sick" }, cancelledAt: null },
         include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },

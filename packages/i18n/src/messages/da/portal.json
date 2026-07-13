@@ -7,6 +7,8 @@
   "noShiftsHint": "Kig forbi igen, når din vagtplan er udgivet.",
   "published": "Udgivet",
   "pending": "Afventer",
+  "cancelledBadge": "Aflyst",
+  "cancelledNote": "Denne vagt er aflyst — du skal ikke møde ind.",
   "inclBreak": "(inkl. {min} min. pause)",
   "workingWithYou": "På arbejde med dig",
   "timeOff": {

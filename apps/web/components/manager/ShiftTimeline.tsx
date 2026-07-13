@@ -19,6 +19,7 @@ import { Tooltip } from "@/components/ui/tooltip"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
 import { SickDayDialog } from "@/components/manager/SickDayDialog"
+import { CancelledShiftDialog } from "@/components/manager/CancelledShiftDialog"
 import type { Shift, Employee, JobRole, ShiftTemplate } from "@/types"
 import type { AvailabilityConflict } from "@/lib/useScheduleData"
 import { formatTime } from "@/lib/dateUtils"
@@ -332,6 +333,7 @@ function TimelineRow({
 
         {shifts.map((shift) => {
           const isSick = shift.colorTag === "sick"
+          const isCancelled = !!shift.cancelledAt
           // While dragging an edge, render the previewed times optimistically.
           const r = resize?.shiftId === shift.id ? resize : null
           const startTime = r ? r.startTime : shift.startTime
@@ -341,9 +343,9 @@ function TimelineRow({
 
           const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
           const isPublished = !isSick && !!publishedAt && shift.createdAt <= publishedAt
-          // Sick markers span the whole day and aren't time-bounded, so they
-          // don't get resize handles.
-          const canResize = !isSick
+          // Sick markers span the whole day and aren't time-bounded, and
+          // cancelled shifts are a read-only record — neither gets resize grips.
+          const canResize = !isSick && !isCancelled
 
           return (
             <button
@@ -354,14 +356,21 @@ function TimelineRow({
                 // px-3.5 keeps the time label clear of the edge resize grips.
                 "group absolute top-2 bottom-2 rounded-md px-3.5 flex items-center overflow-hidden shadow-sm transition-[background-color,box-shadow]",
                 "border-2",
-                isPublished ? "border-green-500/60" : "border-orange-400/60",
-                COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
+                isCancelled
+                  ? "border-gray-300/80 dark:border-gray-600/80 bg-gray-100 dark:bg-gray-800 opacity-70 hover:opacity-100"
+                  : cn(
+                      isPublished ? "border-green-500/60" : "border-orange-400/60",
+                      COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
+                    )
               )}
               style={{ left: `${left}%`, width: `${width}%` }}
-              title={`${employee.name} · ${startTime}–${endTime}`}
+              title={isCancelled ? `${employee.name} · Cancelled` : `${employee.name} · ${startTime}–${endTime}`}
             >
               {!isSick && width > 6 && (
-                <span className={cn("text-[10px] font-semibold truncate whitespace-nowrap", COLOR_TEXT[tag] ?? "text-blue-950")}>
+                <span className={cn(
+                  "text-[10px] font-semibold truncate whitespace-nowrap",
+                  isCancelled ? "text-gray-400 dark:text-gray-500 line-through" : (COLOR_TEXT[tag] ?? "text-blue-950")
+                )}>
                   {formatTime(startTime, tf)}–{formatTime(endTime, tf)}
                 </span>
               )}
@@ -523,7 +532,7 @@ const DaySection = memo(function DaySection({
             publishedAt={publishedAt}
             isEven={idx % 2 === 0}
             draggingEmpScheduledHere={
-              draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id) : null
+              draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
             }
             conflict={getConflict?.(emp.id, date) ?? null}
             todayLine={todayLine}
@@ -567,6 +576,7 @@ interface ShiftTimelineProps {
   }) => void
   onShiftUpdate: (data: Partial<Shift>) => void
   onShiftDelete: (shiftId: string) => void
+  onShiftCancel: (shiftId: string) => void
 }
 
 export function ShiftTimeline({
@@ -583,6 +593,7 @@ export function ShiftTimeline({
   onShiftCreate,
   onShiftUpdate,
   onShiftDelete,
+  onShiftCancel,
 }: ShiftTimelineProps) {
   const [addDialog, setAddDialog] = useState<{
     open: boolean; employeeId: string; defaultStartTime: string; date: string
@@ -592,6 +603,7 @@ export function ShiftTimeline({
   const [activeRowId, setActiveRowId] = useState<string | null>(null)
   const [editDialog, setEditDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
   const [sickDialog, setSickDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
+  const [cancelledDialog, setCancelledDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
   const [draggingEmp, setDraggingEmp] = useState<Employee | null>(null)
   const [currentTime, setCurrentTime] = useState(() => new Date())
 
@@ -660,7 +672,7 @@ export function ShiftTimeline({
       const targetDate = drop.date as string
       if (closedDates.has(targetDate)) return  // store closed that day — no booking
       const alreadyScheduled = shifts.some(
-        (s) => s.employeeId === drag.employee.id && s.date === targetDate
+        (s) => s.employeeId === drag.employee.id && s.date === targetDate && !s.cancelledAt
       )
       if (alreadyScheduled) return
       const activatorX = (event.activatorEvent as PointerEvent).clientX
@@ -740,7 +752,8 @@ export function ShiftTimeline({
                   currentTime={currentTime}
                   getConflict={getConflict}
                   onShiftClick={(shift) => {
-                    if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
+                    if (shift.cancelledAt) setCancelledDialog({ open: true, shift })
+                    else if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
                     else setEditDialog({ open: true, shift })
                   }}
                   onRowClick={(empId, d) => {
@@ -791,8 +804,23 @@ export function ShiftTimeline({
           jobRoles={jobRoles}
           onShiftUpdate={onShiftUpdate}
           onShiftDelete={onShiftDelete}
+          onShiftCancel={onShiftCancel}
         />
       )}
+
+      {cancelledDialog.shift && (() => {
+        const emp = employees.find((e) => e.id === cancelledDialog.shift!.employeeId)
+        if (!emp) return null
+        return (
+          <CancelledShiftDialog
+            open={cancelledDialog.open}
+            onOpenChange={(open) => setCancelledDialog((p) => ({ ...p, open }))}
+            shift={cancelledDialog.shift!}
+            employee={emp}
+            onDelete={onShiftDelete}
+          />
+        )
+      })()}
 
       {sickDialog.shift && (() => {
         const emp = employees.find((e) => e.id === sickDialog.shift!.employeeId)

@@ -19,6 +19,8 @@
     "publishedTitle": "Din vagtplan er klar",
     "publishedBody": "{orgName} har udgivet vagtplanen for {week}. Tryk for at se dine vagter.",
     "rollOutTitle": "Nye vagter udgivet",
-    "rollOutBody": "{orgName} har udrullet vagtplanen for {period}. Tryk for at se dine vagter."
+    "rollOutBody": "{orgName} har udrullet vagtplanen for {period}. Tryk for at se dine vagter.",
+    "shiftCancelledTitle": "Vagt aflyst",
+    "shiftCancelledBody": "{orgName} har aflyst din vagt {when}. Tryk for detaljer."
   }
 }

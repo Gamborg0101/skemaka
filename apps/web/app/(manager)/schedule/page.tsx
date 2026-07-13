@@ -45,7 +45,7 @@ export default function SchedulePage() {
 
   const {
     schedule, loading, employees, approvedTimeOff, getConflict,
-    reloadSchedule, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick,
+    reloadSchedule, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleShiftCancel, handleMarkSick,
   } = useScheduleData(orgId, weekStart)
 
   // A schedule is created lazily (on first shift add), so it can be null even
@@ -138,7 +138,7 @@ export default function SchedulePage() {
 
   const scheduledHoursMap = useMemo(() =>
     employees.reduce<Record<string, number>>((acc, emp) => {
-      const empShifts = (schedule?.shifts ?? []).filter((s) => s.employeeId === emp.id && s.colorTag !== "sick")
+      const empShifts = (schedule?.shifts ?? []).filter((s) => s.employeeId === emp.id && s.colorTag !== "sick" && !s.cancelledAt)
       acc[emp.id] = empShifts.reduce((sum, s) => {
         const [sh, sm] = s.startTime.split(":").map(Number)
         const [eh, em] = s.endTime.split(":").map(Number)
@@ -419,6 +419,7 @@ export default function SchedulePage() {
             onShiftCreate={handleShiftCreate}
             onShiftUpdate={handleShiftUpdate}
             onShiftDelete={handleShiftDelete}
+            onShiftCancel={handleShiftCancel}
             onMarkSick={handleMarkSick}
           />
         ) : (
@@ -436,6 +437,7 @@ export default function SchedulePage() {
             onShiftCreate={handleShiftCreate}
             onShiftUpdate={handleShiftUpdate}
             onShiftDelete={handleShiftDelete}
+            onShiftCancel={handleShiftCancel}
           />
         )}
       </div>

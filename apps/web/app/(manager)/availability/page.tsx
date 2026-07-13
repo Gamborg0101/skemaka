@@ -134,7 +134,7 @@ export default function AvailabilityPage() {
       const tempId = crypto.randomUUID()
       const optimistic: Shift = {
         id: tempId, scheduleId: sid, organizationId: orgId,
-        ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        ...data, cancelledAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       setShifts((prev) => [...prev, optimistic])
 

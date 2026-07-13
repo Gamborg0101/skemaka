@@ -110,6 +110,7 @@ describe("createShift — overlap/block rule", () => {
           organizationId: ORG,
           employeeId: "emp_1",
           date: new Date(DATE + "T00:00:00Z"),
+          cancelledAt: null,
         },
       }),
     )
@@ -288,6 +289,7 @@ describe("updateShift — overlap/block rule on move & reassign", () => {
           employeeId: "emp_1",
           date: new Date("2026-06-16T00:00:00Z"),
           id: { not: "shift_1" },
+          cancelledAt: null,
         },
       }),
     )

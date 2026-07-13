@@ -33,6 +33,11 @@
     "intro": "You've been given a new shift at <strong>{orgName}</strong>.",
     "footer": "Open Skemaka to see your full schedule."
   },
+  "shiftCancelled": {
+    "subject": "Shift cancelled on {date} — {orgName}",
+    "intro": "Your shift at <strong>{orgName}</strong> has been cancelled — you no longer need to come in for it.",
+    "footer": "Contact your manager if you have questions."
+  },
   "rolledOut": {
     "subject": "New shifts in Skemaka",
     "body": "<strong>{orgName}</strong> just rolled out the schedule for <strong>{period}</strong>. Open Skemaka to see your shifts.",

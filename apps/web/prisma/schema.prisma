@@ -216,6 +216,9 @@ model Shift {
   jobRole        String
   notes          String?
   colorTag       String?
+  /// Set when a manager cancels the shift. Cancelled shifts stay visible as a
+  /// record but are excluded from costs, publishing, and conflict checks.
+  cancelledAt    DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)

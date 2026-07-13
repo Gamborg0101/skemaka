@@ -25,6 +25,7 @@ import { ShiftCard } from "@/components/manager/ShiftCard";
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog";
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog";
 import { SickDayDialog } from "@/components/manager/SickDayDialog";
+import { CancelledShiftDialog } from "@/components/manager/CancelledShiftDialog";
 import type {
   Schedule,
   Shift,
@@ -64,6 +65,7 @@ interface WeeklyScheduleGridProps {
   }) => void;
   onShiftUpdate: (data: Partial<Shift>) => void;
   onShiftDelete: (shiftId: string) => void;
+  onShiftCancel: (shiftId: string) => void;
   onMarkSick: (employeeId: string, date: string) => void;
 }
 
@@ -285,6 +287,7 @@ export function WeeklyScheduleGrid({
   onShiftCreate,
   onShiftUpdate,
   onShiftDelete,
+  onShiftCancel,
   onMarkSick,
 }: WeeklyScheduleGridProps) {
   const [addDialog, setAddDialog] = useState<{
@@ -299,6 +302,11 @@ export function WeeklyScheduleGrid({
   }>({ open: false, shift: null });
 
   const [sickDialog, setSickDialog] = useState<{
+    open: boolean;
+    shift: Shift | null;
+  }>({ open: false, shift: null });
+
+  const [cancelledDialog, setCancelledDialog] = useState<{
     open: boolean;
     shift: Shift | null;
   }>({ open: false, shift: null });
@@ -423,7 +431,9 @@ export function WeeklyScheduleGrid({
   };
 
   const openEditDialog = (shift: Shift) => {
-    if (shift.colorTag === "sick") {
+    if (shift.cancelledAt) {
+      setCancelledDialog({ open: true, shift });
+    } else if (shift.colorTag === "sick") {
       setSickDialog({ open: true, shift });
     } else {
       setEditDialog({ open: true, shift });
@@ -832,8 +842,29 @@ export function WeeklyScheduleGrid({
           jobRoles={jobRoles}
           onShiftUpdate={onShiftUpdate}
           onShiftDelete={onShiftDelete}
+          onShiftCancel={onShiftCancel}
         />
       )}
+
+      {/* Cancelled Shift Dialog */}
+      {cancelledDialog.shift &&
+        (() => {
+          const emp = employees.find(
+            (e) => e.id === cancelledDialog.shift!.employeeId,
+          );
+          if (!emp) return null;
+          return (
+            <CancelledShiftDialog
+              open={cancelledDialog.open}
+              onOpenChange={(open) =>
+                setCancelledDialog((prev) => ({ ...prev, open }))
+              }
+              shift={cancelledDialog.shift!}
+              employee={emp}
+              onDelete={onShiftDelete}
+            />
+          );
+        })()}
 
       {/* Sick Day Dialog */}
       {sickDialog.shift &&

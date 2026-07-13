@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, Ban } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Shift, Employee, JobRole } from "@/types"
 import { formatTime, calcNetHours } from "@/lib/dateUtils"
@@ -37,9 +37,11 @@ interface ShiftCardProps {
 }
 
 export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: ShiftCardProps) {
+  const isCancelled = !!shift.cancelledAt
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,
     data: { shift },
+    disabled: isCancelled,
   })
 
   const style = transform
@@ -48,6 +50,28 @@ export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: S
 
   const tf = getOrgSettings().timeFormat
   const isSick = shift.colorTag === "sick"
+
+  if (isCancelled) {
+    return (
+      <div
+        ref={setNodeRef}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick()
+        }}
+        className="group relative rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 border-l-4 border-l-gray-300 dark:border-l-gray-600 pl-2.5 pr-2 py-1.5 text-xs cursor-pointer select-none opacity-70 hover:opacity-100 transition-opacity"
+      >
+        <div className="flex items-center gap-1.5">
+          <Ban className="size-3 text-gray-400 shrink-0" />
+          <p className="font-semibold text-gray-500 dark:text-gray-400 leading-tight truncate line-through">{employee.name}</p>
+        </div>
+        <p className="text-gray-400 dark:text-gray-500 leading-tight mt-0.5">Cancelled</p>
+        <p className="text-gray-400 dark:text-gray-500 leading-tight line-through">
+          {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
+        </p>
+      </div>
+    )
+  }
 
   if (isSick) {
     return (

@@ -237,6 +237,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     handleShiftCreate,
     handleShiftUpdate,
     handleShiftDelete,
+    handleShiftCancel,
     handleMarkSick,
   } = useShiftMutations(
     schedule,
@@ -262,6 +263,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     handleShiftCreate,
     handleShiftUpdate,
     handleShiftDelete,
+    handleShiftCancel,
     handleMarkSick,
   };
 }

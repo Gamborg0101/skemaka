@@ -23,6 +23,7 @@ function formatShiftDate(date: Date, localeTag: string): string {
 type DbShift = {
   id: string; date: Date; startTime: string; endTime: string
   breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
+  cancelledAt: Date | null
 }
 
 type Coworker = { name: string; jobRole: string }
@@ -123,6 +124,7 @@ export default async function EmployeePortalPage() {
           organizationId: employee.organizationId,
           date: { in: shiftDates },
           employeeId: { not: employee.id },
+          cancelledAt: null,
         },
         select: {
           date: true,
@@ -199,8 +201,38 @@ export default async function EmployeePortalPage() {
               {weekShifts.map((shift) => {
                 const hours = calcHours(shift.startTime, shift.endTime, shift.breakMinutes)
                 const dateKey = shift.date.toISOString().split("T")[0]
-                const coworkers = coworkersByDate.get(dateKey) ?? []
+                const isCancelled = !!shift.cancelledAt
+                const coworkers = isCancelled ? [] : (coworkersByDate.get(dateKey) ?? [])
                 const tagClass = TAG_COLORS[shift.colorTag ?? "gray"] ?? TAG_COLORS.gray
+
+                if (isCancelled) {
+                  return (
+                    <div
+                      key={shift.id}
+                      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden opacity-75"
+                    >
+                      <div className="px-4 py-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-semibold text-gray-500 dark:text-gray-400">
+                            {formatShiftDate(shift.date, localeTag)}
+                          </p>
+                          <span className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 uppercase tracking-wide">
+                            {t("cancelledBadge")}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                          <Clock className="size-4 shrink-0" />
+                          <span className="text-sm font-medium line-through">
+                            {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 rounded-lg px-3 py-2">
+                          {t("cancelledNote")}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
 
                 return (
                   <div

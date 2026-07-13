@@ -220,6 +220,38 @@ export async function sendShiftAssignedEmail({
   })
 }
 
+/**
+ * Sent when a manager cancels a shift. Unlike edits/deletes (which revert the
+ * week to draft and defer to the re-publish blast), a cancellation notifies
+ * the one affected employee directly and immediately.
+ */
+export async function sendShiftCancelledEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, locale = "en",
+}: ShiftAssignedOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  return getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    to,
+    subject: t("shiftCancelled.subject", { date: dateLabel, orgName }),
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
+        <p style="color: #555; margin-bottom: 20px;">
+          ${t.markup("shiftCancelled.intro", { orgName, strong })}
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111; text-decoration: line-through;">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151; text-decoration: line-through;">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #999; font-size: 13px;">
+          ${t("shiftCancelled.footer")}
+        </p>
+      </div>
+    `,
+  })
+}
+
 interface ShiftsRolledOutOptions {
   to: string
   name: string

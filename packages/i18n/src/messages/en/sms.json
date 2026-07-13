@@ -19,6 +19,8 @@
     "publishedTitle": "Your schedule is out",
     "publishedBody": "{orgName} published the schedule for {week}. Tap to see your shifts.",
     "rollOutTitle": "New shifts published",
-    "rollOutBody": "{orgName} rolled out the schedule for {period}. Tap to see your shifts."
+    "rollOutBody": "{orgName} rolled out the schedule for {period}. Tap to see your shifts.",
+    "shiftCancelledTitle": "Shift cancelled",
+    "shiftCancelledBody": "{orgName} cancelled your shift on {when}. Tap for details."
   }
 }

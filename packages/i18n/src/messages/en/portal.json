@@ -7,6 +7,8 @@
   "noShiftsHint": "Check back when your schedule is published.",
   "published": "Published",
   "pending": "Pending",
+  "cancelledBadge": "Cancelled",
+  "cancelledNote": "This shift was cancelled — you don't need to come in.",
   "inclBreak": "(incl. {min}m break)",
   "workingWithYou": "Working with you",
   "timeOff": {

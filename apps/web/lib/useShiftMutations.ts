@@ -63,7 +63,7 @@ export function useShiftMutations(
       const tempId = crypto.randomUUID()
       const optimistic: Shift = {
         id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
-        ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        ...data, cancelledAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(optimistic)
       try {
@@ -114,6 +114,26 @@ export function useShiftMutations(
     [schedule, orgId, deleteShift, restoreShift]
   )
 
+  const handleShiftCancel = useCallback(
+    (shiftId: string) => {
+      if (!schedule) return
+      const prev = schedule.shifts?.find((s) => s.id === shiftId)
+      patchShift(shiftId, { cancelledAt: new Date().toISOString() })
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}/cancel`, { method: "POST" })
+        .then(async (r) => {
+          if (r.ok) {
+            const res = (await r.json()) as { data?: Shift }
+            if (res.data) patchShift(shiftId, res.data)
+            toast.success("Shift cancelled — the employee has been notified")
+            return
+          }
+          const msg = await r.json().then((b) => b.error).catch(() => null)
+          rollbackShift(shiftId, prev); toast.error(msg ?? "Failed to cancel shift")
+        }).catch(() => { rollbackShift(shiftId, prev); toast.error("Failed to cancel shift") })
+    },
+    [schedule, orgId, patchShift, rollbackShift]
+  )
+
   const handleMarkSick = useCallback(
     async (employeeId: string, date: string) => {
       const activeSchedule = await ensureSchedule()
@@ -122,6 +142,7 @@ export function useShiftMutations(
         id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
         employeeId, date, startTime: "00:00", endTime: "00:00",
         breakMinutes: 0, jobRole: "Sick Day", notes: null, colorTag: "sick",
+        cancelledAt: null,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(sickShift)
@@ -143,5 +164,5 @@ export function useShiftMutations(
     [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift]
   )
 
-  return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick }
+  return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleShiftCancel, handleMarkSick }
 }

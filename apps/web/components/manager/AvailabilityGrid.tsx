@@ -114,8 +114,9 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
   ): AvailabilityDay | undefined =>
     submission?.days?.find((d) => d.date === date)
 
+  // Cancelled shifts don't occupy the day — the slot is bookable again.
   const getShift = (employeeId: string, date: string): Shift | undefined =>
-    shifts.find((s) => s.employeeId === employeeId && s.date === date)
+    shifts.find((s) => s.employeeId === employeeId && s.date === date && !s.cancelledAt)
 
   // A sick-day marker isn't a scheduled working shift, so it shouldn't count
   // toward "scheduled this week".

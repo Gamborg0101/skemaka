@@ -33,6 +33,11 @@
     "intro": "Du har fået en ny vagt hos <strong>{orgName}</strong>.",
     "footer": "Åbn Skemaka for at se hele din vagtplan."
   },
+  "shiftCancelled": {
+    "subject": "Vagt aflyst {date} — {orgName}",
+    "intro": "Din vagt hos <strong>{orgName}</strong> er blevet aflyst — du skal ikke længere møde ind til den.",
+    "footer": "Kontakt din leder, hvis du har spørgsmål."
+  },
   "rolledOut": {
     "subject": "Nye vagter i Skemaka",
     "body": "<strong>{orgName}</strong> har netop udrullet vagtplanen for <strong>{period}</strong>. Åbn Skemaka for at se dine vagter.",
