@@ -58,6 +58,22 @@ model User {
   employees     Employee[]
   memberships   Membership[]
   sessions      Session[]
+  pushSubscriptions PushSubscription[]
+}
+
+// One row per browser/device push registration. A user can have several
+// (phone PWA, desktop browser); dead endpoints are pruned on send failure.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Organization {

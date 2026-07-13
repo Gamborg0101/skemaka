@@ -10,6 +10,7 @@ import {
 } from "@/lib/sms"
 import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
 import { sendShiftAssignedEmail, sendShiftsRolledOutEmail } from "@/lib/resend"
+import { sendPushToUsers } from "@/lib/push"
 import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -380,7 +381,7 @@ export async function publishSchedule(
     include: {
       shifts: {
         where: { colorTag: { not: "sick" } },
-        include: { employee: { select: { id: true, name: true, phone: true, email: true } } },
+        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
       organization: { select: { name: true, settings: true } },
@@ -398,11 +399,11 @@ export async function publishSchedule(
     include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
   })
 
-  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; lines: string[] }>()
+  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null; lines: string[] }>()
   for (const shift of schedule.shifts) {
     const emp = shift.employee
     if (!byEmployee.has(emp.id)) {
-      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, email: emp.email, lines: [] })
+      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, email: emp.email, userId: emp.userId, lines: [] })
     }
     const day = new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
     byEmployee.get(emp.id)!.lines.push(`${day} ${formatTime(shift.startTime, tf)}–${formatTime(shift.endTime, tf)}`)
@@ -421,6 +422,12 @@ export async function publishSchedule(
       void sendSchedulePublishedSms({ to: phone, employeeName: name.split(" ")[0], orgName, weekLabel, shiftLines: lines })
     }
   }
+  const pushUserIds = [...byEmployee.values()].map((e) => e.userId).filter((id): id is string => id !== null)
+  void sendPushToUsers(pushUserIds, {
+    title: orgName,
+    body: `Your shifts for ${weekLabel} are published`,
+    url: "/portal",
+  })
 
   return { schedule: serSchedule(updated), notified: byEmployee.size }
 }
@@ -478,7 +485,7 @@ export async function rollOut(
     include: {
       shifts: {
         where: { colorTag: { not: "sick" } },
-        include: { employee: { select: { id: true, name: true, phone: true, email: true } } },
+        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true } } },
       },
     },
     orderBy: { weekStart: "asc" },
@@ -498,11 +505,11 @@ export async function rollOut(
   })
 
   // One notification per employee across the whole period.
-  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null }>()
+  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null }>()
   for (const s of toPublish) {
     for (const shift of s.shifts) {
       const e = shift.employee
-      if (!byEmployee.has(e.id)) byEmployee.set(e.id, { name: e.name, phone: e.phone, email: e.email })
+      if (!byEmployee.has(e.id)) byEmployee.set(e.id, { name: e.name, phone: e.phone, email: e.email, userId: e.userId })
     }
   }
 
@@ -522,6 +529,12 @@ export async function rollOut(
     if (email) void sendShiftsRolledOutEmail({ to: email, name: first, orgName, periodLabel }).catch(() => {})
     if (phone) void sendRollOutSms({ to: phone, employeeName: first, orgName, periodLabel })
   }
+  const pushUserIds = [...byEmployee.values()].map((e) => e.userId).filter((id): id is string => id !== null)
+  void sendPushToUsers(pushUserIds, {
+    title: orgName,
+    body: `Your shifts for ${periodLabel} are published`,
+    url: "/portal",
+  })
 
   return { weeks: toPublish.length, notified: byEmployee.size, periodLabel }
 }

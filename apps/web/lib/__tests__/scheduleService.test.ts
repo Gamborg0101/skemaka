@@ -33,6 +33,7 @@ vi.mock("@/lib/sms", () => ({
   sendShiftCancelledSms: vi.fn(),
   sendShiftUpdatedSms: vi.fn(),
 }))
+vi.mock("@/lib/push", () => ({ sendPushToUsers: vi.fn().mockResolvedValue(0) }))
 
 const mockEmpFindFirst = vi.mocked(db.employee.findFirst)
 const mockShiftFindFirst = vi.mocked(db.shift.findFirst)
