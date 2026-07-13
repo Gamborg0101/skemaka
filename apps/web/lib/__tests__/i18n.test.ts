@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { getMessages, SUPPORTED_LOCALES, matchLocale, type Locale } from "@skemaka/i18n"
+import { getMessages, pickShiftQuote, SUPPORTED_LOCALES, matchLocale, type Locale } from "@skemaka/i18n"
 import { getMessageTranslator, resolveRecipientLocale } from "@/lib/messages"
 
 // ── Catalog parity ────────────────────────────────────────────────────────────
@@ -59,6 +59,37 @@ describe("i18n catalog parity", () => {
       expect(empty).toEqual([])
     })
   }
+})
+
+// ── Shift-quote parity ────────────────────────────────────────────────────────
+// Quote sets are translated 1:1 (same length per industry) so the same shiftId
+// deterministically maps to the "same" line in every language. If a locale's
+// set drifted in size, the hash would land on a different quote per language.
+
+describe("shift quote locale parity", () => {
+  const industries = [undefined, "restaurant", "cafe", "retail", "hospitality", "healthcare",
+    "salon", "fitness", "warehouse", "cleaning", "childcare", "security"]
+
+  it("every locale yields a non-empty quote for every industry", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      for (const industry of industries) {
+        expect(pickShiftQuote("shift-abc123", industry, locale).length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it("locales stay index-aligned (same shiftId → same set position)", () => {
+    // Two ids that map to different indices in en must also differ in da —
+    // a cheap proxy for equal set lengths without exporting the raw arrays.
+    for (const industry of industries) {
+      const pairs = ["a", "b", "c", "d", "e", "f", "g"].map((id) =>
+        SUPPORTED_LOCALES.map((l) => pickShiftQuote(id, industry, l)),
+      )
+      const enDistinct = new Set(pairs.map(([en]) => en)).size
+      const daDistinct = new Set(pairs.map(([, da]) => da)).size
+      expect(daDistinct).toBe(enDistinct)
+    }
+  })
 })
 
 // ── Recipient locale resolution ───────────────────────────────────────────────
