@@ -1,6 +1,8 @@
 import { db } from "@/lib/prisma"
 import { serAvailabilityRequest, serAvailabilitySubmission, serEmployee } from "@/lib/serialize"
 import { sendAvailabilityInviteEmail } from "@/lib/resend"
+import { recipientLocaleTag, resolveRecipientLocale } from "@/lib/messages"
+import type { Locale } from "@skemaka/i18n"
 import type { AvailabilityRequest, AvailabilitySubmission, Employee } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -125,28 +127,30 @@ export async function createAvailabilityRequest(
   )
 
   const [org, employees] = await Promise.all([
-    db.organization.findUnique({ where: { id: orgId }, select: { name: true } }),
+    db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } }),
     db.employee.findMany({
       where: { organizationId: orgId, isActive: true, inviteToken: { not: null } },
-      select: { email: true, name: true, inviteToken: true },
+      select: { email: true, name: true, inviteToken: true, locale: true },
     }),
   ])
 
-  const appUrl      = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  const weekLabel   = new Date(weekStart).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-  const deadlineLabel = new Date(deadline).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const dateLabel = (iso: string, locale: Locale) =>
+    new Date(iso).toLocaleDateString(recipientLocaleTag(locale), { day: "numeric", month: "long", year: "numeric" })
 
   void Promise.allSettled(
-    employees.map((emp) =>
-      sendAvailabilityInviteEmail({
+    employees.map((emp) => {
+      const locale = resolveRecipientLocale(emp.locale, org?.locale)
+      return sendAvailabilityInviteEmail({
         to:              emp.email,
         name:            emp.name,
         orgName:         org?.name ?? "",
         availabilityUrl: `${appUrl}/availability/${emp.inviteToken}`,
-        weekLabel,
-        deadline:        deadlineLabel,
-      }),
-    ),
+        weekLabel:       dateLabel(weekStart, locale),
+        deadline:        dateLabel(deadline, locale),
+        locale,
+      })
+    }),
   )
 
   return serAvailabilityRequest(request)

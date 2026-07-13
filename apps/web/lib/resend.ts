@@ -1,5 +1,10 @@
 import "server-only"
 import { Resend } from "resend"
+import type { Locale } from "@skemaka/i18n"
+import { getMessageTranslator } from "@/lib/messages"
+
+// HTML tag renderer for <strong> markup embedded in email catalog strings.
+const strong = (chunks: string) => `<strong>${chunks}</strong>`
 
 let _resend: Resend | null = null
 
@@ -22,6 +27,7 @@ interface InviteEmailOptions {
   orgName: string
   inviteUrl: string
   joinUrl?: string
+  locale?: Locale
 }
 
 interface AvailabilityInviteOptions {
@@ -31,6 +37,7 @@ interface AvailabilityInviteOptions {
   availabilityUrl: string
   weekLabel: string
   deadline: string
+  locale?: Locale
 }
 
 interface ShiftAssignedOptions {
@@ -41,6 +48,7 @@ interface ShiftAssignedOptions {
   startTime: string
   endTime: string
   jobRole: string
+  locale?: Locale
 }
 
 export async function sendAvailabilityInviteEmail({
@@ -50,25 +58,27 @@ export async function sendAvailabilityInviteEmail({
   availabilityUrl,
   weekLabel,
   deadline,
+  locale = "en",
 }: AvailabilityInviteOptions) {
+  const t = getMessageTranslator(locale, "emails")
   return getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
-    subject: `Share your availability for the week of ${weekLabel} — ${orgName}`,
+    subject: t("availabilityInvite.subject", { week: weekLabel, orgName }),
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
         <p style="color: #555; margin-bottom: 8px;">
-          <strong>${orgName}</strong> is building the schedule for the week of <strong>${weekLabel}</strong>.
+          ${t.markup("availabilityInvite.building", { orgName, week: weekLabel, strong })}
         </p>
         <p style="color: #555; margin-bottom: 24px;">
-          Please share your availability before <strong>${deadline}</strong> by clicking the button below.
+          ${t.markup("availabilityInvite.deadline", { deadline, strong })}
         </p>
         <a href="${availabilityUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
-          Submit my availability
+          ${t("availabilityInvite.cta")}
         </a>
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
-          This link is personal to you — please don't share it.
+          ${t("personalLink")}
         </p>
       </div>
     `,
@@ -80,6 +90,7 @@ interface ClaimCodeOptions {
   name: string
   orgName: string
   code: string
+  locale?: Locale
 }
 
 /**
@@ -103,70 +114,73 @@ async function sendWithRetry<T>(send: () => Promise<T>, attempts = 3): Promise<T
   throw lastErr
 }
 
-export async function sendClaimCodeEmail({ to, name, orgName, code }: ClaimCodeOptions) {
+export async function sendClaimCodeEmail({ to, name, orgName, code, locale = "en" }: ClaimCodeOptions) {
+  const t = getMessageTranslator(locale, "emails")
   return sendWithRetry(() => getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
-    subject: `Your Skemaka verification code: ${code}`,
+    subject: t("claimCode.subject", { code }),
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
         <p style="color: #555; margin-bottom: 8px;">
-          Use this code to link your account to <strong>${orgName}</strong> on Skemaka:
+          ${t.markup("claimCode.intro", { orgName, strong })}
         </p>
         <div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #111; background: #f3f4f6; border-radius: 8px; padding: 16px 24px; text-align: center; margin: 16px 0;">
           ${code}
         </div>
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
-          This code expires in 10 minutes. If you didn't request it, you can ignore this email — your account is safe.
+          ${t("claimCode.expiry")}
         </p>
       </div>
     `,
   }))
 }
 
-export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }: InviteEmailOptions) {
+export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl, locale = "en" }: InviteEmailOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  // White-on-dark <strong> for the install box.
+  const strongW = (chunks: string) => `<strong style="color:#ffffff;">${chunks}</strong>`
   return getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
-    subject: `You've been added to ${orgName} on Skemaka`,
+    subject: t("invite.subject", { orgName }),
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
         <p style="color: #555; margin-bottom: 8px;">
-          You've been added as a team member at <strong>${orgName}</strong> on Skemaka.
+          ${t.markup("invite.added", { orgName, strong })}
         </p>
         <p style="color: #555; margin-bottom: 24px;">
-          To get started, create your account below. Once you're in, you can view your shifts,
-          submit your availability, and request time off.
+          ${t("invite.getStarted")}
         </p>
         <a href="${joinUrl ?? inviteUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
-          Create my account
+          ${t("invite.cta")}
         </a>
 
         <div style="margin-top: 28px; padding: 18px; background: #0f172a; border-radius: 8px;">
           <p style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0 0 10px;">
-            Add Skemaka to your phone
+            ${t("invite.installTitle")}
           </p>
           <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 12px;">
-            Skemaka works like an app on your phone. Here's how to add it to your home screen:
+            ${t("invite.installIntro")}
           </p>
           <p style="color: #cbd5e1; font-size: 13px; line-height: 1.75; margin: 0 0 12px;">
-            <strong style="color:#ffffff;">On iPhone</strong>:<br>
-            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in your browser.<br>
-            2. Tap the <strong style="color:#ffffff;">Share</strong> icon.<br>
-            3. Tap <strong style="color:#ffffff;">Add to Home Screen</strong>, then tap <strong style="color:#ffffff;">Add</strong>.
+            <strong style="color:#ffffff;">${t("invite.iphone")}</strong>:<br>
+            1. ${t.markup("invite.iphone1", { strong: strongW })}<br>
+            2. ${t.markup("invite.iphone2", { strong: strongW })}<br>
+            3. ${t.markup("invite.iphone3", { strong: strongW })}
           </p>
           <p style="color: #cbd5e1; font-size: 13px; line-height: 1.75; margin: 0;">
-            <strong style="color:#ffffff;">On Android</strong>:<br>
-            1. Open <strong style="color:#ffffff;">skemaka.com</strong> in your browser.<br>
-            2. Tap the <strong style="color:#ffffff;">&#8942;</strong> menu.<br>
-            3. Tap <strong style="color:#ffffff;">Add to Home screen</strong>.
+            <strong style="color:#ffffff;">${t("invite.android")}</strong>:<br>
+            1. ${t.markup("invite.android1", { strong: strongW })}<br>
+            2. ${t.markup("invite.android2", { strong: strongW })}<br>
+            3. ${t.markup("invite.android3", { strong: strongW })}
           </p>
         </div>
 
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
-          This link is personal to you — please don't share it.
+          ${t("personalLink")}
         </p>
       </div>
     `,
@@ -180,17 +194,18 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl }:
  * affected employee.
  */
 export async function sendShiftAssignedEmail({
-  to, name, orgName, dateLabel, startTime, endTime, jobRole,
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, locale = "en",
 }: ShiftAssignedOptions) {
+  const t = getMessageTranslator(locale, "emails")
   return getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
-    subject: `New shift on ${dateLabel} — ${orgName}`,
+    subject: t("shiftAssigned.subject", { date: dateLabel, orgName }),
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
         <p style="color: #555; margin-bottom: 20px;">
-          You've been given a new shift at <strong>${orgName}</strong>.
+          ${t.markup("shiftAssigned.intro", { orgName, strong })}
         </p>
         <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
           <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111;">${dateLabel}</p>
@@ -198,7 +213,7 @@ export async function sendShiftAssignedEmail({
           <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
         </div>
         <p style="color: #999; font-size: 13px;">
-          Open Skemaka to see your full schedule.
+          ${t("shiftAssigned.footer")}
         </p>
       </div>
     `,
@@ -210,30 +225,31 @@ interface ShiftsRolledOutOptions {
   name: string
   orgName: string
   periodLabel: string
+  locale?: Locale
 }
 
 /** Sent to every employee with a shift when a manager rolls out the schedule. */
 export async function sendShiftsRolledOutEmail({
-  to, name, orgName, periodLabel,
+  to, name, orgName, periodLabel, locale = "en",
 }: ShiftsRolledOutOptions) {
+  const t = getMessageTranslator(locale, "emails")
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://skemaka.com"
   return getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
     to,
-    subject: "New shifts in Skemaka",
+    subject: t("rolledOut.subject"),
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
-        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">Hi ${name},</h2>
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
         <p style="color: #555; margin-bottom: 20px;">
-          <strong>${orgName}</strong> just rolled out the schedule for <strong>${periodLabel}</strong>.
-          Open Skemaka to see your shifts.
+          ${t.markup("rolledOut.body", { orgName, period: periodLabel, strong })}
         </p>
         <a href="${appUrl}/portal"
            style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px;">
-          View my shifts
+          ${t("rolledOut.cta")}
         </a>
         <p style="color: #999; font-size: 13px; margin-top: 24px;">
-          You're receiving this because you have shifts at ${orgName} on Skemaka.
+          ${t("rolledOut.footer", { orgName })}
         </p>
       </div>
     `,

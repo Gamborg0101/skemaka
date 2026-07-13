@@ -1,6 +1,7 @@
 import { db } from "@/lib/prisma"
 import { serTimeOffRequest } from "@/lib/serialize"
 import { sendTimeOffApprovedSms, sendTimeOffDeniedSms } from "@/lib/sms"
+import { resolveRecipientLocale } from "@/lib/messages"
 import type { TimeOffRequest } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -97,7 +98,10 @@ export async function reviewTimeOff(
 ): Promise<TimeOffRequest> {
   const existing = await db.timeOffRequest.findFirst({
     where: { id: requestId, organizationId: orgId },
-    include: { employee: { select: { name: true, phone: true } } },
+    include: {
+      employee: { select: { name: true, phone: true, locale: true } },
+      organization: { select: { locale: true } },
+    },
     orderBy: { createdAt: "asc" },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
@@ -113,12 +117,13 @@ export async function reviewTimeOff(
   const startDate = existing.startDate.toISOString().split("T")[0]
   const endDate   = existing.endDate.toISOString().split("T")[0]
   const firstName = name.split(" ")[0]
+  const locale = resolveRecipientLocale(existing.employee.locale, existing.organization.locale)
 
   if (phone) {
     if (status === "APPROVED") {
-      void sendTimeOffApprovedSms({ to: phone, employeeName: firstName, startDate, endDate })
+      void sendTimeOffApprovedSms({ to: phone, employeeName: firstName, startDate, endDate, locale })
     } else {
-      void sendTimeOffDeniedSms({ to: phone, employeeName: firstName, startDate, endDate, reviewNote })
+      void sendTimeOffDeniedSms({ to: phone, employeeName: firstName, startDate, endDate, reviewNote, locale })
     }
   }
 

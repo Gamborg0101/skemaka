@@ -11,6 +11,8 @@ import {
 import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
 import { sendShiftAssignedEmail, sendShiftsRolledOutEmail } from "@/lib/resend"
 import { sendPushToUsers } from "@/lib/push"
+import { getMessageTranslator, recipientLocaleTag, resolveRecipientLocale } from "@/lib/messages"
+import type { Locale } from "@skemaka/i18n"
 import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
@@ -381,10 +383,10 @@ export async function publishSchedule(
     include: {
       shifts: {
         where: { colorTag: { not: "sick" } },
-        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true } } },
+        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
-      organization: { select: { name: true, settings: true } },
+      organization: { select: { name: true, settings: true, locale: true } },
     },
     orderBy: { createdAt: "asc" },
   })
@@ -399,35 +401,51 @@ export async function publishSchedule(
     include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
   })
 
-  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null; lines: string[] }>()
+  const orgLocale = schedule.organization.locale
+  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null; locale: Locale; lines: string[] }>()
   for (const shift of schedule.shifts) {
     const emp = shift.employee
     if (!byEmployee.has(emp.id)) {
-      byEmployee.set(emp.id, { name: emp.name, phone: emp.phone, email: emp.email, userId: emp.userId, lines: [] })
+      byEmployee.set(emp.id, {
+        name: emp.name, phone: emp.phone, email: emp.email, userId: emp.userId,
+        locale: resolveRecipientLocale(emp.locale, orgLocale), lines: [],
+      })
     }
-    const day = new Date(shift.date).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
-    byEmployee.get(emp.id)!.lines.push(`${day} ${formatTime(shift.startTime, tf)}–${formatTime(shift.endTime, tf)}`)
+    const entry = byEmployee.get(emp.id)!
+    const day = new Date(shift.date).toLocaleDateString(recipientLocaleTag(entry.locale), { weekday: "short", timeZone: "UTC" })
+    entry.lines.push(`${day} ${formatTime(shift.startTime, tf)}–${formatTime(shift.endTime, tf)}`)
   }
 
-  const weekLabel = formatWeekLabel(schedule.weekStart.toISOString().split("T")[0])
+  const weekStartStr = schedule.weekStart.toISOString().split("T")[0]
   const orgName = schedule.organization.name
   // Notify everyone who got a shift: email always (reliable), SMS when a phone
   // is on file and Twilio is configured. Fire-and-forget so a slow/failed send
   // never blocks the roll-out.
-  for (const { name, phone, email, lines } of byEmployee.values()) {
+  for (const { name, phone, email, lines, locale } of byEmployee.values()) {
+    const weekLabel = formatWeekLabel(weekStartStr, recipientLocaleTag(locale))
     if (email) {
-      void sendShiftsRolledOutEmail({ to: email, name: name.split(" ")[0], orgName, periodLabel: weekLabel }).catch(() => {})
+      void sendShiftsRolledOutEmail({ to: email, name: name.split(" ")[0], orgName, periodLabel: weekLabel, locale }).catch(() => {})
     }
     if (phone) {
-      void sendSchedulePublishedSms({ to: phone, employeeName: name.split(" ")[0], orgName, weekLabel, shiftLines: lines })
+      void sendSchedulePublishedSms({ to: phone, employeeName: name.split(" ")[0], orgName, weekLabel, shiftLines: lines, locale })
     }
   }
-  const pushUserIds = [...byEmployee.values()].map((e) => e.userId).filter((id): id is string => id !== null)
-  void sendPushToUsers(pushUserIds, {
-    title: orgName,
-    body: `Your shifts for ${weekLabel} are published`,
-    url: "/portal",
-  })
+  // Push payloads are rendered per language, so group recipients by locale.
+  const pushByLocale = new Map<Locale, string[]>()
+  for (const { userId, locale } of byEmployee.values()) {
+    if (!userId) continue
+    if (!pushByLocale.has(locale)) pushByLocale.set(locale, [])
+    pushByLocale.get(locale)!.push(userId)
+  }
+  for (const [locale, userIds] of pushByLocale) {
+    const t = getMessageTranslator(locale, "sms")
+    const weekLabel = formatWeekLabel(weekStartStr, recipientLocaleTag(locale))
+    void sendPushToUsers(userIds, {
+      title: t("push.publishedTitle"),
+      body: t("push.publishedBody", { orgName, week: weekLabel }),
+      url: "/portal",
+    })
+  }
 
   return { schedule: serSchedule(updated), notified: byEmployee.size }
 }
@@ -485,7 +503,7 @@ export async function rollOut(
     include: {
       shifts: {
         where: { colorTag: { not: "sick" } },
-        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true } } },
+        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
       },
     },
     orderBy: { weekStart: "asc" },
@@ -504,37 +522,58 @@ export async function rollOut(
     data: { publishedAt: new Date() },
   })
 
+  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } })
+  const orgName = org?.name ?? ""
+
   // One notification per employee across the whole period.
-  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null }>()
+  const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null; locale: Locale }>()
   for (const s of toPublish) {
     for (const shift of s.shifts) {
       const e = shift.employee
-      if (!byEmployee.has(e.id)) byEmployee.set(e.id, { name: e.name, phone: e.phone, email: e.email, userId: e.userId })
+      if (!byEmployee.has(e.id)) {
+        byEmployee.set(e.id, {
+          name: e.name, phone: e.phone, email: e.email, userId: e.userId,
+          locale: resolveRecipientLocale(e.locale, org?.locale),
+        })
+      }
     }
   }
 
-  const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true } })
-  const orgName = org?.name ?? ""
   // Period spans the first rolled week's Monday to the last rolled week's Sunday.
   const firstMonday = toPublish[0].weekStart
   const lastMonday  = toPublish[toPublish.length - 1].weekStart
   const lastSunday  = new Date(lastMonday.getTime() + 6 * 24 * 60 * 60 * 1000)
-  const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
-  const periodLabel = toPublish.length === 1
-    ? formatWeekLabel(firstMonday.toISOString().split("T")[0])
-    : `${fmt(firstMonday)} – ${fmt(lastSunday)}`
-
-  for (const { name, phone, email } of byEmployee.values()) {
-    const first = name.split(" ")[0]
-    if (email) void sendShiftsRolledOutEmail({ to: email, name: first, orgName, periodLabel }).catch(() => {})
-    if (phone) void sendRollOutSms({ to: phone, employeeName: first, orgName, periodLabel })
+  const periodFor = (locale: Locale) => {
+    const tag = recipientLocaleTag(locale)
+    const fmt = (d: Date) => d.toLocaleDateString(tag, { day: "numeric", month: "short", timeZone: "UTC" })
+    return toPublish.length === 1
+      ? formatWeekLabel(firstMonday.toISOString().split("T")[0], tag)
+      : `${fmt(firstMonday)} – ${fmt(lastSunday)}`
   }
-  const pushUserIds = [...byEmployee.values()].map((e) => e.userId).filter((id): id is string => id !== null)
-  void sendPushToUsers(pushUserIds, {
-    title: orgName,
-    body: `Your shifts for ${periodLabel} are published`,
-    url: "/portal",
-  })
+  // English label returned to the manager UI (kept as before).
+  const periodLabel = periodFor("en")
+
+  for (const { name, phone, email, locale } of byEmployee.values()) {
+    const first = name.split(" ")[0]
+    const period = periodFor(locale)
+    if (email) void sendShiftsRolledOutEmail({ to: email, name: first, orgName, periodLabel: period, locale }).catch(() => {})
+    if (phone) void sendRollOutSms({ to: phone, employeeName: first, orgName, periodLabel: period, locale })
+  }
+  // Push payloads are rendered per language, so group recipients by locale.
+  const pushByLocale = new Map<Locale, string[]>()
+  for (const { userId, locale } of byEmployee.values()) {
+    if (!userId) continue
+    if (!pushByLocale.has(locale)) pushByLocale.set(locale, [])
+    pushByLocale.get(locale)!.push(userId)
+  }
+  for (const [locale, userIds] of pushByLocale) {
+    const t = getMessageTranslator(locale, "sms")
+    void sendPushToUsers(userIds, {
+      title: t("push.rollOutTitle"),
+      body: t("push.rollOutBody", { orgName, period: periodFor(locale) }),
+      url: "/portal",
+    })
+  }
 
   return { weeks: toPublish.length, notified: byEmployee.size, periodLabel }
 }
@@ -595,7 +634,7 @@ export async function createShift(
   const [employeeInOrg, existing, scheduleRow] = await Promise.all([
     db.employee.findFirst({
       where: { id: employeeId, organizationId: orgId },
-      select: { id: true, name: true, email: true, organization: { select: { name: true } } },
+      select: { id: true, name: true, email: true, locale: true, organization: { select: { name: true, locale: true } } },
     }),
     db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC }, select: { id: true }, orderBy: { createdAt: "asc" } }),
     db.schedule.findFirst({ where: { id: scheduleId, organizationId: orgId }, select: { publishedAt: true } }),
@@ -643,7 +682,8 @@ export async function createShift(
   // schedule, so a new shift is news to them. Fire-and-forget; never block or
   // fail the create on a mail error.
   if (addedToPublishedWeek && employeeInOrg.email) {
-    const dateLabel = new Date(date + "T12:00:00Z").toLocaleDateString("en-GB", {
+    const empLocale = resolveRecipientLocale(employeeInOrg.locale, employeeInOrg.organization.locale)
+    const dateLabel = new Date(date + "T12:00:00Z").toLocaleDateString(recipientLocaleTag(empLocale), {
       weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
     })
     void sendShiftAssignedEmail({
@@ -654,6 +694,7 @@ export async function createShift(
       startTime,
       endTime,
       jobRole,
+      locale: empLocale,
     }).catch((err) => console.error("[ShiftEmail] Failed to send shift-assigned email:", err))
   }
 
@@ -680,8 +721,8 @@ export async function updateShift(
   const existing = await db.shift.findFirst({
     where: { id: shiftId, scheduleId, organizationId: orgId },
     include: {
-      employee: { select: { name: true, phone: true } },
-      organization: { select: { name: true } },
+      employee: { select: { name: true, phone: true, locale: true } },
+      organization: { select: { name: true, locale: true } },
       schedule: { select: { publishedAt: true } },
     },
   })
@@ -749,6 +790,7 @@ export async function updateShift(
   const employeeChanged = input.employeeId !== undefined && input.employeeId !== existing.employeeId
   const timingChanged   = input.date !== undefined || input.startTime !== undefined || input.endTime !== undefined
 
+  const existingLocale = resolveRecipientLocale(existing.employee.locale, existing.organization.locale)
   if (wasPublished) {
     // Notifications are deferred to re-publish; emit nothing here.
   } else if (employeeChanged) {
@@ -760,12 +802,13 @@ export async function updateShift(
         date: oldDate,
         startTime: existing.startTime,
         endTime: existing.endTime,
+        locale: existingLocale,
       })
     }
     if (input.employeeId) {
       const newEmp = await db.employee.findUnique({
         where: { id: input.employeeId },
-        select: { name: true, phone: true },
+        select: { name: true, phone: true, locale: true },
       })
       if (newEmp?.phone) {
         void sendShiftAssignedSms({
@@ -775,6 +818,7 @@ export async function updateShift(
           date: newDate,
           startTime: newStartTime,
           endTime: newEndTime,
+          locale: resolveRecipientLocale(newEmp.locale, existing.organization.locale),
         })
       }
     }
@@ -786,6 +830,7 @@ export async function updateShift(
       date: newDate,
       startTime: newStartTime,
       endTime: newEndTime,
+      locale: existingLocale,
     })
   }
 
@@ -800,8 +845,8 @@ export async function deleteShift(
   const existing = await db.shift.findFirst({
     where: { id: shiftId, scheduleId, organizationId: orgId },
     include: {
-      employee: { select: { name: true, phone: true } },
-      organization: { select: { name: true } },
+      employee: { select: { name: true, phone: true, locale: true } },
+      organization: { select: { name: true, locale: true } },
       schedule: { select: { publishedAt: true } },
     },
   })
@@ -828,6 +873,7 @@ export async function deleteShift(
       date: existing.date.toISOString().split("T")[0],
       startTime: existing.startTime,
       endTime: existing.endTime,
+      locale: resolveRecipientLocale(existing.employee.locale, existing.organization.locale),
     })
   }
 }

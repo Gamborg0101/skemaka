@@ -1,1 +1,24 @@
-{}
+{
+  "optOut": "Svar STOP for at afmelde.",
+  "verification": "Din bekræftelseskode til {orgName} er {code}. Den udløber om 10 minutter.",
+  "shiftUpdated": "Hej {name}, din vagt hos {orgName} er blevet ændret. Nyt tidspunkt: {when}.",
+  "shiftAssigned": "Hej {name}, du er sat på en vagt hos {orgName}: {when}.",
+  "schedulePublished": "Hej {name}! {orgName} har udgivet din vagtplan for {week}. Dine vagter: {list}.",
+  "noShifts": "Ingen vagter i denne uge.",
+  "rollOut": "Hej {name}! Nye vagter i Skemaka — {orgName} har udrullet vagtplanen for {period}. Åbn appen for at se dine vagter.",
+  "timeOffApproved": "Hej {name}, din anmodning om fri {range} er godkendt.",
+  "timeOffDenied": "Hej {name}, din anmodning om fri {range} blev ikke godkendt.{note}",
+  "timeOffDeniedReason": " Årsag: {reason}",
+  "shiftCancelled": "Hej {name}, din vagt hos {orgName} {when} er aflyst. Kontakt din leder, hvis du har spørgsmål.",
+  "coverOffered": "Hej {name}, en {jobRole}-vagt hos {orgName} mangler dækning: {when}. Åbn appen for at tage den.",
+  "coverClaimed": "Hej {name}, {claimer} har tilbudt at tage din vagt hos {orgName} {when}. Afventer lederens godkendelse.",
+  "coverApprovedRequester": "Hej {name}, din vagt hos {orgName} {when} er nu dækket. Du har fri.",
+  "coverApprovedClaimer": "Hej {name}, du er bekræftet til at tage vagten hos {orgName} {when}.",
+  "coverDenied": "Hej {name}, dækningen af vagten hos {orgName} {when} blev ikke godkendt — vagten gælder som planlagt.",
+  "push": {
+    "publishedTitle": "Din vagtplan er klar",
+    "publishedBody": "{orgName} har udgivet vagtplanen for {week}. Tryk for at se dine vagter.",
+    "rollOutTitle": "Nye vagter udgivet",
+    "rollOutBody": "{orgName} har udrullet vagtplanen for {period}. Tryk for at se dine vagter."
+  }
+}

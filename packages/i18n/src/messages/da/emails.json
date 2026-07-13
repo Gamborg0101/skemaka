@@ -1,1 +1,42 @@
-{}
+{
+  "greeting": "Hej {name},",
+  "personalLink": "Dette link er personligt — del det ikke med andre.",
+  "availabilityInvite": {
+    "subject": "Del din tilgængelighed for ugen fra {week} — {orgName}",
+    "building": "<strong>{orgName}</strong> er ved at lægge vagtplanen for ugen fra <strong>{week}</strong>.",
+    "deadline": "Del din tilgængelighed inden <strong>{deadline}</strong> ved at klikke på knappen nedenfor.",
+    "cta": "Send min tilgængelighed"
+  },
+  "claimCode": {
+    "subject": "Din bekræftelseskode til Skemaka: {code}",
+    "intro": "Brug denne kode til at knytte din konto til <strong>{orgName}</strong> på Skemaka:",
+    "expiry": "Koden udløber om 10 minutter. Hvis du ikke har anmodet om den, kan du ignorere denne mail — din konto er sikker."
+  },
+  "invite": {
+    "subject": "Du er blevet tilføjet til {orgName} på Skemaka",
+    "added": "Du er blevet tilføjet som medarbejder hos <strong>{orgName}</strong> på Skemaka.",
+    "getStarted": "Kom i gang ved at oprette din konto nedenfor. Derefter kan du se dine vagter, sende din tilgængelighed og anmode om fri.",
+    "cta": "Opret min konto",
+    "installTitle": "Føj Skemaka til din telefon",
+    "installIntro": "Skemaka fungerer som en app på din telefon. Sådan føjer du den til din hjemmeskærm:",
+    "iphone": "På iPhone",
+    "android": "På Android",
+    "iphone1": "Åbn <strong>skemaka.com</strong> i din browser.",
+    "iphone2": "Tryk på <strong>Del</strong>-ikonet.",
+    "iphone3": "Tryk på <strong>Føj til hjemmeskærm</strong>, og tryk derefter på <strong>Tilføj</strong>.",
+    "android1": "Åbn <strong>skemaka.com</strong> i din browser.",
+    "android2": "Tryk på <strong>⋮</strong>-menuen.",
+    "android3": "Tryk på <strong>Føj til startskærm</strong>."
+  },
+  "shiftAssigned": {
+    "subject": "Ny vagt {date} — {orgName}",
+    "intro": "Du har fået en ny vagt hos <strong>{orgName}</strong>.",
+    "footer": "Åbn Skemaka for at se hele din vagtplan."
+  },
+  "rolledOut": {
+    "subject": "Nye vagter i Skemaka",
+    "body": "<strong>{orgName}</strong> har netop udrullet vagtplanen for <strong>{period}</strong>. Åbn Skemaka for at se dine vagter.",
+    "cta": "Se mine vagter",
+    "footer": "Du modtager denne mail, fordi du har vagter hos {orgName} på Skemaka."
+  }
+}
