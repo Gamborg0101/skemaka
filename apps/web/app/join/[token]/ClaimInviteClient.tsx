@@ -64,21 +64,22 @@ export function ClaimInviteClient({ token }: Props) {
   const [code, setCode] = useState("")
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN)
 
-  const fallbacks: RequestFallbacks = {
-    yourOrganisation: t("yourOrganisation"),
-    yourEmail: t("yourEmail"),
-    somethingWentWrong: tCommon("somethingWentWrong"),
-    networkError: tCommon("networkError"),
-  }
-  const fallbacksRef = useRef(fallbacks)
-  fallbacksRef.current = fallbacks
+  const fallbacks = useCallback(
+    (): RequestFallbacks => ({
+      yourOrganisation: t("yourOrganisation"),
+      yourEmail: t("yourEmail"),
+      somethingWentWrong: tCommon("somethingWentWrong"),
+      networkError: tCommon("networkError"),
+    }),
+    [t, tCommon],
+  )
 
   // Resend (user-triggered): show the spinner immediately, then re-request.
   const requestCode = useCallback(() => {
     setState({ status: "requesting" })
     setCooldown(RESEND_COOLDOWN)
-    void requestVerificationCode(token, fallbacksRef.current).then(setState)
-  }, [token])
+    void requestVerificationCode(token, fallbacks()).then(setState)
+  }, [token, fallbacks])
 
   // On mount the initial state is already "requesting"; kick off the request and
   // apply the result inside the promise callback. The ref guards against React's
@@ -88,8 +89,8 @@ export function ClaimInviteClient({ token }: Props) {
   useEffect(() => {
     if (requested.current) return
     requested.current = true
-    void requestVerificationCode(token, fallbacksRef.current).then(setState)
-  }, [token])
+    void requestVerificationCode(token, fallbacks()).then(setState)
+  }, [token, fallbacks])
 
   // Tick the resend cooldown down to zero once a code has been sent.
   useEffect(() => {
