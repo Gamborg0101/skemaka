@@ -235,7 +235,7 @@ vercel deploy --prod
 
 The **mobile app** is built and released separately through Expo / EAS — see [apps/mobile/APP_STORE_SUBMISSION.md](./apps/mobile/APP_STORE_SUBMISSION.md).
 
-See [GO_LIVE_RUNBOOK.md](./GO_LIVE_RUNBOOK.md) and [LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md) before taking paying customers.
+See [LAUNCH.md](./LAUNCH.md) before taking paying customers.
 
 ---
 
