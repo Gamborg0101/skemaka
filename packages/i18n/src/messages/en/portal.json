@@ -33,6 +33,14 @@
     "enabling": "Enabling…",
     "dismiss": "Dismiss notification prompt"
   },
+  "coverPool": {
+    "title": "Shifts you can cover",
+    "offeredBy": "offered by {name}",
+    "claim": "I'll cover it",
+    "claiming": "Claiming…",
+    "claimed": "You offered to cover — your manager will confirm it",
+    "errClaim": "Couldn't claim this shift"
+  },
   "availability": {
     "linkNotFound": "Link not found",
     "linkNotFoundHint": "This link may have expired or there's no open availability request right now. Ask your manager to resend the invite.",

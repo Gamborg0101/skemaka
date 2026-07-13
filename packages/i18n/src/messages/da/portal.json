@@ -33,6 +33,14 @@
     "enabling": "Slår til…",
     "dismiss": "Afvis notifikationsprompt"
   },
+  "coverPool": {
+    "title": "Vagter du kan tage",
+    "offeredBy": "tilbudt af {name}",
+    "claim": "Jeg tager den",
+    "claiming": "Tager…",
+    "claimed": "Du har tilbudt at tage vagten — din leder bekræfter den",
+    "errClaim": "Vagten kunne ikke tages"
+  },
   "availability": {
     "linkNotFound": "Linket blev ikke fundet",
     "linkNotFoundHint": "Linket kan være udløbet, eller der er ingen åben tilgængelighedsanmodning lige nu. Bed din leder om at sende invitationen igen.",
