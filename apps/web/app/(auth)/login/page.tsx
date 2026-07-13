@@ -1,51 +1,34 @@
 import Link from "next/link";
 import { signIn } from "@/lib/auth";
 import { Calendar, DollarSign, Clock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getISOWeek, getMondayOfWeek } from "@/lib/dateUtils";
-
-const features = [
-  {
-    icon: Calendar,
-    title: "Drag-and-drop scheduling",
-    description: "Build the weekly roster in minutes, not hours.",
-  },
-  {
-    icon: DollarSign,
-    title: "Live labour costs",
-    description: "Wage spend updates as you schedule.",
-  },
-  {
-    icon: Clock,
-    title: "Availability requests",
-    description: "Staff submit availability before each week.",
-  },
-];
 
 const PREVIEW_SHIFTS = [
   {
     name: "Marco",
-    role: "Head chef",
+    roleKey: "roleHeadChef" as const,
     start: 14,
     end: 22,
     color: "bg-amber-400",
   },
   {
     name: "Aoife",
-    role: "Sous chef",
+    roleKey: "roleSousChef" as const,
     start: 15,
     end: 22,
     color: "bg-amber-400",
   },
   {
     name: "Priya",
-    role: "Bartender",
+    roleKey: "roleBartender" as const,
     start: 16,
     end: 22,
     color: "bg-purple-400",
   },
   {
     name: "Lena",
-    role: "Waiter",
+    roleKey: "roleWaiter" as const,
     start: 16,
     end: 22,
     color: "bg-blue-400",
@@ -56,13 +39,15 @@ const DAY_START = 6;
 const DAY_END = 22;
 const DAY_SPAN = DAY_END - DAY_START;
 
-function ShiftPreview({ weekNum }: { weekNum: number }) {
+async function ShiftPreview({ weekNum }: { weekNum: number }) {
+  const t = await getTranslations("auth.login");
+  const tRoles = await getTranslations("marketing.preview");
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="flex items-center gap-2 mb-5">
         <span className="size-1.5 rounded-full bg-green-400 animate-pulse" />
         <span className="text-[11px] font-medium text-white/40 uppercase tracking-widest">
-          Week {weekNum} · Live schedule
+          {t("previewWeek", { week: weekNum })}
         </span>
       </div>
       <div className="space-y-3">
@@ -75,7 +60,7 @@ function ShiftPreview({ weekNum }: { weekNum: number }) {
                 <p className="text-[12px] font-medium text-white/75 truncate">
                   {s.name}
                 </p>
-                <p className="text-[10px] text-white/30">{s.role}</p>
+                <p className="text-[10px] text-white/30">{tRoles(s.roleKey)}</p>
               </div>
               <div className="relative flex-1 h-5">
                 <div
@@ -105,7 +90,14 @@ export default async function LoginPage({
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
   const { callbackUrl } = await searchParams;
+  const t = await getTranslations("auth.login");
+  const tCommon = await getTranslations("common");
   const weekNum = getISOWeek(getMondayOfWeek(new Date()));
+  const features = [
+    { icon: Calendar, title: t("feature1Title"), description: t("feature1Text") },
+    { icon: DollarSign, title: t("feature2Title"), description: t("feature2Text") },
+    { icon: Clock, title: t("feature3Title"), description: t("feature3Text") },
+  ];
   // Use only the path+search so NextAuth's origin check always passes —
   // the full URL may use a LAN IP that doesn't match NEXTAUTH_URL.
   let redirectTo = "/onboarding";
@@ -146,13 +138,12 @@ export default async function LoginPage({
         <div className="relative flex-1 flex flex-col justify-center gap-8">
           <div>
             <h2 className="text-4xl font-bold text-white leading-tight tracking-tight">
-              Staff scheduling,
+              {t("heroTitle1")}
               <br />
-              done right.
+              {t("heroTitle2")}
             </h2>
             <p className="mt-3 text-slate-400 text-base leading-relaxed">
-              Build weekly rosters, track labour costs, and collect availability
-              — all in one place.
+              {t("heroSub")}
             </p>
           </div>
 
@@ -184,16 +175,16 @@ export default async function LoginPage({
               Skemaka
             </p>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Staff scheduling, simplified.
+              {t("tagline")}
             </p>
           </div>
 
           <div>
             <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-              Welcome back
+              {t("welcome")}
             </h1>
             <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-              Sign in to manage your team&apos;s schedule.
+              {t("welcomeSub")}
             </p>
           </div>
 
@@ -209,7 +200,7 @@ export default async function LoginPage({
                 className="w-full flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
               >
                 <GoogleIcon />
-                Continue with Google
+                {t("google")}
               </button>
             </form>
 
@@ -217,7 +208,7 @@ export default async function LoginPage({
             <div className="flex items-center gap-3">
               <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
               <span className="text-[11px] font-medium uppercase tracking-widest text-gray-400 dark:text-gray-600">
-                or
+                {tCommon("or")}
               </span>
               <span className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
             </div>
@@ -237,34 +228,37 @@ export default async function LoginPage({
                 name="email"
                 required
                 autoComplete="email"
-                placeholder="you@restaurant.com"
+                placeholder={t("emailPlaceholder")}
                 className="w-full h-11 px-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-colors"
               />
               <button
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 h-11 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white shadow-sm transition-colors"
               >
-                Email me a sign-in link
+                {t("emailButton")}
               </button>
             </form>
           </div>
 
           <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-            By signing in you agree to our{" "}
-            <Link
-              href="/terms"
-              className="underline underline-offset-2 hover:text-gray-600 transition-colors"
-            >
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="/privacy"
-              className="underline underline-offset-2 hover:text-gray-600 transition-colors"
-            >
-              Privacy Policy
-            </Link>
-            .
+            {t.rich("agree", {
+              terms: (chunks) => (
+                <Link
+                  href="/terms"
+                  className="underline underline-offset-2 hover:text-gray-600 transition-colors"
+                >
+                  {chunks}
+                </Link>
+              ),
+              privacy: (chunks) => (
+                <Link
+                  href="/privacy"
+                  className="underline underline-offset-2 hover:text-gray-600 transition-colors"
+                >
+                  {chunks}
+                </Link>
+              ),
+            })}
           </p>
         </div>
       </div>

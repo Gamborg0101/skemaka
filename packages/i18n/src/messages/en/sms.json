@@ -1,0 +1,24 @@
+{
+  "optOut": "Reply STOP to opt out.",
+  "verification": "Your {orgName} verification code is {code}. It expires in 10 minutes.",
+  "shiftUpdated": "Hi {name}, your shift at {orgName} has been updated. New time: {when}.",
+  "shiftAssigned": "Hi {name}, you've been scheduled for a shift at {orgName}: {when}.",
+  "schedulePublished": "Hi {name}! {orgName} published your schedule for {week}. Your shifts: {list}.",
+  "noShifts": "No shifts this week.",
+  "rollOut": "Hi {name}! New shifts in Skemaka — {orgName} rolled out the schedule for {period}. Open the app to see your shifts.",
+  "timeOffApproved": "Hi {name}, your time-off request for {range} has been approved.",
+  "timeOffDenied": "Hi {name}, your time-off request for {range} was not approved.{note}",
+  "timeOffDeniedReason": " Reason: {reason}",
+  "shiftCancelled": "Hi {name}, your shift at {orgName} on {when} has been cancelled. Contact your manager if you have questions.",
+  "coverOffered": "Hi {name}, a {jobRole} shift at {orgName} needs cover: {when}. Open the app to claim it.",
+  "coverClaimed": "Hi {name}, {claimer} offered to cover your {orgName} shift on {when}. Awaiting manager approval.",
+  "coverApprovedRequester": "Hi {name}, your {orgName} shift on {when} is now covered. You're off the hook.",
+  "coverApprovedClaimer": "Hi {name}, you're confirmed to cover the {orgName} shift on {when}.",
+  "coverDenied": "Hi {name}, the cover request for the {orgName} shift on {when} was not approved — the shift stands as scheduled.",
+  "push": {
+    "publishedTitle": "Your schedule is out",
+    "publishedBody": "{orgName} published the schedule for {week}. Tap to see your shifts.",
+    "rollOutTitle": "New shifts published",
+    "rollOutBody": "{orgName} rolled out the schedule for {period}. Tap to see your shifts."
+  }
+}

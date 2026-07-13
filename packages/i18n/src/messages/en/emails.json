@@ -1,0 +1,42 @@
+{
+  "greeting": "Hi {name},",
+  "personalLink": "This link is personal to you — please don't share it.",
+  "availabilityInvite": {
+    "subject": "Share your availability for the week of {week} — {orgName}",
+    "building": "<strong>{orgName}</strong> is building the schedule for the week of <strong>{week}</strong>.",
+    "deadline": "Please share your availability before <strong>{deadline}</strong> by clicking the button below.",
+    "cta": "Submit my availability"
+  },
+  "claimCode": {
+    "subject": "Your Skemaka verification code: {code}",
+    "intro": "Use this code to link your account to <strong>{orgName}</strong> on Skemaka:",
+    "expiry": "This code expires in 10 minutes. If you didn't request it, you can ignore this email — your account is safe."
+  },
+  "invite": {
+    "subject": "You've been added to {orgName} on Skemaka",
+    "added": "You've been added as a team member at <strong>{orgName}</strong> on Skemaka.",
+    "getStarted": "To get started, create your account below. Once you're in, you can view your shifts, submit your availability, and request time off.",
+    "cta": "Create my account",
+    "installTitle": "Add Skemaka to your phone",
+    "installIntro": "Skemaka works like an app on your phone. Here's how to add it to your home screen:",
+    "iphone": "On iPhone",
+    "android": "On Android",
+    "iphone1": "Open <strong>skemaka.com</strong> in your browser.",
+    "iphone2": "Tap the <strong>Share</strong> icon.",
+    "iphone3": "Tap <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.",
+    "android1": "Open <strong>skemaka.com</strong> in your browser.",
+    "android2": "Tap the <strong>⋮</strong> menu.",
+    "android3": "Tap <strong>Add to Home screen</strong>."
+  },
+  "shiftAssigned": {
+    "subject": "New shift on {date} — {orgName}",
+    "intro": "You've been given a new shift at <strong>{orgName}</strong>.",
+    "footer": "Open Skemaka to see your full schedule."
+  },
+  "rolledOut": {
+    "subject": "New shifts in Skemaka",
+    "body": "<strong>{orgName}</strong> just rolled out the schedule for <strong>{period}</strong>. Open Skemaka to see your shifts.",
+    "cta": "View my shifts",
+    "footer": "You're receiving this because you have shifts at {orgName} on Skemaka."
+  }
+}

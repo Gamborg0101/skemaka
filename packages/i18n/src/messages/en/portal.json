@@ -1,0 +1,58 @@
+{
+  "backToDashboard": "Back to dashboard",
+  "hi": "Hi {name}",
+  "noProfile": "No employee profile",
+  "noProfileHint": "Ask your manager to add you as an employee so your shifts appear here.",
+  "noShifts": "No upcoming shifts",
+  "noShiftsHint": "Check back when your schedule is published.",
+  "published": "Published",
+  "pending": "Pending",
+  "inclBreak": "(incl. {min}m break)",
+  "workingWithYou": "Working with you",
+  "timeOff": {
+    "title": "Time Off",
+    "request": "Request",
+    "from": "From",
+    "to": "To",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "e.g. holiday, appointment…",
+    "submit": "Submit request",
+    "submitting": "Submitting…",
+    "noRequests": "No time off requests yet.",
+    "note": "Note: {note}",
+    "statusPending": "Pending",
+    "statusApproved": "Approved",
+    "statusDenied": "Denied",
+    "errSubmit": "Failed to submit request",
+    "successSubmit": "Time off request submitted"
+  },
+  "push": {
+    "title": "Get notified about new schedules",
+    "body": "We'll ping this device when your shifts are published.",
+    "enable": "Enable",
+    "enabling": "Enabling…",
+    "dismiss": "Dismiss notification prompt"
+  },
+  "coverPool": {
+    "title": "Shifts you can cover",
+    "offeredBy": "offered by {name}",
+    "claim": "I'll cover it",
+    "claiming": "Claiming…",
+    "claimed": "You offered to cover — your manager will confirm it",
+    "errClaim": "Couldn't claim this shift"
+  },
+  "availability": {
+    "linkNotFound": "Link not found",
+    "linkNotFoundHint": "This link may have expired or there's no open availability request right now. Ask your manager to resend the invite.",
+    "allDone": "All done!",
+    "allDoneHint": "Your availability has been submitted. Your manager will build the schedule and let you know your shifts.",
+    "hi": "Hi {name},",
+    "shareIntro": "Share your availability for the week of <b>{week}</b>.",
+    "available": "Available",
+    "notAvailable": "Not Available",
+    "preferredStart": "Preferred start (optional)",
+    "preferredEnd": "Preferred end (optional)",
+    "submit": "Submit Availability",
+    "submitting": "Submitting..."
+  }
+}

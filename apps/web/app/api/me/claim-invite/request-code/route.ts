@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         name:    employee.name,
         orgName: employee.orgName,
         code,
+        locale:  employee.locale,
       })
     } catch (err) {
       // Don't leak whether the address exists / delivery failed via status code;

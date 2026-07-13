@@ -1,7 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import { Building2, Users, Globe, CreditCard, ChevronRight } from "lucide-react"
+import { LanguageSection } from "@/components/manager/settings/LanguageSection"
 import { JobRolesSection } from "@/components/manager/settings/JobRolesSection"
 import { StoreHoursSection } from "@/components/manager/settings/StoreHoursSection"
 import { ShiftTypesSection } from "@/components/manager/settings/ShiftTypesSection"
@@ -24,6 +26,7 @@ function ComingSoonCard({
   title: string
   description: string
 }) {
+  const t = useTranslations("manager.settings")
   return (
     <div className="mb-4 flex items-start gap-4 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900 px-5 py-4">
       <div className="mt-0.5 size-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
@@ -34,59 +37,61 @@ function ComingSoonCard({
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{description}</p>
       </div>
       <span className="ml-auto self-center shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-400 dark:text-gray-500">
-        Coming soon
+        {t("comingSoon")}
       </span>
     </div>
   )
 }
 
 export default function SettingsPage() {
+  const t = useTranslations("manager.settings")
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="hidden md:flex items-center gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Organization settings</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Manage your workspace configuration.</p>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t("subtitle")}</p>
         </div>
       </div>
 
       {/* Mobile header */}
       <div className="md:hidden px-4 pt-6 pb-2">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Organization settings</h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage your workspace configuration.</p>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t("subtitle")}</p>
       </div>
 
       {/* Content — grouped so sections are easy to find */}
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
         <div className="mx-auto max-w-3xl">
-          <SettingsGroup title="Scheduling">
+          <SettingsGroup title={t("groupScheduling")}>
             <StoreHoursSection />
             <ShiftTypesSection />
             <ScheduleViewSection />
             <TimeFormatSection />
             <ComingSoonCard
               icon={Globe}
-              title="Locale & Time Zone"
-              description="Set the time zone and week start day for your schedules."
+              title={t("tzTitle")}
+              description={t("tzDesc")}
             />
           </SettingsGroup>
 
-          <SettingsGroup title="Team">
+          <SettingsGroup title={t("groupTeam")}>
             <JobRolesSection />
             <TeamAccessSection />
             <ComingSoonCard
               icon={Users}
-              title="Roles & Permissions"
-              description="Define job roles and what managers can do."
+              title={t("rolesTitle")}
+              description={t("rolesDesc")}
             />
           </SettingsGroup>
 
-          <SettingsGroup title="Features">
+          <SettingsGroup title={t("groupFeatures")}>
             <FeaturesSection />
           </SettingsGroup>
 
-          <SettingsGroup title="Workspace">
+          <SettingsGroup title={t("groupWorkspace")}>
+            <LanguageSection />
             <CurrencySection />
             <Link
               href="/billing"
@@ -96,19 +101,19 @@ export default function SettingsPage() {
                 <CreditCard className="size-4 text-gray-500 dark:text-gray-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Billing</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Plan, payment method and invoices.</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t("billingTitle")}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t("billingDesc")}</p>
               </div>
               <ChevronRight className="size-4 text-gray-400 dark:text-gray-500 shrink-0" />
             </Link>
             <ComingSoonCard
               icon={Building2}
-              title="Organization"
-              description="Name, logo, and contact details for your business."
+              title={t("orgTitle")}
+              description={t("orgDesc")}
             />
           </SettingsGroup>
 
-          <SettingsGroup title="Data & account">
+          <SettingsGroup title={t("groupData")}>
             <DataRetentionSection />
             <DeleteAccountSection />
           </SettingsGroup>

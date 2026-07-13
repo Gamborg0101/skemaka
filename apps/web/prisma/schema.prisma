@@ -156,6 +156,7 @@ model Employee {
   phone                   String?
   phoneVerifiedAt         DateTime?
   smsConsentAt            DateTime?
+  locale                  String?
   jobRole                 String
   hourlyWage              Decimal                  @db.Decimal(10, 2)
   wageBaseAmount          Decimal?                 @db.Decimal(12, 4)

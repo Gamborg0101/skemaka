@@ -1,0 +1,17 @@
+{
+  "cancel": "Annullér",
+  "back": "Tilbage",
+  "add": "Tilføj",
+  "adding": "Tilføjer…",
+  "saving": "Gemmer…",
+  "creating": "Opretter…",
+  "continue": "Fortsæt",
+  "or": "eller",
+  "copy": "Kopiér",
+  "copied": "Kopieret",
+  "networkError": "Netværksfejl — prøv igen.",
+  "incorrectCode": "Forkert kode.",
+  "somethingWentWrong": "Noget gik galt.",
+  "resendCode": "Send koden igen",
+  "resendCodeIn": "Send igen om {s} s"
+}
