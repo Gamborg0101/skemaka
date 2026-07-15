@@ -43,6 +43,16 @@
     "claimed": "You offered to cover — your manager will confirm it",
     "errClaim": "Couldn't claim this shift"
   },
+  "shiftOffers": {
+    "title": "Shifts you've been offered",
+    "respondBy": "Respond by {date}",
+    "accept": "I can work it",
+    "decline": "Can't make it",
+    "saving": "Saving…",
+    "accepted": "You accepted — waiting for your manager to confirm",
+    "declined": "You declined this offer",
+    "err": "Couldn't save your response"
+  },
   "availability": {
     "linkNotFound": "Link not found",
     "linkNotFoundHint": "This link may have expired or there's no open availability request right now. Ask your manager to resend the invite.",

@@ -21,14 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getCurrencySymbol } from "@/lib/orgSettings"
+import { getCurrencySymbol, getOrgSettings } from "@/lib/orgSettings"
 import { isEmploymentType } from "@/types"
 import type { JobRole, EmploymentType } from "@/types"
 
-const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
-  FULL_TIME:          "Full Time (40h/week)",
-  REDUCED_FULL_TIME:  "Reduced Full Time (32h/week)",
-  PART_TIME:          "Part Time",
+/** Human label for an employment type, using the org's configured full-time hours. */
+function employmentTypeLabel(type: EmploymentType, fullTimeHours: number, reducedHours: number): string {
+  if (type === "FULL_TIME") return `Full Time (${fullTimeHours}h/week)`
+  if (type === "REDUCED_FULL_TIME") return `Reduced Full Time (${reducedHours}h/week)`
+  return "Part Time"
 }
 import { parsePhoneNumberWithError, ParseError } from "libphonenumber-js"
 
@@ -92,9 +93,11 @@ export function AddEmployeeDialog({
     setNotes("")
   }
 
+  const { fullTimeHours, reducedFullTimeHours } = getOrgSettings()
+
   const resolvedContractedHours = (): number => {
-    if (employmentType === "FULL_TIME") return 40
-    if (employmentType === "REDUCED_FULL_TIME") return 32
+    if (employmentType === "FULL_TIME") return fullTimeHours
+    if (employmentType === "REDUCED_FULL_TIME") return reducedFullTimeHours
     return parseInt(contractedHours, 10) || 0
   }
 
@@ -209,11 +212,11 @@ export function AddEmployeeDialog({
             <Label htmlFor="emp-employment-type">Employment Type</Label>
             <Select value={employmentType} onValueChange={(val) => { if (val && isEmploymentType(val)) setEmploymentType(val) }}>
               <SelectTrigger id="emp-employment-type" className="w-full">
-                <SelectValue>{EMPLOYMENT_TYPE_LABELS[employmentType]}</SelectValue>
+                <SelectValue>{employmentTypeLabel(employmentType, fullTimeHours, reducedFullTimeHours)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="FULL_TIME">Full Time (40h/week)</SelectItem>
-                <SelectItem value="REDUCED_FULL_TIME">Reduced Full Time (32h/week)</SelectItem>
+                <SelectItem value="FULL_TIME">{employmentTypeLabel("FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
+                <SelectItem value="REDUCED_FULL_TIME">{employmentTypeLabel("REDUCED_FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
                 <SelectItem value="PART_TIME">Part Time</SelectItem>
               </SelectContent>
             </Select>

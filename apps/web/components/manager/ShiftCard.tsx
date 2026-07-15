@@ -15,6 +15,11 @@ const COLOR_BG: Record<string, string> = {
   purple: "bg-purple-100 dark:bg-purple-900/70",
   yellow: "bg-yellow-100 dark:bg-yellow-900/70",
   rose:   "bg-rose-100 dark:bg-rose-900/70",
+  red:    "bg-red-100 dark:bg-red-900/70",
+  pink:   "bg-pink-100 dark:bg-pink-900/70",
+  indigo: "bg-indigo-100 dark:bg-indigo-900/70",
+  teal:   "bg-teal-100 dark:bg-teal-900/70",
+  cyan:   "bg-cyan-100 dark:bg-cyan-900/70",
   gray:   "bg-gray-100 dark:bg-gray-800",
 }
 
@@ -25,6 +30,11 @@ const COLOR_TEXT: Record<string, string> = {
   purple: "text-purple-900 dark:text-purple-200",
   yellow: "text-yellow-900 dark:text-yellow-200",
   rose:   "text-rose-900 dark:text-rose-200",
+  red:    "text-red-900 dark:text-red-200",
+  pink:   "text-pink-900 dark:text-pink-200",
+  indigo: "text-indigo-900 dark:text-indigo-200",
+  teal:   "text-teal-900 dark:text-teal-200",
+  cyan:   "text-cyan-900 dark:text-cyan-200",
   gray:   "text-gray-700 dark:text-gray-300",
 }
 

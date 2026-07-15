@@ -81,6 +81,15 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
               ...(org.settings?.defaultScheduleView
                 ? { defaultScheduleView: org.settings.defaultScheduleView }
                 : {}),
+              ...(typeof org.settings?.fullTimeHours === "number"
+                ? { fullTimeHours: org.settings.fullTimeHours }
+                : {}),
+              ...(typeof org.settings?.reducedFullTimeHours === "number"
+                ? { reducedFullTimeHours: org.settings.reducedFullTimeHours }
+                : {}),
+              ...(typeof org.settings?.timelineBufferHours === "number"
+                ? { timelineBufferHours: org.settings.timelineBufferHours }
+                : {}),
             })
             setState("ready")
           } else {

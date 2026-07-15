@@ -38,6 +38,22 @@
     "intro": "Your shift at <strong>{orgName}</strong> has been cancelled — you no longer need to come in for it.",
     "footer": "Contact your manager if you have questions."
   },
+  "shiftOffer": {
+    "subject": "You've been offered a shift on {date} — {orgName}",
+    "intro": "<strong>{orgName}</strong> has offered you a shift. Let them know if you can take it.",
+    "deadline": "Please respond before <strong>{deadline}</strong> by opening Skemaka.",
+    "cta": "Respond to offer"
+  },
+  "shiftOfferWon": {
+    "subject": "You got the shift on {date} — {orgName}",
+    "intro": "You're confirmed for this shift at <strong>{orgName}</strong> — it's now on your schedule.",
+    "footer": "Open Skemaka to see your full schedule."
+  },
+  "shiftOfferFilled": {
+    "subject": "The shift on {date} has been filled — {orgName}",
+    "intro": "The shift at <strong>{orgName}</strong> you offered to take has been filled by someone else.",
+    "footer": "Thanks for offering to help out."
+  },
   "rolledOut": {
     "subject": "New shifts in Skemaka",
     "body": "<strong>{orgName}</strong> just rolled out the schedule for <strong>{period}</strong>. Open Skemaka to see your shifts.",

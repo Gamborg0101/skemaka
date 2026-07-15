@@ -18,7 +18,21 @@ export interface OrgSettings {
   timeOffEnabled: boolean
   timeFormat: "12h" | "24h"  // "24h" = 14:00 (EU default), "12h" = 2:00 PM (US)
   includeManagerInSchedule: boolean  // manager appears as a schedulable person
+  fullTimeHours: number         // weekly hours a full-time employee works (40; 37 in Denmark)
+  reducedFullTimeHours: number  // weekly hours for a "reduced full-time" employee (32)
+  timelineBufferHours: number   // hours padded before open / after close on the timeline (0–4)
 }
+
+// Fallbacks used before an org has saved custom values. Kept as named exports so
+// the settings UI and employee dialogs share one source of truth.
+export const DEFAULT_FULL_TIME_HOURS = 40
+export const DEFAULT_REDUCED_FULL_TIME_HOURS = 32
+export const MIN_WORK_WEEK_HOURS = 1
+export const MAX_WORK_WEEK_HOURS = 80
+
+export const DEFAULT_TIMELINE_BUFFER_HOURS = 2
+export const MIN_TIMELINE_BUFFER_HOURS = 0
+export const MAX_TIMELINE_BUFFER_HOURS = 4
 
 export const SUPPORTED_CURRENCIES = [
   { code: "EUR", name: "Euro" },
@@ -50,6 +64,9 @@ let _settings: OrgSettings = {
   timeOffEnabled: true,
   timeFormat: "24h",
   includeManagerInSchedule: false,
+  fullTimeHours: DEFAULT_FULL_TIME_HOURS,
+  reducedFullTimeHours: DEFAULT_REDUCED_FULL_TIME_HOURS,
+  timelineBufferHours: DEFAULT_TIMELINE_BUFFER_HOURS,
 }
 
 export function getOrgSettings(): OrgSettings {
@@ -60,6 +77,9 @@ export function getOrgSettings(): OrgSettings {
     timeOffEnabled: _settings.timeOffEnabled,
     timeFormat: _settings.timeFormat,
     includeManagerInSchedule: _settings.includeManagerInSchedule,
+    fullTimeHours: _settings.fullTimeHours,
+    reducedFullTimeHours: _settings.reducedFullTimeHours,
+    timelineBufferHours: _settings.timelineBufferHours,
   }
 }
 

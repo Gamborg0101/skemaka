@@ -15,12 +15,21 @@
   "coverApprovedRequester": "Hi {name}, your {orgName} shift on {when} is now covered. You're off the hook.",
   "coverApprovedClaimer": "Hi {name}, you're confirmed to cover the {orgName} shift on {when}.",
   "coverDenied": "Hi {name}, the cover request for the {orgName} shift on {when} was not approved — the shift stands as scheduled.",
+  "shiftOffered": "Hi {name}, you've been offered a {jobRole} shift at {orgName}: {when}. Open the app to accept it.",
+  "shiftOfferWon": "Hi {name}, you got the {orgName} shift on {when}. It's now on your schedule.",
+  "shiftOfferFilled": "Hi {name}, the {orgName} shift on {when} has been filled by someone else. Thanks for offering.",
   "push": {
     "publishedTitle": "Your schedule is out",
     "publishedBody": "{orgName} published the schedule for {week}. Tap to see your shifts.",
     "rollOutTitle": "New shifts published",
     "rollOutBody": "{orgName} rolled out the schedule for {period}. Tap to see your shifts.",
     "shiftCancelledTitle": "Shift cancelled",
-    "shiftCancelledBody": "{orgName} cancelled your shift on {when}. Tap for details."
+    "shiftCancelledBody": "{orgName} cancelled your shift on {when}. Tap for details.",
+    "shiftOfferedTitle": "New shift offer",
+    "shiftOfferedBody": "{orgName} offered you a shift on {when}. Tap to accept.",
+    "shiftOfferWonTitle": "You got the shift",
+    "shiftOfferWonBody": "{orgName} confirmed you for the shift on {when}. Tap to view.",
+    "shiftOfferFilledTitle": "Shift filled",
+    "shiftOfferFilledBody": "The {orgName} shift on {when} was filled by someone else."
   }
 }

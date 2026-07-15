@@ -107,6 +107,7 @@ model Organization {
   timeEntries             TimeEntry[]
   timeOffRequests         TimeOffRequest[]
   coverRequests           ShiftCoverRequest[]
+  shiftOffers             ShiftOffer[]
 
   @@index([slug])
   @@index([stripeCustomerId])
@@ -177,6 +178,7 @@ model Employee {
   shifts                  Shift[]
   coverRequestsMade       ShiftCoverRequest[]      @relation("CoverRequester")
   coverRequestsClaimed    ShiftCoverRequest[]      @relation("CoverClaimer")
+  shiftOffersReceived     ShiftOfferRecipient[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -438,6 +440,18 @@ enum BugStatus {
   RESOLVED
 }
 
+enum ShiftOfferStatus {
+  OPEN
+  FILLED
+  CANCELLED
+}
+
+enum ShiftOfferResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 // An employee offers up one of their shifts for a teammate to cover. Teammates
 // claim it; a manager approves (reassigns the shift) or denies. One active
 // (OPEN/CLAIMED) request per shift is enforced in coverService, not the DB, so
@@ -464,6 +478,52 @@ model ShiftCoverRequest {
   @@index([organizationId, status])
   @@index([shiftId])
   @@index([requesterEmployeeId])
+}
+
+// A manager offers a brand-new shift slot (date + time + role) to a hand-picked
+// set of employees. Recipients accept/decline; the manager confirms one winner,
+// which creates and assigns the real Shift and marks the offer FILLED. Distinct
+// from ShiftCoverRequest, which is employee-initiated over an existing shift.
+model ShiftOffer {
+  id               String             @id @default(cuid())
+  organizationId   String
+  date             DateTime
+  startTime        String
+  endTime          String
+  jobRole          String
+  breakMinutes     Int                @default(0)
+  note             String?
+  deadline         DateTime
+  status           ShiftOfferStatus   @default(OPEN)
+  createdByUserId  String
+  filledShiftId    String?
+  filledEmployeeId String?
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipients   ShiftOfferRecipient[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model ShiftOfferRecipient {
+  id          String             @id @default(cuid())
+  offerId     String
+  employeeId  String
+  response    ShiftOfferResponse @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime           @default(now())
+
+  offer    ShiftOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  employee Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, employeeId])
+  @@index([offerId])
+  @@index([employeeId])
 }
 
 /// Immutable audit trail of super-admin ("platform") activity across restaurants.

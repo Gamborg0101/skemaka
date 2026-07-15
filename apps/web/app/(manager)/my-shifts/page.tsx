@@ -8,6 +8,7 @@ import { EmployeePicker } from "@/components/manager/EmployeePicker"
 import { MyShiftsWeekNav } from "@/components/manager/MyShiftsWeekNav"
 import { OfferCoverButton } from "@/components/employee/OfferCoverButton"
 import { CoverPoolPanel } from "@/components/employee/CoverPoolPanel"
+import { MyShiftOffersPanel } from "@/components/employee/MyShiftOffersPanel"
 import { pickShiftQuote } from "@/types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -193,6 +194,7 @@ export default async function MyShiftsPage({
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
+      {viewingSelf && <MyShiftOffersPanel orgId={selfEmployee.organizationId} />}
       {viewingSelf && <CoverPoolPanel orgId={selfEmployee.organizationId} />}
       {shifts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">

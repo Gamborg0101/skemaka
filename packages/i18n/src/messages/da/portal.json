@@ -43,6 +43,16 @@
     "claimed": "Du har tilbudt at tage vagten — din leder bekræfter den",
     "errClaim": "Vagten kunne ikke tages"
   },
+  "shiftOffers": {
+    "title": "Vagter du er blevet tilbudt",
+    "respondBy": "Svar inden {date}",
+    "accept": "Jeg kan tage den",
+    "decline": "Jeg kan ikke",
+    "saving": "Gemmer…",
+    "accepted": "Du har accepteret — afventer din leders bekræftelse",
+    "declined": "Du afslog dette tilbud",
+    "err": "Dit svar kunne ikke gemmes"
+  },
   "availability": {
     "linkNotFound": "Linket blev ikke fundet",
     "linkNotFoundHint": "Linket kan være udløbet, eller der er ingen åben tilgængelighedsanmodning lige nu. Bed din leder om at sende invitationen igen.",

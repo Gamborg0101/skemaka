@@ -3,16 +3,19 @@
 import { useState, useMemo, useEffect } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
-import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus, X, Sparkles } from "lucide-react"
+import { ChevronLeft, ChevronRight, LayoutGrid, AlignLeft, Users, UserPlus, X, Sparkles, Megaphone } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { WeeklyScheduleGrid } from "@/components/manager/WeeklyScheduleGrid"
 import { ShiftTimeline } from "@/components/manager/ShiftTimeline"
 import { CoverRequestsPanel, type CoverFocus } from "@/components/manager/CoverRequestsPanel"
+import { ShiftOffersPanel } from "@/components/manager/ShiftOffersPanel"
+import { OfferShiftDialog } from "@/components/manager/OfferShiftDialog"
 import { getOrgSettings } from "@/lib/orgSettings"
 import { getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { RollOutDialog } from "@/components/manager/RollOutDialog"
+import { MarkSickDialog } from "@/components/manager/MarkSickDialog"
 import { useOrg } from "@/lib/orgContext"
 import { useScheduleData } from "@/lib/useScheduleData"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -29,8 +32,15 @@ export default function SchedulePage() {
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
   const [hintDismissed, setHintDismissed] = useState(false)
   const [rollOutOpen, setRollOutOpen] = useState(false)
+  // Marking someone sick opens a dialog to capture the expected hours + reason.
+  const [markSick, setMarkSick] = useState<{ open: boolean; employeeId: string; date: string }>({
+    open: false, employeeId: "", date: "",
+  })
   // The cover request the manager is reviewing — highlighted on the grid.
   const [coverFocus, setCoverFocus] = useState<CoverFocus | null>(null)
+  // Manager-initiated shift offers: dialog open + a token bumped to reload the panel.
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false)
+  const [offersRefresh, setOffersRefresh] = useState(0)
 
   const focusCover = (f: CoverFocus | null) => {
     setCoverFocus(f)
@@ -112,6 +122,7 @@ export default function SchedulePage() {
     ? isCurrentWeek
     : timelineDates.includes(today)
 
+  const buffer = getOrgSettings().timelineBufferHours
   const { timelineStartHour, timelineEndHour } = useMemo(() => {
     const { hours } = getOrgSettings()
     let minStart = 24, maxEnd = 0
@@ -133,8 +144,8 @@ export default function SchedulePage() {
         return { timelineStartHour: 6, timelineEndHour: 23 }
       }
     }
-    return { timelineStartHour: Math.max(0, minStart - 2), timelineEndHour: Math.min(23, maxEnd + 2) }
-  }, [timelineDates])
+    return { timelineStartHour: Math.max(0, minStart - buffer), timelineEndHour: Math.min(23, maxEnd + buffer) }
+  }, [timelineDates, buffer])
 
   const scheduledHoursMap = useMemo(() =>
     employees.reduce<Record<string, number>>((acc, emp) => {
@@ -288,6 +299,18 @@ export default function SchedulePage() {
     </div>
   )
 
+  const offerBtn = (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setOfferDialogOpen(true)}
+      className="shrink-0"
+    >
+      <Megaphone className="size-4" />
+      <span className="hidden sm:inline">Offer shift</span>
+    </Button>
+  )
+
   return (
     <div className="flex flex-col h-full">
       {/* Desktop header — single row (md+) */}
@@ -306,6 +329,7 @@ export default function SchedulePage() {
         {dayCountSelector}
         {navControls}
         <div className="w-px h-4 bg-gray-200 shrink-0" />
+        {offerBtn}
         {publishBtn}
       </div>
 
@@ -314,6 +338,7 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2 px-4 py-2">
           {viewToggle}
           <div className="flex-1" />
+          {offerBtn}
           {publishBtn}
         </div>
         <div className="flex items-center gap-1.5 px-4 py-2 border-t border-gray-100 dark:border-gray-800">
@@ -336,10 +361,11 @@ export default function SchedulePage() {
         {!loading && employees.length > 0 && (
           <div className="px-4 pt-4">
             <CoverRequestsPanel onFocus={focusCover} />
+            <ShiftOffersPanel orgId={orgId} refreshToken={offersRefresh} />
           </div>
         )}
         {!loading && !hintDismissed && employees.length > 0 && (schedule?.shifts ?? []).length === 0 && (
-          <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3">
+          <div className="mx-4 mt-4 mb-2 flex items-center gap-3 rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-4 py-3">
             <Sparkles className="size-5 shrink-0 text-blue-600 dark:text-blue-400" />
             <span className="flex-1 text-sm text-blue-900 dark:text-gray-300">
               <span className="font-semibold">{t("hintBold")}</span>{" "}
@@ -420,7 +446,7 @@ export default function SchedulePage() {
             onShiftUpdate={handleShiftUpdate}
             onShiftDelete={handleShiftDelete}
             onShiftCancel={handleShiftCancel}
-            onMarkSick={handleMarkSick}
+            onMarkSick={(employeeId, date) => setMarkSick({ open: true, employeeId, date })}
           />
         ) : (
           <ShiftTimeline
@@ -447,6 +473,23 @@ export default function SchedulePage() {
         onOpenChange={setRollOutOpen}
         orgId={orgId}
         onRolledOut={() => reloadSchedule()}
+      />
+
+      <MarkSickDialog
+        open={markSick.open}
+        onOpenChange={(open) => setMarkSick((p) => ({ ...p, open }))}
+        employeeName={employees.find((e) => e.id === markSick.employeeId)?.name ?? ""}
+        date={markSick.date}
+        onConfirm={(details) => handleMarkSick(markSick.employeeId, markSick.date, details)}
+      />
+
+      <OfferShiftDialog
+        open={offerDialogOpen}
+        onOpenChange={setOfferDialogOpen}
+        orgId={orgId}
+        jobRoles={jobRoles}
+        employees={employees}
+        onCreated={() => setOffersRefresh((n) => n + 1)}
       />
     </div>
   )

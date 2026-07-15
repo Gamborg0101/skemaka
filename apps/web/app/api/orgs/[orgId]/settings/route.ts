@@ -28,6 +28,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     availabilityWindowWeeks?: number
     timeFormat?: string
     includeManagerInSchedule?: boolean
+    fullTimeHours?: number
+    reducedFullTimeHours?: number
+    timelineBufferHours?: number
   }
   try {
     body = await req.json()
@@ -35,8 +38,17 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined && body.timeFormat === undefined && body.includeManagerInSchedule === undefined) {
+  if (!body.hours && !body.defaultScheduleView && body.timeOffEnabled === undefined && body.availabilityWindowWeeks === undefined && body.timeFormat === undefined && body.includeManagerInSchedule === undefined && body.fullTimeHours === undefined && body.reducedFullTimeHours === undefined && body.timelineBufferHours === undefined) {
     return NextResponse.json({ error: "No settings fields provided" }, { status: 400 })
+  }
+  if (body.timelineBufferHours !== undefined && (!Number.isInteger(body.timelineBufferHours) || body.timelineBufferHours < 0 || body.timelineBufferHours > 4)) {
+    return NextResponse.json({ error: "timelineBufferHours must be an integer between 0 and 4" }, { status: 400 })
+  }
+  // Work-week hours: integers within a sane range (1–80 h/week).
+  for (const [key, val] of [["fullTimeHours", body.fullTimeHours], ["reducedFullTimeHours", body.reducedFullTimeHours]] as const) {
+    if (val !== undefined && (!Number.isInteger(val) || val < 1 || val > 80)) {
+      return NextResponse.json({ error: `${key} must be an integer between 1 and 80` }, { status: 400 })
+    }
   }
   if (body.includeManagerInSchedule !== undefined && typeof body.includeManagerInSchedule !== "boolean") {
     return NextResponse.json({ error: "includeManagerInSchedule must be a boolean" }, { status: 400 })
@@ -77,6 +89,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     availabilityWindowWeeks:  body.availabilityWindowWeeks,
     timeFormat:               body.timeFormat as "12h" | "24h" | undefined,
     includeManagerInSchedule: body.includeManagerInSchedule,
+    fullTimeHours:            body.fullTimeHours,
+    reducedFullTimeHours:     body.reducedFullTimeHours,
+    timelineBufferHours:      body.timelineBufferHours,
   })
 
   // Adding/removing the manager as a schedulable person is a side effect of the

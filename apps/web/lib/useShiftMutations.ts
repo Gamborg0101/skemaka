@@ -135,13 +135,22 @@ export function useShiftMutations(
   )
 
   const handleMarkSick = useCallback(
-    async (employeeId: string, date: string) => {
+    async (
+      employeeId: string,
+      date: string,
+      details?: { startTime: string; endTime: string; reason: string },
+    ) => {
       const activeSchedule = await ensureSchedule()
       const tempId = crypto.randomUUID()
+      // Hours the person was expected to work (for the record); reason → notes.
+      // Falls back to a bare 00:00 marker if no details were provided.
+      const startTime = details?.startTime ?? "00:00"
+      const endTime = details?.endTime ?? "00:00"
+      const notes = details?.reason?.trim() ? details.reason.trim() : null
       const sickShift: Shift = {
         id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
-        employeeId, date, startTime: "00:00", endTime: "00:00",
-        breakMinutes: 0, jobRole: "Sick Day", notes: null, colorTag: "sick",
+        employeeId, date, startTime, endTime,
+        breakMinutes: 0, jobRole: "Sick Day", notes, colorTag: "sick",
         cancelledAt: null,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
@@ -149,7 +158,7 @@ export function useShiftMutations(
       fetch(`/api/orgs/${orgId}/schedules/${activeSchedule.id}/shifts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId, date, startTime: "00:00", endTime: "00:00", breakMinutes: 0, jobRole: "Sick Day", colorTag: "sick" }),
+        body: JSON.stringify({ employeeId, date, startTime, endTime, breakMinutes: 0, jobRole: "Sick Day", notes, colorTag: "sick" }),
       }).then((r) => r.json()).then((res: { data?: Shift; error?: string }) => {
         if (res.data) {
           replaceShift(tempId, res.data)

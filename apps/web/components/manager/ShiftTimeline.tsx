@@ -13,7 +13,7 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core"
-import { Plus, AlertTriangle } from "lucide-react"
+import { Plus, AlertTriangle, Moon } from "lucide-react"
 import { cn, getInitials } from "@/lib/utils"
 import { Tooltip } from "@/components/ui/tooltip"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
@@ -35,6 +35,11 @@ const COLOR_BAR: Record<string, string> = {
   purple: "bg-purple-400 hover:bg-purple-500",
   yellow: "bg-yellow-400 hover:bg-yellow-500",
   rose:   "bg-rose-400 hover:bg-rose-500",
+  red:    "bg-red-400 hover:bg-red-500",
+  pink:   "bg-pink-400 hover:bg-pink-500",
+  indigo: "bg-indigo-400 hover:bg-indigo-500",
+  teal:   "bg-teal-400 hover:bg-teal-500",
+  cyan:   "bg-cyan-400 hover:bg-cyan-500",
   gray:   "bg-gray-400 hover:bg-gray-500",
   sick:   "bg-rose-300 hover:bg-rose-400",
 }
@@ -46,6 +51,11 @@ const COLOR_TEXT: Record<string, string> = {
   purple: "text-purple-950",
   yellow: "text-yellow-950",
   rose:   "text-rose-950",
+  red:    "text-red-950",
+  pink:   "text-pink-950",
+  indigo: "text-indigo-950",
+  teal:   "text-teal-950",
+  cyan:   "text-cyan-950",
   gray:   "text-gray-950",
   sick:   "text-rose-900",
 }
@@ -338,8 +348,10 @@ function TimelineRow({
           const r = resize?.shiftId === shift.id ? resize : null
           const startTime = r ? r.startTime : shift.startTime
           const endTime = r ? r.endTime : shift.endTime
-          const left  = toPercent(startTime, startHour, totalMinutes)
-          const width = isSick ? 100 - left : durationPercent(startTime, endTime, startHour, totalMinutes)
+          // Sick markers always span the whole day regardless of the hours
+          // recorded on them, so pin them to the left edge at full width.
+          const left  = isSick ? 0 : toPercent(startTime, startHour, totalMinutes)
+          const width = isSick ? 100 : durationPercent(startTime, endTime, startHour, totalMinutes)
 
           const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
           const isPublished = !isSick && !!publishedAt && shift.createdAt <= publishedAt
@@ -467,6 +479,12 @@ const DaySection = memo(function DaySection({
   const todayLine = isToday ? nowPercent(currentTime, startHour, totalMinutes) : null
   const dayShifts = useMemo(() => allShifts.filter((s) => s.date === date), [allShifts, date])
 
+  // A closed day with nothing scheduled collapses to a single "Closed" banner —
+  // no employee rows, so there's nothing to drop a name onto. If the day already
+  // has shifts (e.g. hours were changed after scheduling), keep the rows so those
+  // shifts stay visible and editable.
+  const collapsed = isClosed && dayShifts.length === 0
+
   const dateObj = new Date(date + "T12:00:00")
   const dayLabel = dateObj.toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "short", timeZone: "UTC",
@@ -493,60 +511,72 @@ const DaySection = memo(function DaySection({
           )}
         </div>
 
-        {/* Time axis */}
-        <div className="flex">
-          <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-              Employee
-            </span>
+        {/* Time axis — hidden on a collapsed closed day (no rows to align to) */}
+        {!collapsed && (
+          <div className="flex">
+            <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                Employee
+              </span>
+            </div>
+            <div className="relative flex-1 h-8">
+              {hourMarkers.map((hour) => {
+                const pct = ((hour - startHour) / (endHour - startHour)) * 100
+                return (
+                  <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
+                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
+                      {hour.toString().padStart(2, "0")}:00
+                    </span>
+                  </div>
+                )
+              })}
+              {todayLine !== null && todayLine >= 0 && todayLine <= 100 && (
+                <div className="absolute top-0 bottom-0 w-px bg-red-400" style={{ left: `${todayLine}%` }} />
+              )}
+            </div>
           </div>
-          <div className="relative flex-1 h-8">
-            {hourMarkers.map((hour) => {
-              const pct = ((hour - startHour) / (endHour - startHour)) * 100
-              return (
-                <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
-                  <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
-                    {hour.toString().padStart(2, "0")}:00
-                  </span>
-                </div>
-              )
-            })}
-            {todayLine !== null && todayLine >= 0 && todayLine <= 100 && (
-              <div className="absolute top-0 bottom-0 w-px bg-red-400" style={{ left: `${todayLine}%` }} />
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Employee rows */}
-      {employees.map((emp, idx) => {
-        const rowId = `row-${emp.id}--${date}`
-        return (
-          <TimelineRow
-            key={emp.id}
-            employee={emp}
-            date={date}
-            isClosed={isClosed}
-            shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
-            jobRoles={jobRoles}
-            publishedAt={publishedAt}
-            isEven={idx % 2 === 0}
-            draggingEmpScheduledHere={
-              draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
-            }
-            conflict={getConflict?.(emp.id, date) ?? null}
-            todayLine={todayLine}
-            startHour={startHour}
-            endHour={endHour}
-            totalMinutes={totalMinutes}
-            hourMarkers={hourMarkers}
-            hoverSnap={activeRowId === rowId ? hoverSnap : null}
-            onShiftClick={onShiftClick}
-            onRowClick={onRowClick}
-            onShiftResize={onShiftResize}
-          />
-        )
-      })}
+      {collapsed ? (
+        /* Collapsed closed day — one banner, no drop targets */
+        <div className="flex items-center justify-center gap-2 px-4 py-6 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-200 dark:border-gray-700">
+          <Moon className="size-4 text-gray-300 dark:text-gray-600" />
+          <span className="text-xs font-medium uppercase tracking-widest text-gray-400 dark:text-gray-500 select-none">
+            Closed — no shifts scheduled
+          </span>
+        </div>
+      ) : (
+        /* Employee rows */
+        employees.map((emp, idx) => {
+          const rowId = `row-${emp.id}--${date}`
+          return (
+            <TimelineRow
+              key={emp.id}
+              employee={emp}
+              date={date}
+              isClosed={isClosed}
+              shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
+              jobRoles={jobRoles}
+              publishedAt={publishedAt}
+              isEven={idx % 2 === 0}
+              draggingEmpScheduledHere={
+                draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
+              }
+              conflict={getConflict?.(emp.id, date) ?? null}
+              todayLine={todayLine}
+              startHour={startHour}
+              endHour={endHour}
+              totalMinutes={totalMinutes}
+              hourMarkers={hourMarkers}
+              hoverSnap={activeRowId === rowId ? hoverSnap : null}
+              onShiftClick={onShiftClick}
+              onRowClick={onRowClick}
+              onShiftResize={onShiftResize}
+            />
+          )
+        })
+      )}
     </div>
   )
 })

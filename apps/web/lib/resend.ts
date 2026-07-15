@@ -252,6 +252,91 @@ export async function sendShiftCancelledEmail({
   })
 }
 
+interface ShiftOfferEmailOptions {
+  to: string
+  name: string
+  orgName: string
+  dateLabel: string
+  startTime: string
+  endTime: string
+  jobRole: string
+  deadlineLabel: string
+  portalUrl: string
+  locale?: Locale
+}
+
+/** Sent to each recipient when a manager offers a shift to hand-picked staff. */
+export async function sendShiftOfferEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, deadlineLabel, portalUrl, locale = "en",
+}: ShiftOfferEmailOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  return getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    to,
+    subject: t("shiftOffer.subject", { date: dateLabel, orgName }),
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
+        <p style="color: #555; margin-bottom: 16px;">
+          ${t.markup("shiftOffer.intro", { orgName, strong })}
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111;">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151;">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #555; margin-bottom: 24px;">
+          ${t.markup("shiftOffer.deadline", { deadline: deadlineLabel, strong })}
+        </p>
+        <a href="${portalUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
+          ${t("shiftOffer.cta")}
+        </a>
+      </div>
+    `,
+  })
+}
+
+interface ShiftOfferResultEmailOptions {
+  to: string
+  name: string
+  orgName: string
+  dateLabel: string
+  startTime: string
+  endTime: string
+  jobRole: string
+  won: boolean
+  locale?: Locale
+}
+
+/** Sent after a manager confirms: "you got it" to the winner, "filled" to others. */
+export async function sendShiftOfferResultEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, won, locale = "en",
+}: ShiftOfferResultEmailOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  const key = won ? "shiftOfferWon" : "shiftOfferFilled"
+  return getResend().emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    to,
+    subject: t(`${key}.subject`, { date: dateLabel, orgName }),
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
+        <p style="color: #555; margin-bottom: 20px;">
+          ${t.markup(`${key}.intro`, { orgName, strong })}
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;${won ? "" : " opacity: 0.6;"}">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111;${won ? "" : " text-decoration: line-through;"}">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151;${won ? "" : " text-decoration: line-through;"}">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #999; font-size: 13px;">
+          ${t(`${key}.footer`)}
+        </p>
+      </div>
+    `,
+  })
+}
+
 interface ShiftsRolledOutOptions {
   to: string
   name: string

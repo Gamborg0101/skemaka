@@ -51,6 +51,19 @@ export interface OrgScheduleSettings {
    * activates/deactivates the manager's own Employee record.
    */
   includeManagerInSchedule?: boolean
+  /**
+   * Contracted hours per week a FULL_TIME employee works. Country-dependent —
+   * 40 in much of the world, 37 in Denmark. Drives full-time employees'
+   * contractedHours (the hours-met target). Defaults to 40.
+   */
+  fullTimeHours?: number
+  /** Contracted hours per week for a REDUCED_FULL_TIME employee. Defaults to 32. */
+  reducedFullTimeHours?: number
+  /**
+   * Hours of padding shown before opening / after closing on the schedule
+   * timeline, so shifts near the edges have room. 0–4; defaults to 2.
+   */
+  timelineBufferHours?: number
 }
 
 
@@ -298,4 +311,60 @@ export interface CoverRequest {
     jobRole: string
     colorTag: string | null
   }
+}
+
+// ─── Shift offers (manager offers a slot to hand-picked staff) ─────────────────
+
+export type ShiftOfferStatus = "OPEN" | "FILLED" | "CANCELLED"
+export type ShiftOfferResponse = "PENDING" | "ACCEPTED" | "DECLINED"
+
+/** One recipient of a shift offer, with their response, as returned by the API. */
+export interface ShiftOfferRecipient {
+  id: string
+  employeeId: string
+  employeeName: string
+  response: ShiftOfferResponse
+  respondedAt: string | null
+}
+
+/**
+ * A manager-initiated shift offer as returned by the API — the slot definition
+ * plus the list of recipients and their responses, so the manager panel can show
+ * who's accepted without extra joins.
+ */
+export interface ShiftOffer {
+  id: string
+  organizationId: string
+  date: string
+  startTime: string
+  endTime: string
+  jobRole: string
+  breakMinutes: number
+  note: string | null
+  deadline: string
+  status: ShiftOfferStatus
+  filledEmployeeId: string | null
+  createdAt: string
+  updatedAt: string
+  resolvedAt: string | null
+  recipients: ShiftOfferRecipient[]
+}
+
+/**
+ * An employee's view of an offer addressed to them — the slot plus just their own
+ * response state (they don't see who else was offered it).
+ */
+export interface EmployeeShiftOffer {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  jobRole: string
+  breakMinutes: number
+  note: string | null
+  deadline: string
+  status: ShiftOfferStatus
+  orgName: string
+  myResponse: ShiftOfferResponse
+  wonByMe: boolean
 }

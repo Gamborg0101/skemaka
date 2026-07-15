@@ -5,7 +5,7 @@ import { Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TimePicker } from "@/components/manager/TimePicker"
 import { cn } from "@/lib/utils"
-import { getOrgSettings, updateOrgSettings } from "@/lib/orgSettings"
+import { getOrgSettings, updateOrgSettings, MIN_TIMELINE_BUFFER_HOURS, MAX_TIMELINE_BUFFER_HOURS } from "@/lib/orgSettings"
 import type { DayHours } from "@/lib/orgSettings"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
@@ -16,6 +16,7 @@ const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satu
 export function StoreHoursSection() {
   const { orgId } = useOrg()
   const [hours, setHours] = useState<DayHours[]>(() => getOrgSettings().hours)
+  const [buffer, setBuffer] = useState<number>(() => getOrgSettings().timelineBufferHours)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -34,10 +35,10 @@ export function StoreHoursSection() {
       const r = await fetch(`/api/orgs/${orgId}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hours }),
+        body: JSON.stringify({ hours, timelineBufferHours: buffer }),
       })
       if (!r.ok) throw new Error()
-      updateOrgSettings({ hours })
+      updateOrgSettings({ hours, timelineBufferHours: buffer })
       setDirty(false)
       toast.success("Store hours saved")
     } catch {
@@ -84,18 +85,39 @@ export function StoreHoursSection() {
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-4">
-        <p className="text-xs text-gray-400">
-          The timeline shows each day&apos;s hours with a 2-hour buffer on each end.
-        </p>
-        <Button
-          onClick={handleSave}
-          disabled={!dirty || saving}
-          className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 shrink-0"
-          size="sm"
-        >
-          {saving ? "Saving…" : "Save"}
-        </Button>
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="timeline-buffer" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Timeline buffer
+          </label>
+          <select
+            id="timeline-buffer"
+            value={buffer}
+            onChange={(e) => { setBuffer(Number(e.target.value)); setDirty(true) }}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {Array.from(
+              { length: MAX_TIMELINE_BUFFER_HOURS - MIN_TIMELINE_BUFFER_HOURS + 1 },
+              (_, i) => MIN_TIMELINE_BUFFER_HOURS + i,
+            ).map((n) => (
+              <option key={n} value={n}>{n} {n === 1 ? "hour" : "hours"}</option>
+            ))}
+          </select>
+          <span className="text-sm text-gray-500 dark:text-gray-400">before &amp; after opening times</span>
+        </div>
+        <div className="flex items-end justify-between gap-4">
+          <p className="text-xs text-gray-400">
+            Padding shown around each day on the schedule timeline so shifts near opening or closing have room. Set 0 for an exact fit.
+          </p>
+          <Button
+            onClick={handleSave}
+            disabled={!dirty || saving}
+            className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 shrink-0"
+            size="sm"
+          >
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
     </SettingsSection>
   )

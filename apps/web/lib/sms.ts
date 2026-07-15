@@ -403,3 +403,59 @@ export async function sendCoverDeniedSms({
   const when = formatShiftDate(date, startTime, endTime, locale);
   await send(to, t("coverDenied", { name, orgName, when }), locale);
 }
+
+// ─── Shift offers (manager offers a slot to hand-picked staff) ─────────────────
+
+export async function sendShiftOfferedSms({
+  to,
+  name,
+  orgName,
+  date,
+  startTime,
+  endTime,
+  jobRole,
+  locale = "en",
+}: {
+  to: string;
+  name: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  jobRole: string;
+  locale?: Locale;
+}): Promise<void> {
+  const t = getMessageTranslator(locale, "sms");
+  const when = formatShiftDate(date, startTime, endTime, locale);
+  await send(to, t("shiftOffered", { name, jobRole, orgName, when }), locale);
+}
+
+export async function sendShiftOfferResultSms({
+  to,
+  name,
+  orgName,
+  date,
+  startTime,
+  endTime,
+  won,
+  locale = "en",
+}: {
+  to: string;
+  name: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  won: boolean;
+  locale?: Locale;
+}): Promise<void> {
+  const t = getMessageTranslator(locale, "sms");
+  const when = formatShiftDate(date, startTime, endTime, locale);
+  await send(
+    to,
+    won
+      ? t("shiftOfferWon", { name, orgName, when })
+      : t("shiftOfferFilled", { name, orgName, when }),
+    locale,
+  );
+}
