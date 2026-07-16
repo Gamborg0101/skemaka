@@ -155,6 +155,16 @@ function DroppableCell({
     </span>
   );
 
+  // A day the employee said they can't work. Unlike time off (a hard block), the
+  // manager can still schedule them here — so we mark it but keep the cell usable.
+  // Rendered in-flow above any shift so it marks the day whether empty or filled.
+  const isUnavailable = conflict?.type === "unavailable";
+  const dayOffBadge = isUnavailable && (
+    <span className="inline-block mb-1 rounded px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide bg-rose-100 text-rose-600 dark:bg-rose-900/60 dark:text-rose-300 select-none">
+      Day Off
+    </span>
+  );
+
   if (isClosed) {
     return (
       <div
@@ -214,11 +224,9 @@ function DroppableCell({
       )}
     >
       {coverBadge}
-      {conflict && !isEmpty && (
-        <Tooltip
-          content={conflict.type === "timeoff" ? "Scheduled during approved time off" : "Scheduled on a day they marked unavailable"}
-          side="top"
-        >
+      {dayOffBadge}
+      {conflict?.type === "timeoff" && !isEmpty && (
+        <Tooltip content="Scheduled during approved time off" side="top">
           <span className="absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/60 cursor-help">
             <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-300" />
           </span>
@@ -499,6 +507,7 @@ export function WeeklyScheduleGrid({
               const cellShifts = getShiftsForCell(employee.id, date);
               const isClosed = closedDays[mobileDay];
               const isTimeOff = isTimeOffDay(employee.id, date);
+              const isUnavailable = getConflict?.(employee.id, date)?.type === "unavailable";
               const scheduled = scheduledHoursMap[employee.id] ?? 0;
               const contracted = employee.contractedHours;
               return (
@@ -576,6 +585,11 @@ export function WeeklyScheduleGrid({
                   {isTimeOff && !isClosed && (
                     <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-300 dark:text-rose-600">
                       Time Off
+                    </p>
+                  )}
+                  {isUnavailable && !isClosed && !isTimeOff && (
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-400 dark:text-rose-500">
+                      Day Off
                     </p>
                   )}
                   {cellShifts.length > 0 && (
