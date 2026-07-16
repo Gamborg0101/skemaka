@@ -151,8 +151,7 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {affectedCount} {affectedCount === 1 ? "person" : "people"}
                   </span>{" "}
-                  get a <span className="font-medium">&ldquo;New shifts in Skemaka&rdquo;</span> email
-                  {" "}(and a text, if they have a number on file).
+                  will be notified.
                 </p>
               </div>
             </>
