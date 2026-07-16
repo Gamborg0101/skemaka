@@ -6,7 +6,6 @@ import {
   confirmOffer,
   cancelOffer,
 } from "@/lib/services/shiftOfferService"
-import { ServiceError } from "@/lib/services/errors"
 
 vi.mock("@/lib/prisma", () => ({
   db: {
@@ -174,16 +173,36 @@ describe("confirmOffer", () => {
       recipients: [{ id: "rec_A", employeeId: "emp_A", response: "ACCEPTED", respondedAt: new Date(), employee: { name: "Alice" } }],
     }) as never)
     const shiftCreate = vi.fn().mockResolvedValue({ id: "shift_new" })
+    const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 1 })
     const offerTxUpdate = vi.fn().mockResolvedValue(offerRow({ status: "FILLED", filledEmployeeId: "emp_A" }))
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
-      cb({ shift: { create: shiftCreate }, shiftOffer: { update: offerTxUpdate } }),
+      cb({ shift: { create: shiftCreate }, shiftOffer: { updateMany: offerTxUpdateMany, update: offerTxUpdate } }),
     )
 
     const result = await confirmOffer(ORG, "mgr_1", "off_1", "emp_A")
     expect(result.status).toBe("FILLED")
+    // Claim must be status-guarded so a concurrent confirm can't double-fill.
+    expect(offerTxUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "off_1", status: "OPEN" },
+    }))
     expect(shiftCreate).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ employeeId: "emp_A", scheduleId: "sched_1", startTime: "17:00" }),
     }))
+  })
+
+  it("loses cleanly (no shift) when a concurrent confirm already filled it", async () => {
+    soFindFirst.mockResolvedValue(offerRow({
+      recipients: [{ id: "rec_A", employeeId: "emp_A", response: "ACCEPTED", respondedAt: new Date(), employee: { name: "Alice" } }],
+    }) as never)
+    const shiftCreate = vi.fn()
+    // Another transaction filled the offer between our read and our claim.
+    const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 0 })
+    txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({ shift: { create: shiftCreate }, shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() } }),
+    )
+
+    await expect(confirmOffer(ORG, "mgr_1", "off_1", "emp_A")).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(shiftCreate).not.toHaveBeenCalled()
   })
 })
 

@@ -291,6 +291,19 @@ export async function confirmOffer(
   const { schedule } = await getOrCreateSchedule(orgId, weekStart)
 
   const updated = await db.$transaction(async (tx) => {
+    // Claim the offer first, guarded on status — if a concurrent confirm already
+    // filled it, this matches 0 rows and we bail instead of creating a second shift.
+    const claimed = await tx.shiftOffer.updateMany({
+      where: { id: offerId, status: "OPEN" },
+      data: {
+        status: "FILLED",
+        filledEmployeeId: employeeId,
+        resolvedByUserId: managerUserId,
+        resolvedAt: new Date(),
+      },
+    })
+    if (claimed.count === 0) throw new ServiceError("This offer is already resolved", "CONFLICT")
+
     const shift = await tx.shift.create({
       data: {
         scheduleId: schedule.id,
@@ -306,13 +319,7 @@ export async function confirmOffer(
     })
     return tx.shiftOffer.update({
       where: { id: offerId },
-      data: {
-        status: "FILLED",
-        filledShiftId: shift.id,
-        filledEmployeeId: employeeId,
-        resolvedByUserId: managerUserId,
-        resolvedAt: new Date(),
-      },
+      data: { filledShiftId: shift.id },
       include: OFFER_INCLUDE,
     })
   })
