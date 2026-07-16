@@ -57,3 +57,7 @@ apps/web/.playwright-mcp/
 # Ad-hoc QA / demo screenshots dropped at the repo root
 /demo-desktop.png
 /qa-*.png
+
+# Local agent/tooling state — never committed
+.codex/
+.pnpm-store/

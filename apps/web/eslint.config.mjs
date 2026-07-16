@@ -64,6 +64,17 @@ const eslintConfig = defineConfig([
     rules: { "react-hooks/set-state-in-effect": "warn" },
   },
   {
+    // A leading underscore marks a deliberately unused binding (e.g. the
+    // destructure-to-exclude pattern in app/layout.tsx). Honor that convention
+    // instead of warning on it.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
     // Dark-mode-aware surfaces only. Route-group parens are escaped so minimatch
     // treats them literally rather than as an extglob group.
     files: ["app/\\(manager\\)/**/*.tsx", "components/manager/**/*.tsx"],

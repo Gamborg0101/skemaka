@@ -24,7 +24,7 @@ import { TimePicker } from "@/components/manager/TimePicker"
 import { Send } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { addDays } from "@/lib/dateUtils"
+import { addDays, todayISO } from "@/lib/dateUtils"
 import type { Employee, JobRole } from "@/types"
 
 interface Props {
@@ -34,12 +34,6 @@ interface Props {
   jobRoles: JobRole[]
   employees: Employee[]
   onCreated: () => void
-}
-
-/** Local YYYY-MM-DD for today (min bound for date/deadline inputs). */
-function todayISO(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
 export function OfferShiftDialog({ open, onOpenChange, orgId, jobRoles, employees, onCreated }: Props) {
