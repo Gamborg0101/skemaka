@@ -15,7 +15,6 @@ import { getOrgSettings } from "@/lib/orgSettings"
 import { getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { RollOutDialog } from "@/components/manager/RollOutDialog"
-import { MarkSickDialog } from "@/components/manager/MarkSickDialog"
 import { useOrg } from "@/lib/orgContext"
 import { useScheduleData } from "@/lib/useScheduleData"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -32,10 +31,6 @@ export default function SchedulePage() {
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
   const [hintDismissed, setHintDismissed] = useState(false)
   const [rollOutOpen, setRollOutOpen] = useState(false)
-  // Marking someone sick opens a dialog to capture the expected hours + reason.
-  const [markSick, setMarkSick] = useState<{ open: boolean; employeeId: string; date: string }>({
-    open: false, employeeId: "", date: "",
-  })
   // The cover request the manager is reviewing — highlighted on the grid.
   const [coverFocus, setCoverFocus] = useState<CoverFocus | null>(null)
   // Manager-initiated shift offers: dialog open + a token bumped to reload the panel.
@@ -446,7 +441,7 @@ export default function SchedulePage() {
             onShiftUpdate={handleShiftUpdate}
             onShiftDelete={handleShiftDelete}
             onShiftCancel={handleShiftCancel}
-            onMarkSick={(employeeId, date) => setMarkSick({ open: true, employeeId, date })}
+            onMarkSick={handleMarkSick}
           />
         ) : (
           <ShiftTimeline
@@ -473,14 +468,6 @@ export default function SchedulePage() {
         onOpenChange={setRollOutOpen}
         orgId={orgId}
         onRolledOut={() => reloadSchedule()}
-      />
-
-      <MarkSickDialog
-        open={markSick.open}
-        onOpenChange={(open) => setMarkSick((p) => ({ ...p, open }))}
-        employeeName={employees.find((e) => e.id === markSick.employeeId)?.name ?? ""}
-        date={markSick.date}
-        onConfirm={(details) => handleMarkSick(markSick.employeeId, markSick.date, details)}
       />
 
       <OfferShiftDialog

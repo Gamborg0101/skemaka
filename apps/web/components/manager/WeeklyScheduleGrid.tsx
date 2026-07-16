@@ -116,7 +116,6 @@ interface DroppableCellProps {
   isToday: boolean;
   onAddClick: (employeeId: string, date: string) => void;
   onShiftClick: (shift: Shift) => void;
-  onMarkSick: (employeeId: string, date: string) => void;
 }
 
 function DroppableCell({
@@ -135,7 +134,6 @@ function DroppableCell({
   isToday,
   onAddClick,
   onShiftClick,
-  onMarkSick,
 }: DroppableCellProps) {
   const { setNodeRef, isOver } = useDroppable({ id: cellId });
 
@@ -238,21 +236,9 @@ function DroppableCell({
           />
         ))}
       </div>
-      {/* Action buttons — only shown on empty cells */}
+      {/* Action button — only shown on empty cells. Sick day lives inside Add shift. */}
       {isEmpty && (
         <div className="absolute bottom-1 right-1 hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Tooltip content="Mark as sick day" side="top">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkSick(employeeId, date);
-              }}
-              className="size-5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-500 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900 flex items-center justify-center"
-              aria-label="Mark sick"
-            >
-              <AlertTriangle className="size-3" />
-            </button>
-          </Tooltip>
           <Tooltip content="Add shift" side="top">
             <button
               onClick={(e) => {
@@ -570,15 +556,6 @@ export function WeeklyScheduleGrid({
                     </div>
                     {!isClosed && !isTimeOff && (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Tooltip content="Mark as sick day" side="top">
-                          <button
-                            onClick={() => onMarkSick(employee.id, date)}
-                            className="size-10 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 flex items-center justify-center transition-colors"
-                            aria-label={`Mark ${employee.name} sick`}
-                          >
-                            <AlertTriangle className="size-4" />
-                          </button>
-                        </Tooltip>
                         <Tooltip content="Add shift" side="top">
                           <button
                             onClick={() => openAddDialog(employee.id, date)}
@@ -789,7 +766,6 @@ export function WeeklyScheduleGrid({
                         isToday={toISODate(day) === toISODate(new Date())}
                         onAddClick={openAddDialog}
                         onShiftClick={openEditDialog}
-                        onMarkSick={onMarkSick}
                       />
                     );
                   })}
@@ -831,6 +807,7 @@ export function WeeklyScheduleGrid({
         defaultDate={addDialog.date}
         getConflict={getConflict}
         onShiftCreate={onShiftCreate}
+        onMarkSick={onMarkSick}
       />
 
       {/* Edit Shift Dialog */}
