@@ -6,6 +6,21 @@ import { getMessageTranslator } from "@/lib/messages"
 // HTML tag renderer for <strong> markup embedded in email catalog strings.
 const strong = (chunks: string) => `<strong>${chunks}</strong>`
 
+/**
+ * Single source of truth for the From header on every outbound email.
+ *
+ * `RESEND_FROM_EMAIL` may be a bare address or a "Name <addr>" pair. A bare
+ * address gets a "Skemaka" display name so inboxes show the product, not the
+ * mailbox local-part. NOTE: Resend rejects senders on unverified domains — the
+ * sandbox `onboarding@resend.dev` is the only sender that works (and it only
+ * delivers to the account owner) until skemaka.com is verified in Resend.
+ */
+export function emailFrom(): string {
+  const configured = process.env.RESEND_FROM_EMAIL?.trim()
+  const addr = configured || "noreply@skemaka.com"
+  return addr.includes("<") ? addr : `Skemaka <${addr}>`
+}
+
 let _resend: Resend | null = null
 
 function getResend(): Resend {
@@ -62,7 +77,7 @@ export async function sendAvailabilityInviteEmail({
 }: AvailabilityInviteOptions) {
   const t = getMessageTranslator(locale, "emails")
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("availabilityInvite.subject", { week: weekLabel, orgName }),
     html: `
@@ -117,7 +132,7 @@ async function sendWithRetry<T>(send: () => Promise<T>, attempts = 3): Promise<T
 export async function sendClaimCodeEmail({ to, name, orgName, code, locale = "en" }: ClaimCodeOptions) {
   const t = getMessageTranslator(locale, "emails")
   return sendWithRetry(() => getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("claimCode.subject", { code }),
     html: `
@@ -142,7 +157,7 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl, l
   // White-on-dark <strong> for the install box.
   const strongW = (chunks: string) => `<strong style="color:#ffffff;">${chunks}</strong>`
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("invite.subject", { orgName }),
     html: `
@@ -198,7 +213,7 @@ export async function sendShiftAssignedEmail({
 }: ShiftAssignedOptions) {
   const t = getMessageTranslator(locale, "emails")
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("shiftAssigned.subject", { date: dateLabel, orgName }),
     html: `
@@ -230,7 +245,7 @@ export async function sendShiftCancelledEmail({
 }: ShiftAssignedOptions) {
   const t = getMessageTranslator(locale, "emails")
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("shiftCancelled.subject", { date: dateLabel, orgName }),
     html: `
@@ -271,7 +286,7 @@ export async function sendShiftOfferEmail({
 }: ShiftOfferEmailOptions) {
   const t = getMessageTranslator(locale, "emails")
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("shiftOffer.subject", { date: dateLabel, orgName }),
     html: `
@@ -315,7 +330,7 @@ export async function sendShiftOfferResultEmail({
   const t = getMessageTranslator(locale, "emails")
   const key = won ? "shiftOfferWon" : "shiftOfferFilled"
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t(`${key}.subject`, { date: dateLabel, orgName }),
     html: `
@@ -352,7 +367,7 @@ export async function sendShiftsRolledOutEmail({
   const t = getMessageTranslator(locale, "emails")
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://skemaka.com"
   return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+    from: emailFrom(),
     to,
     subject: t("rolledOut.subject"),
     html: `

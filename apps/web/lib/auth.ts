@@ -4,6 +4,7 @@ import Resend from "next-auth/providers/resend"
 import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { db } from "@/lib/prisma"
+import { emailFrom } from "@/lib/resend"
 import { authConfig } from "@/auth.config"
 import { isSuperadmin } from "@/lib/platform"
 import type { UserRole, SubscriptionStatus } from "@/types"
@@ -112,7 +113,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({ checks: ["state"] }),
     Resend({
       apiKey: process.env.RESEND_API_KEY ?? "",
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+      from: emailFrom(),
     }),
     ...e2eProvider,
   ],
