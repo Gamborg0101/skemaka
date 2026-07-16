@@ -221,6 +221,9 @@ model Shift {
   /// Set when a manager cancels the shift. Cancelled shifts stay visible as a
   /// record but are excluded from costs, publishing, and conflict checks.
   cancelledAt    DateTime?
+  /// Set when the shift was rolled out (sent) to the employee. Null = draft:
+  /// a private placeholder only managers can see, committed by Roll out.
+  publishedAt    DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)

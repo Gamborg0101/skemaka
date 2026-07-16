@@ -167,6 +167,8 @@ export interface Shift {
   colorTag: string | null
   /** ISO timestamp set when a manager cancels the shift; null while scheduled. */
   cancelledAt: string | null
+  /** ISO timestamp set when the shift was rolled out (sent) to the employee; null = draft placeholder. */
+  publishedAt: string | null
   createdAt: string
   updatedAt: string
   employee?: EmbeddedEmployee

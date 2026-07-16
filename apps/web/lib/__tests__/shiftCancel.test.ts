@@ -75,6 +75,8 @@ function shiftRow(overrides: Record<string, unknown> = {}) {
     notes: null,
     colorTag: null,
     cancelledAt: null,
+    // Cancel targets rolled-out shifts; drafts are guarded (deleted instead).
+    publishedAt: new Date("2026-06-15T10:00:00Z"),
     employee: {
       name: "Sarah Chen",
       phone: "+15551234567",
@@ -137,6 +139,15 @@ describe("cancelShift", () => {
     )
 
     await expect(cancelShift(ORG, SCHEDULE, SHIFT)).rejects.toThrow("already cancelled")
+    expect(db.shift.update).not.toHaveBeenCalled()
+  })
+
+  it("refuses a draft shift — drafts are deleted, not cancelled", async () => {
+    vi.mocked(db.shift.findFirst).mockResolvedValue(
+      shiftRow({ publishedAt: null }) as never,
+    )
+
+    await expect(cancelShift(ORG, SCHEDULE, SHIFT)).rejects.toThrow("Draft shifts")
     expect(db.shift.update).not.toHaveBeenCalled()
   })
 

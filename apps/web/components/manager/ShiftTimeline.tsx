@@ -187,7 +187,6 @@ interface RowProps {
   isClosed: boolean
   shifts: Shift[]
   jobRoles: JobRole[]
-  publishedAt?: string | null
   isEven: boolean
   draggingEmpScheduledHere: boolean | null
   conflict: AvailabilityConflict | null
@@ -203,7 +202,7 @@ interface RowProps {
 }
 
 function TimelineRow({
-  employee, date, isClosed, shifts, jobRoles, publishedAt, isEven,
+  employee, date, isClosed, shifts, jobRoles, isEven,
   draggingEmpScheduledHere, conflict, todayLine,
   startHour, endHour, totalMinutes, hourMarkers,
   hoverSnap, onShiftClick, onRowClick, onShiftResize,
@@ -354,7 +353,8 @@ function TimelineRow({
           const width = isSick ? 100 : durationPercent(startTime, endTime, startHour, totalMinutes)
 
           const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
-          const isPublished = !isSick && !!publishedAt && shift.createdAt <= publishedAt
+          // Draft = private placeholder not yet rolled out; dashed orange outline.
+          const isDraft = !isSick && !shift.publishedAt
           // Sick markers span the whole day and aren't time-bounded, and
           // cancelled shifts are a read-only record — neither gets resize grips.
           const canResize = !isSick && !isCancelled
@@ -371,7 +371,7 @@ function TimelineRow({
                 isCancelled
                   ? "border-gray-300/80 dark:border-gray-600/80 bg-gray-100 dark:bg-gray-800 opacity-70 hover:opacity-100"
                   : cn(
-                      isPublished ? "border-green-500/60" : "border-orange-400/60",
+                      isDraft ? "border-dashed border-orange-400/80" : "border-green-500/60",
                       COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
                     )
               )}
@@ -455,7 +455,6 @@ interface DaySectionProps {
   employees: Employee[]
   allShifts: Shift[]
   jobRoles: JobRole[]
-  publishedAt?: string | null
   draggingEmp: Employee | null
   startHour: number
   endHour: number
@@ -471,7 +470,7 @@ interface DaySectionProps {
 }
 
 const DaySection = memo(function DaySection({
-  date, isClosed, employees, allShifts, jobRoles, publishedAt, draggingEmp,
+  date, isClosed, employees, allShifts, jobRoles, draggingEmp,
   startHour, endHour, totalMinutes, hourMarkers,
   activeRowId, hoverSnap, currentTime, getConflict, onShiftClick, onRowClick, onShiftResize,
 }: DaySectionProps) {
@@ -558,7 +557,6 @@ const DaySection = memo(function DaySection({
               isClosed={isClosed}
               shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
               jobRoles={jobRoles}
-              publishedAt={publishedAt}
               isEven={idx % 2 === 0}
               draggingEmpScheduledHere={
                 draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
@@ -591,7 +589,6 @@ interface ShiftTimelineProps {
   shiftTemplates: ShiftTemplate[]
   scheduledHoursMap: Record<string, number>
   getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null
-  publishedAt?: string | null
   startHour?: number
   endHour?: number
   onShiftCreate: (data: {
@@ -603,6 +600,7 @@ interface ShiftTimelineProps {
     jobRole: string
     notes: string | null
     colorTag: string | null
+    notifyNow?: boolean
   }) => void
   onShiftUpdate: (data: Partial<Shift>) => void
   onShiftDelete: (shiftId: string) => void
@@ -617,7 +615,6 @@ export function ShiftTimeline({
   shiftTemplates,
   scheduledHoursMap,
   getConflict,
-  publishedAt,
   startHour = DEFAULT_START_HOUR,
   endHour = DEFAULT_END_HOUR,
   onShiftCreate,
@@ -771,7 +768,6 @@ export function ShiftTimeline({
                   employees={employees}
                   allShifts={shifts}
                   jobRoles={jobRoles}
-                  publishedAt={publishedAt}
                   draggingEmp={draggingEmp}
                   startHour={startHour}
                   endHour={endHour}

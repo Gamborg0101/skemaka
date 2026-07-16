@@ -315,6 +315,9 @@ export async function confirmOffer(
         breakMinutes: offer.breakMinutes,
         jobRole: offer.jobRole,
         notes: offer.note,
+        // Born published: the winner is notified explicitly right below, so
+        // this shift must never wait for (or re-announce at) the next roll-out.
+        publishedAt: new Date(),
       },
     })
     return tx.shiftOffer.update({

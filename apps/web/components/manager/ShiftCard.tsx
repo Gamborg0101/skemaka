@@ -42,11 +42,10 @@ interface ShiftCardProps {
   shift: Shift
   employee: Employee
   jobRoles: JobRole[]
-  publishedAt?: string | null
   onClick: () => void
 }
 
-export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: ShiftCardProps) {
+export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps) {
   const isCancelled = !!shift.cancelledAt
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: shift.id,
@@ -118,8 +117,11 @@ export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: S
   const bgClass   = COLOR_BG[tag]   ?? "bg-gray-100"
   const textClass = COLOR_TEXT[tag] ?? "text-gray-700"
 
-  const isPublished = !!publishedAt && shift.createdAt <= publishedAt
-  const borderClass = isPublished ? "border-l-green-500" : "border-l-orange-400"
+  // Draft = private placeholder not yet rolled out to the employee. Dashed
+  // outline + orange accent + chip, matching the industry convention (Planday
+  // draws drafts orange, When I Work stripes them).
+  const isDraft = !shift.publishedAt
+  const borderClass = isDraft ? "border-l-orange-400" : "border-l-green-500"
 
   return (
     <div
@@ -132,13 +134,21 @@ export function ShiftCard({ shift, employee, jobRoles, publishedAt, onClick }: S
         onClick()
       }}
       className={cn(
-        "group relative rounded-md border border-gray-200 dark:border-gray-700 pl-2.5 pr-2 py-1.5 text-xs cursor-grab active:cursor-grabbing select-none border-l-4 shadow-sm hover:shadow-md transition-shadow",
+        "group relative rounded-md pl-2.5 pr-2 py-1.5 text-xs cursor-grab active:cursor-grabbing select-none border-l-4 shadow-sm hover:shadow-md transition-shadow",
+        isDraft
+          ? "border border-dashed border-orange-300 dark:border-orange-800"
+          : "border border-gray-200 dark:border-gray-700",
         borderClass,
         bgClass,
         isDragging && "opacity-50 shadow-lg z-50"
       )}
     >
-      <p className={cn("font-semibold leading-tight truncate", textClass)}>{employee.name}</p>
+      {isDraft && (
+        <span className="absolute top-1 right-1 rounded px-1 py-px text-[8px] font-bold uppercase tracking-wide bg-orange-100 text-orange-600 dark:bg-orange-900/60 dark:text-orange-300 pointer-events-none select-none">
+          Draft
+        </span>
+      )}
+      <p className={cn("font-semibold leading-tight truncate", isDraft && "pr-8", textClass)}>{employee.name}</p>
       <p className={cn("truncate leading-tight mt-0.5 opacity-70", textClass)}>{shift.jobRole}</p>
       <p className={cn("leading-tight mt-0.5 opacity-60", textClass)}>
         {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}

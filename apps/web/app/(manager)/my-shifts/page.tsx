@@ -101,6 +101,9 @@ export default async function MyShiftsPage({
             gte: new Date(weekStart + "T00:00:00.000Z"),
             lt: new Date(weekEnd + "T00:00:00.000Z"),
           },
+          // This page is the employee-facing view of a week — drafts stay in
+          // the manager's planning space (/schedule) until rolled out.
+          publishedAt: { not: null },
         },
         orderBy: { date: "asc" },
       },
@@ -120,6 +123,7 @@ export default async function MyShiftsPage({
           date: { in: shiftDates },
           employeeId: { not: employee.id },
           cancelledAt: null,
+          publishedAt: { not: null },
         },
         select: { date: true, jobRole: true, employee: { select: { name: true } } },
       })

@@ -20,7 +20,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (!isValidDate(weekStart)) {
       return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
     }
-    const schedule = await scheduleService.getScheduleByWeek(orgId, weekStart)
+    // Employees only ever see rolled-out shifts — drafts are the manager's
+    // private planning space. This one server-side filter covers the web
+    // portal, the mobile app, and any other employee-role reader.
+    const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
+    const schedule = await scheduleService.getScheduleByWeek(orgId, weekStart, { publishedOnly: !isManager })
     return NextResponse.json(
       { data: schedule },
       { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=120" } },

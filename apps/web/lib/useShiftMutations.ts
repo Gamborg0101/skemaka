@@ -57,13 +57,19 @@ export function useShiftMutations(
     async (data: {
       employeeId: string; date: string; startTime: string; endTime: string
       breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
+      notifyNow?: boolean
     }) => {
       // Lazily create the schedule if this week has no schedule yet.
       const activeSchedule = await ensureSchedule()
       const tempId = crypto.randomUUID()
+      const { notifyNow, ...shiftFields } = data
       const optimistic: Shift = {
         id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
-        ...data, cancelledAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        ...shiftFields,
+        cancelledAt: null,
+        // Draft placeholder unless the manager chose to send it right away.
+        publishedAt: notifyNow ? new Date().toISOString() : null,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(optimistic)
       try {
@@ -152,6 +158,8 @@ export function useShiftMutations(
         employeeId, date, startTime, endTime,
         breakMinutes: 0, jobRole: "Sick Day", notes, colorTag: "sick",
         cancelledAt: null,
+        // Sick days are records, not plans — born published, never rolled out.
+        publishedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(sickShift)

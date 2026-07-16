@@ -78,7 +78,9 @@ export default async function EmployeePortalPage() {
     include: {
       organization: { select: { name: true, settings: true, industry: true } },
       shifts: {
-        where: { date: { gte: currentWeekStart } },
+        // Draft shifts are the manager's private planning space — employees
+        // only ever see shifts that have been rolled out to them.
+        where: { date: { gte: currentWeekStart }, publishedAt: { not: null } },
         orderBy: { date: "asc" },
         take: 60,
       },
@@ -100,23 +102,8 @@ export default async function EmployeePortalPage() {
 
   const tf = (employee.organization.settings as { timeFormat?: "12h" | "24h" } | null)?.timeFormat ?? "24h"
 
-  // Fetch schedule publishedAt for each week shown
-  const weekStarts = [...new Set(employee.shifts.map((s) => getMondayOfWeek(s.date)))]
-  const schedules = weekStarts.length > 0
-    ? await db.schedule.findMany({
-        where: {
-          organizationId: employee.organizationId,
-          weekStart: { in: weekStarts.map((w) => new Date(w + "T00:00:00Z")) },
-        },
-        select: { weekStart: true, publishedAt: true },
-        orderBy: { createdAt: "asc" },
-      })
-    : []
-  const publishedWeeks = new Set(
-    schedules.filter((s) => s.publishedAt).map((s) => getMondayOfWeek(s.weekStart))
-  )
-
-  // Fetch all other people working on the same dates
+  // Fetch all other people working on the same dates (rolled-out shifts only —
+  // draft placeholders must not leak through the coworker list either).
   const shiftDates = employee.shifts.map((s) => s.date)
   const coworkerShifts = shiftDates.length > 0
     ? await db.shift.findMany({
@@ -125,6 +112,7 @@ export default async function EmployeePortalPage() {
           date: { in: shiftDates },
           employeeId: { not: employee.id },
           cancelledAt: null,
+          publishedAt: { not: null },
         },
         select: {
           date: true,
@@ -182,19 +170,12 @@ export default async function EmployeePortalPage() {
 
         {weeks.map(([weekStart, weekShifts]) => (
           <div key={weekStart}>
+            {/* Everything shown here has been rolled out, so no per-week
+                published/pending badge is needed anymore. */}
             <div className="flex items-center gap-2 mb-3">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 {formatWeekLabel(weekStart, localeTag)}
               </h2>
-              {publishedWeeks.has(weekStart) ? (
-                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                  {t("published")}
-                </span>
-              ) : (
-                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-px rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
-                  {t("pending")}
-                </span>
-              )}
             </div>
 
             <div className="space-y-3">

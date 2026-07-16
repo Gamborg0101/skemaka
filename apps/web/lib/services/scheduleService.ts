@@ -37,6 +37,11 @@ const PUBLIC_SHIFT_EMPLOYEE_SELECT = {
 export async function getScheduleByWeek(
   orgId: string,
   weekStart: string,
+  opts: {
+    /** Hide draft (unsent) shifts — used for non-manager callers, so private
+     *  placeholder planning never leaks to employees (web portal or mobile). */
+    publishedOnly?: boolean
+  } = {},
 ): Promise<Schedule | null> {
   const weekStartDate = new Date(weekStart + "T00:00:00Z")
   const weekEndDate   = new Date(weekStartDate.getTime() + 7 * 24 * 60 * 60 * 1000)
@@ -44,7 +49,12 @@ export async function getScheduleByWeek(
   const [schedule, timeEntries] = await Promise.all([
     db.schedule.findFirst({
       where: { organizationId: orgId, weekStart: weekStartDate },
-      include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
+      include: {
+        shifts: {
+          ...(opts.publishedOnly ? { where: { publishedAt: { not: null } } } : {}),
+          orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        },
+      },
       orderBy: { createdAt: "asc" },
     }),
     db.timeEntry.findMany({
@@ -378,11 +388,13 @@ export async function publishSchedule(
   orgId: string,
   scheduleId: string,
 ): Promise<PublishResult> {
+  // Per-shift publishing: only draft shifts (publishedAt null) are being sent;
+  // already-rolled-out shifts were announced when they went out.
   const schedule = await db.schedule.findFirst({
     where: { id: scheduleId, organizationId: orgId },
     include: {
       shifts: {
-        where: { colorTag: { not: "sick" }, cancelledAt: null },
+        where: { colorTag: { not: "sick" }, cancelledAt: null, publishedAt: null },
         include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
@@ -391,13 +403,20 @@ export async function publishSchedule(
     orderBy: { createdAt: "asc" },
   })
   if (!schedule) throw new ServiceError("Not found", "NOT_FOUND")
-  if (schedule.publishedAt) throw new ServiceError("Already published", "CONFLICT")
+  if (schedule.shifts.length === 0) throw new ServiceError("Nothing to roll out — no draft shifts this week", "CONFLICT")
 
   const tf = (schedule.organization.settings as { timeFormat?: "12h" | "24h" } | null)?.timeFormat ?? "24h"
 
+  const now = new Date()
+  await db.shift.updateMany({
+    where: { id: { in: schedule.shifts.map((s) => s.id) } },
+    data: { publishedAt: now },
+  })
+  // Schedule.publishedAt is kept as an informational "last rolled out at" for
+  // the week badge — it is never cleared by edits anymore.
   const updated = await db.schedule.update({
     where: { id: scheduleId },
-    data: { publishedAt: new Date() },
+    data: { publishedAt: now },
     include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
   })
 
@@ -455,24 +474,37 @@ export async function publishSchedule(
 export interface PendingRolloutWeek {
   weekStart: string        // YYYY-MM-DD (Monday)
   shiftCount: number
-  employeeIds: string[]    // distinct employees with a real shift that week
+  employeeIds: string[]    // distinct employees with a draft shift that week
+  employeeNames: string[]  // matching distinct names, for the review list
 }
 
-/** Draft (unpublished) weeks that have at least one real shift, oldest first. */
+/** Weeks with at least one draft (unsent) shift, oldest first. */
 export async function getPendingRollout(orgId: string): Promise<PendingRolloutWeek[]> {
-  const schedules = await db.schedule.findMany({
-    where: { organizationId: orgId, publishedAt: null },
-    include: {
-      shifts: { where: { colorTag: { not: "sick" }, cancelledAt: null }, select: { employeeId: true } },
+  const drafts = await db.shift.findMany({
+    where: { organizationId: orgId, publishedAt: null, cancelledAt: null, colorTag: { not: "sick" } },
+    select: {
+      employeeId: true,
+      employee: { select: { name: true } },
+      schedule: { select: { weekStart: true } },
     },
-    orderBy: { weekStart: "asc" },
   })
-  return schedules
-    .filter((s) => s.shifts.length > 0)
-    .map((s) => ({
-      weekStart: s.weekStart.toISOString().split("T")[0],
-      shiftCount: s.shifts.length,
-      employeeIds: [...new Set(s.shifts.map((sh) => sh.employeeId))],
+
+  const byWeek = new Map<string, { count: number; employees: Map<string, string> }>()
+  for (const d of drafts) {
+    const week = d.schedule.weekStart.toISOString().split("T")[0]
+    if (!byWeek.has(week)) byWeek.set(week, { count: 0, employees: new Map() })
+    const entry = byWeek.get(week)!
+    entry.count++
+    entry.employees.set(d.employeeId, d.employee.name)
+  }
+
+  return [...byWeek.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, { count, employees }]) => ({
+      weekStart,
+      shiftCount: count,
+      employeeIds: [...employees.keys()],
+      employeeNames: [...employees.values()],
     }))
 }
 
@@ -483,10 +515,11 @@ export interface RollOutResult {
 }
 
 /**
- * Roll out every draft week that has shifts within [fromWeek, toWeek] (inclusive,
+ * Roll out every draft (unsent) shift within [fromWeek, toWeek] (inclusive,
  * Monday YYYY-MM-DD). Publishes them all in one shot and notifies each affected
  * employee ONCE (email always; SMS when a number is on file) that the roll-out
- * for the whole period is ready.
+ * for the whole period is ready. Already-rolled-out shifts are untouched — no
+ * one is re-notified about shifts they already know about.
  */
 export async function rollOut(
   orgId: string,
@@ -498,56 +531,59 @@ export async function rollOut(
   // raw DateTime range is unreliable; YYYY-MM-DD string compare is exact).
   const weekKey = (d: Date) => d.toISOString().split("T")[0]
 
-  const schedules = await db.schedule.findMany({
-    where: { organizationId: orgId, publishedAt: null },
+  const drafts = await db.shift.findMany({
+    where: { organizationId: orgId, publishedAt: null, cancelledAt: null, colorTag: { not: "sick" } },
     include: {
-      shifts: {
-        where: { colorTag: { not: "sick" }, cancelledAt: null },
-        include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
-      },
+      employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } },
+      schedule: { select: { id: true, weekStart: true } },
     },
-    orderBy: { weekStart: "asc" },
   })
 
-  const toPublish = schedules.filter((s) => {
-    const k = weekKey(s.weekStart)
-    return s.shifts.length > 0 && k >= fromWeek && k <= toWeek
+  const toPublish = drafts.filter((s) => {
+    const k = weekKey(s.schedule.weekStart)
+    return k >= fromWeek && k <= toWeek
   })
   if (toPublish.length === 0) {
-    throw new ServiceError("No draft weeks with shifts to roll out", "CONFLICT")
+    throw new ServiceError("No draft shifts to roll out", "CONFLICT")
   }
 
-  await db.schedule.updateMany({
+  const now = new Date()
+  await db.shift.updateMany({
     where: { id: { in: toPublish.map((s) => s.id) } },
-    data: { publishedAt: new Date() },
+    data: { publishedAt: now },
+  })
+  // Stamp the informational week badge on every affected schedule.
+  await db.schedule.updateMany({
+    where: { id: { in: [...new Set(toPublish.map((s) => s.schedule.id))] } },
+    data: { publishedAt: now },
   })
 
   const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } })
   const orgName = org?.name ?? ""
 
-  // One notification per employee across the whole period.
+  // One notification per employee across the whole period — only people who
+  // actually got newly published shifts.
   const byEmployee = new Map<string, { name: string; phone: string | null; email: string | null; userId: string | null; locale: Locale }>()
-  for (const s of toPublish) {
-    for (const shift of s.shifts) {
-      const e = shift.employee
-      if (!byEmployee.has(e.id)) {
-        byEmployee.set(e.id, {
-          name: e.name, phone: e.phone, email: e.email, userId: e.userId,
-          locale: resolveRecipientLocale(e.locale, org?.locale),
-        })
-      }
+  for (const shift of toPublish) {
+    const e = shift.employee
+    if (!byEmployee.has(e.id)) {
+      byEmployee.set(e.id, {
+        name: e.name, phone: e.phone, email: e.email, userId: e.userId,
+        locale: resolveRecipientLocale(e.locale, org?.locale),
+      })
     }
   }
 
   // Period spans the first rolled week's Monday to the last rolled week's Sunday.
-  const firstMonday = toPublish[0].weekStart
-  const lastMonday  = toPublish[toPublish.length - 1].weekStart
+  const publishedWeeks = [...new Set(toPublish.map((s) => weekKey(s.schedule.weekStart)))].sort()
+  const firstMonday = new Date(publishedWeeks[0] + "T00:00:00Z")
+  const lastMonday  = new Date(publishedWeeks[publishedWeeks.length - 1] + "T00:00:00Z")
   const lastSunday  = new Date(lastMonday.getTime() + 6 * 24 * 60 * 60 * 1000)
   const periodFor = (locale: Locale) => {
     const tag = recipientLocaleTag(locale)
     const fmt = (d: Date) => d.toLocaleDateString(tag, { day: "numeric", month: "short", timeZone: "UTC" })
-    return toPublish.length === 1
-      ? formatWeekLabel(firstMonday.toISOString().split("T")[0], tag)
+    return publishedWeeks.length === 1
+      ? formatWeekLabel(publishedWeeks[0], tag)
       : `${fmt(firstMonday)} – ${fmt(lastSunday)}`
   }
   // English label returned to the manager UI (kept as before).
@@ -575,7 +611,7 @@ export async function rollOut(
     })
   }
 
-  return { weeks: toPublish.length, notified: byEmployee.size, periodLabel }
+  return { weeks: publishedWeeks.length, notified: byEmployee.size, periodLabel }
 }
 
 // ── Shifts ────────────────────────────────────────────────────────────────────
@@ -621,6 +657,9 @@ export type CreateShiftInput = {
   jobRole: string
   notes?: string | null
   colorTag?: string | null
+  /** Publish this shift immediately and notify the employee now, instead of
+   *  leaving it as a private draft to be committed by the next roll-out. */
+  notifyNow?: boolean
 }
 
 export async function createShift(
@@ -628,24 +667,22 @@ export async function createShift(
   scheduleId: string,
   input: CreateShiftInput,
 ): Promise<Shift> {
-  const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag } = input
+  const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag, notifyNow } = input
 
   const dateUTC = new Date(date + "T00:00:00Z")
-  const [employeeInOrg, existing, scheduleRow] = await Promise.all([
+  const [employeeInOrg, existing] = await Promise.all([
     db.employee.findFirst({
       where: { id: employeeId, organizationId: orgId },
-      select: { id: true, name: true, email: true, locale: true, organization: { select: { name: true, locale: true } } },
+      select: { id: true, name: true, email: true, phone: true, locale: true, organization: { select: { name: true, locale: true } } },
     }),
     db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC, cancelledAt: null }, select: { id: true }, orderBy: { createdAt: "asc" } }),
-    db.schedule.findFirst({ where: { id: scheduleId, organizationId: orgId }, select: { publishedAt: true } }),
   ])
   if (!employeeInOrg) throw new ServiceError("Employee not found", "NOT_FOUND")
   if (existing) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
 
-  // A one-off shift added to an already-published week (i.e. not part of a bulk
-  // publish roll-out). Captured before the create, because adding the shift
-  // resets the schedule to draft (clearing publishedAt) just below.
-  const addedToPublishedWeek = scheduleRow?.publishedAt != null
+  // Sick days are records of an absence, not plans — they are born published
+  // (no roll-out needed) and never notified (the person knows they're sick).
+  const isSick = colorTag === "sick"
 
   const shift = await db.shift.create({
     data: {
@@ -659,14 +696,9 @@ export async function createShift(
       jobRole,
       notes: notes ?? null,
       colorTag: colorTag ?? null,
+      // Draft by default: a private placeholder committed by Roll out.
+      publishedAt: isSick || notifyNow ? new Date() : null,
     },
-  })
-
-  // Changing a published schedule returns it to draft so the manager must
-  // re-publish (and thereby re-notify staff) before the change is "live".
-  await db.schedule.updateMany({
-    where: { id: scheduleId, organizationId: orgId, publishedAt: { not: null } },
-    data: { publishedAt: null },
   })
 
   void db.schedulingEvent.create({
@@ -677,25 +709,38 @@ export async function createShift(
     },
   }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
 
-  // Email the affected employee directly when this is a late addition to an
-  // already-published week — they were already notified of the published
-  // schedule, so a new shift is news to them. Fire-and-forget; never block or
-  // fail the create on a mail error.
-  if (addedToPublishedWeek && employeeInOrg.email) {
+  // "Notify now": the ad-hoc case (e.g. someone coming in on their day off,
+  // today) — send the shift straight to the employee instead of waiting for
+  // roll-out. Fire-and-forget; never block or fail the create on a send error.
+  if (notifyNow && !isSick) {
     const empLocale = resolveRecipientLocale(employeeInOrg.locale, employeeInOrg.organization.locale)
-    const dateLabel = new Date(date + "T12:00:00Z").toLocaleDateString(recipientLocaleTag(empLocale), {
-      weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
-    })
-    void sendShiftAssignedEmail({
-      to: employeeInOrg.email,
-      name: employeeInOrg.name,
-      orgName: employeeInOrg.organization.name,
-      dateLabel,
-      startTime,
-      endTime,
-      jobRole,
-      locale: empLocale,
-    }).catch((err) => console.error("[ShiftEmail] Failed to send shift-assigned email:", err))
+    const orgName = employeeInOrg.organization.name
+    if (employeeInOrg.email) {
+      const dateLabel = new Date(date + "T12:00:00Z").toLocaleDateString(recipientLocaleTag(empLocale), {
+        weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
+      })
+      void sendShiftAssignedEmail({
+        to: employeeInOrg.email,
+        name: employeeInOrg.name,
+        orgName,
+        dateLabel,
+        startTime,
+        endTime,
+        jobRole,
+        locale: empLocale,
+      }).catch((err) => console.error("[ShiftEmail] Failed to send shift-assigned email:", err))
+    }
+    if (employeeInOrg.phone) {
+      void sendShiftAssignedSms({
+        to: employeeInOrg.phone,
+        employeeName: employeeInOrg.name,
+        orgName,
+        date,
+        startTime,
+        endTime,
+        locale: empLocale,
+      })
+    }
   }
 
   return serShift(shift)
@@ -723,7 +768,6 @@ export async function updateShift(
     include: {
       employee: { select: { name: true, phone: true, locale: true } },
       organization: { select: { name: true, locale: true } },
-      schedule: { select: { publishedAt: true } },
     },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
@@ -771,17 +815,12 @@ export async function updateShift(
     },
   })
 
-  // Changing a published schedule returns it to draft so the manager must
-  // re-publish (and thereby re-notify staff) before the change is "live".
-  // When that happens we skip the per-shift SMS below — the re-publish blast
-  // covers it, so we don't double-text the employee.
-  const wasPublished = existing.schedule.publishedAt !== null
-  if (wasPublished) {
-    await db.schedule.update({
-      where: { id: scheduleId },
-      data: { publishedAt: null },
-    })
-  }
+  // Draft shifts are private placeholders — editing one is silent. Editing an
+  // already-rolled-out shift is live news for the person on it, so they (and,
+  // on reassignment, the new person) are notified immediately. The shift stays
+  // published: "new = draft until roll-out; touching something sent = they
+  // hear now."
+  const wasPublished = existing.publishedAt !== null
 
   const newDate      = input.date      ?? existing.date.toISOString().split("T")[0]
   const newStartTime = input.startTime ?? existing.startTime
@@ -793,8 +832,8 @@ export async function updateShift(
   const timingChanged   = input.date !== undefined || input.startTime !== undefined || input.endTime !== undefined
 
   const existingLocale = resolveRecipientLocale(existing.employee.locale, existing.organization.locale)
-  if (wasPublished) {
-    // Notifications are deferred to re-publish; emit nothing here.
+  if (!wasPublished) {
+    // Draft: nobody has seen this shift — nothing to announce.
   } else if (employeeChanged) {
     if (existing.employee.phone) {
       void sendShiftCancelledSms({
@@ -849,27 +888,18 @@ export async function deleteShift(
     include: {
       employee: { select: { name: true, phone: true, locale: true } },
       organization: { select: { name: true, locale: true } },
-      schedule: { select: { publishedAt: true } },
     },
   })
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
 
   await db.shift.delete({ where: { id: shiftId } })
 
-  // Changing a published schedule returns it to draft so the manager must
-  // re-publish before the change is "live". The re-publish blast covers the
-  // notification, so we skip the per-shift cancellation SMS in that case.
-  const wasPublished = existing.schedule.publishedAt !== null
-  if (wasPublished) {
-    await db.schedule.update({
-      where: { id: scheduleId },
-      data: { publishedAt: null },
-    })
-  }
-
-  // A shift that was already cancelled was already announced as cancelled —
-  // deleting the leftover record must not text the employee a second time.
-  if (!wasPublished && !existing.cancelledAt && existing.employee.phone) {
+  // Deleting a draft is silent (nobody ever saw it). Deleting a rolled-out
+  // shift is live news for the person on it — tell them immediately. A shift
+  // that was already cancelled was already announced as cancelled, so deleting
+  // the leftover record must not text the employee a second time.
+  const wasPublished = existing.publishedAt !== null
+  if (wasPublished && !existing.cancelledAt && existing.employee.phone) {
     void sendShiftCancelledSms({
       to: existing.employee.phone,
       employeeName: existing.employee.name,
@@ -904,6 +934,8 @@ export async function cancelShift(
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
   if (existing.cancelledAt) throw new ServiceError("Shift is already cancelled", "CONFLICT")
   if (existing.colorTag === "sick") throw new ServiceError("Sick days cannot be cancelled — delete them instead", "CONFLICT")
+  // A draft was never sent, so there is nothing to cancel — just delete it.
+  if (!existing.publishedAt) throw new ServiceError("Draft shifts cannot be cancelled — delete them instead", "BAD_REQUEST")
 
   const shift = await db.shift.update({
     where: { id: shiftId },

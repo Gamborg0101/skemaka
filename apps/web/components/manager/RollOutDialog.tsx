@@ -21,6 +21,7 @@ interface PendingWeek {
   weekStart: string
   shiftCount: number
   employeeIds: string[]
+  employeeNames: string[]
 }
 
 interface Props {
@@ -104,7 +105,7 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
         <DialogHeader>
           <DialogTitle>Roll out the schedule</DialogTitle>
           <DialogDescription>
-            Publish your draft weeks and notify everyone with a shift, all at once.
+            Send your draft shifts to the team, all at once. Everyone getting new shifts is notified once.
           </DialogDescription>
         </DialogHeader>
 
@@ -113,7 +114,7 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
             <p className="text-sm text-gray-400 py-6 text-center">Loading draft weeks…</p>
           ) : nothing ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">
-              Nothing to roll out — no draft weeks have shifts yet. Add shifts, then roll out.
+              Nothing to roll out — no draft shifts yet. Add shifts, then roll out.
             </p>
           ) : (
             <>
@@ -132,18 +133,27 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-400">
-                  Draft weeks from {formatWeekLabel(fromWeek)} up to your choice are rolled out; later drafts stay private.
+                  Draft shifts from {formatWeekLabel(fromWeek)} up to your choice are sent; later drafts stay private.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 px-3 py-3 text-sm">
-                <CalendarRange className="size-5 shrink-0 text-gray-400" />
-                <p className="text-gray-700 dark:text-gray-200">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {included.length} {included.length === 1 ? "week" : "weeks"}
-                  </span>{" "}
-                  will roll out.
-                </p>
+              {/* Review list — exactly what this roll-out will send, per week. */}
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800 max-h-48 overflow-y-auto">
+                {included.map((w) => (
+                  <div key={w.weekStart} className="px-3 py-2.5 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CalendarRange className="size-4 shrink-0 text-gray-400" />
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{formatWeekLabel(w.weekStart)}</span>
+                      <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 tabular-nums shrink-0">
+                        {w.shiftCount} {w.shiftCount === 1 ? "draft shift" : "draft shifts"}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 pl-6 text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {w.employeeNames.slice(0, 4).join(", ")}
+                      {w.employeeNames.length > 4 && ` +${w.employeeNames.length - 4} more`}
+                    </p>
+                  </div>
+                ))}
               </div>
               <div className="flex items-center gap-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 px-3 py-3 text-sm">
                 <Users className="size-5 shrink-0 text-gray-400" />

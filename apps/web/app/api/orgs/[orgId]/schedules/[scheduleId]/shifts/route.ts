@@ -35,13 +35,18 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   let body: {
     employeeId?: string; date?: string; startTime?: string; endTime?: string
     breakMinutes?: number; jobRole?: string; notes?: string; colorTag?: string
+    notifyNow?: boolean
   }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
-  const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag } = body
+  const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag, notifyNow } = body
+
+  if (notifyNow !== undefined && typeof notifyNow !== "boolean") {
+    return NextResponse.json({ error: "notifyNow must be a boolean" }, { status: 400 })
+  }
 
   if (!employeeId || !date || !startTime || !endTime || !jobRole) {
     return NextResponse.json(
@@ -69,7 +74,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   try {
     const shift = await scheduleService.createShift(orgId, scheduleId, {
-      employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag,
+      employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag, notifyNow,
     })
     return NextResponse.json({ data: shift }, { status: 201 })
   } catch (err) {

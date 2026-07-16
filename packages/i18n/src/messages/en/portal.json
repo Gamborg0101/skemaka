@@ -5,8 +5,6 @@
   "noProfileHint": "Ask your manager to add you as an employee so your shifts appear here.",
   "noShifts": "No upcoming shifts",
   "noShiftsHint": "Check back when your schedule is published.",
-  "published": "Published",
-  "pending": "Pending",
   "cancelledBadge": "Cancelled",
   "cancelledNote": "This shift was cancelled — you don't need to come in.",
   "inclBreak": "(incl. {min}m break)",

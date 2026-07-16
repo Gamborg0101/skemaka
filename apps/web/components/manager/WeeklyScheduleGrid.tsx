@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -17,7 +11,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
-import { Plus, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -47,7 +41,6 @@ interface WeeklyScheduleGridProps {
   approvedTimeOff?: TimeOffRequest[];
   getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null;
   coverFocus?: CoverFocus | null;
-  publishedAt?: string | null;
   onShiftMove: (
     shiftId: string,
     newDate: string,
@@ -62,6 +55,7 @@ interface WeeklyScheduleGridProps {
     jobRole: string;
     notes: string | null;
     colorTag: string | null;
+    notifyNow?: boolean
   }) => void;
   onShiftUpdate: (data: Partial<Shift>) => void;
   onShiftDelete: (shiftId: string) => void;
@@ -70,12 +64,10 @@ interface WeeklyScheduleGridProps {
 }
 
 const EMPLOYEE_COL_WIDTH = 160;
-
-function getVisibleDays(containerWidth: number): 3 | 5 | 7 {
-  if (containerWidth >= 1070) return 7; // 7 × 130 + 160
-  if (containerWidth >= 810) return 5; // 5 × 130 + 160
-  return 3;
-}
+// Below this width the desktop grid scrolls horizontally instead of hiding
+// days — all 7 days are always rendered (sticky employee column keeps names
+// in view while scrolling).
+const GRID_MIN_WIDTH = EMPLOYEE_COL_WIDTH + 7 * 104;
 
 function getWeekDays(weekStart: string): Date[] {
   // Pin to local noon to avoid DST-boundary shifts on UTC-N timezones where
@@ -107,7 +99,6 @@ interface DroppableCellProps {
   shifts: Shift[];
   employee: Employee;
   jobRoles: JobRole[];
-  publishedAt?: string | null;
   isWeekend: boolean;
   isClosed: boolean;
   isTimeOff: boolean;
@@ -125,7 +116,6 @@ function DroppableCell({
   shifts,
   employee,
   jobRoles,
-  publishedAt,
   isWeekend,
   isClosed,
   isTimeOff,
@@ -239,7 +229,6 @@ function DroppableCell({
             shift={shift}
             employee={employee}
             jobRoles={jobRoles}
-            publishedAt={publishedAt}
             onClick={() => onShiftClick(shift)}
           />
         ))}
@@ -276,7 +265,6 @@ export function WeeklyScheduleGrid({
   approvedTimeOff = [],
   getConflict,
   coverFocus,
-  publishedAt,
   onShiftMove,
   onShiftCreate,
   onShiftUpdate,
@@ -307,21 +295,6 @@ export function WeeklyScheduleGrid({
 
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [mobileDay, setMobileDay] = useState(0);
-  const [startDayOffset, setStartDayOffset] = useState(0);
-  const [containerWidth, setContainerWidth] = useState<number | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) =>
-      setContainerWidth(entry.contentRect.width),
-    );
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const visibleDays = getVisibleDays(containerWidth ?? 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -338,15 +311,6 @@ export function WeeklyScheduleGrid({
     const todayISO = new Date().toISOString().split("T")[0];
     const idx = days.findIndex((d) => toISODate(d) === todayISO);
     setMobileDay(idx >= 0 ? idx : 0);
-    setStartDayOffset(0);
-  }
-
-  // Clamp offset when the number of visible columns shrinks.
-  // Uses "adjust state during render" pattern.
-  const [prevVisibleDays, setPrevVisibleDays] = useState(visibleDays);
-  if (visibleDays !== prevVisibleDays) {
-    setPrevVisibleDays(visibleDays);
-    setStartDayOffset((o) => Math.min(o, 7 - visibleDays));
   }
 
   const shifts = useMemo(() => schedule.shifts ?? [], [schedule.shifts]);
@@ -435,7 +399,7 @@ export function WeeklyScheduleGrid({
   };
 
   return (
-    <div ref={gridRef}>
+    <div>
       <DndContext
         id="weekly-schedule-dnd"
         sensors={sensors}
@@ -600,7 +564,6 @@ export function WeeklyScheduleGrid({
                           shift={shift}
                           employee={employee}
                           jobRoles={jobRoles}
-                          publishedAt={publishedAt}
                           onClick={() => openEditDialog(shift)}
                         />
                       ))}
@@ -612,12 +575,13 @@ export function WeeklyScheduleGrid({
           </div>
         </div>
 
-        {/* ── Desktop: responsive grid (hidden on mobile) ── */}
-        <div className="hidden md:block">
+        {/* ── Desktop: full week, horizontally scrollable when narrow ── */}
+        <div className="hidden md:block overflow-x-auto">
           <div
             className="grid w-full"
             style={{
-              gridTemplateColumns: `${EMPLOYEE_COL_WIDTH}px repeat(${visibleDays}, minmax(0, 1fr))`,
+              gridTemplateColumns: `${EMPLOYEE_COL_WIDTH}px repeat(7, minmax(0, 1fr))`,
+              minWidth: GRID_MIN_WIDTH,
             }}
           >
             {/* Header row */}
@@ -625,33 +589,8 @@ export function WeeklyScheduleGrid({
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Employee
               </span>
-              {visibleDays < 7 && (
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => setStartDayOffset((o) => Math.max(0, o - 1))}
-                    disabled={startDayOffset === 0}
-                    className="size-5 flex items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    aria-label="Previous days"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setStartDayOffset((o) => Math.min(7 - visibleDays, o + 1))
-                    }
-                    disabled={startDayOffset + visibleDays >= 7}
-                    className="size-5 flex items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    aria-label="Next days"
-                  >
-                    <ChevronRight className="size-3.5" />
-                  </button>
-                </div>
-              )}
             </div>
-            {days
-              .slice(startDayOffset, startDayOffset + visibleDays)
-              .map((day, si) => {
-                const di = startDayOffset + si;
+            {days.map((day, di) => {
                 const isToday = toISODate(day) === toISODate(new Date());
                 const isWeekend = di >= 5;
                 const isClosed = closedDays[di];
@@ -747,10 +686,7 @@ export function WeeklyScheduleGrid({
                     );
                   })()}
                 </div>
-                {days
-                  .slice(startDayOffset, startDayOffset + visibleDays)
-                  .map((day, si) => {
-                    const di = startDayOffset + si;
+                {days.map((day, di) => {
                     const date = toISODate(day);
                     const cellId = `${employee.id}__${date}`;
                     const cellShifts = getShiftsForCell(employee.id, date);
@@ -771,7 +707,6 @@ export function WeeklyScheduleGrid({
                         shifts={cellShifts}
                         employee={employee}
                         jobRoles={jobRoles}
-                        publishedAt={publishedAt}
                         isWeekend={di >= 5}
                         isClosed={closedDays[di]}
                         isTimeOff={isTimeOffDay(employee.id, date)}
@@ -801,7 +736,6 @@ export function WeeklyScheduleGrid({
                     shift={activeShift}
                     employee={emp}
                     jobRoles={jobRoles}
-                    publishedAt={publishedAt}
                     onClick={() => {}}
                   />
                 </div>

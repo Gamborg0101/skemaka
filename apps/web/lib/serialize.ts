@@ -40,6 +40,7 @@ export function serShift(s: {
   date: Date; startTime: string; endTime: string; breakMinutes: number
   jobRole: string; notes: string | null; colorTag: string | null
   cancelledAt?: Date | null
+  publishedAt?: Date | null
   createdAt: Date; updatedAt: Date
   employee?: { id: string; name: string; jobRole: string }
 }): Shift {
@@ -56,6 +57,7 @@ export function serShift(s: {
     notes: s.notes,
     colorTag: s.colorTag,
     cancelledAt: s.cancelledAt?.toISOString() ?? null,
+    publishedAt: s.publishedAt?.toISOString() ?? null,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
     ...(s.employee ? { employee: { id: s.employee.id, name: s.employee.name, jobRole: s.employee.jobRole } satisfies EmbeddedEmployee } : {}),

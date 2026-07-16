@@ -47,6 +47,8 @@ interface AddShiftDialogProps {
     jobRole: string
     notes: string | null
     colorTag: string | null
+    /** Send this shift to the employee immediately instead of leaving it as a draft. */
+    notifyNow?: boolean
   }) => void | boolean | Promise<void | boolean>
   /** Register the whole day as a sick day for this employee instead of a shift. */
   onMarkSick?: (
@@ -82,6 +84,8 @@ export function AddShiftDialog({
   // Sick mode: register the whole day as a sick day instead of a normal shift.
   const [sick, setSick] = useState(false)
   const [sickReason, setSickReason] = useState("")
+  // Send immediately (ad-hoc shift) instead of leaving a draft for roll-out.
+  const [notifyNow, setNotifyNow] = useState(false)
   // Last start/end pair the break auto-suggest has seen. Pre-set on open and on
   // template apply so the suggestion only fires when the user edits the times.
   const [prevBreakSuggestKey, setPrevBreakSuggestKey] = useState(`${startTime}__${endTime}`)
@@ -107,6 +111,7 @@ export function AddShiftDialog({
       setSubmitting(false)
       setSick(false)
       setSickReason("")
+      setNotifyNow(false)
       const emp = employees.find((e) => e.id === defaultEmployeeId)
       setSelectedRole(emp?.jobRole ?? "")
     }
@@ -165,6 +170,7 @@ export function AddShiftDialog({
         jobRole: selectedRole,
         notes: notes.trim() || null,
         colorTag,
+        notifyNow,
       })
       // Keep the dialog open when the create explicitly failed so the manager
       // can adjust and retry without re-entering everything. Legacy creators
@@ -363,6 +369,29 @@ export function AddShiftDialog({
               + Add a note
             </button>
           )}
+
+          {/* Ad-hoc case: send this one shift right away instead of drafting it. */}
+          <label className={cn(
+            "flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors",
+            notifyNow
+              ? "border-blue-300 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30"
+              : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          )}>
+            <input
+              type="checkbox"
+              checked={notifyNow}
+              onChange={(e) => setNotifyNow(e.target.checked)}
+              className="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="min-w-0 flex-1 text-sm">
+              <span className={cn("font-medium", notifyNow ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-200")}>
+                Notify now
+              </span>
+              <span className="block text-xs text-gray-400 dark:text-gray-500">
+                Sends this shift to the employee immediately instead of waiting for roll-out.
+              </span>
+            </span>
+          </label>
           </>
           )}
 
@@ -378,7 +407,7 @@ export function AddShiftDialog({
                 sick ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"
               )}
             >
-              {sick ? "Mark sick" : submitting ? "Adding…" : "Add shift"}
+              {sick ? "Mark sick" : submitting ? "Adding…" : notifyNow ? "Add & notify" : "Add shift"}
             </Button>
           </DialogFooter>
         </form>

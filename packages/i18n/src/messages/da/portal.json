@@ -5,8 +5,6 @@
   "noProfileHint": "Bed din leder om at tilføje dig som medarbejder, så dine vagter vises her.",
   "noShifts": "Ingen kommende vagter",
   "noShiftsHint": "Kig forbi igen, når din vagtplan er udgivet.",
-  "published": "Udgivet",
-  "pending": "Afventer",
   "cancelledBadge": "Aflyst",
   "cancelledNote": "Denne vagt er aflyst — du skal ikke møde ind.",
   "inclBreak": "(inkl. {min} min. pause)",
