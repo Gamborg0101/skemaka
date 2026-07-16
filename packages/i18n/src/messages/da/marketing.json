@@ -18,7 +18,7 @@
     "wageLiveTitle": "Lønudgift, live",
     "wageLiveSub": "opdateres når du tilføjer vagter",
     "conflictTitle": "Konflikt fanget",
-    "conflictSub": "Tom har fri — markeret",
+    "conflictSub": "Thomas har fri — markeret",
     "legendKitchen": "Køkken",
     "legendFoh": "Servering",
     "legendBar": "Bar",
@@ -68,8 +68,8 @@
     "catchTitle": "Fang problemerne før dine medarbejdere",
     "catchBody": "Sætter du nogen på en dag, de har fri eller har meldt sig utilgængelige, siger Skemaka til — før du udgiver, ikke efter klagen.",
     "conflictsHeader": "{count} ting at rette før udgivelse",
-    "flag1": "Tom har godkendt ferie om fredagen — men han står på vagtplanen.",
-    "flag2": "Lena har meldt sig utilgængelig om lørdagen — men hun står på vagtplanen."
+    "flag1": "Thomas har godkendt ferie om fredagen — men han står på vagtplanen.",
+    "flag2": "Emma har meldt sig utilgængelig om lørdagen — men hun står på vagtplanen."
   },
   "benefits": {
     "title": "Alt det, en restaurants vagtplan faktisk har brug for",

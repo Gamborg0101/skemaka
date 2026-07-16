@@ -19,11 +19,11 @@ const WINDOW_END = 24
 const SPAN = WINDOW_END - WINDOW_START
 
 const ROWS: Row[] = [
-  { name: "Marco", roleKey: "roleHeadChef", start: 14, end: 23.5, color: "bg-amber-400" },
-  { name: "Aoife", roleKey: "roleSousChef", start: 15, end: 23.5, color: "bg-amber-400" },
-  { name: "Priya", roleKey: "roleBartender", start: 16, end: 24, color: "bg-purple-400" },
-  { name: "Lena", roleKey: "roleWaiter", start: 16, end: 23.5, color: "bg-blue-400" },
-  { name: "Tom", roleKey: "roleWaiter", start: 17, end: 23.5, color: "bg-blue-400", conflict: true },
+  { name: "Peter", roleKey: "roleHeadChef", start: 14, end: 23.5, color: "bg-amber-400" },
+  { name: "Anna", roleKey: "roleSousChef", start: 15, end: 23.5, color: "bg-amber-400" },
+  { name: "Julie", roleKey: "roleBartender", start: 16, end: 24, color: "bg-purple-400" },
+  { name: "Emma", roleKey: "roleWaiter", start: 16, end: 23.5, color: "bg-blue-400" },
+  { name: "Thomas", roleKey: "roleWaiter", start: 17, end: 23.5, color: "bg-blue-400", conflict: true },
 ]
 
 function label(h: number) {

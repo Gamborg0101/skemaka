@@ -54,48 +54,48 @@ export const ROLE_STYLES: Record<DemoRole, { chip: string; dot: string }> = {
 }
 
 export const DEMO_STAFF: DemoStaff[] = [
-  { id: "marco", name: "Marco Rossi", title: "Head chef", role: "Kitchen", hourlyWage: 18.5, contractedHours: 40 },
-  { id: "aoife", name: "Aoife Byrne", title: "Sous chef", role: "Kitchen", hourlyWage: 15.0, contractedHours: 38 },
-  { id: "sam", name: "Sam Okoro", title: "Kitchen porter", role: "Kitchen", hourlyWage: 11.5, contractedHours: 16 },
-  { id: "lena", name: "Lena Vogt", title: "Waiter", role: "Front of house", hourlyWage: 12.5, contractedHours: 25 },
-  { id: "tom", name: "Tom Walsh", title: "Waiter", role: "Front of house", hourlyWage: 12.0, contractedHours: 20 },
-  { id: "priya", name: "Priya Shah", title: "Bartender", role: "Bar", hourlyWage: 13.5, contractedHours: 30 },
+  { id: "peter", name: "Peter Hansen", title: "Head chef", role: "Kitchen", hourlyWage: 18.5, contractedHours: 40 },
+  { id: "anna", name: "Anna Nielsen", title: "Sous chef", role: "Kitchen", hourlyWage: 15.0, contractedHours: 38 },
+  { id: "simon", name: "Simon Lund", title: "Kitchen porter", role: "Kitchen", hourlyWage: 11.5, contractedHours: 16 },
+  { id: "emma", name: "Emma Larsen", title: "Waiter", role: "Front of house", hourlyWage: 12.5, contractedHours: 25 },
+  { id: "thomas", name: "Thomas Berg", title: "Waiter", role: "Front of house", hourlyWage: 12.0, contractedHours: 20 },
+  { id: "julie", name: "Julie Andersen", title: "Bartender", role: "Bar", hourlyWage: 13.5, contractedHours: 30 },
 ]
 
 // Mon (0) is closed. Dinner service Tue–Sun; weekends start earlier.
 export const DEMO_SHIFTS: DemoShift[] = [
-  // Marco — head chef, in for every service
-  { staffId: "marco", day: 1, start: "15:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "marco", day: 2, start: "15:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "marco", day: 3, start: "15:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "marco", day: 4, start: "14:00", end: "23:30", breakMinutes: 30 },
-  { staffId: "marco", day: 5, start: "12:00", end: "23:30", breakMinutes: 45 },
-  // Aoife — sous, covers the days Marco needs support / his day off
-  { staffId: "aoife", day: 1, start: "15:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "aoife", day: 4, start: "15:00", end: "23:30", breakMinutes: 30 },
-  { staffId: "aoife", day: 5, start: "12:00", end: "23:30", breakMinutes: 45 },
-  { staffId: "aoife", day: 6, start: "12:00", end: "22:00", breakMinutes: 45 },
-  // Sam — KP, busiest nights only
-  { staffId: "sam", day: 4, start: "17:00", end: "23:30", breakMinutes: 30 },
-  { staffId: "sam", day: 5, start: "17:00", end: "23:30", breakMinutes: 30 },
-  // Lena — FOH
-  { staffId: "lena", day: 2, start: "16:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "lena", day: 3, start: "16:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "lena", day: 5, start: "16:00", end: "23:30", breakMinutes: 30 },
-  { staffId: "lena", day: 6, start: "12:00", end: "20:00", breakMinutes: 30 }, // ⚠ conflict: Lena marked Sat unavailable
-  // Tom — FOH
-  { staffId: "tom", day: 3, start: "17:00", end: "23:00", breakMinutes: 30 },
-  { staffId: "tom", day: 4, start: "17:00", end: "23:30", breakMinutes: 30 }, // ⚠ conflict: Tom is on approved time-off Fri
-  // Priya — bar
-  { staffId: "priya", day: 2, start: "16:00", end: "23:30", breakMinutes: 30 },
-  { staffId: "priya", day: 4, start: "16:00", end: "00:00", breakMinutes: 30 },
-  { staffId: "priya", day: 5, start: "16:00", end: "00:00", breakMinutes: 30 },
-  { staffId: "priya", day: 6, start: "14:00", end: "23:00", breakMinutes: 45 },
+  // Peter — head chef, in for every service
+  { staffId: "peter", day: 1, start: "15:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "peter", day: 2, start: "15:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "peter", day: 3, start: "15:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "peter", day: 4, start: "14:00", end: "23:30", breakMinutes: 30 },
+  { staffId: "peter", day: 5, start: "12:00", end: "23:30", breakMinutes: 45 },
+  // Anna — sous, covers the days Peter needs support / his day off
+  { staffId: "anna", day: 1, start: "15:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "anna", day: 4, start: "15:00", end: "23:30", breakMinutes: 30 },
+  { staffId: "anna", day: 5, start: "12:00", end: "23:30", breakMinutes: 45 },
+  { staffId: "anna", day: 6, start: "12:00", end: "22:00", breakMinutes: 45 },
+  // Simon — KP, busiest nights only
+  { staffId: "simon", day: 4, start: "17:00", end: "23:30", breakMinutes: 30 },
+  { staffId: "simon", day: 5, start: "17:00", end: "23:30", breakMinutes: 30 },
+  // Emma — FOH
+  { staffId: "emma", day: 2, start: "16:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "emma", day: 3, start: "16:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "emma", day: 5, start: "16:00", end: "23:30", breakMinutes: 30 },
+  { staffId: "emma", day: 6, start: "12:00", end: "20:00", breakMinutes: 30 }, // ⚠ conflict: Emma marked Sat unavailable
+  // Thomas — FOH
+  { staffId: "thomas", day: 3, start: "17:00", end: "23:00", breakMinutes: 30 },
+  { staffId: "thomas", day: 4, start: "17:00", end: "23:30", breakMinutes: 30 }, // ⚠ conflict: Thomas is on approved time-off Fri
+  // Julie — bar
+  { staffId: "julie", day: 2, start: "16:00", end: "23:30", breakMinutes: 30 },
+  { staffId: "julie", day: 4, start: "16:00", end: "00:00", breakMinutes: 30 },
+  { staffId: "julie", day: 5, start: "16:00", end: "00:00", breakMinutes: 30 },
+  { staffId: "julie", day: 6, start: "14:00", end: "23:00", breakMinutes: 45 },
 ]
 
 /** Approved time-off — shown greyed on the grid. */
 export const DEMO_TIME_OFF: { staffId: string; day: number; reason: string }[] = [
-  { staffId: "tom", day: 4, reason: "Annual leave" },
+  { staffId: "thomas", day: 4, reason: "Annual leave" },
 ]
 
 /**
@@ -103,8 +103,8 @@ export const DEMO_TIME_OFF: { staffId: string; day: number; reason: string }[] =
  * but listed explicitly so the demo can highlight them without re-deriving.
  */
 export const DEMO_FLAGS: DemoFlag[] = [
-  { staffId: "tom", day: 4, note: "Tom is on approved leave on Friday — but he's on the schedule." },
-  { staffId: "lena", day: 6, note: "Lena marked Saturday as unavailable — but she's on the schedule." },
+  { staffId: "thomas", day: 4, note: "Thomas is on approved leave on Friday — but he's on the schedule." },
+  { staffId: "emma", day: 6, note: "Emma marked Saturday as unavailable — but she's on the schedule." },
 ]
 
 // ── Derived helpers (pure) ──────────────────────────────────────────────────────

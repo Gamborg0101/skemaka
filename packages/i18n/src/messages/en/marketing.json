@@ -18,7 +18,7 @@
     "wageLiveTitle": "Wage cost, live",
     "wageLiveSub": "updates as you add shifts",
     "conflictTitle": "Conflict caught",
-    "conflictSub": "Tom's on leave — flagged",
+    "conflictSub": "Thomas's on leave — flagged",
     "legendKitchen": "Kitchen",
     "legendFoh": "Front of house",
     "legendBar": "Bar",
@@ -68,8 +68,8 @@
     "catchTitle": "Catch problems before staff do",
     "catchBody": "Put someone on a day they're off, or one they marked unavailable, and Skemaka tells you — before you publish, not after the complaint.",
     "conflictsHeader": "{count} things to fix before publishing",
-    "flag1": "Tom is on approved leave on Friday — but he's on the schedule.",
-    "flag2": "Lena marked Saturday as unavailable — but she's on the schedule."
+    "flag1": "Thomas is on approved leave on Friday — but he's on the schedule.",
+    "flag2": "Emma marked Saturday as unavailable — but she's on the schedule."
   },
   "benefits": {
     "title": "Everything a restaurant schedule actually needs",

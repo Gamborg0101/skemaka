@@ -186,11 +186,11 @@ async function main() {
     where: { id: IDS.userAlex },
     create: {
       id:    IDS.userAlex,
-      name:  "Alex Manager",
+      name:  "Maria Hansen",
       email: "manager@thedailygrind.com",
       role:  "MANAGER",
     },
-    update: { name: "Alex Manager", email: "manager@thedailygrind.com", role: "MANAGER" },
+    update: { name: "Maria Hansen", email: "manager@thedailygrind.com", role: "MANAGER" },
   })
 
   await db.membership.upsert({
@@ -264,8 +264,8 @@ async function main() {
   const PERSONAS = [
     {
       id:              IDS.empSarah,
-      name:            faker.person.fullName({ sex: "female", firstName: "Sarah", lastName: "Chen" }),
-      email:           faker.internet.email({ firstName: "sarah", lastName: "chen", provider: "thedailygrind.com" }),
+      name:            faker.person.fullName({ sex: "female", firstName: "Sofia", lastName: "Larsen" }),
+      email:           faker.internet.email({ firstName: "sofia", lastName: "larsen", provider: "thedailygrind.com" }),
       phone:           faker.phone.number({ style: "international" }),
       jobRole:         "Barista",
       hourlyWage:      parseFloat(faker.finance.amount({ min: 13.5, max: 15.5, dec: 2 })),
@@ -275,8 +275,8 @@ async function main() {
     },
     {
       id:              IDS.empJames,
-      name:            faker.person.fullName({ sex: "male", firstName: "James", lastName: "O'Brien" }),
-      email:           faker.internet.email({ firstName: "james", lastName: "obrien", provider: "thedailygrind.com" }),
+      name:            faker.person.fullName({ sex: "male", firstName: "Peter", lastName: "Holm" }),
+      email:           faker.internet.email({ firstName: "peter", lastName: "holm", provider: "thedailygrind.com" }),
       phone:           faker.phone.number({ style: "international" }),
       jobRole:         "Barista",
       hourlyWage:      parseFloat(faker.finance.amount({ min: 12.5, max: 14.0, dec: 2 })),
@@ -319,8 +319,8 @@ async function main() {
     },
     {
       id:              IDS.empNadia,
-      name:            faker.person.fullName({ sex: "female", firstName: "Nadia", lastName: "Patel" }),
-      email:           faker.internet.email({ firstName: "nadia", lastName: "patel", provider: "thedailygrind.com" }),
+      name:            faker.person.fullName({ sex: "female", firstName: "Julie", lastName: "Lund" }),
+      email:           faker.internet.email({ firstName: "julie", lastName: "lund", provider: "thedailygrind.com" }),
       phone:           faker.phone.number({ style: "international" }),
       jobRole:         "Barista",
       hourlyWage:      parseFloat(faker.finance.amount({ min: 12.5, max: 14.0, dec: 2 })),

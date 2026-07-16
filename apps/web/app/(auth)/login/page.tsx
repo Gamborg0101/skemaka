@@ -6,28 +6,28 @@ import { getISOWeek, getMondayOfWeek } from "@/lib/dateUtils";
 
 const PREVIEW_SHIFTS = [
   {
-    name: "Marco",
+    name: "Peter",
     roleKey: "roleHeadChef" as const,
     start: 14,
     end: 22,
     color: "bg-amber-400",
   },
   {
-    name: "Aoife",
+    name: "Anna",
     roleKey: "roleSousChef" as const,
     start: 15,
     end: 22,
     color: "bg-amber-400",
   },
   {
-    name: "Priya",
+    name: "Julie",
     roleKey: "roleBartender" as const,
     start: 16,
     end: 22,
     color: "bg-purple-400",
   },
   {
-    name: "Lena",
+    name: "Emma",
     roleKey: "roleWaiter" as const,
     start: 16,
     end: 22,
