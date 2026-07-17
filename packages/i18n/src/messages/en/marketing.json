@@ -23,7 +23,8 @@
     "legendFoh": "Front of house",
     "legendBar": "Bar",
     "legendConflict": "Conflict",
-    "replaces": "Replaces the spreadsheet, the WhatsApp group, and the printout on the fridge."
+    "replaces": "Replaces the spreadsheet, the WhatsApp group, and the printout on the fridge.",
+    "imgAlt": "Staff preparing a restaurant dining room"
   },
   "trust": {
     "stripeTitle": "Payments handled by Stripe",
@@ -55,7 +56,8 @@
     "step2Title": "You build the schedule",
     "step2Text": "Drag names onto days. The wage total adds up live, so an expensive week shows up before you publish it.",
     "step3Title": "Publish — everyone knows",
-    "step3Text": "One tap texts everyone their shifts and puts them in the app. Nothing on the fridge."
+    "step3Text": "One tap texts everyone their shifts and puts them in the app. Nothing on the fridge.",
+    "imgAlt": "Bar staff working together during service"
   },
   "deep": {
     "buildTitle": "Build the schedule by dragging names",
@@ -69,7 +71,12 @@
     "catchBody": "Put someone on a day they're off, or one they marked unavailable, and Skemaka tells you — before you publish, not after the complaint.",
     "conflictsHeader": "{count} things to fix before publishing",
     "flag1": "Tom is on approved leave on Friday — but he's on the schedule.",
-    "flag2": "Emma marked Saturday as unavailable — but she's on the schedule."
+    "flag2": "Emma marked Saturday as unavailable — but she's on the schedule.",
+    "draftTitle": "Plan months ahead — send it when you're ready",
+    "draftBody": "New shifts are private drafts only you can see. When the plan is right, one Roll out sends everything at once — and everyone gets exactly one message with their shifts.",
+    "altSchedule": "The Skemaka week view with a full staff schedule",
+    "altRollout": "The roll-out dialog reviewing draft shifts before sending",
+    "altCosts": "The labour cost page with live wage totals"
   },
   "benefits": {
     "title": "Everything a restaurant schedule actually needs",
@@ -140,7 +147,8 @@
     "title": "Get next week's schedule off WhatsApp.",
     "subtitle": "Try it on the demo restaurant, or start free with your own team.",
     "trial": "Start free trial",
-    "demo": "See the demo →"
+    "demo": "See the demo →",
+    "imgAlt": "A smiling server presenting a dish"
   },
   "footer": {
     "demo": "Demo",

@@ -23,7 +23,8 @@
     "legendFoh": "Servering",
     "legendBar": "Bar",
     "legendConflict": "Konflikt",
-    "replaces": "Erstatter regnearket, WhatsApp-gruppen og udskriften på køleskabet."
+    "replaces": "Erstatter regnearket, WhatsApp-gruppen og udskriften på køleskabet.",
+    "imgAlt": "Personale gør en restaurant klar til service"
   },
   "trust": {
     "stripeTitle": "Betalinger håndteres af Stripe",
@@ -55,7 +56,8 @@
     "step2Title": "Du bygger vagtplanen",
     "step2Text": "Træk navne ind på dagene. Løntotalen opdateres live, så en dyr uge opdages, før du udgiver den.",
     "step3Title": "Udgiv — alle ved besked",
-    "step3Text": "Ét tryk sender alle deres vagter på sms og lægger dem i appen. Intet på køleskabet."
+    "step3Text": "Ét tryk sender alle deres vagter på sms og lægger dem i appen. Intet på køleskabet.",
+    "imgAlt": "Barpersonale arbejder sammen under service"
   },
   "deep": {
     "buildTitle": "Byg vagtplanen ved at trække navne",
@@ -69,7 +71,12 @@
     "catchBody": "Sætter du nogen på en dag, de har fri eller har meldt sig utilgængelige, siger Skemaka til — før du udgiver, ikke efter klagen.",
     "conflictsHeader": "{count} ting at rette før udgivelse",
     "flag1": "Mikkel har godkendt ferie om fredagen — men han står på vagtplanen.",
-    "flag2": "Sofie har meldt sig utilgængelig om lørdagen — men hun står på vagtplanen."
+    "flag2": "Sofie har meldt sig utilgængelig om lørdagen — men hun står på vagtplanen.",
+    "draftTitle": "Planlæg måneder frem — send når du er klar",
+    "draftBody": "Nye vagter er private kladder, kun du kan se. Når planen sidder, sender én udrulning det hele på én gang — og alle får præcis én besked med deres vagter.",
+    "altSchedule": "Skemakas ugevisning med en fuld vagtplan",
+    "altRollout": "Udrulningsdialogen med kladdevagter klar til afsendelse",
+    "altCosts": "Lønudgiftssiden med løbende løntotal"
   },
   "benefits": {
     "title": "Alt det, en restaurants vagtplan faktisk har brug for",
@@ -140,7 +147,8 @@
     "title": "Få næste uges vagtplan ud af WhatsApp.",
     "subtitle": "Prøv demo-restauranten, eller start gratis med dit eget hold.",
     "trial": "Start gratis prøveperiode",
-    "demo": "Se demoen →"
+    "demo": "Se demoen →",
+    "imgAlt": "En smilende tjener serverer en ret"
   },
   "footer": {
     "demo": "Demo",
