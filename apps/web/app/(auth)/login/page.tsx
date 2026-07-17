@@ -4,30 +4,31 @@ import { Calendar, DollarSign, Clock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getISOWeek, getMondayOfWeek } from "@/lib/dateUtils";
 
+// Names come from the marketing.preview catalog so each locale sees local names.
 const PREVIEW_SHIFTS = [
   {
-    name: "Peter",
+    nameKey: "nameHeadChef" as const,
     roleKey: "roleHeadChef" as const,
     start: 14,
     end: 22,
     color: "bg-amber-400",
   },
   {
-    name: "Anna",
+    nameKey: "nameSousChef" as const,
     roleKey: "roleSousChef" as const,
     start: 15,
     end: 22,
     color: "bg-amber-400",
   },
   {
-    name: "Julie",
+    nameKey: "nameBartender" as const,
     roleKey: "roleBartender" as const,
     start: 16,
     end: 22,
     color: "bg-purple-400",
   },
   {
-    name: "Emma",
+    nameKey: "nameWaiter1" as const,
     roleKey: "roleWaiter" as const,
     start: 16,
     end: 22,
@@ -55,10 +56,10 @@ async function ShiftPreview({ weekNum }: { weekNum: number }) {
           const offsetPct = ((s.start - DAY_START) / DAY_SPAN) * 100;
           const widthPct = ((s.end - s.start) / DAY_SPAN) * 100;
           return (
-            <div key={s.name} className="flex items-center gap-3">
+            <div key={s.nameKey} className="flex items-center gap-3">
               <div className="w-20 shrink-0">
                 <p className="text-[12px] font-medium text-white/75 truncate">
-                  {s.name}
+                  {tRoles(s.nameKey)}
                 </p>
                 <p className="text-[10px] text-white/30">{tRoles(s.roleKey)}</p>
               </div>

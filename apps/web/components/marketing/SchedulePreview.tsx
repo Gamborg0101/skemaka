@@ -3,10 +3,11 @@ import { useTranslations } from "next-intl"
 
 // A real, in-DOM preview of a Friday dinner-service schedule — rendered live rather
 // than shipped as a screenshot, so it can never go stale and never shows seed/
-// placeholder names. The cast matches the /demo restaurant ("The Copper Pan").
+// placeholder names. Names come from the marketing.preview catalog so each
+// locale sees local names (en cast matches the English-only /demo restaurant).
 
 type Row = {
-  name: string
+  nameKey: "nameHeadChef" | "nameSousChef" | "nameBartender" | "nameWaiter1" | "nameWaiter2"
   roleKey: "roleHeadChef" | "roleSousChef" | "roleBartender" | "roleWaiter"
   start: number // 24h decimal, e.g. 15.5 = 15:30
   end: number
@@ -19,11 +20,11 @@ const WINDOW_END = 24
 const SPAN = WINDOW_END - WINDOW_START
 
 const ROWS: Row[] = [
-  { name: "Peter", roleKey: "roleHeadChef", start: 14, end: 23.5, color: "bg-amber-400" },
-  { name: "Anna", roleKey: "roleSousChef", start: 15, end: 23.5, color: "bg-amber-400" },
-  { name: "Julie", roleKey: "roleBartender", start: 16, end: 24, color: "bg-purple-400" },
-  { name: "Emma", roleKey: "roleWaiter", start: 16, end: 23.5, color: "bg-blue-400" },
-  { name: "Thomas", roleKey: "roleWaiter", start: 17, end: 23.5, color: "bg-blue-400", conflict: true },
+  { nameKey: "nameHeadChef", roleKey: "roleHeadChef", start: 14, end: 23.5, color: "bg-amber-400" },
+  { nameKey: "nameSousChef", roleKey: "roleSousChef", start: 15, end: 23.5, color: "bg-amber-400" },
+  { nameKey: "nameBartender", roleKey: "roleBartender", start: 16, end: 24, color: "bg-purple-400" },
+  { nameKey: "nameWaiter1", roleKey: "roleWaiter", start: 16, end: 23.5, color: "bg-blue-400" },
+  { nameKey: "nameWaiter2", roleKey: "roleWaiter", start: 17, end: 23.5, color: "bg-blue-400", conflict: true },
 ]
 
 function label(h: number) {
@@ -51,9 +52,9 @@ export function SchedulePreview() {
           const offset = ((r.start - WINDOW_START) / SPAN) * 100
           const width = ((r.end - r.start) / SPAN) * 100
           return (
-            <div key={r.name} className="flex items-center gap-3">
+            <div key={r.nameKey} className="flex items-center gap-3">
               <div className="w-24 shrink-0">
-                <p className="text-xs font-semibold text-gray-800 leading-tight">{r.name}</p>
+                <p className="text-xs font-semibold text-gray-800 leading-tight">{t(r.nameKey)}</p>
                 <p className="text-[10px] text-gray-400 leading-tight">{t(r.roleKey)}</p>
               </div>
               <div className="relative h-5 flex-1">
