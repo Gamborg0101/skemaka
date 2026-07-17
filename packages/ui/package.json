@@ -15,7 +15,7 @@
     "lint": "echo 'No linting for ui package'"
   },
   "dependencies": {
-    "@skemaka/types": "workspace:*"
+    "@skemaka/types": "*"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

@@ -42,7 +42,6 @@ apps/web/next-env.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 .vercel
 coverage
 
@@ -60,4 +59,3 @@ apps/web/.playwright-mcp/
 
 # Local agent/tooling state — never committed
 .codex/
-.pnpm-store/

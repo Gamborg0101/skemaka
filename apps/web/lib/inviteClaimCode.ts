@@ -28,7 +28,7 @@ type CodeRecord = { hash: string; attempts: number }
  */
 export type CodeScope = "claim" | "phone"
 
-// Dev/test fallback only. Single-process, so it works for `pnpm dev` and e2e.
+// Dev/test fallback only. Single-process, so it works for `npm run dev` and e2e.
 const memStore = new Map<string, { rec: CodeRecord; expiresAt: number }>()
 
 function redisKey(id: string, scope: CodeScope): string {

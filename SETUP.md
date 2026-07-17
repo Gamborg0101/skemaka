@@ -103,7 +103,7 @@ openssl rand -base64 32
 ## 8. Run database migrations
 
 ```bash
-npx prisma migrate dev
+npm run db:migrate
 ```
 
 This applies the schema to your Neon database and generates the Prisma client.
@@ -113,7 +113,7 @@ This applies the schema to your Neon database and generates the Prisma client.
 ## 9. Start the dev server
 
 ```bash
-npm run dev
+npm run dev:web
 ```
 
 App runs at http://localhost:3000.

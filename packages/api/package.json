@@ -15,7 +15,7 @@
     "lint": "echo 'No linting for api package'"
   },
   "dependencies": {
-    "@skemaka/types": "workspace:*"
+    "@skemaka/types": "*"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
