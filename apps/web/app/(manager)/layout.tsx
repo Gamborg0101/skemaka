@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
+import { auth, signOut } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { ManagerShell } from "@/components/manager/ManagerShell"
+import { DemoBanner } from "@/components/manager/DemoBanner"
 import { OrgProvider } from "@/lib/orgContext"
 import { BfcacheGuard } from "@/components/BfcacheGuard"
 import { isSuperadmin } from "@/lib/platform"
@@ -31,9 +32,17 @@ export default async function ManagerLayout({
     // else: they have a membership — JWT is stale, let OrgProvider handle the rest
   }
 
+  // Demo-sandbox exit: sign the visitor out of the throwaway demo user before
+  // sending them to signup — an authenticated /login visit would bounce back.
+  async function exitDemo() {
+    "use server"
+    await signOut({ redirectTo: "/login" })
+  }
+
   return (
     <OrgProvider>
       <BfcacheGuard />
+      <DemoBanner exitAction={exitDemo} />
       <ManagerShell superAdmin={isSuperadmin(session.user?.email)}>{children}</ManagerShell>
     </OrgProvider>
   )

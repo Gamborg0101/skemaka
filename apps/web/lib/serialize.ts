@@ -90,6 +90,7 @@ export function serOrg(o: {
   timezone?: string | null; industry?: string | null
   settings?: unknown
   subscriptionStatus: string
+  isDemo?: boolean
   createdAt: Date; updatedAt: Date
 }): Organization {
   return {
@@ -103,6 +104,7 @@ export function serOrg(o: {
     industry: o.industry ?? null,
     settings: (o.settings as Organization["settings"]) ?? null,
     subscriptionStatus: o.subscriptionStatus as Organization["subscriptionStatus"],
+    isDemo: o.isDemo ?? false,
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
   }

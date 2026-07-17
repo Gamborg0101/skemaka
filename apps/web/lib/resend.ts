@@ -1,7 +1,9 @@
 import "server-only"
 import { Resend } from "resend"
+import type { CreateEmailOptions } from "resend"
 import type { Locale } from "@skemaka/i18n"
 import { getMessageTranslator } from "@/lib/messages"
+import { DEMO_EMAIL_DOMAIN } from "@/lib/demo/constants"
 
 // HTML tag renderer for <strong> markup embedded in email catalog strings.
 const strong = (chunks: string) => `<strong>${chunks}</strong>`
@@ -35,6 +37,21 @@ export const resend = new Proxy({} as Resend, {
     return getResend()[prop as keyof Resend]
   },
 })
+
+/**
+ * All outbound product email funnels through this instead of calling Resend
+ * directly. Recipients on DEMO_EMAIL_DOMAIN (demo-sandbox users/employees) are
+ * silently dropped — a sandbox must never email anyone, and the unroutable
+ * domain would only bounce and hurt sender reputation.
+ */
+async function deliver(payload: CreateEmailOptions) {
+  const to = Array.isArray(payload.to) ? payload.to : [payload.to]
+  const demoOnly = to.every(
+    (addr) => typeof addr === "string" && addr.toLowerCase().endsWith(`@${DEMO_EMAIL_DOMAIN}`),
+  )
+  if (demoOnly) return null
+  return getResend().emails.send(payload)
+}
 
 interface InviteEmailOptions {
   to: string
@@ -76,7 +93,7 @@ export async function sendAvailabilityInviteEmail({
   locale = "en",
 }: AvailabilityInviteOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t("availabilityInvite.subject", { week: weekLabel, orgName }),
@@ -131,7 +148,7 @@ async function sendWithRetry<T>(send: () => Promise<T>, attempts = 3): Promise<T
 
 export async function sendClaimCodeEmail({ to, name, orgName, code, locale = "en" }: ClaimCodeOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return sendWithRetry(() => getResend().emails.send({
+  return sendWithRetry(() => deliver({
     from: emailFrom(),
     to,
     subject: t("claimCode.subject", { code }),
@@ -156,7 +173,7 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl, l
   const t = getMessageTranslator(locale, "emails")
   // White-on-dark <strong> for the install box.
   const strongW = (chunks: string) => `<strong style="color:#ffffff;">${chunks}</strong>`
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t("invite.subject", { orgName }),
@@ -212,7 +229,7 @@ export async function sendShiftAssignedEmail({
   to, name, orgName, dateLabel, startTime, endTime, jobRole, locale = "en",
 }: ShiftAssignedOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t("shiftAssigned.subject", { date: dateLabel, orgName }),
@@ -244,7 +261,7 @@ export async function sendShiftCancelledEmail({
   to, name, orgName, dateLabel, startTime, endTime, jobRole, locale = "en",
 }: ShiftAssignedOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t("shiftCancelled.subject", { date: dateLabel, orgName }),
@@ -285,7 +302,7 @@ export async function sendShiftOfferEmail({
   to, name, orgName, dateLabel, startTime, endTime, jobRole, deadlineLabel, portalUrl, locale = "en",
 }: ShiftOfferEmailOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t("shiftOffer.subject", { date: dateLabel, orgName }),
@@ -329,7 +346,7 @@ export async function sendShiftOfferResultEmail({
 }: ShiftOfferResultEmailOptions) {
   const t = getMessageTranslator(locale, "emails")
   const key = won ? "shiftOfferWon" : "shiftOfferFilled"
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t(`${key}.subject`, { date: dateLabel, orgName }),
@@ -366,7 +383,7 @@ export async function sendShiftsRolledOutEmail({
 }: ShiftsRolledOutOptions) {
   const t = getMessageTranslator(locale, "emails")
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://skemaka.com"
-  return getResend().emails.send({
+  return deliver({
     from: emailFrom(),
     to,
     subject: t("rolledOut.subject"),

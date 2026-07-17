@@ -68,5 +68,9 @@
     "langDesc": "Sprog i appen og i beskeder til dine medarbejdere.",
     "langSaved": "Sprog opdateret",
     "langError": "Sproget kunne ikke opdateres"
+  },
+  "demoBanner": {
+    "text": "Demo-restaurant — slettes efter 48 timer. Alt, hvad du ændrer her, er kun dit.",
+    "cta": "Start din gratis prøveperiode"
   }
 }

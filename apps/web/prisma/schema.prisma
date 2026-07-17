@@ -92,6 +92,9 @@ model Organization {
   timezone                String?
   industry                String?
   settings                Json?
+  /// Throwaway "try the live demo" sandbox — auto-deleted by the cleanup cron
+  /// 48h after creation, excluded from platform metrics, emails suppressed.
+  isDemo                  Boolean                  @default(false)
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   availabilityRequests    AvailabilityRequest[]
@@ -112,6 +115,7 @@ model Organization {
   @@index([slug])
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
+  @@index([isDemo, createdAt])
 }
 
 model Membership {

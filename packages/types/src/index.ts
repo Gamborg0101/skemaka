@@ -82,6 +82,8 @@ export interface Organization {
   industry?: string | null
   settings?: OrgScheduleSettings | null
   subscriptionStatus: SubscriptionStatus
+  /** Throwaway "try the live demo" sandbox — shows the demo banner, auto-deleted after 48h. */
+  isDemo?: boolean
   createdAt: string
   updatedAt: string
 }

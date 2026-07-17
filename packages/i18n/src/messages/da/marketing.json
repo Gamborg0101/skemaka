@@ -160,5 +160,18 @@
     "nameBartender": "Ida",
     "nameWaiter1": "Sofie",
     "nameWaiter2": "Mikkel"
+  },
+  "demo": {
+    "badge": "Live demo",
+    "title": "Træd ind i en rigtig restaurant",
+    "sub": "Ét klik giver dig din egen kopi af Skemaka — en bistro med 9 medarbejdere, to måneders historik og to måneders planlagte vagter. Ret hvad du vil: den er din, og kun din.",
+    "point1": "Træk vagter rundt i uge- og tidslinjevisningen",
+    "point2": "Udrul kladde-ugerne og se hele flowet",
+    "point3": "Se lønudgifter, timesedler og tilgængelighed",
+    "cta": "Prøv den levende demo",
+    "launching": "Gør din restaurant klar…",
+    "note": "Ingen tilmelding. Din sandkasse slettes automatisk efter 48 timer.",
+    "signupPrompt": "Klar til den ægte vare?",
+    "signupLink": "Start din gratis prøveperiode"
   }
 }

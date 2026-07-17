@@ -17,6 +17,8 @@ export async function GET() {
   if ("error" in guard) return guard.error
 
   const orgs = await db.organization.findMany({
+    // Throwaway demo sandboxes are noise here — 48h-lived and auto-created.
+    where: { isDemo: false },
     select: {
       id: true,
       name: true,
