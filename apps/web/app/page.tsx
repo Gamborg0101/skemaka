@@ -68,7 +68,7 @@ export default async function HomePage() {
   // Localized display text for the demo conflict flags rendered below. Keyed
   // 1:1 with DEMO_FLAGS — update these keys if the demo data changes.
   const flagNotes = [t("deep.flag1"), t("deep.flag2")]
-  const faqs = [1, 2, 3, 4, 5, 6].map((i) => ({
+  const faqs = [1, 2, 3, 4, 5, 6, 7].map((i) => ({
     q: t(`faq.q${i}` as `faq.q1`),
     a: t(`faq.a${i}` as `faq.a1`, {
       currency: PLAN_CURRENCY,

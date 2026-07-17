@@ -87,9 +87,9 @@
     "availabilityTitle": "Availability & time-off",
     "availabilityText": "Staff send when they can work; requests land in one place.",
     "conflictTitle": "Conflict warnings",
-    "conflictText": "Rostered someone who's off? Skemaka flags it before publish.",
-    "csvTitle": "CSV for payroll",
-    "csvText": "Export hours and pay for the bookkeeper in one click.",
+    "conflictText": "Rostered someone who's off — or with under 11 hours rest since their last shift? Skemaka flags it before you publish.",
+    "csvTitle": "Time registration & payroll",
+    "csvText": "Clock-in records working time the way the 2024 Danish rules require, and exports hours and pay for the bookkeeper in one click.",
     "appTitle": "Free staff app",
     "appText": "iPhone and Android. Staff see shifts and clock in."
   },
@@ -141,7 +141,9 @@
     "q5": "Is there a contract?",
     "a5": "No. {days} days free with no card, then month to month. Cancel whenever — you keep access until the end of the period.",
     "q6": "I run more than one venue.",
-    "a6": "Each venue is its own workspace today. Multi-venue under one login is on the way — get in touch and we'll set you up."
+    "a6": "Each venue is its own workspace today. Multi-venue under one login is on the way — get in touch and we'll set you up.",
+    "q7": "Does Skemaka follow the Danish scheduling rules?",
+    "a7": "Skemaka warns you before publishing if a shift breaks the 11-hour rest rule or exceeds a 13-hour working day, encourages the 4-week schedule notice the hospitality agreements expect, and records worked time as the 2024 working-time rules require. Wage rates under your collective agreement remain your responsibility."
   },
   "cta": {
     "title": "Get next week's schedule off WhatsApp.",

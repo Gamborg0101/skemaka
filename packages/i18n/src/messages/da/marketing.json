@@ -87,9 +87,9 @@
     "availabilityTitle": "Tilgængelighed & fridage",
     "availabilityText": "Medarbejderne sender, hvornår de kan arbejde; anmodninger samles ét sted.",
     "conflictTitle": "Konfliktadvarsler",
-    "conflictText": "Har du sat nogen på, der har fri? Skemaka markerer det før udgivelse.",
-    "csvTitle": "CSV til løn",
-    "csvText": "Eksportér timer og løn til bogholderen med ét klik.",
+    "conflictText": "Har du sat nogen på, der har fri — eller med under 11 timers hvile siden sidste vagt? Skemaka markerer det, før du udgiver.",
+    "csvTitle": "Tidsregistrering & løn",
+    "csvText": "Stempling registrerer arbejdstid, som 2024-reglerne kræver, og eksporterer timer og løn til bogholderen med ét klik.",
     "appTitle": "Gratis medarbejder-app",
     "appText": "iPhone og Android. Medarbejderne ser vagter og stempler ind."
   },
@@ -141,7 +141,9 @@
     "q5": "Er der binding?",
     "a5": "Nej. {days} dage gratis uden kort, derefter måned til måned. Opsig når som helst — du har adgang perioden ud.",
     "q6": "Jeg har mere end ét sted.",
-    "a6": "Hvert sted er sit eget workspace i dag. Flere steder under ét login er på vej — skriv til os, så sætter vi dig op."
+    "a6": "Hvert sted er sit eget workspace i dag. Flere steder under ét login er på vej — skriv til os, så sætter vi dig op.",
+    "q7": "Overholder Skemaka de danske regler for vagtplanlægning?",
+    "a7": "Skemaka advarer dig før udgivelse, hvis en vagt bryder 11-timers-reglen eller overstiger en arbejdsdag på 13 timer, opfordrer til overenskomsternes 4-ugers varsel for vagtplaner og registrerer arbejdstid, som 2024-reglerne kræver. Lønsatser efter din overenskomst er fortsat dit ansvar."
   },
   "cta": {
     "title": "Få næste uges vagtplan ud af WhatsApp.",

@@ -82,6 +82,20 @@ function getWeekDays(weekStart: string): Date[] {
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+/** Tooltip copy for the amber warning triangle on a scheduled cell. */
+function conflictTooltip(c: AvailabilityConflict): string {
+  switch (c.type) {
+    case "timeoff":
+      return "Scheduled during approved time off";
+    case "unavailable":
+      return "Scheduled on a day they marked unavailable";
+    case "rest":
+      return `Only ${c.hours}h rest since their previous shift — the rules say at least 11`;
+    case "longDay":
+      return `${c.hours}h working day — the rules cap a day at 13 hours`;
+  }
+}
+
 function formatHeaderDate(date: Date) {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
@@ -215,8 +229,8 @@ function DroppableCell({
     >
       {coverBadge}
       {dayOffBadge}
-      {conflict?.type === "timeoff" && !isEmpty && (
-        <Tooltip content="Scheduled during approved time off" side="top">
+      {conflict && conflict.type !== "unavailable" && !isEmpty && (
+        <Tooltip content={conflictTooltip(conflict)} side="top">
           <span className="absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/60 cursor-help">
             <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-300" />
           </span>

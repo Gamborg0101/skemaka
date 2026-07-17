@@ -135,6 +135,20 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
                 <p className="text-xs text-gray-400">
                   Draft shifts from {formatWeekLabel(fromWeek)} up to your choice are sent; later drafts stay private.
                 </p>
+                {/* "Spil efter reglerne": Danish hospitality agreements expect
+                    schedules to be known 4 weeks ahead. Quiet nudge, no gating. */}
+                {(() => {
+                  const weeksAhead = Math.floor(
+                    (Date.parse(throughWeek + "T00:00:00Z") - Date.now()) / (7 * 24 * 60 * 60 * 1000),
+                  ) + 1
+                  return (
+                    <p className={`text-xs ${weeksAhead >= 4 ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                      {weeksAhead >= 4
+                        ? `Covers ${weeksAhead} weeks ahead — within the 4-week notice Danish agreements expect.`
+                        : `Covers ${Math.max(weeksAhead, 0)} ${weeksAhead === 1 ? "week" : "weeks"} ahead. Danish agreements expect schedules 4 weeks in advance — draft further ahead when you can.`}
+                    </p>
+                  )
+                })()}
               </div>
 
               {/* Review list — exactly what this roll-out will send, per week. */}

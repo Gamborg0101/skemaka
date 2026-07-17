@@ -67,6 +67,20 @@ function toMinutes(time: string): number {
   return h * 60 + m
 }
 
+/** Tooltip copy for the amber warning triangle on a scheduled row. */
+function conflictTooltip(c: AvailabilityConflict): string {
+  switch (c.type) {
+    case "timeoff":
+      return "Scheduled during approved time off"
+    case "unavailable":
+      return "Scheduled on a day they marked unavailable"
+    case "rest":
+      return `Only ${c.hours}h rest since their previous shift — the rules say at least 11`
+    case "longDay":
+      return `${c.hours}h working day — the rules cap a day at 13 hours`
+  }
+}
+
 // Snap a pixel X position (within the time-bars strip) to the nearest 15-minute
 // mark, returning an "HH:MM" string clamped to the visible [startHour, endHour].
 function snapClientXToTime(
@@ -286,7 +300,7 @@ function TimelineRow({
               </Tooltip>
             )}
             {conflict && !isEmpty && (
-              <Tooltip content={conflict.type === "timeoff" ? "Scheduled during approved time off" : "Scheduled on a day they marked unavailable"} side="right">
+              <Tooltip content={conflictTooltip(conflict)} side="right">
                 <AlertTriangle className="size-3 shrink-0 text-amber-500 cursor-help" aria-label="Availability conflict" />
               </Tooltip>
             )}

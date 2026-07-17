@@ -197,10 +197,12 @@ export function AddShiftDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Soft availability warning — the manager can still schedule anyway. */}
+        {/* Soft availability warning — the manager can still schedule anyway.
+            Rest/long-day rule warnings describe existing shifts, so only the
+            person-level conflicts are relevant when adding to an empty day. */}
         {(() => {
           const conflict = getConflict && employeeId && defaultDate ? getConflict(employeeId, defaultDate) : null
-          if (!conflict) return null
+          if (!conflict || (conflict.type !== "timeoff" && conflict.type !== "unavailable")) return null
           const empName = employees.find((e) => e.id === employeeId)?.name ?? "This person"
           return (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
