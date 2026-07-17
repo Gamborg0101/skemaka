@@ -41,11 +41,16 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
   const [weeks, setWeeks] = useState<PendingWeek[] | null>(null)
   const [throughWeek, setThroughWeek] = useState<string>("")
   const [rolling, setRolling] = useState(false)
+  // Captured when the dialog opens — Date.now() is impure and must not run
+  // during render (react-compiler rule); open-time precision is plenty for
+  // the weeks-ahead nudge.
+  const [openedAt, setOpenedAt] = useState(0)
 
   // Load the draft weeks each time the dialog opens.
   useEffect(() => {
     if (!open) return
     setWeeks(null)
+    setOpenedAt(Date.now())
     fetch(`/api/orgs/${orgId}/schedules/roll-out`)
       .then((r) => r.json())
       .then((d: { data?: PendingWeek[] }) => {
@@ -137,9 +142,9 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
                 </p>
                 {/* "Spil efter reglerne": Danish hospitality agreements expect
                     schedules to be known 4 weeks ahead. Quiet nudge, no gating. */}
-                {(() => {
+                {openedAt > 0 && (() => {
                   const weeksAhead = Math.floor(
-                    (Date.parse(throughWeek + "T00:00:00Z") - Date.now()) / (7 * 24 * 60 * 60 * 1000),
+                    (Date.parse(throughWeek + "T00:00:00Z") - openedAt) / (7 * 24 * 60 * 60 * 1000),
                   ) + 1
                   return (
                     <p className={`text-xs ${weeksAhead >= 4 ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
