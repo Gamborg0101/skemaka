@@ -13,6 +13,7 @@ import {
 } from "@/lib/pricing"
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
+import { CookieSettingsLink } from "@/components/CookieBanner"
 import { LangQuerySync, LocaleToggle } from "@/components/marketing/LocaleToggle"
 import { DEMO_FLAGS } from "@/lib/demo/demoData"
 import { LogoLockup } from "@/components/brand/Logo"
@@ -491,10 +492,11 @@ export default async function HomePage() {
       <footer className="border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
           <LogoLockup className="text-slate-900" markClassName="size-6" wordClassName="text-sm font-semibold" />
-          <nav className="flex items-center gap-6">
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/demo" className="hover:text-gray-600 transition-colors">{t("footer.demo")}</Link>
             <Link href="/terms" className="hover:text-gray-600 transition-colors">{t("footer.terms")}</Link>
             <Link href="/privacy" className="hover:text-gray-600 transition-colors">{t("footer.privacy")}</Link>
+            <CookieSettingsLink />
             <LocaleToggle variant="light" />
           </nav>
           <span>© {new Date().getFullYear()} Skemaka ApS</span>

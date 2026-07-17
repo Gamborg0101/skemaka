@@ -6,6 +6,7 @@ import { getMessages } from "@skemaka/i18n"
 import type { Locale, Messages } from "@skemaka/i18n"
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/providers"
+import { CookieBanner } from "@/components/CookieBanner"
 import { RegisterSW } from "@/components/pwa/RegisterSW"
 import "./globals.css"
 
@@ -63,6 +64,7 @@ export default async function RootLayout({
           <Providers>
             {children}
             <Toaster />
+            <CookieBanner />
           </Providers>
         </NextIntlClientProvider>
         <RegisterSW />
