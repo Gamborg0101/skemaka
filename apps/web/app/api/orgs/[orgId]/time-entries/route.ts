@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, parseBody } from "@/lib/apiGuard"
 import { isValidDate, parsePaginationParams } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -9,6 +10,12 @@ import { getEmployeeByUserId, getEmployeeById } from "@/lib/services/employeeSer
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const ClockInSchema = z.object({
+  employeeId: z.string().optional(),
+  shiftId:    z.string().optional(),
+  note:       z.string().max(500, "note must be at most 500 characters").optional(),
+})
 
 // GET /api/orgs/[orgId]/time-entries
 // Managers see all entries (filterable). Employees see only their own.
@@ -64,18 +71,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
-  let body: {
-    employeeId?: string; shiftId?: string; note?: string
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
 
-  if (body.note && body.note.length > 500) {
-    return NextResponse.json({ error: "note must be at most 500 characters" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, ClockInSchema)
+  if ("error" in parsed) return parsed.error
+  const body = parsed.data
 
   let resolvedEmployeeId: string
 
