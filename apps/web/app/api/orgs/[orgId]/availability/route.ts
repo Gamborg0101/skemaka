@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { isValidDate, parsePaginationParams } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import * as availabilityService from "@/lib/services/availabilityService"
 import { db } from "@/lib/prisma"
 import type { OrgScheduleSettings, DayHours } from "@/types"
+
+// `deadline` is a full ISO datetime (end-of-day) from the client, not a bare
+// calendar date, so validate it as a parseable timestamp rather than with
+// isValidDate. The auto-create path passes a date-only string, also parseable.
+const CreateAvailabilitySchema = z.object({
+  weekStart: z.string().refine(isValidDate, "weekStart must be a valid YYYY-MM-DD date"),
+  deadline:  z.string().refine((s) => !isNaN(Date.parse(s)), "deadline must be a valid date"),
+})
 
 const DEFAULT_HOURS: DayHours[] = [
   { isOpen: true,  openTime: "07:00", closeTime: "21:00" },
@@ -54,27 +63,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { weekStart?: string; deadline?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { weekStart, deadline } = body
-
-  if (!weekStart || !deadline) {
-    return NextResponse.json({ error: "weekStart and deadline are required" }, { status: 400 })
-  }
-  if (!isValidDate(weekStart)) {
-    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
-  }
-  // `deadline` is a full ISO datetime (end-of-day) from the client, not a bare
-  // calendar date, so validate it as a parseable timestamp rather than with
-  // isValidDate (which only accepts YYYY-MM-DD). The auto-create path passes a
-  // date-only string, which Date.parse also accepts.
-  if (typeof deadline !== "string" || isNaN(Date.parse(deadline))) {
-    return NextResponse.json({ error: "deadline must be a valid date" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, CreateAvailabilitySchema)
+  if ("error" in parsed) return parsed.error
+  const { weekStart, deadline } = parsed.data
 
   const request = await availabilityService.createAvailabilityRequest(orgId, weekStart, deadline)
   return NextResponse.json({ data: request }, { status: 201 })
