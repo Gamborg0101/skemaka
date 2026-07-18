@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { isValidDate } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -9,6 +10,11 @@ import { logError, requestIdFrom } from "@/lib/log"
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const GenerateSchema = z.object({
+  weekStart: z.string().refine(isValidDate, "weekStart must be a valid YYYY-MM-DD date"),
+  mode:      z.enum(["starter", "copyPrevious"], { message: "mode must be 'starter' or 'copyPrevious'" }),
+})
 
 /**
  * POST /api/orgs/[orgId]/schedules/generate
@@ -28,20 +34,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { weekStart?: string; mode?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { weekStart, mode } = body
-
-  if (!weekStart || !isValidDate(weekStart)) {
-    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
-  }
-  if (mode !== "starter" && mode !== "copyPrevious") {
-    return NextResponse.json({ error: "mode must be 'starter' or 'copyPrevious'" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, GenerateSchema)
+  if ("error" in parsed) return parsed.error
+  const { weekStart, mode } = parsed.data
 
   try {
     const schedule =

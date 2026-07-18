@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isValidDate, isValidTime, isValidColorTag } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as scheduleService from "@/lib/services/scheduleService"
-import type { Shift } from "@/types"
 
 interface RouteContext {
   params: Promise<{ orgId: string; scheduleId: string; shiftId: string }>
 }
+
+// Only the fields the original handler validated are constrained here; the rest
+// pass through unchanged (matching prior behavior) into UpdateShiftInput.
+const UpdateShiftSchema = z.object({
+  employeeId:   z.string().optional(),
+  date:         z.string().refine(isValidDate, "date must be a valid YYYY-MM-DD").optional(),
+  startTime:    z.string().refine(isValidTime, "startTime must be HH:MM").optional(),
+  endTime:      z.string().refine(isValidTime, "endTime must be HH:MM").optional(),
+  breakMinutes: z.number().optional(),
+  jobRole:      z.string().optional(),
+  notes:        z.string().nullable().optional(),
+  colorTag:     z.string().refine((s) => isValidColorTag(s), "Invalid colorTag").nullable().optional(),
+})
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId, scheduleId, shiftId } = await params
@@ -20,30 +33,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: Partial<
-    Pick<Shift, "date" | "startTime" | "endTime" | "breakMinutes" | "jobRole" | "notes" | "colorTag" | "employeeId">
-  >
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-
-  if (body.date      !== undefined && !isValidDate(body.date)) {
-    return NextResponse.json({ error: "date must be a valid YYYY-MM-DD" }, { status: 400 })
-  }
-  if (body.startTime !== undefined && !isValidTime(body.startTime)) {
-    return NextResponse.json({ error: "startTime must be HH:MM" }, { status: 400 })
-  }
-  if (body.endTime   !== undefined && !isValidTime(body.endTime)) {
-    return NextResponse.json({ error: "endTime must be HH:MM" }, { status: 400 })
-  }
-  if (body.colorTag !== undefined && !isValidColorTag(body.colorTag)) {
-    return NextResponse.json({ error: "Invalid colorTag" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, UpdateShiftSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const shift = await scheduleService.updateShift(orgId, scheduleId, shiftId, body)
+    const shift = await scheduleService.updateShift(orgId, scheduleId, shiftId, parsed.data)
     return NextResponse.json({ data: shift })
   } catch (err) {
     if (err instanceof ServiceError) {
