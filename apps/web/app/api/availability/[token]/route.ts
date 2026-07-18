@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isValidDate, isValidTime } from "@/lib/validate"
 import * as availabilityService from "@/lib/services/availabilityService"
@@ -6,6 +8,35 @@ import * as availabilityService from "@/lib/services/availabilityService"
 interface RouteContext {
   params: Promise<{ token: string }>
 }
+
+// Times are only validated for available days, matching the original handler.
+const DaySchema = z
+  .object({
+    date:        z.string(),
+    isAvailable: z.boolean(),
+    startTime:   z.string().nullable().optional(),
+    endTime:     z.string().nullable().optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (!isValidDate(d.date)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Invalid date: ${d.date}` })
+    }
+    if (d.isAvailable) {
+      if (d.startTime != null && !isValidTime(d.startTime)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Invalid startTime: ${d.startTime}` })
+      }
+      if (d.endTime != null && !isValidTime(d.endTime)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Invalid endTime: ${d.endTime}` })
+      }
+      if (d.startTime && d.endTime && d.endTime <= d.startTime) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "endTime must be after startTime" })
+      }
+    }
+  })
+
+const SubmitAvailabilitySchema = z.object({
+  days: z.array(DaySchema).min(1, "days array is required"),
+})
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
@@ -40,39 +71,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     )
   }
 
-  let body: {
-    days?: { date: string; isAvailable: boolean; startTime?: string; endTime?: string }[]
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { days } = body
+  const parsed = await parseBody(req, SubmitAvailabilitySchema)
+  if ("error" in parsed) return parsed.error
 
-  if (!Array.isArray(days) || days.length === 0) {
-    return NextResponse.json({ error: "days array is required" }, { status: 400 })
-  }
-  for (const day of days) {
-    if (!isValidDate(day.date)) {
-      return NextResponse.json({ error: `Invalid date: ${day.date}` }, { status: 400 })
-    }
-    if (typeof day.isAvailable !== "boolean") {
-      return NextResponse.json({ error: "isAvailable must be a boolean" }, { status: 400 })
-    }
-    if (day.isAvailable) {
-      if (day.startTime != null && !isValidTime(day.startTime)) {
-        return NextResponse.json({ error: `Invalid startTime: ${day.startTime}` }, { status: 400 })
-      }
-      if (day.endTime != null && !isValidTime(day.endTime)) {
-        return NextResponse.json({ error: `Invalid endTime: ${day.endTime}` }, { status: 400 })
-      }
-      if (day.startTime && day.endTime && day.endTime <= day.startTime) {
-        return NextResponse.json({ error: "endTime must be after startTime" }, { status: 400 })
-      }
-    }
-  }
-
-  await availabilityService.submitAvailability(ctx.requestId, ctx.employeeId, ctx.organizationId, days)
+  await availabilityService.submitAvailability(ctx.requestId, ctx.employeeId, ctx.organizationId, parsed.data.days)
   return NextResponse.json({ data: { submitted: true } }, { status: 201 })
 }
