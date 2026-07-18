@@ -8,7 +8,7 @@
 skemaka/                    ← workspace root (Turborepo + npm workspaces)
 ├── apps/
 │   ├── web/                ← Next.js 16 web app
-│   └── mobile/             ← Expo 53 React Native app
+│   └── mobile/             ← Expo 54 React Native app
 ├── packages/
 │   ├── types/              ← @skemaka/types  — shared TypeScript interfaces
 │   ├── api/                ← @skemaka/api    — ApiClient + TanStack Query hooks

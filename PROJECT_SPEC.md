@@ -22,7 +22,7 @@ Monetized via Stripe at €3/employee/month.
 
 | Layer | Choice |
 |---|---|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
 | Database | PostgreSQL (Neon) |
