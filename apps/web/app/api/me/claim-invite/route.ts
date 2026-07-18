@@ -15,7 +15,8 @@
  *   429  Rate limited
  */
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireAuth, parseBody } from "@/lib/apiGuard"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import { claimInvite, getClaimableEmployee } from "@/lib/services/employeeService"
 import { verifyClaimCode } from "@/lib/inviteClaimCode"
@@ -36,17 +37,12 @@ export async function POST(req: NextRequest) {
   const { userId } = guard
 
   // ── 3. Parse body ──────────────────────────────────────────────────────────
-  let body: { token?: unknown }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-
-  const { token, code } = body as { token?: unknown; code?: unknown }
-  if (!token || typeof token !== "string") {
-    return NextResponse.json({ error: "token is required" }, { status: 400 })
-  }
+  const parsed = await parseBody(
+    req,
+    z.object({ token: z.string().min(1, "token is required"), code: z.string().optional() }),
+  )
+  if ("error" in parsed) return parsed.error
+  const { token, code } = parsed.data
 
   // ── 4. Verify the emailed code, then claim ───────────────────────────────────
   // The code (sent to the employee's record email by /request-code) proves the
@@ -57,7 +53,7 @@ export async function POST(req: NextRequest) {
     const employee = await getClaimableEmployee(token, userId)
 
     if (!employee.alreadyLinkedToUser) {
-      if (!code || typeof code !== "string" || !/^\d{6}$/.test(code)) {
+      if (!code || !/^\d{6}$/.test(code)) {
         return NextResponse.json({ error: "A 6-digit verification code is required" }, { status: 400 })
       }
       const verdict = await verifyClaimCode(employee.id, code)

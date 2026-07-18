@@ -19,7 +19,8 @@
  * can complete the flow without a real handset. NEVER returned in production.
  */
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireAuth, parseBody } from "@/lib/apiGuard"
 import { db } from "@/lib/prisma"
 import { generateClaimCode, storeClaimCode } from "@/lib/inviteClaimCode"
 import { normalizePhone, sendPhoneVerificationSms } from "@/lib/sms"
@@ -46,17 +47,10 @@ export async function POST(req: NextRequest) {
   const guard = await requireAuth(req)
   if ("error" in guard) return guard.error
 
-  let body: { phone?: unknown }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, z.object({ phone: z.string().min(1, "phone is required") }))
+  if ("error" in parsed) return parsed.error
 
-  if (!body.phone || typeof body.phone !== "string") {
-    return NextResponse.json({ error: "phone is required" }, { status: 400 })
-  }
-  const phone = toE164(body.phone)
+  const phone = toE164(parsed.data.phone)
   if (!phone) {
     return NextResponse.json(
       { error: "Enter a valid phone number including country code, e.g. +4520123456" },
