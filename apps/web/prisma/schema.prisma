@@ -103,6 +103,11 @@ model Organization {
   /// never take effect mid-cycle — the org keeps (and pays for) `seats` until
   /// the period rolls over, at which point this replaces it. Null = no change.
   pendingSeats            Int?
+  /// When {@link pendingSeats} becomes effective — the end of the period the
+  /// reduction was made in. Resolved at read time rather than by a cron or a
+  /// webhook, so a missed event can never leave an org holding seats it stopped
+  /// paying for (or vice versa).
+  pendingSeatsEffectiveAt DateTime?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   availabilityRequests    AvailabilityRequest[]

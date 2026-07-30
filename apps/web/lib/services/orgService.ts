@@ -3,7 +3,6 @@ import { PrismaClient, Prisma } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
 import { seedDefaultRoles, seedDefaultShiftTemplates } from "@/lib/seedDefaultRoles"
 import { recordAudit } from "@/lib/audit"
-import { syncSubscriptionQuantitySafe } from "./billingService"
 import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings } from "@/types"
 import { ServiceError } from "./errors"
 import { assertSeatAvailable } from "./seats"
@@ -298,7 +297,6 @@ export async function syncManagerEmployee(
     // Soft-deactivate so past shifts and labor-cost history stay intact.
     if (existing && existing.isActive) {
       await db.employee.update({ where: { id: existing.id }, data: { isActive: false } })
-      syncSubscriptionQuantitySafe(orgId)  // one fewer active seat
     }
     return
   }
@@ -310,7 +308,6 @@ export async function syncManagerEmployee(
         await assertSeatAvailable(tx, orgId)
         await tx.employee.update({ where: { id: existing.id }, data: { isActive: true } })
       })
-      syncSubscriptionQuantitySafe(orgId)  // one more active seat
     }
     return
   }
@@ -347,7 +344,6 @@ export async function syncManagerEmployee(
         data:  { userId: manager.userId, isActive: true },
       })
     })
-    syncSubscriptionQuantitySafe(orgId)
     return
   }
 
@@ -375,7 +371,6 @@ export async function syncManagerEmployee(
     },
     })
   })
-  syncSubscriptionQuantitySafe(orgId)
 }
 
 // ── Org context for the current user ─────────────────────────────────────────

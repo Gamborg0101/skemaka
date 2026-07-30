@@ -37,10 +37,21 @@ type Tx = Prisma.TransactionClient
  * otherwise the lock is released before the row exists and the race reopens.
  */
 export async function assertSeatAvailable(tx: Tx, orgId: string): Promise<void> {
+  // A due reduction is honoured here rather than by a cron or webhook: resolving
+  // it inside the same locked read that enforces the cap means it can never be
+  // late, double-applied, or lost to a missed event.
   const rows = await tx.$queryRaw<
     { seats: number; subscriptionStatus: string }[]
   >`
-    SELECT "seats", "subscriptionStatus"::text AS "subscriptionStatus"
+    SELECT
+      CASE
+        WHEN "pendingSeats" IS NOT NULL
+         AND "pendingSeatsEffectiveAt" IS NOT NULL
+         AND "pendingSeatsEffectiveAt" <= NOW()
+        THEN "pendingSeats"
+        ELSE "seats"
+      END AS "seats",
+      "subscriptionStatus"::text AS "subscriptionStatus"
     FROM "Organization"
     WHERE "id" = ${orgId}
     FOR UPDATE

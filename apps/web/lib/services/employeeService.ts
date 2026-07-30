@@ -7,7 +7,6 @@ import type { PaginationParams } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
 import { resolveRecipientLocale } from "@/lib/messages"
 import { recordAudit } from "@/lib/audit"
-import { syncSubscriptionQuantitySafe } from "./billingService"
 import { ServiceError } from "./errors"
 import { assertSeatAvailable } from "./seats"
 
@@ -131,7 +130,6 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     locale:    resolveRecipientLocale(org?.locale),
   }).catch((err) => console.error("[invite] Resend error:", err))
 
-  syncSubscriptionQuantitySafe(orgId)
 
   return serEmployee(employee)
 }
@@ -205,7 +203,6 @@ export async function updateEmployee(
     })
 
     if (input.isActive !== undefined && input.isActive !== existing.isActive) {
-      syncSubscriptionQuantitySafe(orgId)
     }
 
     // Audit wage changes — who changed an employee's pay, and from/to what.
@@ -258,7 +255,6 @@ export async function deleteEmployee(
     })
   }
 
-  syncSubscriptionQuantitySafe(orgId)
 }
 
 /**
