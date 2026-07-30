@@ -13,12 +13,13 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core"
-import { Plus, AlertTriangle } from "lucide-react"
+import { Plus, AlertTriangle, Moon } from "lucide-react"
 import { cn, getInitials } from "@/lib/utils"
 import { Tooltip } from "@/components/ui/tooltip"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog"
 import { SickDayDialog } from "@/components/manager/SickDayDialog"
+import { CancelledShiftDialog } from "@/components/manager/CancelledShiftDialog"
 import type { Shift, Employee, JobRole, ShiftTemplate } from "@/types"
 import type { AvailabilityConflict } from "@/lib/useScheduleData"
 import { formatTime } from "@/lib/dateUtils"
@@ -34,6 +35,11 @@ const COLOR_BAR: Record<string, string> = {
   purple: "bg-purple-400 hover:bg-purple-500",
   yellow: "bg-yellow-400 hover:bg-yellow-500",
   rose:   "bg-rose-400 hover:bg-rose-500",
+  red:    "bg-red-400 hover:bg-red-500",
+  pink:   "bg-pink-400 hover:bg-pink-500",
+  indigo: "bg-indigo-400 hover:bg-indigo-500",
+  teal:   "bg-teal-400 hover:bg-teal-500",
+  cyan:   "bg-cyan-400 hover:bg-cyan-500",
   gray:   "bg-gray-400 hover:bg-gray-500",
   sick:   "bg-rose-300 hover:bg-rose-400",
 }
@@ -45,6 +51,11 @@ const COLOR_TEXT: Record<string, string> = {
   purple: "text-purple-950",
   yellow: "text-yellow-950",
   rose:   "text-rose-950",
+  red:    "text-red-950",
+  pink:   "text-pink-950",
+  indigo: "text-indigo-950",
+  teal:   "text-teal-950",
+  cyan:   "text-cyan-950",
   gray:   "text-gray-950",
   sick:   "text-rose-900",
 }
@@ -54,6 +65,20 @@ const COLOR_TEXT: Record<string, string> = {
 function toMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number)
   return h * 60 + m
+}
+
+/** Tooltip copy for the amber warning triangle on a scheduled row. */
+function conflictTooltip(c: AvailabilityConflict): string {
+  switch (c.type) {
+    case "timeoff":
+      return "Scheduled during approved time off"
+    case "unavailable":
+      return "Scheduled on a day they marked unavailable"
+    case "rest":
+      return `Only ${c.hours}h rest since their previous shift — the rules say at least 11`
+    case "longDay":
+      return `${c.hours}h working day — the rules cap a day at 13 hours`
+  }
 }
 
 // Snap a pixel X position (within the time-bars strip) to the nearest 15-minute
@@ -176,7 +201,6 @@ interface RowProps {
   isClosed: boolean
   shifts: Shift[]
   jobRoles: JobRole[]
-  publishedAt?: string | null
   isEven: boolean
   draggingEmpScheduledHere: boolean | null
   conflict: AvailabilityConflict | null
@@ -192,7 +216,7 @@ interface RowProps {
 }
 
 function TimelineRow({
-  employee, date, isClosed, shifts, jobRoles, publishedAt, isEven,
+  employee, date, isClosed, shifts, jobRoles, isEven,
   draggingEmpScheduledHere, conflict, todayLine,
   startHour, endHour, totalMinutes, hourMarkers,
   hoverSnap, onShiftClick, onRowClick, onShiftResize,
@@ -276,7 +300,7 @@ function TimelineRow({
               </Tooltip>
             )}
             {conflict && !isEmpty && (
-              <Tooltip content={conflict.type === "timeoff" ? "Scheduled during approved time off" : "Scheduled on a day they marked unavailable"} side="right">
+              <Tooltip content={conflictTooltip(conflict)} side="right">
                 <AlertTriangle className="size-3 shrink-0 text-amber-500 cursor-help" aria-label="Availability conflict" />
               </Tooltip>
             )}
@@ -332,18 +356,22 @@ function TimelineRow({
 
         {shifts.map((shift) => {
           const isSick = shift.colorTag === "sick"
+          const isCancelled = !!shift.cancelledAt
           // While dragging an edge, render the previewed times optimistically.
           const r = resize?.shiftId === shift.id ? resize : null
           const startTime = r ? r.startTime : shift.startTime
           const endTime = r ? r.endTime : shift.endTime
-          const left  = toPercent(startTime, startHour, totalMinutes)
-          const width = isSick ? 100 - left : durationPercent(startTime, endTime, startHour, totalMinutes)
+          // Sick markers always span the whole day regardless of the hours
+          // recorded on them, so pin them to the left edge at full width.
+          const left  = isSick ? 0 : toPercent(startTime, startHour, totalMinutes)
+          const width = isSick ? 100 : durationPercent(startTime, endTime, startHour, totalMinutes)
 
           const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
-          const isPublished = !isSick && !!publishedAt && shift.createdAt <= publishedAt
-          // Sick markers span the whole day and aren't time-bounded, so they
-          // don't get resize handles.
-          const canResize = !isSick
+          // Draft = private placeholder not yet rolled out; dashed orange outline.
+          const isDraft = !isSick && !shift.publishedAt
+          // Sick markers span the whole day and aren't time-bounded, and
+          // cancelled shifts are a read-only record — neither gets resize grips.
+          const canResize = !isSick && !isCancelled
 
           return (
             <button
@@ -354,14 +382,21 @@ function TimelineRow({
                 // px-3.5 keeps the time label clear of the edge resize grips.
                 "group absolute top-2 bottom-2 rounded-md px-3.5 flex items-center overflow-hidden shadow-sm transition-[background-color,box-shadow]",
                 "border-2",
-                isPublished ? "border-green-500/60" : "border-orange-400/60",
-                COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
+                isCancelled
+                  ? "border-gray-300/80 dark:border-gray-600/80 bg-gray-100 dark:bg-gray-800 opacity-70 hover:opacity-100"
+                  : cn(
+                      isDraft ? "border-dashed border-orange-400/80" : "border-green-500/60",
+                      COLOR_BAR[tag] ?? "bg-blue-400 hover:bg-blue-500"
+                    )
               )}
               style={{ left: `${left}%`, width: `${width}%` }}
-              title={`${employee.name} · ${startTime}–${endTime}`}
+              title={isCancelled ? `${employee.name} · Cancelled` : `${employee.name} · ${startTime}–${endTime}`}
             >
               {!isSick && width > 6 && (
-                <span className={cn("text-[10px] font-semibold truncate whitespace-nowrap", COLOR_TEXT[tag] ?? "text-blue-950")}>
+                <span className={cn(
+                  "text-[10px] font-semibold truncate whitespace-nowrap",
+                  isCancelled ? "text-gray-400 dark:text-gray-500 line-through" : (COLOR_TEXT[tag] ?? "text-blue-950")
+                )}>
                   {formatTime(startTime, tf)}–{formatTime(endTime, tf)}
                 </span>
               )}
@@ -434,7 +469,6 @@ interface DaySectionProps {
   employees: Employee[]
   allShifts: Shift[]
   jobRoles: JobRole[]
-  publishedAt?: string | null
   draggingEmp: Employee | null
   startHour: number
   endHour: number
@@ -450,13 +484,19 @@ interface DaySectionProps {
 }
 
 const DaySection = memo(function DaySection({
-  date, isClosed, employees, allShifts, jobRoles, publishedAt, draggingEmp,
+  date, isClosed, employees, allShifts, jobRoles, draggingEmp,
   startHour, endHour, totalMinutes, hourMarkers,
   activeRowId, hoverSnap, currentTime, getConflict, onShiftClick, onRowClick, onShiftResize,
 }: DaySectionProps) {
   const isToday = date === todayStr()
   const todayLine = isToday ? nowPercent(currentTime, startHour, totalMinutes) : null
   const dayShifts = useMemo(() => allShifts.filter((s) => s.date === date), [allShifts, date])
+
+  // A closed day with nothing scheduled collapses to a single "Closed" banner —
+  // no employee rows, so there's nothing to drop a name onto. If the day already
+  // has shifts (e.g. hours were changed after scheduling), keep the rows so those
+  // shifts stay visible and editable.
+  const collapsed = isClosed && dayShifts.length === 0
 
   const dateObj = new Date(date + "T12:00:00")
   const dayLabel = dateObj.toLocaleDateString("en-GB", {
@@ -484,60 +524,71 @@ const DaySection = memo(function DaySection({
           )}
         </div>
 
-        {/* Time axis */}
-        <div className="flex">
-          <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-              Employee
-            </span>
+        {/* Time axis — hidden on a collapsed closed day (no rows to align to) */}
+        {!collapsed && (
+          <div className="flex">
+            <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                Employee
+              </span>
+            </div>
+            <div className="relative flex-1 h-8">
+              {hourMarkers.map((hour) => {
+                const pct = ((hour - startHour) / (endHour - startHour)) * 100
+                return (
+                  <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
+                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
+                      {hour.toString().padStart(2, "0")}:00
+                    </span>
+                  </div>
+                )
+              })}
+              {todayLine !== null && todayLine >= 0 && todayLine <= 100 && (
+                <div className="absolute top-0 bottom-0 w-px bg-red-400" style={{ left: `${todayLine}%` }} />
+              )}
+            </div>
           </div>
-          <div className="relative flex-1 h-8">
-            {hourMarkers.map((hour) => {
-              const pct = ((hour - startHour) / (endHour - startHour)) * 100
-              return (
-                <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
-                  <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
-                    {hour.toString().padStart(2, "0")}:00
-                  </span>
-                </div>
-              )
-            })}
-            {todayLine !== null && todayLine >= 0 && todayLine <= 100 && (
-              <div className="absolute top-0 bottom-0 w-px bg-red-400" style={{ left: `${todayLine}%` }} />
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Employee rows */}
-      {employees.map((emp, idx) => {
-        const rowId = `row-${emp.id}--${date}`
-        return (
-          <TimelineRow
-            key={emp.id}
-            employee={emp}
-            date={date}
-            isClosed={isClosed}
-            shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
-            jobRoles={jobRoles}
-            publishedAt={publishedAt}
-            isEven={idx % 2 === 0}
-            draggingEmpScheduledHere={
-              draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id) : null
-            }
-            conflict={getConflict?.(emp.id, date) ?? null}
-            todayLine={todayLine}
-            startHour={startHour}
-            endHour={endHour}
-            totalMinutes={totalMinutes}
-            hourMarkers={hourMarkers}
-            hoverSnap={activeRowId === rowId ? hoverSnap : null}
-            onShiftClick={onShiftClick}
-            onRowClick={onRowClick}
-            onShiftResize={onShiftResize}
-          />
-        )
-      })}
+      {collapsed ? (
+        /* Collapsed closed day — one banner, no drop targets */
+        <div className="flex items-center justify-center gap-2 px-4 py-6 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-200 dark:border-gray-700">
+          <Moon className="size-4 text-gray-300 dark:text-gray-600" />
+          <span className="text-xs font-medium uppercase tracking-widest text-gray-400 dark:text-gray-500 select-none">
+            Closed — no shifts scheduled
+          </span>
+        </div>
+      ) : (
+        /* Employee rows */
+        employees.map((emp, idx) => {
+          const rowId = `row-${emp.id}--${date}`
+          return (
+            <TimelineRow
+              key={emp.id}
+              employee={emp}
+              date={date}
+              isClosed={isClosed}
+              shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
+              jobRoles={jobRoles}
+              isEven={idx % 2 === 0}
+              draggingEmpScheduledHere={
+                draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
+              }
+              conflict={getConflict?.(emp.id, date) ?? null}
+              todayLine={todayLine}
+              startHour={startHour}
+              endHour={endHour}
+              totalMinutes={totalMinutes}
+              hourMarkers={hourMarkers}
+              hoverSnap={activeRowId === rowId ? hoverSnap : null}
+              onShiftClick={onShiftClick}
+              onRowClick={onRowClick}
+              onShiftResize={onShiftResize}
+            />
+          )
+        })
+      )}
     </div>
   )
 })
@@ -552,7 +603,6 @@ interface ShiftTimelineProps {
   shiftTemplates: ShiftTemplate[]
   scheduledHoursMap: Record<string, number>
   getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null
-  publishedAt?: string | null
   startHour?: number
   endHour?: number
   onShiftCreate: (data: {
@@ -564,9 +614,11 @@ interface ShiftTimelineProps {
     jobRole: string
     notes: string | null
     colorTag: string | null
+    notifyNow?: boolean
   }) => void
   onShiftUpdate: (data: Partial<Shift>) => void
   onShiftDelete: (shiftId: string) => void
+  onShiftCancel: (shiftId: string) => void
 }
 
 export function ShiftTimeline({
@@ -577,12 +629,12 @@ export function ShiftTimeline({
   shiftTemplates,
   scheduledHoursMap,
   getConflict,
-  publishedAt,
   startHour = DEFAULT_START_HOUR,
   endHour = DEFAULT_END_HOUR,
   onShiftCreate,
   onShiftUpdate,
   onShiftDelete,
+  onShiftCancel,
 }: ShiftTimelineProps) {
   const [addDialog, setAddDialog] = useState<{
     open: boolean; employeeId: string; defaultStartTime: string; date: string
@@ -592,6 +644,7 @@ export function ShiftTimeline({
   const [activeRowId, setActiveRowId] = useState<string | null>(null)
   const [editDialog, setEditDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
   const [sickDialog, setSickDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
+  const [cancelledDialog, setCancelledDialog] = useState<{ open: boolean; shift: Shift | null }>({ open: false, shift: null })
   const [draggingEmp, setDraggingEmp] = useState<Employee | null>(null)
   const [currentTime, setCurrentTime] = useState(() => new Date())
 
@@ -660,7 +713,7 @@ export function ShiftTimeline({
       const targetDate = drop.date as string
       if (closedDates.has(targetDate)) return  // store closed that day — no booking
       const alreadyScheduled = shifts.some(
-        (s) => s.employeeId === drag.employee.id && s.date === targetDate
+        (s) => s.employeeId === drag.employee.id && s.date === targetDate && !s.cancelledAt
       )
       if (alreadyScheduled) return
       const activatorX = (event.activatorEvent as PointerEvent).clientX
@@ -729,7 +782,6 @@ export function ShiftTimeline({
                   employees={employees}
                   allShifts={shifts}
                   jobRoles={jobRoles}
-                  publishedAt={publishedAt}
                   draggingEmp={draggingEmp}
                   startHour={startHour}
                   endHour={endHour}
@@ -740,7 +792,8 @@ export function ShiftTimeline({
                   currentTime={currentTime}
                   getConflict={getConflict}
                   onShiftClick={(shift) => {
-                    if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
+                    if (shift.cancelledAt) setCancelledDialog({ open: true, shift })
+                    else if (shift.colorTag === "sick") setSickDialog({ open: true, shift })
                     else setEditDialog({ open: true, shift })
                   }}
                   onRowClick={(empId, d) => {
@@ -791,8 +844,23 @@ export function ShiftTimeline({
           jobRoles={jobRoles}
           onShiftUpdate={onShiftUpdate}
           onShiftDelete={onShiftDelete}
+          onShiftCancel={onShiftCancel}
         />
       )}
+
+      {cancelledDialog.shift && (() => {
+        const emp = employees.find((e) => e.id === cancelledDialog.shift!.employeeId)
+        if (!emp) return null
+        return (
+          <CancelledShiftDialog
+            open={cancelledDialog.open}
+            onOpenChange={(open) => setCancelledDialog((p) => ({ ...p, open }))}
+            shift={cancelledDialog.shift!}
+            employee={emp}
+            onDelete={onShiftDelete}
+          />
+        )
+      })()}
 
       {sickDialog.shift && (() => {
         const emp = employees.find((e) => e.id === sickDialog.shift!.employeeId)

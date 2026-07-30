@@ -1,9 +1,12 @@
 /**
- * Drop-to-draft semantics for shift mutations (A-07). Editing, adding, or
- * deleting a shift on an already-published schedule must clear `publishedAt`
- * (returning it to draft so the manager re-publishes) and must NOT fire the
- * per-shift SMS — the re-publish blast covers the notification instead. On a
- * draft schedule the per-shift SMS still fires and nothing is re-published.
+ * Per-shift draft/publish semantics (Planday-style).
+ *
+ * New shifts are private drafts (publishedAt null) until rolled out — creating
+ * or editing them is silent. Touching an already-rolled-out shift is live news
+ * for the person on it, so it notifies immediately and the shift STAYS
+ * published; nothing ever reverts a week to draft anymore. "Notify now" (the
+ * ad-hoc case) publishes a single new shift instantly. Sick days are records,
+ * not plans: born published, never announced.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { db } from "@/lib/prisma"
@@ -12,6 +15,7 @@ import {
   sendShiftCancelledSms,
   sendShiftAssignedSms,
 } from "@/lib/sms"
+import { sendShiftAssignedEmail } from "@/lib/resend"
 import { createShift, updateShift, deleteShift } from "@/lib/services/scheduleService"
 
 vi.mock("@/lib/prisma", () => ({
@@ -42,10 +46,19 @@ vi.mock("@/lib/sms", () => ({
   sendShiftCancelledSms: vi.fn(),
   sendShiftAssignedSms: vi.fn(),
   sendSchedulePublishedSms: vi.fn(),
+  sendRollOutSms: vi.fn(),
 }))
 
-// These tests assert on DB writes and SMS side-effects, not the serialized
-// response shape, so an identity serializer keeps the fixtures minimal.
+vi.mock("@/lib/resend", () => ({
+  sendShiftAssignedEmail: vi.fn().mockReturnValue({ catch: vi.fn() }),
+  sendShiftCancelledEmail: vi.fn().mockReturnValue({ catch: vi.fn() }),
+  sendShiftsRolledOutEmail: vi.fn().mockReturnValue({ catch: vi.fn() }),
+}))
+
+vi.mock("@/lib/push", () => ({ sendPushToUsers: vi.fn().mockResolvedValue(0) }))
+
+// These tests assert on DB writes and notification side-effects, not the
+// serialized response shape, so an identity serializer keeps fixtures minimal.
 vi.mock("@/lib/serialize", () => ({
   serShift: (s: unknown) => s,
   serSchedule: (s: unknown) => s,
@@ -69,67 +82,140 @@ function shiftRow(overrides: Record<string, unknown> = {}) {
     jobRole: "Barista",
     notes: null,
     colorTag: null,
-    employee: { name: "Sarah Chen", phone: "+15551234567" },
-    organization: { name: "The Daily Grind" },
-    schedule: { publishedAt: null },
+    publishedAt: null,
+    cancelledAt: null,
+    employee: { name: "Sarah Chen", phone: "+15551234567", locale: null },
+    organization: { name: "The Daily Grind", locale: null },
     ...overrides,
   }
+}
+
+const EMPLOYEE = {
+  id: "emp_1",
+  name: "Sarah Chen",
+  email: "sarah@example.com",
+  phone: "+15551234567",
+  locale: null,
+  organization: { name: "The Daily Grind", locale: null },
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe("updateShift drop-to-draft", () => {
-  it("clears publishedAt and suppresses per-shift SMS when the schedule was published", async () => {
-    vi.mocked(db.shift.findFirst).mockResolvedValue(
-      shiftRow({ schedule: { publishedAt: new Date("2026-06-15T10:00:00Z") } }) as never,
-    )
-    vi.mocked(db.shift.update).mockResolvedValue(shiftRow() as never)
+describe("createShift — draft by default", () => {
+  it("creates a private draft (publishedAt null) and notifies no one", async () => {
+    vi.mocked(db.employee.findFirst).mockResolvedValue(EMPLOYEE as never)
+    vi.mocked(db.shift.findFirst).mockResolvedValue(null as never)
+    vi.mocked(db.shift.create).mockResolvedValue(shiftRow() as never)
 
-    await updateShift(ORG, SCHEDULE, SHIFT, { startTime: "10:00" })
-
-    expect(db.schedule.update).toHaveBeenCalledWith({
-      where: { id: SCHEDULE },
-      data: { publishedAt: null },
+    await createShift(ORG, SCHEDULE, {
+      employeeId: "emp_1", date: "2026-06-20", startTime: "09:00", endTime: "17:00", jobRole: "Barista",
     })
-    expect(sendShiftUpdatedSms).not.toHaveBeenCalled()
+
+    expect(db.shift.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ publishedAt: null }),
+    }))
+    // No week revert, ever.
+    expect(db.schedule.updateMany).not.toHaveBeenCalled()
+    expect(db.schedule.update).not.toHaveBeenCalled()
+    expect(sendShiftAssignedEmail).not.toHaveBeenCalled()
     expect(sendShiftAssignedSms).not.toHaveBeenCalled()
-    expect(sendShiftCancelledSms).not.toHaveBeenCalled()
   })
 
-  it("leaves a draft schedule alone and still sends the per-shift SMS", async () => {
-    vi.mocked(db.shift.findFirst).mockResolvedValue(
-      shiftRow({ schedule: { publishedAt: null } }) as never,
-    )
+  it("notifyNow publishes the shift immediately and notifies the employee", async () => {
+    vi.mocked(db.employee.findFirst).mockResolvedValue(EMPLOYEE as never)
+    vi.mocked(db.shift.findFirst).mockResolvedValue(null as never)
+    vi.mocked(db.shift.create).mockResolvedValue(shiftRow({ publishedAt: new Date() }) as never)
+
+    await createShift(ORG, SCHEDULE, {
+      employeeId: "emp_1", date: "2026-06-20", startTime: "09:00", endTime: "17:00", jobRole: "Barista",
+      notifyNow: true,
+    })
+
+    expect(db.shift.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ publishedAt: expect.any(Date) }),
+    }))
+    expect(sendShiftAssignedEmail).toHaveBeenCalledTimes(1)
+    expect(sendShiftAssignedSms).toHaveBeenCalledTimes(1)
+  })
+
+  it("sick days are born published but never announced", async () => {
+    vi.mocked(db.employee.findFirst).mockResolvedValue(EMPLOYEE as never)
+    vi.mocked(db.shift.findFirst).mockResolvedValue(null as never)
+    vi.mocked(db.shift.create).mockResolvedValue(shiftRow({ colorTag: "sick" }) as never)
+
+    await createShift(ORG, SCHEDULE, {
+      employeeId: "emp_1", date: "2026-06-20", startTime: "00:00", endTime: "00:00", jobRole: "Sick Day",
+      colorTag: "sick",
+    })
+
+    expect(db.shift.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ publishedAt: expect.any(Date) }),
+    }))
+    expect(sendShiftAssignedEmail).not.toHaveBeenCalled()
+    expect(sendShiftAssignedSms).not.toHaveBeenCalled()
+  })
+})
+
+describe("updateShift — notify-immediately for rolled-out shifts", () => {
+  it("edits a draft silently", async () => {
+    vi.mocked(db.shift.findFirst).mockResolvedValue(shiftRow({ publishedAt: null }) as never)
     vi.mocked(db.shift.update).mockResolvedValue(shiftRow() as never)
 
     await updateShift(ORG, SCHEDULE, SHIFT, { startTime: "10:00" })
 
     expect(db.schedule.update).not.toHaveBeenCalled()
+    expect(sendShiftUpdatedSms).not.toHaveBeenCalled()
+    expect(sendShiftAssignedSms).not.toHaveBeenCalled()
+    expect(sendShiftCancelledSms).not.toHaveBeenCalled()
+  })
+
+  it("keeps a rolled-out shift published and texts the employee about the change", async () => {
+    vi.mocked(db.shift.findFirst).mockResolvedValue(
+      shiftRow({ publishedAt: new Date("2026-06-15T10:00:00Z") }) as never,
+    )
+    vi.mocked(db.shift.update).mockResolvedValue(shiftRow() as never)
+
+    await updateShift(ORG, SCHEDULE, SHIFT, { startTime: "10:00" })
+
+    // The week must NOT revert to draft, and the shift's publishedAt is untouched.
+    expect(db.schedule.update).not.toHaveBeenCalled()
+    expect(db.shift.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.not.objectContaining({ publishedAt: expect.anything() }),
+    }))
     expect(sendShiftUpdatedSms).toHaveBeenCalledTimes(1)
+  })
+
+  it("reassigning a rolled-out shift tells the old assignee and the new one", async () => {
+    vi.mocked(db.shift.findFirst)
+      .mockResolvedValueOnce(shiftRow({ publishedAt: new Date("2026-06-15T10:00:00Z") }) as never)
+      .mockResolvedValueOnce(null as never) // clash check
+    vi.mocked(db.employee.findFirst).mockResolvedValue({ id: "emp_2" } as never)
+    vi.mocked(db.employee.findUnique).mockResolvedValue({ name: "Bob", phone: "+15559876543", locale: null } as never)
+    vi.mocked(db.shift.update).mockResolvedValue(shiftRow({ employeeId: "emp_2" }) as never)
+
+    await updateShift(ORG, SCHEDULE, SHIFT, { employeeId: "emp_2" })
+
+    expect(sendShiftCancelledSms).toHaveBeenCalledTimes(1) // old assignee
+    expect(sendShiftAssignedSms).toHaveBeenCalledTimes(1)  // new assignee
   })
 })
 
-describe("deleteShift drop-to-draft", () => {
-  it("clears publishedAt and suppresses the cancellation SMS when published", async () => {
-    vi.mocked(db.shift.findFirst).mockResolvedValue(
-      shiftRow({ schedule: { publishedAt: new Date("2026-06-15T10:00:00Z") } }) as never,
-    )
+describe("deleteShift — notify-immediately for rolled-out shifts", () => {
+  it("deletes a draft silently", async () => {
+    vi.mocked(db.shift.findFirst).mockResolvedValue(shiftRow({ publishedAt: null }) as never)
     vi.mocked(db.shift.delete).mockResolvedValue(shiftRow() as never)
 
     await deleteShift(ORG, SCHEDULE, SHIFT)
 
-    expect(db.schedule.update).toHaveBeenCalledWith({
-      where: { id: SCHEDULE },
-      data: { publishedAt: null },
-    })
+    expect(db.schedule.update).not.toHaveBeenCalled()
     expect(sendShiftCancelledSms).not.toHaveBeenCalled()
   })
 
-  it("leaves a draft schedule alone and still sends the cancellation SMS", async () => {
+  it("texts the employee when deleting a rolled-out shift", async () => {
     vi.mocked(db.shift.findFirst).mockResolvedValue(
-      shiftRow({ schedule: { publishedAt: null } }) as never,
+      shiftRow({ publishedAt: new Date("2026-06-15T10:00:00Z") }) as never,
     )
     vi.mocked(db.shift.delete).mockResolvedValue(shiftRow() as never)
 
@@ -138,28 +224,15 @@ describe("deleteShift drop-to-draft", () => {
     expect(db.schedule.update).not.toHaveBeenCalled()
     expect(sendShiftCancelledSms).toHaveBeenCalledTimes(1)
   })
-})
 
-describe("createShift drop-to-draft", () => {
-  it("returns a published schedule to draft via the conditional updateMany", async () => {
-    vi.mocked(db.employee.findFirst).mockResolvedValue({ id: "emp_1" } as never)
-    vi.mocked(db.shift.findFirst).mockResolvedValue(null as never)
-    // createShift reads the schedule's publishedAt (for the late-add email path);
-    // an employee with no email keeps this test focused on the updateMany reset.
-    vi.mocked(db.schedule.findFirst).mockResolvedValue({ publishedAt: new Date("2026-06-15T10:00:00Z") } as never)
-    vi.mocked(db.shift.create).mockResolvedValue(shiftRow() as never)
+  it("does not re-announce deleting an already-cancelled rolled-out shift", async () => {
+    vi.mocked(db.shift.findFirst).mockResolvedValue(
+      shiftRow({ publishedAt: new Date("2026-06-15T10:00:00Z"), cancelledAt: new Date() }) as never,
+    )
+    vi.mocked(db.shift.delete).mockResolvedValue(shiftRow() as never)
 
-    await createShift(ORG, SCHEDULE, {
-      employeeId: "emp_1",
-      date: "2026-06-20",
-      startTime: "09:00",
-      endTime: "17:00",
-      jobRole: "Barista",
-    })
+    await deleteShift(ORG, SCHEDULE, SHIFT)
 
-    expect(db.schedule.updateMany).toHaveBeenCalledWith({
-      where: { id: SCHEDULE, organizationId: ORG, publishedAt: { not: null } },
-      data: { publishedAt: null },
-    })
+    expect(sendShiftCancelledSms).not.toHaveBeenCalled()
   })
 })

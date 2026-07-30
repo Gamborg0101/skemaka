@@ -17,6 +17,14 @@ export function getMondayOfWeek(date: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`
 }
 
+/** Local YYYY-MM-DD for today — e.g. the min bound for date inputs. */
+export function todayISO(): string {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
 /** Adds (or subtracts) days from an ISO date string. Noon-anchored to avoid DST shifts; returns local date components. */
 export function addDays(isoDate: string, days: number): string {
   const d = new Date(isoDate + "T12:00:00")

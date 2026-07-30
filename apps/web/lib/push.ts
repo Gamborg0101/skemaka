@@ -51,9 +51,18 @@ export function isPushConfigured(): boolean {
 export async function sendPushToUsers(userIds: string[], payload: PushPayload): Promise<number> {
   if (userIds.length === 0 || !ensureConfigured()) return 0
 
-  const subs = await db.pushSubscription.findMany({
-    where: { userId: { in: userIds } },
-  })
+  let subs: Awaited<ReturnType<typeof db.pushSubscription.findMany>>
+  try {
+    subs = await db.pushSubscription.findMany({
+      where: { userId: { in: userIds } },
+    })
+  } catch (err) {
+    // The initial lookup runs outside the per-subscription try/catch below;
+    // a DB blip here must not reject, or fire-and-forget callers (`void
+    // sendPushToUsers(...)`) surface an unhandled rejection.
+    console.error("[push] Failed to load subscriptions:", err)
+    return 0
+  }
   if (subs.length === 0) return 0
 
   const body = JSON.stringify(payload)

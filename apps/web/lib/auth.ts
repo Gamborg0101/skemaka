@@ -4,6 +4,11 @@ import Resend from "next-auth/providers/resend"
 import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { db } from "@/lib/prisma"
+import { emailFrom } from "@/lib/resend"
+import { seedDemoOrg } from "@/lib/demo/seedDemoOrg"
+import { DEMO_MAX_CONCURRENT } from "@/lib/demo/constants"
+import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+import { logWarn } from "@/lib/log"
 import { authConfig } from "@/auth.config"
 import { isSuperadmin } from "@/lib/platform"
 import type { UserRole, SubscriptionStatus } from "@/types"
@@ -33,6 +38,40 @@ const e2eProvider =
         }),
       ]
     : []
+
+/**
+ * Public "try the live demo" sign-in: every successful authorize() creates a
+ * fresh throwaway restaurant (seedDemoOrg) and signs the visitor in as its
+ * manager. Anonymous by design — abuse is bounded by a per-IP rate limit and
+ * a global cap on concurrent sandboxes; the cleanup cron deletes sandboxes
+ * after DEMO_TTL_HOURS. The jwt callback below embeds the new org exactly as
+ * it does for a real manager sign-in.
+ */
+const demoProvider = Credentials({
+  id: "demo",
+  name: "Live Demo",
+  credentials: {},
+  async authorize(_creds, request) {
+    const { success } = await rateLimitRequest(getClientIp(request.headers), "demo")
+    if (!success) return null
+
+    const activeSandboxes = await db.organization.count({ where: { isDemo: true } })
+    if (activeSandboxes >= DEMO_MAX_CONCURRENT) {
+      logWarn("demo", "sandbox cap reached — refusing new demo sign-in", { activeSandboxes })
+      return null
+    }
+
+    // Locale: NEXT_LOCALE cookie first, then Accept-Language (da → da, else en) —
+    // same precedence as lib/locale.ts, parsed from the raw request.
+    const cookie = request.headers.get("cookie") ?? ""
+    const cookieLocale = /(?:^|;\s*)NEXT_LOCALE=(da|en)/.exec(cookie)?.[1]
+    const acceptsDa = (request.headers.get("accept-language") ?? "").toLowerCase().startsWith("da")
+    const locale = (cookieLocale ?? (acceptsDa ? "da" : "en")) as "en" | "da"
+
+    const demo = await seedDemoOrg(locale)
+    return { id: demo.userId, email: demo.email, name: demo.name }
+  },
+})
 
 /** Org billing fields cached in the JWT for the paywall fast-path. */
 const ORG_BILLING_SELECT = {
@@ -112,8 +151,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({ checks: ["state"] }),
     Resend({
       apiKey: process.env.RESEND_API_KEY ?? "",
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+      from: emailFrom(),
     }),
+    demoProvider,
     ...e2eProvider,
   ],
   callbacks: {

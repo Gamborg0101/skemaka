@@ -57,13 +57,19 @@ export function useShiftMutations(
     async (data: {
       employeeId: string; date: string; startTime: string; endTime: string
       breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
+      notifyNow?: boolean
     }) => {
       // Lazily create the schedule if this week has no schedule yet.
       const activeSchedule = await ensureSchedule()
       const tempId = crypto.randomUUID()
+      const { notifyNow, ...shiftFields } = data
       const optimistic: Shift = {
         id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
-        ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        ...shiftFields,
+        cancelledAt: null,
+        // Draft placeholder unless the manager chose to send it right away.
+        publishedAt: notifyNow ? new Date().toISOString() : null,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(optimistic)
       try {
@@ -114,21 +120,53 @@ export function useShiftMutations(
     [schedule, orgId, deleteShift, restoreShift]
   )
 
+  const handleShiftCancel = useCallback(
+    (shiftId: string) => {
+      if (!schedule) return
+      const prev = schedule.shifts?.find((s) => s.id === shiftId)
+      patchShift(shiftId, { cancelledAt: new Date().toISOString() })
+      fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}/cancel`, { method: "POST" })
+        .then(async (r) => {
+          if (r.ok) {
+            const res = (await r.json()) as { data?: Shift }
+            if (res.data) patchShift(shiftId, res.data)
+            toast.success("Shift cancelled — the employee has been notified")
+            return
+          }
+          const msg = await r.json().then((b) => b.error).catch(() => null)
+          rollbackShift(shiftId, prev); toast.error(msg ?? "Failed to cancel shift")
+        }).catch(() => { rollbackShift(shiftId, prev); toast.error("Failed to cancel shift") })
+    },
+    [schedule, orgId, patchShift, rollbackShift]
+  )
+
   const handleMarkSick = useCallback(
-    async (employeeId: string, date: string) => {
+    async (
+      employeeId: string,
+      date: string,
+      details?: { startTime: string; endTime: string; reason: string },
+    ) => {
       const activeSchedule = await ensureSchedule()
       const tempId = crypto.randomUUID()
+      // Hours the person was expected to work (for the record); reason → notes.
+      // Falls back to a bare 00:00 marker if no details were provided.
+      const startTime = details?.startTime ?? "00:00"
+      const endTime = details?.endTime ?? "00:00"
+      const notes = details?.reason?.trim() ? details.reason.trim() : null
       const sickShift: Shift = {
         id: tempId, scheduleId: activeSchedule.id, organizationId: orgId,
-        employeeId, date, startTime: "00:00", endTime: "00:00",
-        breakMinutes: 0, jobRole: "Sick Day", notes: null, colorTag: "sick",
+        employeeId, date, startTime, endTime,
+        breakMinutes: 0, jobRole: "Sick Day", notes, colorTag: "sick",
+        cancelledAt: null,
+        // Sick days are records, not plans — born published, never rolled out.
+        publishedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }
       appendShift(sickShift)
       fetch(`/api/orgs/${orgId}/schedules/${activeSchedule.id}/shifts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId, date, startTime: "00:00", endTime: "00:00", breakMinutes: 0, jobRole: "Sick Day", colorTag: "sick" }),
+        body: JSON.stringify({ employeeId, date, startTime, endTime, breakMinutes: 0, jobRole: "Sick Day", notes, colorTag: "sick" }),
       }).then((r) => r.json()).then((res: { data?: Shift; error?: string }) => {
         if (res.data) {
           replaceShift(tempId, res.data)
@@ -143,5 +181,5 @@ export function useShiftMutations(
     [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift]
   )
 
-  return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleMarkSick }
+  return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleShiftCancel, handleMarkSick }
 }

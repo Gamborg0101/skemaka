@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
-import { isValidDate, isValidTime, isNonNegativeInt, timesAreDifferent, parsePaginationParams, isValidColorTag } from "@/lib/validate"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
+import { isValidDate, isValidTime, parsePaginationParams, isValidColorTag } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as scheduleService from "@/lib/services/scheduleService"
@@ -8,6 +9,25 @@ import * as scheduleService from "@/lib/services/scheduleService"
 interface RouteContext {
   params: Promise<{ orgId: string; scheduleId: string }>
 }
+
+const CreateShiftSchema = z
+  .object({
+    employeeId:   z.string().min(1),
+    date:         z.string().refine(isValidDate, "date must be a valid YYYY-MM-DD"),
+    startTime:    z.string().refine(isValidTime, "startTime and endTime must be HH:MM"),
+    endTime:      z.string().refine(isValidTime, "startTime and endTime must be HH:MM"),
+    breakMinutes: z.number().int().min(0, "breakMinutes must be a non-negative integer").optional(),
+    jobRole:      z.string().min(1).max(100, "jobRole must be at most 100 characters"),
+    notes:        z.string().max(5000, "notes must be at most 5000 characters").nullable().optional(),
+    colorTag:     z.string().refine((s) => isValidColorTag(s), "Invalid colorTag").nullable().optional(),
+    notifyNow:    z.boolean().optional(),
+  })
+  // Sick days are zero-duration day markers (00:00–00:00), so the differ check
+  // doesn't apply to them.
+  .refine((b) => b.colorTag === "sick" || b.startTime !== b.endTime, {
+    message: "startTime and endTime must differ",
+    path: ["endTime"],
+  })
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId, scheduleId } = await params
@@ -32,45 +52,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: {
-    employeeId?: string; date?: string; startTime?: string; endTime?: string
-    breakMinutes?: number; jobRole?: string; notes?: string; colorTag?: string
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag } = body
-
-  if (!employeeId || !date || !startTime || !endTime || !jobRole) {
-    return NextResponse.json(
-      { error: "employeeId, date, startTime, endTime, and jobRole are required" },
-      { status: 400 },
-    )
-  }
-  if (!isValidDate(date)) {
-    return NextResponse.json({ error: "date must be a valid YYYY-MM-DD" }, { status: 400 })
-  }
-  if (!isValidTime(startTime) || !isValidTime(endTime)) {
-    return NextResponse.json({ error: "startTime and endTime must be HH:MM" }, { status: 400 })
-  }
-  // Sick days are zero-duration day markers (00:00–00:00) — they carry no hours
-  // and are excluded from all hours/cost math — so the differ check doesn't apply.
-  if (colorTag !== "sick" && !timesAreDifferent(startTime, endTime)) {
-    return NextResponse.json({ error: "startTime and endTime must differ" }, { status: 400 })
-  }
-  if (!isNonNegativeInt(breakMinutes ?? 0)) {
-    return NextResponse.json({ error: "breakMinutes must be a non-negative integer" }, { status: 400 })
-  }
-  if (jobRole.length > 100) return NextResponse.json({ error: "jobRole must be at most 100 characters" }, { status: 400 })
-  if (notes && notes.length > 5000) return NextResponse.json({ error: "notes must be at most 5000 characters" }, { status: 400 })
-  if (!isValidColorTag(colorTag)) return NextResponse.json({ error: "Invalid colorTag" }, { status: 400 })
+  const parsed = await parseBody(req, CreateShiftSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const shift = await scheduleService.createShift(orgId, scheduleId, {
-      employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag,
-    })
+    const shift = await scheduleService.createShift(orgId, scheduleId, parsed.data)
     return NextResponse.json({ data: shift }, { status: 201 })
   } catch (err) {
     if (err instanceof ServiceError) {

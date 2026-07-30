@@ -20,9 +20,10 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
       <footer className="border-t border-gray-100 mt-24">
-        <div className="mx-auto max-w-3xl px-6 py-8 flex gap-6 text-sm text-gray-400">
+        <div className="mx-auto max-w-3xl px-6 py-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
           <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
           <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
+          <Link href="/cookies" className="hover:text-gray-600 transition-colors">Cookie Policy</Link>
           <Link href="/subprocessors" className="hover:text-gray-600 transition-colors">Sub-processors</Link>
           <Link href="/support" className="hover:text-gray-600 transition-colors">Support</Link>
         </div>

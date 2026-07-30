@@ -13,5 +13,21 @@
   "incorrectCode": "Incorrect code.",
   "somethingWentWrong": "Something went wrong.",
   "resendCode": "Resend code",
-  "resendCodeIn": "Resend code in {s}s"
+  "resendCodeIn": "Resend code in {s}s",
+  "cookies": {
+    "banner": "We use cookies to sign you in and remember your settings — nothing else. No ads, no tracking.",
+    "bannerLinkLabel": "Read our cookie policy",
+    "acceptAll": "Accept all",
+    "onlyNecessary": "Only necessary",
+    "customize": "Settings",
+    "save": "Save choices",
+    "settingsTitle": "Cookie settings",
+    "necessaryLabel": "Necessary",
+    "necessaryDesc": "Signing in, security and this consent choice. Always on — the site can't work without them.",
+    "preferencesLabel": "Preferences",
+    "preferencesDesc": "Remembers choices like your language so you don't have to pick them again.",
+    "analyticsLabel": "Analytics",
+    "analyticsDesc": "We don't use any analytics cookies today. If that ever changes, they stay off unless you allow them here.",
+    "footerLink": "Cookie settings"
+  }
 }

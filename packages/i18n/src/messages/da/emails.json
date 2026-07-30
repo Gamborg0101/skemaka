@@ -33,6 +33,27 @@
     "intro": "Du har fået en ny vagt hos <strong>{orgName}</strong>.",
     "footer": "Åbn Skemaka for at se hele din vagtplan."
   },
+  "shiftCancelled": {
+    "subject": "Vagt aflyst {date} — {orgName}",
+    "intro": "Din vagt hos <strong>{orgName}</strong> er blevet aflyst — du skal ikke længere møde ind til den.",
+    "footer": "Kontakt din leder, hvis du har spørgsmål."
+  },
+  "shiftOffer": {
+    "subject": "Du er blevet tilbudt en vagt {date} — {orgName}",
+    "intro": "<strong>{orgName}</strong> har tilbudt dig en vagt. Giv besked, om du kan tage den.",
+    "deadline": "Svar venligst inden <strong>{deadline}</strong> ved at åbne Skemaka.",
+    "cta": "Svar på tilbud"
+  },
+  "shiftOfferWon": {
+    "subject": "Du fik vagten {date} — {orgName}",
+    "intro": "Du er bekræftet til denne vagt hos <strong>{orgName}</strong> — den står nu på din vagtplan.",
+    "footer": "Åbn Skemaka for at se hele din vagtplan."
+  },
+  "shiftOfferFilled": {
+    "subject": "Vagten {date} er blevet dækket — {orgName}",
+    "intro": "Vagten hos <strong>{orgName}</strong>, som du tilbød at tage, er blevet dækket af en anden.",
+    "footer": "Tak fordi du tilbød at hjælpe."
+  },
   "rolledOut": {
     "subject": "Nye vagter i Skemaka",
     "body": "<strong>{orgName}</strong> har netop udrullet vagtplanen for <strong>{period}</strong>. Åbn Skemaka for at se dine vagter.",

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { auth } from "@/lib/auth"
+import { parseBody } from "@/lib/apiGuard"
 import { db } from "@/lib/prisma"
 import { isSuperadmin } from "@/lib/platform"
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
+
+const UpdateBugReportSchema = z.object({
+  status: z.enum(["OPEN", "RESOLVED"], { message: "status must be OPEN or RESOLVED" }),
+})
 
 async function requireSuperadmin() {
   const session = await auth()
@@ -23,15 +29,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const { id } = await params
 
-  let body: { status?: unknown }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  if (body.status !== "OPEN" && body.status !== "RESOLVED") {
-    return NextResponse.json({ error: "status must be OPEN or RESOLVED" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, UpdateBugReportSchema)
+  if ("error" in parsed) return parsed.error
+  const { status } = parsed.data
 
   const existing = await db.bugReport.findUnique({ where: { id }, select: { id: true } })
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -39,8 +39,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const updated = await db.bugReport.update({
     where: { id },
     data: {
-      status: body.status,
-      resolvedAt: body.status === "RESOLVED" ? new Date() : null,
+      status,
+      resolvedAt: status === "RESOLVED" ? new Date() : null,
     },
   })
 

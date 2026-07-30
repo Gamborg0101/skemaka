@@ -15,4 +15,7 @@ export type CleanupPreview = {
 
 export type CleanupResult = CleanupPreview & {
   sessions?: number
+  /** Expired "try the live demo" sandboxes removed this run. */
+  demoOrgs?: number
+  demoUsers?: number
 }

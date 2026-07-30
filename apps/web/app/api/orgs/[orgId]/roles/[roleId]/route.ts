@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
+import { isValidColorTag } from "@/lib/validate"
 import * as orgService from "@/lib/services/orgService"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 
 interface RouteContext {
   params: Promise<{ orgId: string; roleId: string }>
 }
+
+const UpdateRoleSchema = z
+  .object({
+    name:  z.string().trim().min(1, "name must be a non-empty string").max(100, "name must be at most 100 characters").optional(),
+    color: z.string().refine(isValidColorTag, "Invalid color").optional(),
+  })
+  .refine((b) => b.name !== undefined || b.color !== undefined, {
+    message: "Provide a name and/or color to update",
+  })
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId, roleId } = await params
@@ -18,21 +29,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { name?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 })
-  }
-  if (body.name.trim().length > 100) {
-    return NextResponse.json({ error: "name must be at most 100 characters" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, UpdateRoleSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const role = await orgService.renameJobRole(orgId, roleId, body.name.trim())
+    const role = await orgService.updateJobRole(orgId, roleId, {
+      ...(parsed.data.name  !== undefined ? { name: parsed.data.name }   : {}),
+      ...(parsed.data.color !== undefined ? { color: parsed.data.color } : {}),
+    })
     return NextResponse.json({ data: role })
   } catch (err) {
     if (err instanceof ServiceError) {

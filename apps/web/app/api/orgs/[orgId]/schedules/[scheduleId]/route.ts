@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { isValidDate } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -8,6 +9,14 @@ import * as scheduleService from "@/lib/services/scheduleService"
 interface RouteContext {
   params: Promise<{ orgId: string; scheduleId: string }>
 }
+
+const DuplicateScheduleSchema = z.object({
+  weekStart: z.string().refine(isValidDate, "weekStart must be a valid YYYY-MM-DD date"),
+})
+
+const PublishScheduleSchema = z
+  .object({ published: z.boolean().optional() })
+  .refine((b) => b.published === true, { message: "Only { published: true } is supported" })
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId, scheduleId } = await params
@@ -30,20 +39,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const managerCheck = requireManagerRole(guard)
   if (managerCheck) return managerCheck.error
 
-  let body: { weekStart?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { weekStart } = body
-
-  if (!weekStart) {
-    return NextResponse.json({ error: "weekStart is required" }, { status: 400 })
-  }
-  if (!isValidDate(weekStart)) {
-    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, DuplicateScheduleSchema)
+  if ("error" in parsed) return parsed.error
+  const { weekStart } = parsed.data
 
   try {
     const schedule = await scheduleService.duplicateSchedule(orgId, scheduleId, weekStart)
@@ -66,15 +64,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { published?: boolean }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  if (body.published !== true) {
-    return NextResponse.json({ error: "Only { published: true } is supported" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, PublishScheduleSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
     const { schedule, notified } = await scheduleService.publishSchedule(orgId, scheduleId)

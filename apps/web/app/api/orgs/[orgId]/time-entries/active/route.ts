@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
-import { isNonNegativeInt } from "@/lib/validate"
+import { z } from "zod"
+import { requireOrgMember, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as clockService from "@/lib/services/clockService"
@@ -9,6 +9,12 @@ import { getEmployeeByUserId, getEmployeeById } from "@/lib/services/employeeSer
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const ClockOutSchema = z.object({
+  employeeId:   z.string().optional(),
+  breakMinutes: z.number().int().min(0, "must be a non-negative integer").optional(),
+  note:         z.string().max(500, "note must be at most 500 characters").optional(),
+})
 
 // GET /api/orgs/[orgId]/time-entries/active
 // Returns the current open time entry for the caller (or a specified employee for managers).
@@ -50,21 +56,10 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
   const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
-  let body: {
-    employeeId?: string; breakMinutes?: number; note?: string
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
 
-  if (body.breakMinutes !== undefined && !isNonNegativeInt(body.breakMinutes)) {
-    return NextResponse.json({ error: "breakMinutes must be a non-negative integer" }, { status: 400 })
-  }
-  if (body.note && body.note.length > 500) {
-    return NextResponse.json({ error: "note must be at most 500 characters" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, ClockOutSchema)
+  if ("error" in parsed) return parsed.error
+  const body = parsed.data
 
   let resolvedEmployeeId: string
 

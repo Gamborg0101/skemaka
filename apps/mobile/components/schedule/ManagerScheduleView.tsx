@@ -297,7 +297,7 @@ export function ManagerScheduleView() {
           ) : (
             <View className="flex-1 items-center justify-center py-16 gap-1">
               <Text className="text-sm text-ink-secondary">No shifts scheduled</Text>
-              <Text className="text-xs text-ink-muted">Tap "Add Shift" to schedule someone</Text>
+              <Text className="text-xs text-ink-muted">Tap &quot;Add Shift&quot; to schedule someone</Text>
             </View>
           )
         }

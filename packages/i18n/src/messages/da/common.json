@@ -13,5 +13,21 @@
   "incorrectCode": "Forkert kode.",
   "somethingWentWrong": "Noget gik galt.",
   "resendCode": "Send koden igen",
-  "resendCodeIn": "Send igen om {s} s"
+  "resendCodeIn": "Send igen om {s} s",
+  "cookies": {
+    "banner": "Vi bruger cookies til at logge dig ind og huske dine indstillinger — ikke andet. Ingen reklamer, ingen sporing.",
+    "bannerLinkLabel": "Læs vores cookiepolitik",
+    "acceptAll": "Accepter alle",
+    "onlyNecessary": "Kun nødvendige",
+    "customize": "Indstillinger",
+    "save": "Gem valg",
+    "settingsTitle": "Cookieindstillinger",
+    "necessaryLabel": "Nødvendige",
+    "necessaryDesc": "Login, sikkerhed og dette samtykkevalg. Altid slået til — siden kan ikke fungere uden.",
+    "preferencesLabel": "Præferencer",
+    "preferencesDesc": "Husker valg som dit sprog, så du ikke skal vælge dem igen.",
+    "analyticsLabel": "Analyse",
+    "analyticsDesc": "Vi bruger ingen analyse-cookies i dag. Skulle det ændre sig, forbliver de slået fra, medmindre du tillader dem her.",
+    "footerLink": "Cookieindstillinger"
+  }
 }

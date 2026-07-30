@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { Check, ChevronRight, ChevronLeft, Info, ShieldCheck } from "lucide-react"
 import { InstallPrompt } from "@/components/pwa/InstallPrompt"
+import { ROLE_COLOR_TOKENS } from "@/lib/roleColors"
 
 type Step = 1 | 2 | 3
 
@@ -65,8 +66,8 @@ const INDUSTRIES = [
 const FALLBACK_ROLES = ["Staff", "Shift lead", "Manager"]
 
 // Cycled through when a user adds a custom role inline, so new roles get varied
-// colors. Must be valid color tags (see lib/validate.ts VALID_COLOR_TAGS).
-const ROLE_COLORS = ["blue", "purple", "green", "orange", "yellow", "rose"]
+// colors. Uses the shared role-color palette (see lib/roleColors.ts).
+const ROLE_COLORS = ROLE_COLOR_TOKENS
 
 // Sentinel option value that triggers the inline "add a role" input.
 const ADD_ROLE = "__add_role__"

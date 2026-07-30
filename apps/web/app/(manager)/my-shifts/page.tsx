@@ -8,6 +8,7 @@ import { EmployeePicker } from "@/components/manager/EmployeePicker"
 import { MyShiftsWeekNav } from "@/components/manager/MyShiftsWeekNav"
 import { OfferCoverButton } from "@/components/employee/OfferCoverButton"
 import { CoverPoolPanel } from "@/components/employee/CoverPoolPanel"
+import { MyShiftOffersPanel } from "@/components/employee/MyShiftOffersPanel"
 import { pickShiftQuote } from "@/types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -22,6 +23,7 @@ function formatDate(date: Date) {
 type DbShift = {
   id: string; date: Date; startTime: string; endTime: string
   breakMinutes: number; jobRole: string; notes: string | null; colorTag: string | null
+  cancelledAt: Date | null
 }
 type Coworker = { name: string; jobRole: string }
 
@@ -99,6 +101,9 @@ export default async function MyShiftsPage({
             gte: new Date(weekStart + "T00:00:00.000Z"),
             lt: new Date(weekEnd + "T00:00:00.000Z"),
           },
+          // This page is the employee-facing view of a week — drafts stay in
+          // the manager's planning space (/schedule) until rolled out.
+          publishedAt: { not: null },
         },
         orderBy: { date: "asc" },
       },
@@ -117,6 +122,8 @@ export default async function MyShiftsPage({
           organizationId: employee.organizationId,
           date: { in: shiftDates },
           employeeId: { not: employee.id },
+          cancelledAt: null,
+          publishedAt: { not: null },
         },
         select: { date: true, jobRole: true, employee: { select: { name: true } } },
       })
@@ -129,7 +136,7 @@ export default async function MyShiftsPage({
     coworkersByDate.get(key)!.push({ name: s.employee.name, jobRole: s.jobRole })
   }
 
-  const nextShiftId = shifts.find((s) => s.date >= today)?.id
+  const nextShiftId = shifts.find((s) => s.date >= today && !s.cancelledAt)?.id
 
   // Which of my shifts are already up for cover (to seed the per-shift button).
   const myActiveCover = viewingSelf
@@ -191,6 +198,7 @@ export default async function MyShiftsPage({
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
+      {viewingSelf && <MyShiftOffersPanel orgId={selfEmployee.organizationId} />}
       {viewingSelf && <CoverPoolPanel orgId={selfEmployee.organizationId} />}
       {shifts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
@@ -206,9 +214,10 @@ export default async function MyShiftsPage({
           {shifts.map((shift) => {
             const hours = calcNetHours(shift.startTime, shift.endTime, shift.breakMinutes)
             const dateKey = shift.date.toISOString().split("T")[0]
-            const coworkers = coworkersByDate.get(dateKey) ?? []
+            const isCancelled = !!shift.cancelledAt
+            const coworkers = isCancelled ? [] : (coworkersByDate.get(dateKey) ?? [])
             const accent = ACCENT[shift.colorTag ?? "gray"] ?? ACCENT.gray
-            const isToday = dateKey === todayKey
+            const isToday = dateKey === todayKey && !isCancelled
             const isNext = shift.id === nextShiftId
 
             return (
@@ -216,9 +225,11 @@ export default async function MyShiftsPage({
                 key={shift.id}
                 className={cn(
                   "bg-white dark:bg-gray-800/60 rounded-2xl border flex flex-col transition-shadow",
-                  isToday
-                    ? "border-blue-300 dark:border-blue-700 shadow-lg shadow-blue-100/60 dark:shadow-blue-900/20"
-                    : "border-gray-200 dark:border-gray-700 shadow-sm"
+                  isCancelled
+                    ? "border-gray-200 dark:border-gray-700 shadow-none opacity-70"
+                    : isToday
+                      ? "border-blue-300 dark:border-blue-700 shadow-lg shadow-blue-100/60 dark:shadow-blue-900/20"
+                      : "border-gray-200 dark:border-gray-700 shadow-sm"
                 )}
               >
                 <div className="p-4 flex flex-col gap-3 flex-1">
@@ -233,6 +244,11 @@ export default async function MyShiftsPage({
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
+                      {isCancelled && (
+                        <span className="text-[11px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                          Cancelled
+                        </span>
+                      )}
                       {isToday && (
                         <span className="text-[11px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">
                           Today
@@ -251,32 +267,38 @@ export default async function MyShiftsPage({
 
                   {/* Time — hero */}
                   <div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-none">
+                    <p className={cn(
+                      "text-2xl font-bold tabular-nums leading-none",
+                      isCancelled
+                        ? "text-gray-400 dark:text-gray-500 line-through"
+                        : "text-gray-900 dark:text-gray-100"
+                    )}>
                       {formatTime(shift.startTime, tf)} – {formatTime(shift.endTime, tf)}
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
-                      {hours}
-                      {shift.breakMinutes > 0
-                        ? ` · ${shift.breakMinutes} min break`
-                        : " · No break"}
+                      {isCancelled
+                        ? "This shift was cancelled"
+                        : <>{hours}{shift.breakMinutes > 0 ? ` · ${shift.breakMinutes} min break` : " · No break"}</>}
                     </p>
                   </div>
 
                   {/* Notes */}
-                  <p className={cn(
-                    "text-xs rounded-lg px-3 py-2 italic leading-relaxed",
-                    shift.notes
-                      ? "text-gray-500 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50"
-                      : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40"
-                  )}>
-                    &ldquo;{shift.notes ?? pickShiftQuote(shift.id, employee.organization.industry)}&rdquo;
-                  </p>
+                  {!isCancelled && (
+                    <p className={cn(
+                      "text-xs rounded-lg px-3 py-2 italic leading-relaxed",
+                      shift.notes
+                        ? "text-gray-500 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50"
+                        : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40"
+                    )}>
+                      &ldquo;{shift.notes ?? pickShiftQuote(shift.id, employee.organization.industry)}&rdquo;
+                    </p>
+                  )}
 
                   {/* Coworkers */}
                   {coworkers.length > 0 && <CoworkerList coworkers={coworkers} />}
 
                   {/* Offer this shift up for a teammate to cover (own upcoming shifts only) */}
-                  {viewingSelf && shift.date >= today && (
+                  {viewingSelf && !isCancelled && shift.date >= today && (
                     <div className="mt-auto pt-1">
                       <OfferCoverButton
                         orgId={selfEmployee.organizationId}

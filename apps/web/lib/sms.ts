@@ -82,15 +82,18 @@ async function send(to: string, body: string, locale: Locale = "en"): Promise<vo
     console.warn("[sms] Twilio not configured — skipping SMS");
     return;
   }
-  // Respect opt-out before doing anything else (carrier + legal compliance).
-  if (await isSuppressed(to)) {
-    console.warn("[sms] recipient has opted out — skipping SMS");
-    return;
-  }
-  // Standard A2P opt-out footer appended to every outbound message.
-  const optOut = getMessageTranslator(locale, "sms")("optOut");
-  const recipient = process.env.TWILIO_TO_OVERRIDE ?? to;
+  // The opt-out lookup is a DB call; keep it inside the try so a DB blip can't
+  // reject this promise — callers fire these as `void send…Sms(...)` with no
+  // .catch, so any rejection surfaces as an unhandled rejection.
   try {
+    // Respect opt-out before doing anything else (carrier + legal compliance).
+    if (await isSuppressed(to)) {
+      console.warn("[sms] recipient has opted out — skipping SMS");
+      return;
+    }
+    // Standard A2P opt-out footer appended to every outbound message.
+    const optOut = getMessageTranslator(locale, "sms")("optOut");
+    const recipient = process.env.TWILIO_TO_OVERRIDE ?? to;
     await client.messages.create({ body: `${body} ${optOut}`, from, to: recipient });
   } catch (err) {
     console.error("[sms] Failed to send SMS:", err);
@@ -402,4 +405,60 @@ export async function sendCoverDeniedSms({
   const t = getMessageTranslator(locale, "sms");
   const when = formatShiftDate(date, startTime, endTime, locale);
   await send(to, t("coverDenied", { name, orgName, when }), locale);
+}
+
+// ─── Shift offers (manager offers a slot to hand-picked staff) ─────────────────
+
+export async function sendShiftOfferedSms({
+  to,
+  name,
+  orgName,
+  date,
+  startTime,
+  endTime,
+  jobRole,
+  locale = "en",
+}: {
+  to: string;
+  name: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  jobRole: string;
+  locale?: Locale;
+}): Promise<void> {
+  const t = getMessageTranslator(locale, "sms");
+  const when = formatShiftDate(date, startTime, endTime, locale);
+  await send(to, t("shiftOffered", { name, jobRole, orgName, when }), locale);
+}
+
+export async function sendShiftOfferResultSms({
+  to,
+  name,
+  orgName,
+  date,
+  startTime,
+  endTime,
+  won,
+  locale = "en",
+}: {
+  to: string;
+  name: string;
+  orgName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  won: boolean;
+  locale?: Locale;
+}): Promise<void> {
+  const t = getMessageTranslator(locale, "sms");
+  const when = formatShiftDate(date, startTime, endTime, locale);
+  await send(
+    to,
+    won
+      ? t("shiftOfferWon", { name, orgName, when })
+      : t("shiftOfferFilled", { name, orgName, when }),
+    locale,
+  );
 }

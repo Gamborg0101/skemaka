@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
-import { isValidWage, isValidEmail, isNonNegativeInt, parsePaginationParams } from "@/lib/validate"
+import { isValidWage, isValidEmail, parsePaginationParams } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as employeeService from "@/lib/services/employeeService"
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const CreateEmployeeSchema = z.object({
+  name:            z.string().min(1).max(200, "name must be at most 200 characters"),
+  email:           z.string().refine(isValidEmail, "email must be a valid email address"),
+  phone:           z.string().max(20, "phone must be at most 20 characters").optional(),
+  jobRole:         z.string().min(1).max(100, "jobRole must be at most 100 characters"),
+  hourlyWage:      z.number().refine(isValidWage, "hourlyWage must be a positive number up to 100000"),
+  notes:           z.string().max(5000, "notes must be at most 5000 characters").optional(),
+  employmentType:  z.string().optional(),
+  contractedHours: z.number().int().min(0, "contractedHours must be a non-negative integer").optional(),
+})
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -37,40 +49,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: {
-    name?: string; email?: string; phone?: string
-    jobRole?: string; hourlyWage?: number; notes?: string
-    employmentType?: string; contractedHours?: number
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { name, email, jobRole, hourlyWage, phone, notes, employmentType, contractedHours } = body
-
-  if (!name || !email || !jobRole || hourlyWage === undefined) {
-    return NextResponse.json(
-      { error: "name, email, jobRole, and hourlyWage are required" },
-      { status: 400 },
-    )
-  }
-  if (!isValidWage(hourlyWage)) {
-    return NextResponse.json({ error: "hourlyWage must be a positive number up to 100000" }, { status: 400 })
-  }
-  if (name.length > 200) return NextResponse.json({ error: "name must be at most 200 characters" }, { status: 400 })
-  if (!isValidEmail(email)) return NextResponse.json({ error: "email must be a valid email address" }, { status: 400 })
-  if (phone && phone.length > 20) return NextResponse.json({ error: "phone must be at most 20 characters" }, { status: 400 })
-  if (notes && notes.length > 5000) return NextResponse.json({ error: "notes must be at most 5000 characters" }, { status: 400 })
-  if (jobRole.length > 100) return NextResponse.json({ error: "jobRole must be at most 100 characters" }, { status: 400 })
-  if (contractedHours !== undefined && !isNonNegativeInt(contractedHours)) {
-    return NextResponse.json({ error: "contractedHours must be a non-negative integer" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, CreateEmployeeSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const employee = await employeeService.createEmployee(orgId, {
-      name, email, phone, jobRole, hourlyWage, notes, employmentType, contractedHours,
-    })
+    const employee = await employeeService.createEmployee(orgId, parsed.data)
     return NextResponse.json({ data: employee }, { status: 201 })
   } catch (err) {
     if (err instanceof ServiceError) {

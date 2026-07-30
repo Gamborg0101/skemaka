@@ -5,7 +5,6 @@ import {
   Mail,
   Phone,
   Calendar,
-  AlertTriangle,
   Briefcase,
   Send,
   BadgeCheck,
@@ -30,16 +29,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SickDaysSection } from "@/components/manager/SickDaysSection"
 import { getInitials } from "@/lib/utils"
-import { formatCurrency, getCurrencySymbol } from "@/lib/orgSettings"
+import { formatCurrency, getCurrencySymbol, getOrgSettings } from "@/lib/orgSettings"
 import { useOrg } from "@/lib/orgContext"
 import { isEmploymentType } from "@/types"
 import type { Employee, EmploymentType, JobRole } from "@/types"
 
-const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
-  FULL_TIME:          "Full Time (40h/week)",
-  REDUCED_FULL_TIME:  "Reduced Full Time (32h/week)",
-  PART_TIME:          "Part Time",
+/** Employment-type label using the org's configured full-time / reduced hours. */
+function employmentTypeLabel(type: EmploymentType, fullTimeHours: number, reducedHours: number): string {
+  if (type === "FULL_TIME") return `Full Time (${fullTimeHours}h/week)`
+  if (type === "REDUCED_FULL_TIME") return `Reduced Full Time (${reducedHours}h/week)`
+  return "Part Time"
 }
 
 interface EmployeeDetailSheetProps {
@@ -60,9 +61,11 @@ function formatDate(isoDate: string): string {
   })
 }
 
+// View label reflects the employee's own stored hours (not the org default), so
+// it stays accurate even if the org later changes what full-time means.
 function formatContractLabel(type: EmploymentType, contractedHours: number): string {
-  if (type === "FULL_TIME") return "Full Time (40h/week)"
-  if (type === "REDUCED_FULL_TIME") return "Reduced Full Time (32h/week)"
+  if (type === "FULL_TIME") return `Full Time (${contractedHours}h/week)`
+  if (type === "REDUCED_FULL_TIME") return `Reduced Full Time (${contractedHours}h/week)`
   return `Part Time (${contractedHours}h/week)`
 }
 
@@ -102,6 +105,7 @@ export function EmployeeDetailSheet({
   initialMode = "view",
 }: EmployeeDetailSheetProps) {
   const { org } = useOrg()
+  const { fullTimeHours, reducedFullTimeHours } = getOrgSettings()
   const [isEditing, setIsEditing] = useState(initialMode === "edit")
   const [sendingInvite, setSendingInvite] = useState(false)
 
@@ -171,7 +175,13 @@ export function EmployeeDetailSheet({
     const newNotes = editNotes.trim() || null
     if (newNotes !== employee.notes) updated.notes = newNotes
     if (editEmploymentType !== employee.employmentType) updated.employmentType = editEmploymentType
-    const newContractedHours = parseInt(editContractedHours, 10) || 0
+    // Full-time / reduced derive their hours from org settings; only part-time
+    // uses the free-text field. This also keeps hours correct when the manager
+    // switches an employee's type.
+    const newContractedHours =
+      editEmploymentType === "FULL_TIME" ? fullTimeHours
+      : editEmploymentType === "REDUCED_FULL_TIME" ? reducedFullTimeHours
+      : parseInt(editContractedHours, 10) || 0
     if (newContractedHours !== employee.contractedHours) updated.contractedHours = newContractedHours
 
     if (Object.keys(updated).length > 0) {
@@ -195,9 +205,6 @@ export function EmployeeDetailSheet({
   }
 
   if (!employee) return null
-
-  // TODO: fetch from /api/orgs/[orgId]/employees/[employeeId]/sick-days?month=current
-  const sickDaysThisMonth: number = 0
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -236,7 +243,7 @@ export function EmployeeDetailSheet({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="shrink-0"
+                className="shrink-0 mr-8"
               >
                 Edit
               </Button>
@@ -311,11 +318,11 @@ export function EmployeeDetailSheet({
                   onValueChange={(val) => { if (val && isEmploymentType(val)) setEditEmploymentType(val) }}
                 >
                   <SelectTrigger id="edit-employment-type" className="w-full">
-                    <SelectValue>{EMPLOYMENT_TYPE_LABELS[editEmploymentType]}</SelectValue>
+                    <SelectValue>{employmentTypeLabel(editEmploymentType, fullTimeHours, reducedFullTimeHours)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="FULL_TIME">Full Time (40h/week)</SelectItem>
-                    <SelectItem value="REDUCED_FULL_TIME">Reduced Full Time (32h/week)</SelectItem>
+                    <SelectItem value="FULL_TIME">{employmentTypeLabel("FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
+                    <SelectItem value="REDUCED_FULL_TIME">{employmentTypeLabel("REDUCED_FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
                     <SelectItem value="PART_TIME">Part Time</SelectItem>
                   </SelectContent>
                 </Select>
@@ -405,26 +412,12 @@ export function EmployeeDetailSheet({
 
               <Separator />
 
-              {/* Sick days — only alarm-styled when there's actually a sick day */}
-              {sickDaysThisMonth > 0 ? (
-                <div className="flex items-center gap-2.5 rounded-lg border border-rose-100 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 px-3 py-2.5">
-                  <AlertTriangle className="size-4 text-rose-400 shrink-0" />
-                  <p className="text-sm text-rose-700 dark:text-rose-300">
-                    <span className="font-medium">{sickDaysThisMonth}</span>{" "}
-                    sick {sickDaysThisMonth === 1 ? "day" : "days"} this month
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2.5 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 px-3 py-2.5">
-                  <AlertTriangle className="size-4 text-gray-300 dark:text-gray-600 shrink-0" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    No sick days this month
-                  </p>
-                </div>
-              )}
+              {/* Sick days — collapsible history (last 6 months by default) */}
+              <SickDaysSection orgId={orgId} employeeId={employee.id} />
 
-              {/* Invite */}
-              {employee.isActive && (
+              {/* Invite — only while the employee hasn't accepted (no linked
+                  user account yet). Once accepted, there's nothing to (re)send. */}
+              {employee.isActive && !employee.userId && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -433,7 +426,7 @@ export function EmployeeDetailSheet({
                   className="w-full gap-2"
                 >
                   <Send className="size-3.5" />
-                  {sendingInvite ? "Sending…" : employee.userId ? "Resend invite email" : "Send invite email"}
+                  {sendingInvite ? "Sending…" : employee.inviteToken ? "Resend invite email" : "Send invite email"}
                 </Button>
               )}
             </div>

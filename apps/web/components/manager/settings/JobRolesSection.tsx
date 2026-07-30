@@ -9,22 +9,14 @@ import { Tooltip } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { useOrg } from "@/lib/orgContext"
 import { useOptimisticList } from "@/lib/useOptimisticList"
+import { ROLE_COLOR_TOKENS, roleColorSwatch } from "@/lib/roleColors"
 import type { JobRole } from "@/types"
 import { SettingsSection } from "./SettingsSection"
 
-const PRESET_COLORS = [
-  "#6366f1", // indigo
-  "#3b82f6", // blue
-  "#06b6d4", // cyan
-  "#10b981", // emerald
-  "#f59e0b", // amber
-  "#ef4444", // red
-  "#ec4899", // pink
-  "#8b5cf6", // violet
-  "#64748b", // slate
-  "#f97316", // orange
-]
+const DEFAULT_COLOR = ROLE_COLOR_TOKENS[0]
 
+// Palette of named color tokens the schedule can actually render. The stored
+// value is the token; the swatch just shows a representative hue.
 function ColorPicker({
   value,
   onChange,
@@ -34,20 +26,23 @@ function ColorPicker({
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {PRESET_COLORS.map((color) => (
-        <button
-          key={color}
-          type="button"
-          onClick={() => onChange(color)}
-          className="size-6 rounded-full border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          style={{
-            backgroundColor: color,
-            borderColor: value === color ? "white" : "transparent",
-            boxShadow: value === color ? `0 0 0 2px ${color}` : "none",
-          }}
-          aria-label={`Select color ${color}`}
-        />
-      ))}
+      {ROLE_COLOR_TOKENS.map((token) => {
+        const hex = roleColorSwatch(token)
+        return (
+          <button
+            key={token}
+            type="button"
+            onClick={() => onChange(token)}
+            className="size-6 rounded-full border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            style={{
+              backgroundColor: hex,
+              borderColor: value === token ? "white" : "transparent",
+              boxShadow: value === token ? `0 0 0 2px ${hex}` : "none",
+            }}
+            aria-label={`Select ${token}`}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -59,28 +54,31 @@ export function JobRolesSection() {
   // Add form
   const [showAddForm, setShowAddForm] = useState(false)
   const [addName, setAddName] = useState("")
-  const [addColor, setAddColor] = useState(PRESET_COLORS[0])
+  const [addColor, setAddColor] = useState<string>(DEFAULT_COLOR)
   const [addSaving, setAddSaving] = useState(false)
 
   // Inline edit
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
+  const [editColor, setEditColor] = useState<string>(DEFAULT_COLOR)
   const [editSaving, setEditSaving] = useState(false)
 
   function resetAddForm() {
     setAddName("")
-    setAddColor(PRESET_COLORS[0])
+    setAddColor(DEFAULT_COLOR)
     setShowAddForm(false)
   }
 
   function startEdit(role: JobRole) {
     setEditingId(role.id)
     setEditName(role.name)
+    setEditColor(role.color)
   }
 
   function cancelEdit() {
     setEditingId(null)
     setEditName("")
+    setEditColor(DEFAULT_COLOR)
     setEditSaving(false)
   }
 
@@ -119,23 +117,31 @@ export function JobRolesSection() {
 
   async function handleSaveEdit(role: JobRole) {
     const trimmed = editName.trim()
-    if (!trimmed || trimmed === role.name) { cancelEdit(); return }
+    if (!trimmed) return
+    const nameChanged = trimmed !== role.name
+    const colorChanged = editColor !== role.color
+    if (!nameChanged && !colorChanged) { cancelEdit(); return }
+
+    const body = {
+      ...(nameChanged ? { name: trimmed } : {}),
+      ...(colorChanged ? { color: editColor } : {}),
+    }
     setEditSaving(true)
     try {
-      await patch(role.id, { name: trimmed }, async () => {
+      await patch(role.id, body, async () => {
         const r = await fetch(`/api/orgs/${orgId}/roles/${role.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: trimmed }),
+          body: JSON.stringify(body),
         })
         const data = await r.json() as { data?: JobRole; error?: string }
-        if (!r.ok) throw new Error(data.error ?? "Failed to rename")
-        toast.success(`Role renamed to "${trimmed}"`)
+        if (!r.ok) throw new Error(data.error ?? "Failed to update")
+        toast.success(`"${trimmed}" updated`)
         cancelEdit()
         return data.data ?? null
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to rename role")
+      toast.error(err instanceof Error ? err.message : "Failed to update role")
     } finally {
       setEditSaving(false)
     }
@@ -209,44 +215,47 @@ export function JobRolesSection() {
               editingId === role.id ? (
                 <div
                   key={role.id}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-50 dark:bg-gray-700/40"
+                  className="rounded-lg px-3 py-2.5 bg-gray-50 dark:bg-gray-700/40 space-y-2.5"
                 >
-                  <span
-                    className="size-3 rounded-full shrink-0"
-                    style={{ backgroundColor: role.color }}
-                  />
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="h-7 text-sm flex-1"
-                    autoFocus
-                    maxLength={100}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); handleSaveEdit(role) }
-                      if (e.key === "Escape") cancelEdit()
-                    }}
-                  />
-                  <Tooltip content="Save">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => handleSaveEdit(role)}
-                      disabled={editSaving || !editName.trim()}
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/40 shrink-0"
-                    >
-                      <Check className="size-3.5" />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Cancel">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={cancelEdit}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 shrink-0"
-                    >
-                      <X className="size-3.5" />
-                    </Button>
-                  </Tooltip>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="size-3 rounded-full shrink-0"
+                      style={{ backgroundColor: roleColorSwatch(editColor) }}
+                    />
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="h-7 text-sm flex-1"
+                      autoFocus
+                      maxLength={100}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); handleSaveEdit(role) }
+                        if (e.key === "Escape") cancelEdit()
+                      }}
+                    />
+                    <Tooltip content="Save">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => handleSaveEdit(role)}
+                        disabled={editSaving || !editName.trim()}
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/40 shrink-0"
+                      >
+                        <Check className="size-3.5" />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="Cancel">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={cancelEdit}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 shrink-0"
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </Tooltip>
+                  </div>
+                  <ColorPicker value={editColor} onChange={setEditColor} />
                 </div>
               ) : (
                 <div
@@ -255,7 +264,7 @@ export function JobRolesSection() {
                 >
                   <span
                     className="size-3 rounded-full shrink-0"
-                    style={{ backgroundColor: role.color }}
+                    style={{ backgroundColor: roleColorSwatch(role.color) }}
                   />
                   <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100 min-w-0 truncate">
                     {role.name}

@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -17,7 +11,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
-import { Plus, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -25,6 +19,7 @@ import { ShiftCard } from "@/components/manager/ShiftCard";
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog";
 import { EditShiftDialog } from "@/components/manager/EditShiftDialog";
 import { SickDayDialog } from "@/components/manager/SickDayDialog";
+import { CancelledShiftDialog } from "@/components/manager/CancelledShiftDialog";
 import type {
   Schedule,
   Shift,
@@ -46,7 +41,6 @@ interface WeeklyScheduleGridProps {
   approvedTimeOff?: TimeOffRequest[];
   getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null;
   coverFocus?: CoverFocus | null;
-  publishedAt?: string | null;
   onShiftMove: (
     shiftId: string,
     newDate: string,
@@ -61,19 +55,19 @@ interface WeeklyScheduleGridProps {
     jobRole: string;
     notes: string | null;
     colorTag: string | null;
+    notifyNow?: boolean
   }) => void;
   onShiftUpdate: (data: Partial<Shift>) => void;
   onShiftDelete: (shiftId: string) => void;
+  onShiftCancel: (shiftId: string) => void;
   onMarkSick: (employeeId: string, date: string) => void;
 }
 
 const EMPLOYEE_COL_WIDTH = 160;
-
-function getVisibleDays(containerWidth: number): 3 | 5 | 7 {
-  if (containerWidth >= 1070) return 7; // 7 × 130 + 160
-  if (containerWidth >= 810) return 5; // 5 × 130 + 160
-  return 3;
-}
+// Below this width the desktop grid scrolls horizontally instead of hiding
+// days — all 7 days are always rendered (sticky employee column keeps names
+// in view while scrolling).
+const GRID_MIN_WIDTH = EMPLOYEE_COL_WIDTH + 7 * 104;
 
 function getWeekDays(weekStart: string): Date[] {
   // Pin to local noon to avoid DST-boundary shifts on UTC-N timezones where
@@ -87,6 +81,20 @@ function getWeekDays(weekStart: string): Date[] {
 }
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** Tooltip copy for the amber warning triangle on a scheduled cell. */
+function conflictTooltip(c: AvailabilityConflict): string {
+  switch (c.type) {
+    case "timeoff":
+      return "Scheduled during approved time off";
+    case "unavailable":
+      return "Scheduled on a day they marked unavailable";
+    case "rest":
+      return `Only ${c.hours}h rest since their previous shift — the rules say at least 11`;
+    case "longDay":
+      return `${c.hours}h working day — the rules cap a day at 13 hours`;
+  }
+}
 
 function formatHeaderDate(date: Date) {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -105,7 +113,6 @@ interface DroppableCellProps {
   shifts: Shift[];
   employee: Employee;
   jobRoles: JobRole[];
-  publishedAt?: string | null;
   isWeekend: boolean;
   isClosed: boolean;
   isTimeOff: boolean;
@@ -114,7 +121,6 @@ interface DroppableCellProps {
   isToday: boolean;
   onAddClick: (employeeId: string, date: string) => void;
   onShiftClick: (shift: Shift) => void;
-  onMarkSick: (employeeId: string, date: string) => void;
 }
 
 function DroppableCell({
@@ -124,7 +130,6 @@ function DroppableCell({
   shifts,
   employee,
   jobRoles,
-  publishedAt,
   isWeekend,
   isClosed,
   isTimeOff,
@@ -133,7 +138,6 @@ function DroppableCell({
   isToday,
   onAddClick,
   onShiftClick,
-  onMarkSick,
 }: DroppableCellProps) {
   const { setNodeRef, isOver } = useDroppable({ id: cellId });
 
@@ -152,6 +156,16 @@ function DroppableCell({
       )}
     >
       {coverRole === "source" ? "Giving up" : "Would cover"}
+    </span>
+  );
+
+  // A day the employee said they can't work. Unlike time off (a hard block), the
+  // manager can still schedule them here — so we mark it but keep the cell usable.
+  // Rendered in-flow above any shift so it marks the day whether empty or filled.
+  const isUnavailable = conflict?.type === "unavailable";
+  const dayOffBadge = isUnavailable && (
+    <span className="inline-block mb-1 rounded px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide bg-rose-100 text-rose-600 dark:bg-rose-900/60 dark:text-rose-300 select-none">
+      Day Off
     </span>
   );
 
@@ -214,11 +228,9 @@ function DroppableCell({
       )}
     >
       {coverBadge}
-      {conflict && !isEmpty && (
-        <Tooltip
-          content={conflict.type === "timeoff" ? "Scheduled during approved time off" : "Scheduled on a day they marked unavailable"}
-          side="top"
-        >
+      {dayOffBadge}
+      {conflict && conflict.type !== "unavailable" && !isEmpty && (
+        <Tooltip content={conflictTooltip(conflict)} side="top">
           <span className="absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/60 cursor-help">
             <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-300" />
           </span>
@@ -231,26 +243,13 @@ function DroppableCell({
             shift={shift}
             employee={employee}
             jobRoles={jobRoles}
-            publishedAt={publishedAt}
             onClick={() => onShiftClick(shift)}
           />
         ))}
       </div>
-      {/* Action buttons — only shown on empty cells */}
+      {/* Action button — only shown on empty cells. Sick day lives inside Add shift. */}
       {isEmpty && (
         <div className="absolute bottom-1 right-1 hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Tooltip content="Mark as sick day" side="top">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkSick(employeeId, date);
-              }}
-              className="size-5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-500 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900 flex items-center justify-center"
-              aria-label="Mark sick"
-            >
-              <AlertTriangle className="size-3" />
-            </button>
-          </Tooltip>
           <Tooltip content="Add shift" side="top">
             <button
               onClick={(e) => {
@@ -280,11 +279,11 @@ export function WeeklyScheduleGrid({
   approvedTimeOff = [],
   getConflict,
   coverFocus,
-  publishedAt,
   onShiftMove,
   onShiftCreate,
   onShiftUpdate,
   onShiftDelete,
+  onShiftCancel,
   onMarkSick,
 }: WeeklyScheduleGridProps) {
   const [addDialog, setAddDialog] = useState<{
@@ -303,23 +302,13 @@ export function WeeklyScheduleGrid({
     shift: Shift | null;
   }>({ open: false, shift: null });
 
+  const [cancelledDialog, setCancelledDialog] = useState<{
+    open: boolean;
+    shift: Shift | null;
+  }>({ open: false, shift: null });
+
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [mobileDay, setMobileDay] = useState(0);
-  const [startDayOffset, setStartDayOffset] = useState(0);
-  const [containerWidth, setContainerWidth] = useState<number | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) =>
-      setContainerWidth(entry.contentRect.width),
-    );
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const visibleDays = getVisibleDays(containerWidth ?? 0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -336,15 +325,6 @@ export function WeeklyScheduleGrid({
     const todayISO = new Date().toISOString().split("T")[0];
     const idx = days.findIndex((d) => toISODate(d) === todayISO);
     setMobileDay(idx >= 0 ? idx : 0);
-    setStartDayOffset(0);
-  }
-
-  // Clamp offset when the number of visible columns shrinks.
-  // Uses "adjust state during render" pattern.
-  const [prevVisibleDays, setPrevVisibleDays] = useState(visibleDays);
-  if (visibleDays !== prevVisibleDays) {
-    setPrevVisibleDays(visibleDays);
-    setStartDayOffset((o) => Math.min(o, 7 - visibleDays));
   }
 
   const shifts = useMemo(() => schedule.shifts ?? [], [schedule.shifts]);
@@ -423,7 +403,9 @@ export function WeeklyScheduleGrid({
   };
 
   const openEditDialog = (shift: Shift) => {
-    if (shift.colorTag === "sick") {
+    if (shift.cancelledAt) {
+      setCancelledDialog({ open: true, shift });
+    } else if (shift.colorTag === "sick") {
       setSickDialog({ open: true, shift });
     } else {
       setEditDialog({ open: true, shift });
@@ -431,7 +413,7 @@ export function WeeklyScheduleGrid({
   };
 
   return (
-    <div ref={gridRef}>
+    <div>
       <DndContext
         id="weekly-schedule-dnd"
         sensors={sensors}
@@ -503,6 +485,7 @@ export function WeeklyScheduleGrid({
               const cellShifts = getShiftsForCell(employee.id, date);
               const isClosed = closedDays[mobileDay];
               const isTimeOff = isTimeOffDay(employee.id, date);
+              const isUnavailable = getConflict?.(employee.id, date)?.type === "unavailable";
               const scheduled = scheduledHoursMap[employee.id] ?? 0;
               const contracted = employee.contractedHours;
               return (
@@ -560,15 +543,6 @@ export function WeeklyScheduleGrid({
                     </div>
                     {!isClosed && !isTimeOff && (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Tooltip content="Mark as sick day" side="top">
-                          <button
-                            onClick={() => onMarkSick(employee.id, date)}
-                            className="size-10 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 flex items-center justify-center transition-colors"
-                            aria-label={`Mark ${employee.name} sick`}
-                          >
-                            <AlertTriangle className="size-4" />
-                          </button>
-                        </Tooltip>
                         <Tooltip content="Add shift" side="top">
                           <button
                             onClick={() => openAddDialog(employee.id, date)}
@@ -591,6 +565,11 @@ export function WeeklyScheduleGrid({
                       Time Off
                     </p>
                   )}
+                  {isUnavailable && !isClosed && !isTimeOff && (
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-400 dark:text-rose-500">
+                      Day Off
+                    </p>
+                  )}
                   {cellShifts.length > 0 && (
                     <div className="mt-2.5 space-y-1.5">
                       {cellShifts.map((shift) => (
@@ -599,7 +578,6 @@ export function WeeklyScheduleGrid({
                           shift={shift}
                           employee={employee}
                           jobRoles={jobRoles}
-                          publishedAt={publishedAt}
                           onClick={() => openEditDialog(shift)}
                         />
                       ))}
@@ -611,12 +589,13 @@ export function WeeklyScheduleGrid({
           </div>
         </div>
 
-        {/* ── Desktop: responsive grid (hidden on mobile) ── */}
-        <div className="hidden md:block">
+        {/* ── Desktop: full week, horizontally scrollable when narrow ── */}
+        <div className="hidden md:block overflow-x-auto">
           <div
             className="grid w-full"
             style={{
-              gridTemplateColumns: `${EMPLOYEE_COL_WIDTH}px repeat(${visibleDays}, minmax(0, 1fr))`,
+              gridTemplateColumns: `${EMPLOYEE_COL_WIDTH}px repeat(7, minmax(0, 1fr))`,
+              minWidth: GRID_MIN_WIDTH,
             }}
           >
             {/* Header row */}
@@ -624,33 +603,8 @@ export function WeeklyScheduleGrid({
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Employee
               </span>
-              {visibleDays < 7 && (
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => setStartDayOffset((o) => Math.max(0, o - 1))}
-                    disabled={startDayOffset === 0}
-                    className="size-5 flex items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    aria-label="Previous days"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setStartDayOffset((o) => Math.min(7 - visibleDays, o + 1))
-                    }
-                    disabled={startDayOffset + visibleDays >= 7}
-                    className="size-5 flex items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    aria-label="Next days"
-                  >
-                    <ChevronRight className="size-3.5" />
-                  </button>
-                </div>
-              )}
             </div>
-            {days
-              .slice(startDayOffset, startDayOffset + visibleDays)
-              .map((day, si) => {
-                const di = startDayOffset + si;
+            {days.map((day, di) => {
                 const isToday = toISODate(day) === toISODate(new Date());
                 const isWeekend = di >= 5;
                 const isClosed = closedDays[di];
@@ -746,10 +700,7 @@ export function WeeklyScheduleGrid({
                     );
                   })()}
                 </div>
-                {days
-                  .slice(startDayOffset, startDayOffset + visibleDays)
-                  .map((day, si) => {
-                    const di = startDayOffset + si;
+                {days.map((day, di) => {
                     const date = toISODate(day);
                     const cellId = `${employee.id}__${date}`;
                     const cellShifts = getShiftsForCell(employee.id, date);
@@ -770,7 +721,6 @@ export function WeeklyScheduleGrid({
                         shifts={cellShifts}
                         employee={employee}
                         jobRoles={jobRoles}
-                        publishedAt={publishedAt}
                         isWeekend={di >= 5}
                         isClosed={closedDays[di]}
                         isTimeOff={isTimeOffDay(employee.id, date)}
@@ -779,7 +729,6 @@ export function WeeklyScheduleGrid({
                         isToday={toISODate(day) === toISODate(new Date())}
                         onAddClick={openAddDialog}
                         onShiftClick={openEditDialog}
-                        onMarkSick={onMarkSick}
                       />
                     );
                   })}
@@ -801,7 +750,6 @@ export function WeeklyScheduleGrid({
                     shift={activeShift}
                     employee={emp}
                     jobRoles={jobRoles}
-                    publishedAt={publishedAt}
                     onClick={() => {}}
                   />
                 </div>
@@ -821,6 +769,7 @@ export function WeeklyScheduleGrid({
         defaultDate={addDialog.date}
         getConflict={getConflict}
         onShiftCreate={onShiftCreate}
+        onMarkSick={onMarkSick}
       />
 
       {/* Edit Shift Dialog */}
@@ -832,8 +781,29 @@ export function WeeklyScheduleGrid({
           jobRoles={jobRoles}
           onShiftUpdate={onShiftUpdate}
           onShiftDelete={onShiftDelete}
+          onShiftCancel={onShiftCancel}
         />
       )}
+
+      {/* Cancelled Shift Dialog */}
+      {cancelledDialog.shift &&
+        (() => {
+          const emp = employees.find(
+            (e) => e.id === cancelledDialog.shift!.employeeId,
+          );
+          if (!emp) return null;
+          return (
+            <CancelledShiftDialog
+              open={cancelledDialog.open}
+              onOpenChange={(open) =>
+                setCancelledDialog((prev) => ({ ...prev, open }))
+              }
+              shift={cancelledDialog.shift!}
+              employee={emp}
+              onDelete={onShiftDelete}
+            />
+          );
+        })()}
 
       {/* Sick Day Dialog */}
       {sickDialog.shift &&

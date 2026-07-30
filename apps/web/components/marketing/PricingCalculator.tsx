@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { TrendingDown } from "lucide-react"
 import { useTranslations } from "next-intl"
 import {
   PRICE_PER_EMPLOYEE_MONTHLY,
+  MONTHLY_MINIMUM,
+  MINIMUM_COVERS_STAFF,
   PLAN_CURRENCY,
   monthlyTotal,
-  breakEvenLabourHoursPerMonth,
-  ROI_ASSUMED_HOURLY_WAGE,
+  formatPrice,
 } from "@/lib/pricing"
 
 const MIN = 1
@@ -16,16 +16,18 @@ const MAX = 60
 
 /**
  * Interactive "what will I pay?" estimator. Mirrors the exact billing formula:
- * active employees × {@link PRICE_PER_EMPLOYEE_MONTHLY}. Pure client state — no
- * network, safe to render anywhere on the marketing page.
+ * {@link monthlyTotal} = max(minimum, active employees × per-employee rate).
+ * Pure client state — no network, safe to render anywhere on the marketing page.
  */
 export function PricingCalculator() {
   const t = useTranslations("marketing.calculator")
-  const [count, setCount] = useState(8)
+  // Start inside the minimum band so the first thing a visitor sees is the €19
+  // entry price, not the per-employee rate that only applies above the floor.
+  const [count, setCount] = useState(4)
   const total = monthlyTotal(count)
-  // Break-even framing: how little avoided over-scheduling covers the bill.
-  const breakEvenHrs = breakEvenLabourHoursPerMonth(count)
-  const breakEvenMinPerWeek = Math.round((breakEvenHrs * 12 / 52) * 60)
+  // Below the break-even count the €19 floor applies, so the per-employee
+  // maths would understate the bill — show the minimum framing instead.
+  const atMinimum = count * PRICE_PER_EMPLOYEE_MONTHLY < MONTHLY_MINIMUM
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
@@ -58,27 +60,18 @@ export function PricingCalculator() {
         className="mt-6 flex flex-col items-center gap-1 rounded-xl bg-gray-50 py-6"
       >
         <p className="text-sm text-gray-500 tabular-nums">
-          {count} × {PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}
+          {atMinimum
+            ? t("minimumLine", { currency: PLAN_CURRENCY, min: MONTHLY_MINIMUM })
+            : t("perUnit", { count, currency: PLAN_CURRENCY, price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY) })}
         </p>
         <p className="text-4xl font-bold text-gray-900 tabular-nums">
-          {PLAN_CURRENCY}{total}
+          {PLAN_CURRENCY}{formatPrice(total)}
           <span className="ml-1 text-base font-medium text-gray-400">{t("perMonth")}</span>
         </p>
-        <p className="text-xs text-gray-400">
-          {t("activeNote")}
-        </p>
-      </div>
-
-      {/* Break-even: reframes the price as a return, not just a cost. */}
-      <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-        <TrendingDown className="mt-0.5 size-4 shrink-0 text-green-600" />
-        <p className="text-xs leading-relaxed text-green-900">
-          {t.rich("breakEven", {
-            currency: PLAN_CURRENCY,
-            wage: ROI_ASSUMED_HOURLY_WAGE,
-            min: breakEvenMinPerWeek,
-            b: (chunks) => <span className="font-semibold tabular-nums">{chunks}</span>,
-          })}
+        <p className="text-xs text-gray-400 text-center px-4">
+          {atMinimum
+            ? t("noteMinimum", { covers: MINIMUM_COVERS_STAFF })
+            : t("activeNote")}
         </p>
       </div>
     </div>

@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
-import { isNonNegativeInt } from "@/lib/validate"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as clockService from "@/lib/services/clockService"
 
 interface RouteContext {
   params: Promise<{ orgId: string; entryId: string }>
 }
+
+// A loose "valid Date string" check, matching the previous `new Date(x)` guard —
+// accepts any string Date can parse, rejects garbage. At least one field must be
+// present, enforced by the object-level refine.
+const isoTimestamp = z
+  .string()
+  .refine((s) => !isNaN(new Date(s).getTime()), "must be a valid ISO 8601 timestamp")
+
+const UpdateEntrySchema = z
+  .object({
+    clockIn:      isoTimestamp.optional(),
+    clockOut:     isoTimestamp.nullable().optional(),
+    breakMinutes: z.number().int().min(0, "must be a non-negative integer").optional(),
+    shiftId:      z.string().nullable().optional(),
+    note:         z.string().nullable().optional(),
+  })
+  .refine((b) => Object.keys(b).length > 0, { message: "No fields to update" })
 
 // PATCH /api/orgs/[orgId]/time-entries/[entryId]
 // Manager only. Correct an existing entry (timestamps, break, shift, note).
@@ -15,43 +32,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  if (guard.role !== "MANAGER" && guard.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  }
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
-  let body: {
-    clockIn?: string; clockOut?: string | null
-    breakMinutes?: number; shiftId?: string | null; note?: string | null
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-
-  if (Object.keys(body).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 })
-  }
-
-  // Validate ISO timestamp strings
-  if (body.clockIn !== undefined) {
-    const t = new Date(body.clockIn)
-    if (isNaN(t.getTime())) {
-      return NextResponse.json({ error: "clockIn must be a valid ISO 8601 timestamp" }, { status: 400 })
-    }
-  }
-  if (body.clockOut !== undefined && body.clockOut !== null) {
-    const t = new Date(body.clockOut)
-    if (isNaN(t.getTime())) {
-      return NextResponse.json({ error: "clockOut must be a valid ISO 8601 timestamp or null" }, { status: 400 })
-    }
-  }
-  if (body.breakMinutes !== undefined && !isNonNegativeInt(body.breakMinutes)) {
-    return NextResponse.json({ error: "breakMinutes must be a non-negative integer" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, UpdateEntrySchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const entry = await clockService.adminUpdateEntry(orgId, entryId, body, guard.userId)
+    const entry = await clockService.adminUpdateEntry(orgId, entryId, parsed.data, guard.userId)
     return NextResponse.json({ data: entry })
   } catch (err) {
     if (err instanceof ServiceError) {
@@ -68,9 +56,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  if (guard.role !== "MANAGER" && guard.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  }
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   try {
     await clockService.adminDeleteEntry(orgId, entryId, guard.userId)

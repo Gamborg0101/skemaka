@@ -31,29 +31,26 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
-        # version is read from the "packageManager" field in package.json
-
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: pnpm
+          cache: npm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Generate Prisma client
         working-directory: apps/web
         run: npx prisma generate
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: npm run typecheck
 
       - name: Lint (web)
-        run: pnpm --filter web lint
+        run: npm run lint --workspace=web
 
       - name: Test
-        run: pnpm test
+        run: npm test
 
   # Browser E2E for the money path (access control, trial paywall, invite claim).
   # Nightly + manual only. Runs the Neon serverless driver against a plain Postgres
@@ -92,15 +89,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: pnpm
+          cache: npm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Generate Prisma client
         working-directory: apps/web
@@ -112,10 +107,11 @@ jobs:
 
       - name: Seed E2E data
         working-directory: apps/web
-        run: pnpm seed:e2e
+        run: npm run seed:e2e
 
       - name: Install Playwright browser
-        run: pnpm --filter web exec playwright install --with-deps chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
 
       - name: Run E2E
-        run: pnpm --filter web test:e2e
+        run: npm run test:e2e --workspace=web

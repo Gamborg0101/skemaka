@@ -1,24 +1,39 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { getTranslations } from "next-intl/server"
 import {
   Check, X, ShieldCheck, Lock, Download, AlertTriangle, GripVertical, Send,
   Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare, Clock, Wallet,
 } from "lucide-react"
 import {
-  PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS,
-  hoursSavedPerMonth, MANUAL_SCHEDULING_MINUTES, SKEMAKA_SCHEDULING_MINUTES,
+  PRICE_PER_EMPLOYEE_MONTHLY, MONTHLY_MINIMUM, MINIMUM_COVERS_STAFF, PLAN_CURRENCY, TRIAL_DAYS,
+  formatPrice, hoursSavedPerMonth, MANUAL_SCHEDULING_MINUTES, SKEMAKA_SCHEDULING_MINUTES,
 } from "@/lib/pricing"
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
+import { CookieSettingsLink } from "@/components/CookieBanner"
 import { LangQuerySync, LocaleToggle } from "@/components/marketing/LocaleToggle"
-import { DEMO_FLAGS, demoWeekSummary } from "@/lib/demo/demoData"
+import { DEMO_FLAGS } from "@/lib/demo/demoData"
 import { LogoLockup } from "@/components/brand/Logo"
 
-const cost = demoWeekSummary()
 const savedHrsMonth = hoursSavedPerMonth()
 const manualHrs = Math.round(MANUAL_SCHEDULING_MINUTES / 60)
+
+/** Real product screenshot in a minimal browser frame. */
+function Screenshot({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-2xl shadow-slate-900/10 overflow-hidden">
+      <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-3 py-2">
+        <span className="size-2 rounded-full bg-gray-200" />
+        <span className="size-2 rounded-full bg-gray-200" />
+        <span className="size-2 rounded-full bg-gray-200" />
+      </div>
+      <Image src={src} alt={alt} width={1440} height={900} className="w-full h-auto" />
+    </div>
+  )
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export async function generateMetadata() {
@@ -53,11 +68,12 @@ export default async function HomePage() {
   // Localized display text for the demo conflict flags rendered below. Keyed
   // 1:1 with DEMO_FLAGS — update these keys if the demo data changes.
   const flagNotes = [t("deep.flag1"), t("deep.flag2")]
-  const faqs = [1, 2, 3, 4, 5, 6].map((i) => ({
+  const faqs = [1, 2, 3, 4, 5, 6, 7].map((i) => ({
     q: t(`faq.q${i}` as `faq.q1`),
     a: t(`faq.a${i}` as `faq.a1`, {
       currency: PLAN_CURRENCY,
-      price: PRICE_PER_EMPLOYEE_MONTHLY,
+      price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY),
+      min: MONTHLY_MINIMUM,
       days: TRIAL_DAYS,
     }),
   }))
@@ -68,6 +84,17 @@ export default async function HomePage() {
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="bg-slate-900 relative overflow-hidden">
+        {/* Warm restaurant photograph under a dark wash — depth without hurting
+            text contrast. The preview card floats over it like a real app. */}
+        <Image
+          src="/marketing/hero-restaurant.jpg"
+          alt={t("hero.imgAlt")}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-30"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/85 via-slate-900/75 to-slate-900" />
         <div className="pointer-events-none absolute -top-40 left-1/4 size-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
 
         <nav className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
@@ -88,16 +115,18 @@ export default async function HomePage() {
           <p className="mt-5 text-lg text-slate-400 leading-relaxed max-w-xl mx-auto">
             {t("hero.subtitle")}
           </p>
+          {/* Demo-first: the one-click sandbox is the strongest thing we can
+              show a visitor — none of our competitors have it. */}
           <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/login" className="inline-flex items-center justify-center h-11 px-7 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
-              {t("hero.ctaTrial")}
+            <Link href="/demo" className="inline-flex items-center justify-center h-11 px-7 rounded-lg bg-blue-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400 transition-colors">
+              {t("demo.cta")}
             </Link>
-            <Link href="/demo" className="inline-flex items-center justify-center h-11 px-7 rounded-lg border border-white/15 text-sm font-medium text-white/80 hover:text-white hover:border-white/30 transition-colors">
-              {t("hero.ctaDemo")}
+            <Link href="/login" className="inline-flex items-center justify-center h-11 px-7 rounded-lg border border-white/20 text-sm font-medium text-white/85 hover:text-white hover:border-white/40 transition-colors">
+              {t("hero.ctaTrial")}
             </Link>
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            {t("hero.priceLine", { days: TRIAL_DAYS, currency: PLAN_CURRENCY, price: PRICE_PER_EMPLOYEE_MONTHLY })}
+            {t("hero.priceLine", { days: TRIAL_DAYS, currency: PLAN_CURRENCY, min: MONTHLY_MINIMUM })}
           </p>
         </div>
 
@@ -196,62 +225,78 @@ export default async function HomePage() {
       <section className="bg-gray-50 py-20 border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight text-center">{t("how.title")}</h2>
-          <div className="mt-12 grid md:grid-cols-3 gap-8">
-            {[
-              { n: 1, icon: CalendarCheck, title: t("how.step1Title"), text: t("how.step1Text") },
-              { n: 2, icon: GripVertical, title: t("how.step2Title"), text: t("how.step2Text") },
-              { n: 3, icon: Send, title: t("how.step3Title"), text: t("how.step3Text") },
-            ].map(({ n, icon: Icon, title, text }) => (
-              <div key={n} className="rounded-2xl border border-gray-200 bg-white p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="inline-flex items-center justify-center size-9 rounded-lg bg-slate-900 text-white">
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{t("how.stepLabel", { n })}</span>
+          <div className="mt-12 grid lg:grid-cols-[380px_1fr] gap-8 items-stretch">
+            {/* The people this is for — real service, not clip art. */}
+            <div className="relative hidden lg:block overflow-hidden rounded-2xl">
+              <Image
+                src="/marketing/bar-team.jpg"
+                alt={t("how.imgAlt")}
+                fill
+                /* 380px-wide column but object-cover crops a tall portrait,
+                   so the real render is ~850px wide — request that, not 380px. */
+                sizes="900px"
+                className="object-cover"
+              />
+            </div>
+            <div className="grid gap-5">
+              {[
+                { n: 1, icon: CalendarCheck, title: t("how.step1Title"), text: t("how.step1Text") },
+                { n: 2, icon: GripVertical, title: t("how.step2Title"), text: t("how.step2Text") },
+                { n: 3, icon: Send, title: t("how.step3Title"), text: t("how.step3Text") },
+              ].map(({ n, icon: Icon, title, text }) => (
+                <div key={n} className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="inline-flex items-center justify-center size-9 rounded-lg bg-slate-900 text-white">
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{t("how.stepLabel", { n })}</span>
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+                  <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{text}</p>
                 </div>
-                <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-                <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">{text}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Solution deep-dives (live visuals, not screenshots) ────────────── */}
+      {/* ── Solution deep-dives — the real product, not mockups ────────────── */}
       <section className="py-20">
-        <div className="max-w-5xl mx-auto px-6 space-y-20">
+        <div className="max-w-6xl mx-auto px-6 space-y-20">
 
           {/* Build the schedule */}
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="grid lg:grid-cols-[2fr_3fr] gap-10 items-center">
             <div>
               <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{t("deep.buildTitle")}</h3>
               <p className="mt-3 text-gray-500 leading-relaxed">
                 {t("deep.buildBody")}
               </p>
             </div>
-            <SchedulePreview />
+            <Screenshot src="/marketing/screens/shot-schedule.png" alt={t("deep.altSchedule")} />
+          </div>
+
+          {/* Plan ahead in drafts, roll out once */}
+          <div className="grid lg:grid-cols-[3fr_2fr] gap-10 items-center">
+            <div className="lg:order-1 order-2">
+              <Screenshot src="/marketing/screens/shot-rollout.png" alt={t("deep.altRollout")} />
+            </div>
+            <div className="lg:order-2 order-1">
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{t("deep.draftTitle")}</h3>
+              <p className="mt-3 text-gray-500 leading-relaxed">
+                {t("deep.draftBody")}
+              </p>
+            </div>
           </div>
 
           {/* Wage cost */}
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
-            <div className="lg:order-2">
+          <div className="grid lg:grid-cols-[2fr_3fr] gap-10 items-center">
+            <div>
               <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{t("deep.costTitle")}</h3>
               <p className="mt-3 text-gray-500 leading-relaxed">
                 {t("deep.costBody")}
               </p>
             </div>
-            <div className="lg:order-1 grid grid-cols-3 gap-3">
-              {[
-                { label: t("deep.statThisWeek"), value: `${cost.totalHours}h` },
-                { label: t("deep.statWageCost"), value: `${PLAN_CURRENCY}${cost.totalCost.toLocaleString()}` },
-                { label: t("deep.statAvgRate"), value: `${PLAN_CURRENCY}${cost.avgRate}` },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl border border-gray-200 bg-white p-4 text-center">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{s.label}</p>
-                  <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums">{s.value}</p>
-                </div>
-              ))}
-            </div>
+            <Screenshot src="/marketing/screens/shot-costs.png" alt={t("deep.altCosts")} />
           </div>
 
           {/* Catch problems */}
@@ -336,7 +381,7 @@ export default async function HomePage() {
               <p className="mt-3 text-sm text-gray-500 leading-relaxed">
                 {t.rich("savings.moneyBody", {
                   currency: PLAN_CURRENCY,
-                  price: PRICE_PER_EMPLOYEE_MONTHLY,
+                  price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY),
                   b: bold,
                 })}
               </p>
@@ -354,8 +399,8 @@ export default async function HomePage() {
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{t("pricing.title")}</h2>
             <p className="mt-3 text-base text-gray-500">
-              <span className="font-semibold text-gray-900">{t("pricing.subBold", { currency: PLAN_CURRENCY, price: PRICE_PER_EMPLOYEE_MONTHLY })}</span>{" "}
-              {t("pricing.subRest")}
+              <span className="font-semibold text-gray-900">{t("pricing.subBold", { currency: PLAN_CURRENCY, min: MONTHLY_MINIMUM, covers: MINIMUM_COVERS_STAFF })}</span>{" "}
+              {t("pricing.subRest", { currency: PLAN_CURRENCY, price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY) })}
             </p>
           </div>
 
@@ -363,9 +408,10 @@ export default async function HomePage() {
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               <div className="bg-slate-900 px-8 py-7 text-center">
                 <div className="flex items-end justify-center gap-1">
-                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}</span>
+                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{formatPrice(MONTHLY_MINIMUM)}</span>
                   <span className="text-white/40 pb-1.5 text-base">{t("pricing.priceUnit")}</span>
                 </div>
+                <p className="mt-1.5 text-sm font-medium text-white/70 tabular-nums">{t("pricing.minimumNote", { currency: PLAN_CURRENCY, price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY), covers: MINIMUM_COVERS_STAFF })}</p>
                 <p className="mt-2 text-sm text-white/35">{t("pricing.trialNote", { days: TRIAL_DAYS })}</p>
               </div>
               <div className="px-8 py-6 space-y-2.5">
@@ -419,20 +465,28 @@ export default async function HomePage() {
       </section>
 
       {/* ── Bottom CTA ────────────────────────────────────────────────────── */}
-      <section className="bg-slate-900">
-        <div className="max-w-3xl mx-auto px-6 py-20 text-center">
+      <section className="relative overflow-hidden bg-slate-900">
+        <Image
+          src="/marketing/server-smile.jpg"
+          alt={t("cta.imgAlt")}
+          fill
+          sizes="100vw"
+          className="object-cover opacity-25"
+        />
+        <div className="absolute inset-0 bg-slate-900/75" />
+        <div className="relative max-w-3xl mx-auto px-6 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             {t("cta.title")}
           </h2>
-          <p className="mt-4 text-lg text-slate-400">
+          <p className="mt-4 text-lg text-slate-300">
             {t("cta.subtitle")}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/login" className="inline-flex items-center justify-center h-12 px-10 rounded-lg bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
-              {t("cta.trial")}
-            </Link>
-            <Link href="/demo" className="inline-flex items-center justify-center h-12 px-10 rounded-lg border border-white/15 text-sm font-medium text-white/80 hover:text-white hover:border-white/30 transition-colors">
+            <Link href="/demo" className="inline-flex items-center justify-center h-12 px-10 rounded-lg bg-blue-500 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400 transition-colors">
               {t("cta.demo")}
+            </Link>
+            <Link href="/login" className="inline-flex items-center justify-center h-12 px-10 rounded-lg border border-white/25 text-sm font-medium text-white/85 hover:text-white hover:border-white/50 transition-colors">
+              {t("cta.trial")}
             </Link>
           </div>
         </div>
@@ -442,10 +496,11 @@ export default async function HomePage() {
       <footer className="border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
           <LogoLockup className="text-slate-900" markClassName="size-6" wordClassName="text-sm font-semibold" />
-          <nav className="flex items-center gap-6">
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link href="/demo" className="hover:text-gray-600 transition-colors">{t("footer.demo")}</Link>
             <Link href="/terms" className="hover:text-gray-600 transition-colors">{t("footer.terms")}</Link>
             <Link href="/privacy" className="hover:text-gray-600 transition-colors">{t("footer.privacy")}</Link>
+            <CookieSettingsLink />
             <LocaleToggle variant="light" />
           </nav>
           <span>© {new Date().getFullYear()} Skemaka ApS</span>

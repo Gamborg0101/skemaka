@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 import * as timeOffService from "@/lib/services/timeOffService"
@@ -8,30 +9,25 @@ interface RouteContext {
   params: Promise<{ orgId: string; requestId: string }>
 }
 
+const ReviewTimeOffSchema = z.object({
+  status:     z.enum(["APPROVED", "DENIED"]),
+  reviewNote: z.string().max(2000, "reviewNote must be at most 2000 characters").optional(),
+})
+
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { orgId, requestId } = await params
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  if (guard.role !== "MANAGER" && guard.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  }
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { status?: "APPROVED" | "DENIED"; reviewNote?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  if (!body.status || !["APPROVED", "DENIED"].includes(body.status)) {
-    return NextResponse.json({ error: "status must be APPROVED or DENIED" }, { status: 400 })
-  }
-  if (body.reviewNote && body.reviewNote.length > 2000) {
-    return NextResponse.json({ error: "reviewNote must be at most 2000 characters" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, ReviewTimeOffSchema)
+  if ("error" in parsed) return parsed.error
+  const body = parsed.data
 
   try {
     const updated = await timeOffService.reviewTimeOff(orgId, requestId, body.status, body.reviewNote)
@@ -49,9 +45,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  if (guard.role !== "MANAGER" && guard.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  }
+  const managerCheck = requireManagerRole(guard)
+  if (managerCheck) return managerCheck.error
 
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })

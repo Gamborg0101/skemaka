@@ -68,5 +68,9 @@
     "langDesc": "Language for the app and for messages sent to your staff.",
     "langSaved": "Language updated",
     "langError": "Couldn't update language"
+  },
+  "demoBanner": {
+    "text": "Demo restaurant — deleted after 48 hours. Everything you change here is private to you.",
+    "cta": "Start your free trial"
   }
 }

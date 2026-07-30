@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test"
  *
  * Auth uses the env-gated "e2e" credentials provider (see lib/auth.ts), so the
  * dev server must run with E2E_TEST_LOGIN=1 and a shared E2E_TEST_PASSWORD. The
- * suite expects the deterministic dataset created by `pnpm seed:e2e`.
+ * suite expects the deterministic dataset created by `npm run seed:e2e`.
  *
  * Set E2E_BASE_URL to run against an already-running server (skips webServer).
  */
@@ -26,7 +26,7 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: "pnpm dev",
+        command: "npm run dev",
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

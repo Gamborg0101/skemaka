@@ -4,14 +4,14 @@
 // route (which renders lib/demo/demoData.ts) or the landing page. Because the
 // landing page's feature images are captured FROM the same /demo DOM, marketing
 // can never drift from the real UI — change the demo data or the components and
-// the next `pnpm screenshots` run updates the marketing assets to match.
+// the next `npm run screenshots` run updates the marketing assets to match.
 //
 // Usage:
-//   pnpm screenshots                 # boots `next dev`, captures, shuts down
-//   BASE_URL=http://localhost:3000 pnpm screenshots   # reuse a running server
-//   pnpm screenshots:check           # CI: regenerate + fail if anything changed
+//   npm run screenshots              # boots `next dev`, captures, shuts down
+//   BASE_URL=http://localhost:3000 npm run screenshots   # reuse a running server
+//   npm run screenshots:check        # CI: regenerate + fail if anything changed
 //
-// One-time setup:  pnpm install && npx playwright install chromium
+// One-time setup:  npm install && npx playwright install chromium
 
 import { spawn } from "node:child_process"
 import { setTimeout as sleep } from "node:timers/promises"
@@ -60,7 +60,7 @@ async function main() {
   let server
   if (SPAWN) {
     console.log(`▶ booting next dev on :${PORT}`)
-    server = spawn("pnpm", ["exec", "next", "dev", "-p", PORT], {
+    server = spawn("npx", ["next", "dev", "-p", PORT], {
       stdio: "ignore",
       env: process.env,
     })

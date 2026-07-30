@@ -8,6 +8,7 @@ import { JobRolesSection } from "@/components/manager/settings/JobRolesSection"
 import { StoreHoursSection } from "@/components/manager/settings/StoreHoursSection"
 import { ShiftTypesSection } from "@/components/manager/settings/ShiftTypesSection"
 import { TeamAccessSection } from "@/components/manager/settings/TeamAccessSection"
+import { WorkWeekSection } from "@/components/manager/settings/WorkWeekSection"
 import { ScheduleViewSection } from "@/components/manager/settings/ScheduleViewSection"
 import { TimeFormatSection } from "@/components/manager/settings/TimeFormatSection"
 import { CurrencySection } from "@/components/manager/settings/CurrencySection"
@@ -78,6 +79,7 @@ export default function SettingsPage() {
 
           <SettingsGroup title={t("groupTeam")}>
             <JobRolesSection />
+            <WorkWeekSection />
             <TeamAccessSection />
             <ComingSoonCard
               icon={Users}

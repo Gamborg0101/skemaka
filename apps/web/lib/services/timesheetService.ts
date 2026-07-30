@@ -66,8 +66,9 @@ async function scheduledRows(orgId: string, dateFrom: string, dateTo: string): P
         gte: new Date(dateFrom + "T00:00:00Z"),
         lte: new Date(dateTo + "T00:00:00Z"),
       },
-      // Sick shifts carry no worked hours — mirrors getLaborCosts.
+      // Sick and cancelled shifts carry no worked hours — mirrors getLaborCosts.
       colorTag: { not: "sick" },
+      cancelledAt: null,
     },
     include: { employee: { select: ROW_EMPLOYEE_SELECT } },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],

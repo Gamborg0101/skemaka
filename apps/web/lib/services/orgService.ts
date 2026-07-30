@@ -246,6 +246,9 @@ export type OrgSettingsPatch = {
   availabilityWindowWeeks?:  number
   timeFormat?:               "12h" | "24h"
   includeManagerInSchedule?: boolean
+  fullTimeHours?:            number
+  reducedFullTimeHours?:     number
+  timelineBufferHours?:      number
 }
 
 export async function updateOrgSettings(
@@ -262,6 +265,9 @@ export async function updateOrgSettings(
   if (patch.availabilityWindowWeeks !== undefined) merged.availabilityWindowWeeks = patch.availabilityWindowWeeks
   if (patch.timeFormat              !== undefined) merged.timeFormat              = patch.timeFormat
   if (patch.includeManagerInSchedule !== undefined) merged.includeManagerInSchedule = patch.includeManagerInSchedule
+  if (patch.fullTimeHours           !== undefined) merged.fullTimeHours           = patch.fullTimeHours
+  if (patch.reducedFullTimeHours    !== undefined) merged.reducedFullTimeHours    = patch.reducedFullTimeHours
+  if (patch.timelineBufferHours     !== undefined) merged.timelineBufferHours     = patch.timelineBufferHours
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await db.organization.update({ where: { id: orgId }, data: { settings: merged as any } })
@@ -526,20 +532,41 @@ export async function deleteJobRole(orgId: string, roleId: string): Promise<void
   await db.jobRole.delete({ where: { id: roleId } })
 }
 
-export async function renameJobRole(orgId: string, roleId: string, newName: string): Promise<JobRole> {
+export async function updateJobRole(
+  orgId: string,
+  roleId: string,
+  patch: { name?: string; color?: string },
+): Promise<JobRole> {
   const existing = await db.jobRole.findFirst({
     where: { id: roleId, organizationId: orgId },
     select: { id: true, name: true },
   })
   if (!existing) throw new ServiceError("Job role not found", "NOT_FOUND")
-  if (existing.name === newName) return serJobRole(await db.jobRole.findUniqueOrThrow({ where: { id: roleId } }))
 
-  const [updated] = await db.$transaction([
-    db.jobRole.update({ where: { id: roleId }, data: { name: newName } }),
-    db.employee.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: newName } }),
-    db.shift.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: newName } }),
-    db.shiftTemplate.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: newName } }),
-  ])
+  const nameChanged = patch.name !== undefined && patch.name !== existing.name
+  const data: { name?: string; color?: string } = {}
+  if (nameChanged) data.name = patch.name
+  if (patch.color !== undefined) data.color = patch.color
+
+  // Nothing to change (e.g. a no-op rename) — return the current record.
+  if (Object.keys(data).length === 0) {
+    return serJobRole(await db.jobRole.findUniqueOrThrow({ where: { id: roleId } }))
+  }
+
+  // The role NAME is denormalized onto employees/shifts/templates, so a rename
+  // must cascade. Color lives only on the role, so a color-only change is a
+  // plain update.
+  if (nameChanged) {
+    const [updated] = await db.$transaction([
+      db.jobRole.update({ where: { id: roleId }, data }),
+      db.employee.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: patch.name! } }),
+      db.shift.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: patch.name! } }),
+      db.shiftTemplate.updateMany({ where: { organizationId: orgId, jobRole: existing.name }, data: { jobRole: patch.name! } }),
+    ])
+    return serJobRole(updated)
+  }
+
+  const updated = await db.jobRole.update({ where: { id: roleId }, data })
   return serJobRole(updated)
 }
 

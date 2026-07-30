@@ -1,10 +1,27 @@
 import "server-only"
 import { Resend } from "resend"
+import type { CreateEmailOptions } from "resend"
 import type { Locale } from "@skemaka/i18n"
 import { getMessageTranslator } from "@/lib/messages"
+import { DEMO_EMAIL_DOMAIN } from "@/lib/demo/constants"
 
 // HTML tag renderer for <strong> markup embedded in email catalog strings.
 const strong = (chunks: string) => `<strong>${chunks}</strong>`
+
+/**
+ * Single source of truth for the From header on every outbound email.
+ *
+ * `RESEND_FROM_EMAIL` may be a bare address or a "Name <addr>" pair. A bare
+ * address gets a "Skemaka" display name so inboxes show the product, not the
+ * mailbox local-part. NOTE: Resend rejects senders on unverified domains — the
+ * sandbox `onboarding@resend.dev` is the only sender that works (and it only
+ * delivers to the account owner) until skemaka.com is verified in Resend.
+ */
+export function emailFrom(): string {
+  const configured = process.env.RESEND_FROM_EMAIL?.trim()
+  const addr = configured || "noreply@skemaka.com"
+  return addr.includes("<") ? addr : `Skemaka <${addr}>`
+}
 
 let _resend: Resend | null = null
 
@@ -20,6 +37,21 @@ export const resend = new Proxy({} as Resend, {
     return getResend()[prop as keyof Resend]
   },
 })
+
+/**
+ * All outbound product email funnels through this instead of calling Resend
+ * directly. Recipients on DEMO_EMAIL_DOMAIN (demo-sandbox users/employees) are
+ * silently dropped — a sandbox must never email anyone, and the unroutable
+ * domain would only bounce and hurt sender reputation.
+ */
+async function deliver(payload: CreateEmailOptions) {
+  const to = Array.isArray(payload.to) ? payload.to : [payload.to]
+  const demoOnly = to.every(
+    (addr) => typeof addr === "string" && addr.toLowerCase().endsWith(`@${DEMO_EMAIL_DOMAIN}`),
+  )
+  if (demoOnly) return null
+  return getResend().emails.send(payload)
+}
 
 interface InviteEmailOptions {
   to: string
@@ -61,8 +93,8 @@ export async function sendAvailabilityInviteEmail({
   locale = "en",
 }: AvailabilityInviteOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+  return deliver({
+    from: emailFrom(),
     to,
     subject: t("availabilityInvite.subject", { week: weekLabel, orgName }),
     html: `
@@ -116,8 +148,8 @@ async function sendWithRetry<T>(send: () => Promise<T>, attempts = 3): Promise<T
 
 export async function sendClaimCodeEmail({ to, name, orgName, code, locale = "en" }: ClaimCodeOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return sendWithRetry(() => getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+  return sendWithRetry(() => deliver({
+    from: emailFrom(),
     to,
     subject: t("claimCode.subject", { code }),
     html: `
@@ -141,8 +173,8 @@ export async function sendInviteEmail({ to, name, orgName, inviteUrl, joinUrl, l
   const t = getMessageTranslator(locale, "emails")
   // White-on-dark <strong> for the install box.
   const strongW = (chunks: string) => `<strong style="color:#ffffff;">${chunks}</strong>`
-  return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+  return deliver({
+    from: emailFrom(),
     to,
     subject: t("invite.subject", { orgName }),
     html: `
@@ -197,8 +229,8 @@ export async function sendShiftAssignedEmail({
   to, name, orgName, dateLabel, startTime, endTime, jobRole, locale = "en",
 }: ShiftAssignedOptions) {
   const t = getMessageTranslator(locale, "emails")
-  return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+  return deliver({
+    from: emailFrom(),
     to,
     subject: t("shiftAssigned.subject", { date: dateLabel, orgName }),
     html: `
@@ -220,6 +252,123 @@ export async function sendShiftAssignedEmail({
   })
 }
 
+/**
+ * Sent when a manager cancels a shift. Unlike edits/deletes (which revert the
+ * week to draft and defer to the re-publish blast), a cancellation notifies
+ * the one affected employee directly and immediately.
+ */
+export async function sendShiftCancelledEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, locale = "en",
+}: ShiftAssignedOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  return deliver({
+    from: emailFrom(),
+    to,
+    subject: t("shiftCancelled.subject", { date: dateLabel, orgName }),
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
+        <p style="color: #555; margin-bottom: 20px;">
+          ${t.markup("shiftCancelled.intro", { orgName, strong })}
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111; text-decoration: line-through;">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151; text-decoration: line-through;">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #999; font-size: 13px;">
+          ${t("shiftCancelled.footer")}
+        </p>
+      </div>
+    `,
+  })
+}
+
+interface ShiftOfferEmailOptions {
+  to: string
+  name: string
+  orgName: string
+  dateLabel: string
+  startTime: string
+  endTime: string
+  jobRole: string
+  deadlineLabel: string
+  portalUrl: string
+  locale?: Locale
+}
+
+/** Sent to each recipient when a manager offers a shift to hand-picked staff. */
+export async function sendShiftOfferEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, deadlineLabel, portalUrl, locale = "en",
+}: ShiftOfferEmailOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  return deliver({
+    from: emailFrom(),
+    to,
+    subject: t("shiftOffer.subject", { date: dateLabel, orgName }),
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
+        <p style="color: #555; margin-bottom: 16px;">
+          ${t.markup("shiftOffer.intro", { orgName, strong })}
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111;">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151;">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #555; margin-bottom: 24px;">
+          ${t.markup("shiftOffer.deadline", { deadline: deadlineLabel, strong })}
+        </p>
+        <a href="${portalUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">
+          ${t("shiftOffer.cta")}
+        </a>
+      </div>
+    `,
+  })
+}
+
+interface ShiftOfferResultEmailOptions {
+  to: string
+  name: string
+  orgName: string
+  dateLabel: string
+  startTime: string
+  endTime: string
+  jobRole: string
+  won: boolean
+  locale?: Locale
+}
+
+/** Sent after a manager confirms: "you got it" to the winner, "filled" to others. */
+export async function sendShiftOfferResultEmail({
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, won, locale = "en",
+}: ShiftOfferResultEmailOptions) {
+  const t = getMessageTranslator(locale, "emails")
+  const key = won ? "shiftOfferWon" : "shiftOfferFilled"
+  return deliver({
+    from: emailFrom(),
+    to,
+    subject: t(`${key}.subject`, { date: dateLabel, orgName }),
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">${t("greeting", { name })}</h2>
+        <p style="color: #555; margin-bottom: 20px;">
+          ${t.markup(`${key}.intro`, { orgName, strong })}
+        </p>
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;${won ? "" : " opacity: 0.6;"}">
+          <p style="margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111;${won ? "" : " text-decoration: line-through;"}">${dateLabel}</p>
+          <p style="margin: 0 0 4px; color: #374151;${won ? "" : " text-decoration: line-through;"}">${startTime} – ${endTime}</p>
+          <p style="margin: 0; color: #6b7280; font-size: 14px;">${jobRole}</p>
+        </div>
+        <p style="color: #999; font-size: 13px;">
+          ${t(`${key}.footer`)}
+        </p>
+      </div>
+    `,
+  })
+}
+
 interface ShiftsRolledOutOptions {
   to: string
   name: string
@@ -234,8 +383,8 @@ export async function sendShiftsRolledOutEmail({
 }: ShiftsRolledOutOptions) {
   const t = getMessageTranslator(locale, "emails")
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://skemaka.com"
-  return getResend().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+  return deliver({
+    from: emailFrom(),
     to,
     subject: t("rolledOut.subject"),
     html: `

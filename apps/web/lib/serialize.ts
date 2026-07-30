@@ -39,6 +39,8 @@ export function serShift(s: {
   id: string; scheduleId: string; organizationId: string; employeeId: string
   date: Date; startTime: string; endTime: string; breakMinutes: number
   jobRole: string; notes: string | null; colorTag: string | null
+  cancelledAt?: Date | null
+  publishedAt?: Date | null
   createdAt: Date; updatedAt: Date
   employee?: { id: string; name: string; jobRole: string }
 }): Shift {
@@ -54,6 +56,8 @@ export function serShift(s: {
     jobRole: s.jobRole,
     notes: s.notes,
     colorTag: s.colorTag,
+    cancelledAt: s.cancelledAt?.toISOString() ?? null,
+    publishedAt: s.publishedAt?.toISOString() ?? null,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
     ...(s.employee ? { employee: { id: s.employee.id, name: s.employee.name, jobRole: s.employee.jobRole } satisfies EmbeddedEmployee } : {}),
@@ -86,6 +90,7 @@ export function serOrg(o: {
   timezone?: string | null; industry?: string | null
   settings?: unknown
   subscriptionStatus: string
+  isDemo?: boolean
   createdAt: Date; updatedAt: Date
 }): Organization {
   return {
@@ -99,6 +104,7 @@ export function serOrg(o: {
     industry: o.industry ?? null,
     settings: (o.settings as Organization["settings"]) ?? null,
     subscriptionStatus: o.subscriptionStatus as Organization["subscriptionStatus"],
+    isDemo: o.isDemo ?? false,
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
   }

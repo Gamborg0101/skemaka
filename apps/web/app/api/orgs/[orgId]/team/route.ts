@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isValidEmail } from "@/lib/validate"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -8,6 +9,10 @@ import * as orgService from "@/lib/services/orgService"
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const AddTeamMemberSchema = z.object({
+  email: z.string().trim().toLowerCase().min(1, "Email is required").refine(isValidEmail, "email must be a valid email address"),
+})
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -33,22 +38,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { email?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const email = body.email?.trim().toLowerCase()
-  if (!email) {
-    return NextResponse.json({ error: "Email is required" }, { status: 400 })
-  }
-  if (!isValidEmail(email)) {
-    return NextResponse.json({ error: "email must be a valid email address" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, AddTeamMemberSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const member = await orgService.addTeamMember(orgId, guard.userId, email)
+    const member = await orgService.addTeamMember(orgId, guard.userId, parsed.data.email)
     return NextResponse.json({ data: member }, { status: 201 })
   } catch (err) {
     if (err instanceof ServiceError) {

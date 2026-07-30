@@ -1,8 +1,8 @@
 import { db } from "@/lib/prisma"
 import { PrismaClient } from "@/app/generated/prisma/client"
-import { serEmployee } from "@/lib/serialize"
+import { serEmployee, serShift } from "@/lib/serialize"
 import { isEmploymentType } from "@/types"
-import type { Employee } from "@/types"
+import type { Employee, Shift } from "@/types"
 import type { PaginationParams } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
 import { resolveRecipientLocale } from "@/lib/messages"
@@ -302,6 +302,19 @@ export async function getEmployeeById(orgId: string, employeeId: string): Promis
     where: { id: employeeId, organizationId: orgId },
   })
   return employee ? serEmployee(employee) : null
+}
+
+/**
+ * All sick-day records for an employee, newest first. Sick days are stored as
+ * shifts with colorTag "sick" (see handleMarkSick); startTime/endTime carry the
+ * hours the person was expected to work and `notes` holds the reason.
+ */
+export async function listSickDays(orgId: string, employeeId: string): Promise<Shift[]> {
+  const shifts = await db.shift.findMany({
+    where: { organizationId: orgId, employeeId, colorTag: "sick" },
+    orderBy: { date: "desc" },
+  })
+  return shifts.map(serShift)
 }
 
 export async function refreshInviteToken(orgId: string, employeeId: string): Promise<Employee> {
