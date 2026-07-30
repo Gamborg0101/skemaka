@@ -650,7 +650,7 @@ function ManagerAvailabilityView() {
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-16 gap-1">
             <Text className="text-sm text-ink-secondary">No responses yet</Text>
-            <Text className="text-xs text-ink-muted">Employees haven't submitted for this week</Text>
+            <Text className="text-xs text-ink-muted">Employees haven&apos;t submitted for this week</Text>
           </View>
         }
         renderItem={({ item: employee, index }) => {

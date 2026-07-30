@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { SUPPORTED_CURRENCIES } from "@/lib/orgSettings"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -7,6 +8,28 @@ import * as orgService from "@/lib/services/orgService"
 import { logError, requestIdFrom } from "@/lib/log"
 
 const VALID_CURRENCY_CODES = new Set(SUPPORTED_CURRENCIES.map((c) => c.code))
+
+const UpdateOrgSchema = z
+  .object({
+    currency:   z.string().refine((c) => VALID_CURRENCY_CODES.has(c), "Invalid currency code").optional(),
+    // Untrimmed like the original; reject whitespace-only, cap raw length at 100.
+    name:       z.string()
+                  .refine((s) => s.trim().length > 0, "name cannot be empty")
+                  .refine((s) => s.length <= 100, "name must be at most 100 characters")
+                  .optional(),
+    country:    z.string().max(8,  "Invalid profile field").optional(),
+    timezone:   z.string().max(64, "Invalid profile field").optional(),
+    locale:     z.string().max(16, "Invalid profile field").optional(),
+    industry:   z.string().max(32, "Invalid profile field").optional(),
+    timeFormat: z.enum(["12h", "24h"], { message: "timeFormat must be '12h' or '24h'" }).optional(),
+  })
+  .refine(
+    (b) =>
+      b.currency !== undefined || b.name !== undefined || b.country !== undefined ||
+      b.timezone !== undefined || b.locale !== undefined || b.industry !== undefined ||
+      b.timeFormat !== undefined,
+    { message: "No fields to update" },
+  )
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId: string }> }) {
   const { orgId } = await context.params
@@ -18,42 +41,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: {
-    currency?: string
-    name?: string; country?: string; timezone?: string; locale?: string
-    industry?: string; timeFormat?: string
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, UpdateOrgSchema)
+  if ("error" in parsed) return parsed.error
 
-  const { currency, name, country, timezone, locale, industry, timeFormat } = body
+  const { currency, name, country, timezone, locale, industry, timeFormat } = parsed.data
   const hasProfile =
     name !== undefined || country !== undefined || timezone !== undefined ||
     locale !== undefined || industry !== undefined || timeFormat !== undefined
-
-  if (currency === undefined && !hasProfile) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 })
-  }
-  if (currency !== undefined && !VALID_CURRENCY_CODES.has(currency)) {
-    return NextResponse.json({ error: "Invalid currency code" }, { status: 400 })
-  }
-  // Profile validation mirrors the create route (POST /api/orgs).
-  if (name !== undefined && (typeof name !== "string" || name.trim().length === 0)) {
-    return NextResponse.json({ error: "name cannot be empty" }, { status: 400 })
-  }
-  if (name !== undefined && name.length > 100) {
-    return NextResponse.json({ error: "name must be at most 100 characters" }, { status: 400 })
-  }
-  const tooLong = (s: unknown, max: number) => typeof s === "string" && s.length > max
-  if (tooLong(country, 8) || tooLong(timezone, 64) || tooLong(locale, 16) || tooLong(industry, 32)) {
-    return NextResponse.json({ error: "Invalid profile field" }, { status: 400 })
-  }
-  if (timeFormat !== undefined && timeFormat !== "12h" && timeFormat !== "24h") {
-    return NextResponse.json({ error: "timeFormat must be '12h' or '24h'" }, { status: 400 })
-  }
 
   try {
     let org
@@ -63,8 +57,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId
     }
     if (hasProfile) {
       org = await orgService.updateOrgProfile(orgId, {
-        name, country, timezone, locale, industry,
-        timeFormat: timeFormat as "12h" | "24h" | undefined,
+        name, country, timezone, locale, industry, timeFormat,
       })
     }
     return NextResponse.json({ data: org })

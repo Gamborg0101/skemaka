@@ -15,10 +15,21 @@
   "coverApprovedRequester": "Hej {name}, din vagt hos {orgName} {when} er nu dækket. Du har fri.",
   "coverApprovedClaimer": "Hej {name}, du er bekræftet til at tage vagten hos {orgName} {when}.",
   "coverDenied": "Hej {name}, dækningen af vagten hos {orgName} {when} blev ikke godkendt — vagten gælder som planlagt.",
+  "shiftOffered": "Hej {name}, du er blevet tilbudt en {jobRole}-vagt hos {orgName}: {when}. Åbn appen for at tage den.",
+  "shiftOfferWon": "Hej {name}, du fik vagten hos {orgName} {when}. Den står nu på din vagtplan.",
+  "shiftOfferFilled": "Hej {name}, vagten hos {orgName} {when} er blevet dækket af en anden. Tak fordi du tilbød dig.",
   "push": {
     "publishedTitle": "Din vagtplan er klar",
     "publishedBody": "{orgName} har udgivet vagtplanen for {week}. Tryk for at se dine vagter.",
     "rollOutTitle": "Nye vagter udgivet",
-    "rollOutBody": "{orgName} har udrullet vagtplanen for {period}. Tryk for at se dine vagter."
+    "rollOutBody": "{orgName} har udrullet vagtplanen for {period}. Tryk for at se dine vagter.",
+    "shiftCancelledTitle": "Vagt aflyst",
+    "shiftCancelledBody": "{orgName} har aflyst din vagt {when}. Tryk for detaljer.",
+    "shiftOfferedTitle": "Nyt vagttilbud",
+    "shiftOfferedBody": "{orgName} har tilbudt dig en vagt {when}. Tryk for at tage den.",
+    "shiftOfferWonTitle": "Du fik vagten",
+    "shiftOfferWonBody": "{orgName} har bekræftet dig til vagten {when}. Tryk for at se den.",
+    "shiftOfferFilledTitle": "Vagt dækket",
+    "shiftOfferFilledBody": "Vagten hos {orgName} {when} blev dækket af en anden."
   }
 }

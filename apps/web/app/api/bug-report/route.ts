@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { resend } from "@/lib/resend"
+import { resend, emailFrom } from "@/lib/resend"
 import { db } from "@/lib/prisma"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { logWarn, logError, requestIdFrom } from "@/lib/log"
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
   // lose the report. Log and acknowledge.
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+      from: emailFrom(),
       to: superadminEmail,
       subject,
       html: `

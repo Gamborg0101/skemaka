@@ -18,7 +18,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ]
 
-// 3. pnpm symlinks cause Metro to resolve 'react' as '@types/react'.
+// 3. Workspace symlinks can cause Metro to resolve 'react' as '@types/react'.
 //    withNativeWind/withCssInterop captures resolveRequest as its inner
 //    resolver, so this MUST be set before calling withNativeWind.
 function realPkgPath(name) {

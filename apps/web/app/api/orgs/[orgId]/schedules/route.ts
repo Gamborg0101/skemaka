@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { isValidDate, parsePaginationParams } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -8,6 +9,10 @@ import * as scheduleService from "@/lib/services/scheduleService"
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const CreateScheduleSchema = z.object({
+  weekStart: z.string().refine(isValidDate, "weekStart must be a valid YYYY-MM-DD date"),
+})
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -20,7 +25,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (!isValidDate(weekStart)) {
       return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
     }
-    const schedule = await scheduleService.getScheduleByWeek(orgId, weekStart)
+    // Employees only ever see rolled-out shifts — drafts are the manager's
+    // private planning space. This one server-side filter covers the web
+    // portal, the mobile app, and any other employee-role reader.
+    const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
+    const schedule = await scheduleService.getScheduleByWeek(orgId, weekStart, { publishedOnly: !isManager })
     return NextResponse.json(
       { data: schedule },
       { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=120" } },
@@ -45,20 +54,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { weekStart?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const { weekStart } = body
-
-  if (!weekStart) {
-    return NextResponse.json({ error: "weekStart is required" }, { status: 400 })
-  }
-  if (!isValidDate(weekStart)) {
-    return NextResponse.json({ error: "weekStart must be a valid YYYY-MM-DD date" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, CreateScheduleSchema)
+  if ("error" in parsed) return parsed.error
+  const { weekStart } = parsed.data
 
   try {
     const { schedule, created } = await scheduleService.getOrCreateSchedule(orgId, weekStart)

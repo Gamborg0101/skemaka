@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, parseBody } from "@/lib/apiGuard"
 import { isValidDate, parsePaginationParams } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -10,6 +11,18 @@ import { logError, requestIdFrom } from "@/lib/log"
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const CreateTimeOffSchema = z
+  .object({
+    employeeId: z.string().optional(),
+    startDate:  z.string().refine(isValidDate, "must be a valid YYYY-MM-DD date"),
+    endDate:    z.string().refine(isValidDate, "must be a valid YYYY-MM-DD date"),
+    reason:     z.string().max(2000, "reason must be at most 2000 characters").optional(),
+  })
+  .refine((b) => b.endDate >= b.startDate, {
+    message: "endDate must be on or after startDate",
+    path: ["endDate"],
+  })
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -61,18 +74,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const isManager = guard.role === "MANAGER" || guard.role === "ADMIN"
 
-  let body: {
-    employeeId?: string; startDate?: string; endDate?: string; reason?: string
-  }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-
-  if (!body.startDate || !body.endDate) {
-    return NextResponse.json({ error: "startDate and endDate are required" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, CreateTimeOffSchema)
+  if ("error" in parsed) return parsed.error
+  const body = parsed.data
 
   let resolvedEmployeeId: string
 
@@ -97,30 +101,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     resolvedEmployeeId = emp.id
   }
 
-  if (body.reason && body.reason.length > 2000) {
-    return NextResponse.json({ error: "reason must be at most 2000 characters" }, { status: 400 })
-  }
-
-  if (!isValidDate(body.startDate!) || !isValidDate(body.endDate!)) {
-    return NextResponse.json(
-      { error: "startDate and endDate must be valid YYYY-MM-DD dates" },
-      { status: 400 },
-    )
-  }
-
-  if (body.endDate! < body.startDate!) {
-    return NextResponse.json(
-      { error: "endDate must be on or after startDate" },
-      { status: 400 },
-    )
-  }
-
   try {
     const request = await timeOffService.createTimeOff(
       orgId,
       resolvedEmployeeId,
-      body.startDate!,
-      body.endDate!,
+      body.startDate,
+      body.endDate,
       body.reason ?? null,
     )
     return NextResponse.json({ data: request }, { status: 201 })

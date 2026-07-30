@@ -296,7 +296,7 @@ export default function TeamScreen() {
             </View>
           ) : query.trim() ? (
             <View className="flex-1 items-center justify-center py-16 gap-1">
-              <Text className="text-sm text-ink-secondary">No results for "{query}"</Text>
+              <Text className="text-sm text-ink-secondary">No results for &quot;{query}&quot;</Text>
               <Text className="text-xs text-ink-muted">Try a different name or role</Text>
             </View>
           ) : (

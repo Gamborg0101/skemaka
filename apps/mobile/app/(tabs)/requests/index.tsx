@@ -90,7 +90,7 @@ function ManagerTimeOffView() {
     )
   }
 
-  const allItems: Array<TimeOffRequest | { _section: string }> = [
+  const allItems: (TimeOffRequest | { _section: string })[] = [
     ...(pending.length  > 0 ? [{ _section: "Pending" } as const,  ...pending]  : []),
     ...(resolved.length > 0 ? [{ _section: "Resolved" } as const, ...resolved] : []),
   ]

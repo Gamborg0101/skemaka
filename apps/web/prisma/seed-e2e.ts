@@ -5,7 +5,7 @@
  * fresh CI database repeatedly. Pairs with the env-gated "e2e" credentials
  * provider in lib/auth.ts — the seeded users sign in by email + E2E_TEST_PASSWORD.
  *
- *   pnpm seed:e2e
+ *   npm run seed:e2e
  */
 import { config } from "dotenv"
 config({ path: ".env.local" })

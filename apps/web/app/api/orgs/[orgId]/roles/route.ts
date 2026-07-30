@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { isValidColorTag } from "@/lib/validate"
 import * as orgService from "@/lib/services/orgService"
@@ -8,6 +9,11 @@ import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const CreateRoleSchema = z.object({
+  name:  z.string().trim().min(1, "name is required").max(100, "name must be at most 100 characters"),
+  color: z.string().trim().min(1, "color is required").refine(isValidColorTag, "Invalid color"),
+})
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -31,19 +37,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { name?: string; color?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  if (!body.name?.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 })
-  if (!body.color?.trim()) return NextResponse.json({ error: "color is required" }, { status: 400 })
-  if (body.name.trim().length > 100) return NextResponse.json({ error: "name must be at most 100 characters" }, { status: 400 })
-  if (!isValidColorTag(body.color.trim())) return NextResponse.json({ error: "Invalid color" }, { status: 400 })
+  const parsed = await parseBody(req, CreateRoleSchema)
+  if ("error" in parsed) return parsed.error
 
   try {
-    const role = await orgService.createJobRole(orgId, body.name.trim(), body.color.trim())
+    const role = await orgService.createJobRole(orgId, parsed.data.name, parsed.data.color)
     return NextResponse.json({ data: role }, { status: 201 })
   } catch (err) {
     if (err instanceof ServiceError) return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })

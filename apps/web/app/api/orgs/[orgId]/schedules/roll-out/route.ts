@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { z } from "zod"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { isValidDate } from "@/lib/validate"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { ServiceError, serviceErrorStatus } from "@/lib/services/errors"
@@ -8,6 +9,16 @@ import * as scheduleService from "@/lib/services/scheduleService"
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+const RollOutSchema = z
+  .object({
+    fromWeek: z.string().refine(isValidDate, "fromWeek and toWeek must be valid YYYY-MM-DD dates"),
+    toWeek:   z.string().refine(isValidDate, "fromWeek and toWeek must be valid YYYY-MM-DD dates"),
+  })
+  .refine((b) => b.toWeek >= b.fromWeek, {
+    message: "toWeek must be on or after fromWeek",
+    path: ["toWeek"],
+  })
 
 /** GET — the draft weeks (with shifts) available to roll out. */
 export async function GET(req: NextRequest, { params }: RouteContext) {
@@ -32,18 +43,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
 
-  let body: { fromWeek?: string; toWeek?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  if (!body.fromWeek || !body.toWeek || !isValidDate(body.fromWeek) || !isValidDate(body.toWeek)) {
-    return NextResponse.json({ error: "fromWeek and toWeek must be valid YYYY-MM-DD dates" }, { status: 400 })
-  }
-  if (body.toWeek < body.fromWeek) {
-    return NextResponse.json({ error: "toWeek must be on or after fromWeek" }, { status: 400 })
-  }
+  const parsed = await parseBody(req, RollOutSchema)
+  if ("error" in parsed) return parsed.error
+  const body = parsed.data
 
   try {
     const result = await scheduleService.rollOut(orgId, body.fromWeek, body.toWeek)

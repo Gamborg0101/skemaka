@@ -42,7 +42,7 @@ One organization per business. Each member has a role: `MANAGER` (or `ADMIN`) or
 
 | Layer | Technology |
 |---|---|
-| Monorepo | Turborepo + pnpm workspaces |
+| Monorepo | Turborepo + npm workspaces |
 | Web framework | Next.js 16 (App Router) |
 | Mobile | Expo 54 / React Native + NativeWind + expo-router |
 | Language | TypeScript |
@@ -65,10 +65,15 @@ One organization per business. Each member has a role: `MANAGER` (or `ADMIN`) or
 
 ### Prerequisites
 
-- Node.js 20+
-- [pnpm](https://pnpm.io) 10+ (this repo is a pnpm workspace — npm/yarn will not resolve the internal packages)
+- Node.js 20.19+ (enforced via `engines`; Next 16 and React Native set the floor)
+- npm 10+ (ships with Node — this repo is an npm workspace)
 - A Neon database (or any Postgres instance)
 - Accounts for: Google Cloud (OAuth), Resend, Twilio, Stripe, Upstash Redis
+
+> **Use npm, not pnpm/yarn.** The root `packageManager` field pins npm, so
+> running `pnpm …` fails fast with _"This project is configured to use npm"_
+> rather than silently creating a second lockfile. All scripts run from the repo
+> root — you never need to `cd` into a workspace.
 
 See [SETUP.md](./SETUP.md) for step-by-step provider setup.
 
@@ -77,25 +82,23 @@ See [SETUP.md](./SETUP.md) for step-by-step provider setup.
 ```bash
 git clone https://github.com/Gamborg0101/skemaka.git
 cd skemaka
-pnpm install
+npm install
 
 # Copy and fill in env vars (the web app reads from apps/web/.env.local)
 cp apps/web/.env.example apps/web/.env.local
 
-# Push schema + seed demo data (Prisma always runs from apps/web)
-cd apps/web
-npx prisma db push
-npx prisma db seed
-cd ../..
+# Push schema + seed demo data (from the repo root)
+npm run db:push
+npm run db:seed
 
 # Start the web dev server (Next.js)
-pnpm dev:web
+npm run dev:web
 
 # …or the mobile dev server (Expo)
-pnpm dev:mobile
+npm run dev:mobile
 ```
 
-The web app runs at [http://localhost:3000](http://localhost:3000). `pnpm dev` starts every app via Turborepo.
+The web app runs at [http://localhost:3000](http://localhost:3000). `npm run dev` starts every app via Turborepo.
 
 ### Environment variables
 
@@ -129,7 +132,7 @@ All web env vars live in `apps/web/.env.local` (see `apps/web/.env.example`).
 
 ## Project structure
 
-This is a Turborepo + pnpm monorepo:
+This is a Turborepo + npm-workspaces monorepo:
 
 ```
 apps/
@@ -201,24 +204,29 @@ lib/, hooks/, components/
 Run from the repo root — Turborepo fans these out across the workspace:
 
 ```bash
-pnpm dev           # Start all dev servers
-pnpm dev:web       # Web only (Next.js)
-pnpm dev:mobile    # Mobile only (Expo)
-pnpm build         # Production build (all apps)
-pnpm lint          # ESLint
-pnpm typecheck     # tsc --noEmit across every package
-pnpm test          # Vitest (run once)
+npm run dev           # Start all dev servers
+npm run dev:web       # Web only (Next.js)
+npm run dev:mobile    # Mobile only (Expo)
+npm run build         # Production build (all apps)
+npm run lint          # ESLint
+npm run typecheck     # tsc --noEmit across every package
+npm test              # Vitest (run once)
 ```
 
-App-specific scripts live in each package — e.g. from `apps/web/`:
+These also run from the repo root (they delegate to `apps/web`):
 
 ```bash
-pnpm start            # Start the production Next.js server
-pnpm test:watch       # Vitest (watch mode)
-pnpm test:e2e         # Playwright end-to-end tests
-pnpm seed:e2e         # Seed the e2e test fixtures
-pnpm screenshots      # Regenerate UI screenshots
+npm start                 # Start the production Next.js server
+npm run test:e2e          # Playwright end-to-end tests
+npm run seed:e2e          # Seed the e2e test fixtures
+npm run screenshots       # Regenerate UI screenshots
+npm run db:push           # prisma db push
+npm run db:generate       # prisma generate
+npm run db:migrate        # prisma migrate dev
+npm run db:studio         # prisma studio
 ```
+
+(`test:watch` still lives in `apps/web` — run it with `npm run test:watch --workspace=web`.)
 
 ---
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
+import type { ZodType } from "zod"
 import { db } from "@/lib/prisma"
 import { canAccessOrg, type BillingBlock, type BillingSnapshot } from "@/lib/billing"
 import { isSuperadmin } from "@/lib/platform"
@@ -58,6 +59,38 @@ async function enforceBilling(
 
   const freshBlock = canAccessOrg(fresh)
   return freshBlock ? billingBlocked(freshBlock) : null
+}
+
+/**
+ * Parse and validate a JSON request body against a Zod schema. Returns the typed
+ * data on success, or a ready-to-return 400 (invalid JSON) / 400 (validation)
+ * response on failure — mirroring the `{ error }` guard idiom so callers can do:
+ *
+ *   const parsed = await parseBody(req, Schema)
+ *   if ("error" in parsed) return parsed.error
+ *   // parsed.data is fully typed
+ *
+ * The error message is derived from the first Zod issue (prefixed with its field
+ * path), keeping the existing `{ error: string }` response shape and 400 status.
+ */
+export async function parseBody<T>(
+  req: NextRequest,
+  schema: ZodType<T>,
+): Promise<{ error: Response } | { data: T }> {
+  let raw: unknown
+  try {
+    raw = await req.json()
+  } catch {
+    return { error: NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
+  }
+  const result = schema.safeParse(raw)
+  if (!result.success) {
+    const first = result.error.issues[0]
+    const path = first?.path.length ? `${first.path.join(".")}: ` : ""
+    const message = `${path}${first?.message ?? "Invalid request body"}`
+    return { error: NextResponse.json({ error: message }, { status: 400 }) }
+  }
+  return { data: result.data }
 }
 
 /** Returns a 403 response when the guard's role is not MANAGER or ADMIN. */

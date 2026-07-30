@@ -5,9 +5,18 @@ import { toast } from "sonner";
 import type { Employee, Schedule, TimeOffRequest } from "@/types";
 import { useShiftMutations } from "@/lib/useShiftMutations";
 import { fetchAllPages } from "@/lib/pagination";
+import { findRuleWarnings } from "@/lib/restRules";
 
-/** Why an employee shouldn't be scheduled on a given day (soft warning). */
-export type AvailabilityConflict = { type: "timeoff" | "unavailable" };
+/**
+ * Why an employee shouldn't be scheduled on a given day (soft warning):
+ * approved leave, self-reported unavailability, or a Danish working-time rule
+ * (under 11 hours rest since the previous shift / a 13h+ working day).
+ */
+export type AvailabilityConflict =
+  | { type: "timeoff" }
+  | { type: "unavailable" }
+  | { type: "rest"; hours: number }
+  | { type: "longDay"; hours: number };
 
 export function useScheduleData(orgId: string, weekStart: string) {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
@@ -157,10 +166,17 @@ export function useScheduleData(orgId: string, weekStart: string) {
   }, [weekStart, orgId]);
 
   // Fast lookup: is (employee, date) a conflict? Approved time-off takes
-  // precedence over self-reported unavailability in the message.
+  // precedence over self-reported unavailability, which takes precedence over
+  // the working-time rule warnings.
   const unavailableSet = useMemo(
     () => new Set(unavailable.map((u) => `${u.employeeId}__${u.date}`)),
     [unavailable],
+  );
+  // 11h-rest / 13h-day warnings, recomputed whenever the week's shifts change
+  // (so dragging a shift updates the flags immediately).
+  const ruleWarnings = useMemo(
+    () => findRuleWarnings(schedule?.shifts ?? []),
+    [schedule?.shifts],
   );
   const getConflict = useCallback(
     (employeeId: string, date: string): AvailabilityConflict | null => {
@@ -169,9 +185,11 @@ export function useScheduleData(orgId: string, weekStart: string) {
       );
       if (onLeave) return { type: "timeoff" };
       if (unavailableSet.has(`${employeeId}__${date}`)) return { type: "unavailable" };
+      const rule = ruleWarnings.get(`${employeeId}__${date}`);
+      if (rule) return rule;
       return null;
     },
-    [approvedTimeOff, unavailableSet],
+    [approvedTimeOff, unavailableSet, ruleWarnings],
   );
 
   // Magic-moment: fill an empty week in one click (starter defaults or a copy of
@@ -237,6 +255,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     handleShiftCreate,
     handleShiftUpdate,
     handleShiftDelete,
+    handleShiftCancel,
     handleMarkSick,
   } = useShiftMutations(
     schedule,
@@ -262,6 +281,7 @@ export function useScheduleData(orgId: string, weekStart: string) {
     handleShiftCreate,
     handleShiftUpdate,
     handleShiftDelete,
+    handleShiftCancel,
     handleMarkSick,
   };
 }

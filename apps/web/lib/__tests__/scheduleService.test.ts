@@ -110,6 +110,7 @@ describe("createShift — overlap/block rule", () => {
           organizationId: ORG,
           employeeId: "emp_1",
           date: new Date(DATE + "T00:00:00Z"),
+          cancelledAt: null,
         },
       }),
     )
@@ -141,26 +142,20 @@ describe("createShift — overlap/block rule", () => {
   })
 })
 
-describe("createShift — published-week side effects", () => {
-  it("does NOT email the employee for an add to a draft week", async () => {
-    mockSchedFindFirst.mockResolvedValue({ publishedAt: null } as never)
-
+describe("createShift — draft/notify-now side effects", () => {
+  it("does NOT email the employee for a default (draft) add", async () => {
     await createShift(ORG, "sched_1", INPUT)
 
     expect(mockSendEmail).not.toHaveBeenCalled()
+    // Nothing ever reverts a week to draft anymore.
+    expect(mockUpdateMany).not.toHaveBeenCalled()
   })
 
-  it("resets a published week back to draft and emails the late-added employee", async () => {
-    mockSchedFindFirst.mockResolvedValue({ publishedAt: new Date("2026-06-10T00:00:00Z") } as never)
+  it("notifyNow publishes the shift immediately and emails the employee", async () => {
+    await createShift(ORG, "sched_1", { ...INPUT, notifyNow: true })
 
-    await createShift(ORG, "sched_1", INPUT)
-
-    // Reset-to-draft guard: only touches still-published schedules.
-    expect(mockUpdateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "sched_1", organizationId: ORG, publishedAt: { not: null } },
-        data: { publishedAt: null },
-      }),
+    expect(mockShiftCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ publishedAt: expect.any(Date) }) }),
     )
     expect(mockSendEmail).toHaveBeenCalledOnce()
     expect(mockSendEmail).toHaveBeenCalledWith(
@@ -288,6 +283,7 @@ describe("updateShift — overlap/block rule on move & reassign", () => {
           employeeId: "emp_1",
           date: new Date("2026-06-16T00:00:00Z"),
           id: { not: "shift_1" },
+          cancelledAt: null,
         },
       }),
     )

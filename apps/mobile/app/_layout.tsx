@@ -34,7 +34,7 @@ function AuthGate() {
     const inAuth = segment === "(auth)"
     if (!token && !inAuth) router.replace("/(auth)/login")
     if (token && inAuth) router.replace("/(tabs)/shifts")
-  }, [token, isLoading, segment]) // router is a stable singleton — not a dep
+  }, [token, isLoading, segment, router]) // router is a stable singleton — included to satisfy exhaustive-deps
 
   return <Slot />
 }

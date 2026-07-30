@@ -95,9 +95,10 @@ export async function createCoverRequest(
 
   const shift = await db.shift.findFirst({
     where: { id: shiftId, organizationId: orgId },
-    select: { id: true, employeeId: true, date: true, startTime: true, endTime: true, jobRole: true },
+    select: { id: true, employeeId: true, date: true, startTime: true, endTime: true, jobRole: true, cancelledAt: true },
   })
   if (!shift) throw new ServiceError("Shift not found", "NOT_FOUND")
+  if (shift.cancelledAt) throw new ServiceError("This shift has been cancelled", "CONFLICT")
   if (shift.employeeId !== employee.id) {
     throw new ServiceError("You can only offer up your own shifts", "FORBIDDEN")
   }

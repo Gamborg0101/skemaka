@@ -42,7 +42,6 @@ apps/web/next-env.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 .vercel
 coverage
 
@@ -57,3 +56,6 @@ apps/web/.playwright-mcp/
 # Ad-hoc QA / demo screenshots dropped at the repo root
 /demo-desktop.png
 /qa-*.png
+
+# Local agent/tooling state — never committed
+.codex/

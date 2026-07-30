@@ -1,5 +1,6 @@
 import { db } from "@/lib/prisma"
 import { RETENTION } from "@/lib/cleanupConfig"
+import { DEMO_EMAIL_DOMAIN, DEMO_TTL_HOURS } from "@/lib/demo/constants"
 import type { CleanupPreview, CleanupResult } from "@/lib/cleanupConfig"
 
 export { RETENTION } from "@/lib/cleanupConfig"
@@ -63,7 +64,30 @@ export async function runCleanupForOrg(orgId: string): Promise<CleanupPreview> {
   return { schedules, availability, events, total: schedules + availability + events }
 }
 
+/**
+ * Delete expired "try the live demo" sandboxes: demo orgs older than
+ * DEMO_TTL_HOURS (org cascade wipes everything org-scoped) plus their demo
+ * users, which aren't org-cascaded. Users are matched by the unroutable demo
+ * email domain and only removed once they have no memberships left.
+ */
+export async function cleanupDemoSandboxes(): Promise<{ orgs: number; users: number }> {
+  const ttlCutoff = new Date(Date.now() - DEMO_TTL_HOURS * 60 * 60 * 1000)
+  const { count: orgs } = await db.organization.deleteMany({
+    where: { isDemo: true, createdAt: { lt: ttlCutoff } },
+  })
+  const { count: users } = await db.user.deleteMany({
+    where: {
+      email: { endsWith: `@${DEMO_EMAIL_DOMAIN}` },
+      createdAt: { lt: ttlCutoff },
+      memberships: { none: {} },
+    },
+  })
+  return { orgs, users }
+}
+
 export async function runGlobalCleanup(): Promise<CleanupResult> {
+  const demo = await cleanupDemoSandboxes()
+
   const orgs = await db.organization.findMany({ select: { id: true } })
 
   const deletedSessions = await db.session.deleteMany({
@@ -87,5 +111,7 @@ export async function runGlobalCleanup(): Promise<CleanupResult> {
     events,
     total: schedules + availability + events,
     sessions: deletedSessions.count,
+    demoOrgs: demo.orgs,
+    demoUsers: demo.users,
   }
 }

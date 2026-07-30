@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/prisma"
-import { resend } from "@/lib/resend"
+import { resend, emailFrom } from "@/lib/resend"
 import { logError, logInfo } from "@/lib/log"
 
 // Called daily by Vercel Cron (see vercel.json). Protected by CRON_SECRET.
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@skemaka.com",
+      from: emailFrom(),
       to: superadminEmail,
       subject: `Skemaka bug digest — ${reports.length} report(s), ${crashes} crash(es) in 24h`,
       html: `

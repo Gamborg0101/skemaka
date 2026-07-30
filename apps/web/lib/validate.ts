@@ -1,3 +1,5 @@
+import { ROLE_COLOR_TOKENS } from "@/lib/roleColors"
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^\d{2}:\d{2}$/
 
@@ -40,7 +42,8 @@ export function isValidEmail(s: unknown): s is string {
   return typeof s === "string" && s.length <= 254 && EMAIL_RE.test(s)
 }
 
-export const VALID_COLOR_TAGS = new Set(["blue", "green", "orange", "purple", "yellow", "rose", "gray", "sick"])
+// The selectable role-color tokens plus "sick" (a reserved shift-only marker).
+export const VALID_COLOR_TAGS = new Set<string>([...ROLE_COLOR_TOKENS, "sick"])
 
 export function isValidColorTag(s: unknown): s is string | null {
   if (s === null || s === undefined) return true

@@ -31,6 +31,7 @@ interface EditShiftDialogProps {
   jobRoles: JobRole[]
   onShiftUpdate: (data: Partial<Shift>) => void
   onShiftDelete: (shiftId: string) => void
+  onShiftCancel?: (shiftId: string) => void
 }
 
 export function EditShiftDialog({
@@ -40,6 +41,7 @@ export function EditShiftDialog({
   jobRoles,
   onShiftUpdate,
   onShiftDelete,
+  onShiftCancel,
 }: EditShiftDialogProps) {
   const [date, setDate] = useState(shift.date)
   const [startTime, setStartTime] = useState(shift.startTime)
@@ -48,6 +50,7 @@ export function EditShiftDialog({
   const [selectedRole, setSelectedRole] = useState(shift.jobRole)
   const [notes, setNotes] = useState(shift.notes ?? "")
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   // Last start/end pair the break auto-suggest has seen. Pre-set on open so the
   // suggestion only fires when the user edits the times.
   const [prevBreakSuggestKey, setPrevBreakSuggestKey] = useState(`${startTime}__${endTime}`)
@@ -67,6 +70,7 @@ export function EditShiftDialog({
       setSelectedRole(shift.jobRole)
       setNotes(shift.notes ?? "")
       setConfirmDelete(false)
+      setConfirmCancel(false)
     }
   }
 
@@ -100,9 +104,20 @@ export function EditShiftDialog({
   const handleDelete = () => {
     if (!confirmDelete) {
       setConfirmDelete(true)
+      setConfirmCancel(false)
       return
     }
     onShiftDelete(shift.id)
+    onOpenChange(false)
+  }
+
+  const handleCancel = () => {
+    if (!confirmCancel) {
+      setConfirmCancel(true)
+      setConfirmDelete(false)
+      return
+    }
+    onShiftCancel?.(shift.id)
     onOpenChange(false)
   }
 
@@ -175,6 +190,12 @@ export function EditShiftDialog({
             />
           </div>
 
+          {confirmCancel && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2">
+              The shift stays on the schedule as a cancelled record, and the employee is
+              notified right away. The rest of the week stays published.
+            </p>
+          )}
           <DialogFooter className="flex-row gap-2">
             <Button
               type="button"
@@ -184,12 +205,22 @@ export function EditShiftDialog({
             >
               {confirmDelete ? "Confirm Delete" : "Delete"}
             </Button>
+            {onShiftCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                className="border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+              >
+                {confirmCancel ? "Notify & Cancel" : "Cancel Shift"}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              Close
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
               Save Changes

@@ -4,7 +4,8 @@ import { runGlobalCleanup } from "@/lib/cleanup"
 import { db } from "@/lib/prisma"
 import { logInfo } from "@/lib/log"
 
-// Called weekly by Vercel Cron (see vercel.json).
+// Called daily by Vercel Cron (see vercel.json) — daily cadence is required by
+// the 48h demo-sandbox TTL; the retention sweeps are idempotent either way.
 // Protected by CRON_SECRET — Vercel injects it automatically.
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET

@@ -47,7 +47,15 @@ interface AddShiftDialogProps {
     jobRole: string
     notes: string | null
     colorTag: string | null
+    /** Send this shift to the employee immediately instead of leaving it as a draft. */
+    notifyNow?: boolean
   }) => void | boolean | Promise<void | boolean>
+  /** Register the whole day as a sick day for this employee instead of a shift. */
+  onMarkSick?: (
+    employeeId: string,
+    date: string,
+    details: { startTime: string; endTime: string; reason: string },
+  ) => void
 }
 
 export function AddShiftDialog({
@@ -61,6 +69,7 @@ export function AddShiftDialog({
   defaultStartTime = "09:00",
   defaultEndTime = "17:00",
   onShiftCreate,
+  onMarkSick,
   getConflict,
 }: AddShiftDialogProps) {
   const [employeeId, setEmployeeId] = useState(defaultEmployeeId)
@@ -72,6 +81,11 @@ export function AddShiftDialog({
   const [showNotes, setShowNotes] = useState(false)
   const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Sick mode: register the whole day as a sick day instead of a normal shift.
+  const [sick, setSick] = useState(false)
+  const [sickReason, setSickReason] = useState("")
+  // Send immediately (ad-hoc shift) instead of leaving a draft for roll-out.
+  const [notifyNow, setNotifyNow] = useState(false)
   // Last start/end pair the break auto-suggest has seen. Pre-set on open and on
   // template apply so the suggestion only fires when the user edits the times.
   const [prevBreakSuggestKey, setPrevBreakSuggestKey] = useState(`${startTime}__${endTime}`)
@@ -95,6 +109,9 @@ export function AddShiftDialog({
       setShowNotes(false)
       setAppliedTemplateId(null)
       setSubmitting(false)
+      setSick(false)
+      setSickReason("")
+      setNotifyNow(false)
       const emp = employees.find((e) => e.id === defaultEmployeeId)
       setSelectedRole(emp?.jobRole ?? "")
     }
@@ -131,7 +148,16 @@ export function AddShiftDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!employeeId || !defaultDate || !startTime || !endTime || submitting) return
+    if (!employeeId || !defaultDate || submitting) return
+
+    // Sick mode: mark the whole day as a sick day (no shift hours/role) and close.
+    if (sick) {
+      onMarkSick?.(employeeId, defaultDate, { startTime: "00:00", endTime: "00:00", reason: sickReason })
+      onOpenChange(false)
+      return
+    }
+
+    if (!startTime || !endTime) return
     setSubmitting(true)
     const colorTag = jobRoles.find((r) => r.name === selectedRole)?.color ?? "gray"
     try {
@@ -144,6 +170,7 @@ export function AddShiftDialog({
         jobRole: selectedRole,
         notes: notes.trim() || null,
         colorTag,
+        notifyNow,
       })
       // Keep the dialog open when the create explicitly failed so the manager
       // can adjust and retry without re-entering everything. Legacy creators
@@ -161,7 +188,7 @@ export function AddShiftDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            Add Shift
+            {sick ? "Mark Sick Day" : "Add Shift"}
             {defaultDate && (
               <span className="ml-2 text-sm font-normal text-gray-400">
                 {formatDayLabel(defaultDate)}
@@ -170,10 +197,12 @@ export function AddShiftDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Soft availability warning — the manager can still schedule anyway. */}
+        {/* Soft availability warning — the manager can still schedule anyway.
+            Rest/long-day rule warnings describe existing shifts, so only the
+            person-level conflicts are relevant when adding to an empty day. */}
         {(() => {
           const conflict = getConflict && employeeId && defaultDate ? getConflict(employeeId, defaultDate) : null
-          if (!conflict) return null
+          if (!conflict || (conflict.type !== "timeoff" && conflict.type !== "unavailable")) return null
           const empName = employees.find((e) => e.id === employeeId)?.name ?? "This person"
           return (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
@@ -189,7 +218,7 @@ export function AddShiftDialog({
         })()}
 
         {/* Shift type presets */}
-        {shiftTemplates.length > 0 && (
+        {!sick && shiftTemplates.length > 0 && (
           <div className="flex flex-wrap gap-1.5 -mt-1">
             {shiftTemplates.map((tmpl) => {
               const isActive = tmpl.id === appliedTemplateId
@@ -241,6 +270,45 @@ export function AddShiftDialog({
             </Select>
           </div>
 
+          {/* Mark-as-sick toggle — turns this into a full sick day for the whole day. */}
+          {onMarkSick && (
+            <label className={cn(
+              "flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors",
+              sick
+                ? "border-rose-300 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30"
+                : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+            )}>
+              <input
+                type="checkbox"
+                checked={sick}
+                onChange={(e) => setSick(e.target.checked)}
+                className="size-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
+              />
+              <AlertTriangle className={cn("size-4 shrink-0", sick ? "text-rose-500" : "text-gray-400")} />
+              <span className="min-w-0 flex-1 text-sm">
+                <span className={cn("font-medium", sick ? "text-rose-700 dark:text-rose-300" : "text-gray-700 dark:text-gray-200")}>
+                  Mark as sick day
+                </span>
+                <span className="block text-xs text-gray-400 dark:text-gray-500">
+                  Registers the whole day as a sick day — no shift hours.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {sick ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="sick-reason">Reason (optional)</Label>
+              <Textarea
+                id="sick-reason"
+                placeholder="e.g. Flu / fever"
+                value={sickReason}
+                onChange={(e) => setSickReason(e.target.value)}
+                className="min-h-[60px]"
+              />
+            </div>
+          ) : (
+          <>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Start time</Label>
@@ -304,6 +372,31 @@ export function AddShiftDialog({
             </button>
           )}
 
+          {/* Ad-hoc case: send this one shift right away instead of drafting it. */}
+          <label className={cn(
+            "flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors",
+            notifyNow
+              ? "border-blue-300 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30"
+              : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          )}>
+            <input
+              type="checkbox"
+              checked={notifyNow}
+              onChange={(e) => setNotifyNow(e.target.checked)}
+              className="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="min-w-0 flex-1 text-sm">
+              <span className={cn("font-medium", notifyNow ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-200")}>
+                Notify now
+              </span>
+              <span className="block text-xs text-gray-400 dark:text-gray-500">
+                Sends this shift to the employee immediately instead of waiting for roll-out.
+              </span>
+            </span>
+          </label>
+          </>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
@@ -311,9 +404,12 @@ export function AddShiftDialog({
             <Button
               type="submit"
               disabled={!employeeId || !defaultDate || submitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className={cn(
+                "text-white",
+                sick ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"
+              )}
             >
-              {submitting ? "Adding…" : "Add shift"}
+              {sick ? "Mark sick" : submitting ? "Adding…" : notifyNow ? "Add & notify" : "Add shift"}
             </Button>
           </DialogFooter>
         </form>

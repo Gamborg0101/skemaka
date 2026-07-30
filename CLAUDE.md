@@ -5,16 +5,16 @@
 ## Monorepo structure
 
 ```
-skemaka/                    ← workspace root (Turborepo + pnpm)
+skemaka/                    ← workspace root (Turborepo + npm workspaces)
 ├── apps/
 │   ├── web/                ← Next.js 16 web app
-│   └── mobile/             ← Expo 53 React Native app
+│   └── mobile/             ← Expo 54 React Native app
 ├── packages/
 │   ├── types/              ← @skemaka/types  — shared TypeScript interfaces
 │   ├── api/                ← @skemaka/api    — ApiClient + TanStack Query hooks
 │   └── ui/                 ← @skemaka/ui     — shared design tokens + cn()
 ├── turbo.json
-├── pnpm-workspace.yaml
+├── package.json            ← "workspaces" defined here; all scripts run from root
 └── tsconfig.base.json
 ```
 
@@ -143,22 +143,21 @@ When working through a multi-step task, include verification steps in the task l
 
 ## Running the project
 
+Everything runs from the repo root with npm (npm workspaces monorepo — see SETUP.md):
+
 ```bash
-# Install (pnpm required — see SETUP.md)
-pnpm install
+npm install          # install all workspaces
 
-# Web dev server
-pnpm dev:web         # or: cd apps/web && pnpm dev
+npm run dev:web      # Web dev server (Next.js)
+npm run dev:mobile   # Mobile dev server (Expo)
 
-# Mobile dev server (Expo)
-pnpm dev:mobile      # or: cd apps/mobile && pnpm dev
+npm run typecheck    # Typecheck all packages
 
-# Typecheck all packages
-pnpm typecheck
-
-# Prisma (always run from apps/web/)
-cd apps/web && npx prisma db push
-cd apps/web && npx prisma generate
+# Prisma (root scripts delegate to apps/web, where the schema lives)
+npm run db:push
+npm run db:generate
+npm run db:migrate   # prisma migrate dev
+npm run db:seed
 ```
 
 ---

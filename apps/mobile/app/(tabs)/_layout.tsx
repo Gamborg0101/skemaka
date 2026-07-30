@@ -7,9 +7,11 @@ import { NoOrgScreen } from "@/components/account/NoOrgScreen"
 type IconName = React.ComponentProps<typeof Ionicons>["name"]
 
 function tabIcon(active: IconName, inactive: IconName) {
-  return ({ color, focused }: { color: string; focused: boolean }) => (
+  const TabIcon = ({ color, focused }: { color: string; focused: boolean }) => (
     <Ionicons name={focused ? active : inactive} size={24} color={color} />
   )
+  TabIcon.displayName = "TabIcon"
+  return TabIcon
 }
 
 export default function TabsLayout() {

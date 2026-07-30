@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, Clock } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { formatTime } from "@/lib/dateUtils"
+import { getOrgSettings } from "@/lib/orgSettings"
 import type { Shift, Employee } from "@/types"
 
 interface SickDayDialogProps {
@@ -26,11 +28,13 @@ export function SickDayDialog({
   employee,
   onDelete,
 }: SickDayDialogProps) {
+  const tf = getOrgSettings().timeFormat
   const date = new Date(shift.date + "T12:00:00").toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
     month: "long",
   })
+  const hasHours = shift.startTime !== "00:00" || shift.endTime !== "00:00"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,6 +51,17 @@ export function SickDayDialog({
             <p className="text-sm text-gray-500 dark:text-gray-400">{date}</p>
           </div>
         </div>
+        {hasHours && (
+          <p className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+            <Clock className="size-3.5 text-gray-400" />
+            {formatTime(shift.startTime, tf)}–{formatTime(shift.endTime, tf)}
+          </p>
+        )}
+        {shift.notes && (
+          <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+            {shift.notes}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

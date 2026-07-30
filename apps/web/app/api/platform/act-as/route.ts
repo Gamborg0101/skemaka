@@ -8,7 +8,9 @@
  * getOrgContext, both gated on isSuperadmin).
  */
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { auth } from "@/lib/auth"
+import { parseBody } from "@/lib/apiGuard"
 import { db } from "@/lib/prisma"
 import { isSuperadmin, ACTING_ORG_COOKIE } from "@/lib/platform"
 import { writeAudit } from "@/lib/services/auditService"
@@ -19,14 +21,9 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (!isSuperadmin(email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  let body: { orgId?: unknown }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
-  const orgId = typeof body.orgId === "string" ? body.orgId : ""
-  if (!orgId) return NextResponse.json({ error: "orgId is required" }, { status: 400 })
+  const parsed = await parseBody(req, z.object({ orgId: z.string().min(1, "orgId is required") }))
+  if ("error" in parsed) return parsed.error
+  const { orgId } = parsed.data
 
   const org = await db.organization.findUnique({ where: { id: orgId }, select: { id: true, name: true } })
   if (!org) return NextResponse.json({ error: "Restaurant not found" }, { status: 404 })
