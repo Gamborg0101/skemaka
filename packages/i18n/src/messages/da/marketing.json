@@ -14,7 +14,7 @@
     "subtitle": "Byg ugen, se lønudgiften vokse undervejs, og send alle deres vagter på sms. I stedet for et regneark og jagten på afløsere på WhatsApp.",
     "ctaTrial": "Start gratis prøveperiode",
     "ctaDemo": "Se demo-restauranten →",
-    "priceLine": "{days} dage gratis · derefter {currency}{price} pr. aktiv medarbejder/md. · intet kort påkrævet",
+    "priceLine": "{days} dage gratis · derefter fra {currency}{min}/md. · intet kort påkrævet",
     "wageLiveTitle": "Lønudgift, live",
     "wageLiveSub": "opdateres når du tilføjer vagter",
     "conflictTitle": "Konflikt fanget",
@@ -108,9 +108,10 @@
   },
   "pricing": {
     "title": "Betal for dem, der arbejder",
-    "subBold": "{currency}{price} pr. aktiv medarbejder / måned.",
-    "subRest": "Ingen pakker, intet oprettelsesgebyr, opsig når som helst.",
-    "priceUnit": "/ medarbejder / md.",
+    "subBold": "{currency}{min}/måned dækker op til {covers} aktive medarbejdere.",
+    "subRest": "Derover er det {currency}{price} pr. aktiv medarbejder — intet oprettelsesgebyr, opsig når som helst.",
+    "priceUnit": "/ måned",
+    "minimumNote": "Dækker op til {covers} aktive medarbejdere · derefter {currency}{price} pr. stk.",
     "trialNote": "{days} dage gratis — du betaler kun for aktive medarbejdere",
     "feature1": "Betal kun for aktive medarbejdere",
     "feature2": "Ubegrænsede vagtplaner, vagter & historik",
@@ -126,7 +127,9 @@
     "employees": "{count} {count, plural, one {medarbejder} other {medarbejdere}}",
     "perMonth": "/måned",
     "activeNote": "Du betaler kun for aktive medarbejdere — deaktivér nogen, og din regning falder næste periode.",
-    "breakEven": "<b>Tjener sig nemt hjem.</b> Ved ~{currency}{wage}/t dækker bare <b>{min} min</b> mindre overbemanding om ugen hele regningen — den løbende løntotal hjælper dig med at finde dem."
+    "perUnit": "{count} × {currency}{price}",
+    "minimumLine": "{currency}{min}/md. i minimum",
+    "noteMinimum": "Dækker op til {covers} aktive medarbejdere — du betaler først mere, når du vokser."
   },
   "faq": {
     "title": "Spørgsmål fra ejere",
@@ -135,7 +138,7 @@
     "q2": "Skal medarbejderne oprette en konto?",
     "a2": "Nej. Du tilføjer dem, og de får et invitationslink. De logger ind med Google eller Apple, og så er de i gang — de fleste er klar på under et minut.",
     "q3": "Hvad koster det egentlig?",
-    "a3": "{currency}{price} pr. aktiv medarbejder pr. måned. Deaktivér en sæsonmedarbejder, og du betaler ikke længere for vedkommende. Ingen pakker, intet oprettelsesgebyr.",
+    "a3": "{currency}{price} pr. aktiv medarbejder pr. måned, med et minimum på {currency}{min}/måned (dækker dine første par medarbejdere). Deaktivér en sæsonmedarbejder, og du betaler ikke længere for vedkommende. Intet oprettelsesgebyr.",
     "q4": "Kan jeg eksportere timer til løn?",
     "a4": "Ja — lønoverblikket eksporterer til CSV med timer, timeløn og samlet løn pr. person, klar til bogholderen eller lønsystemet.",
     "q5": "Er der binding?",

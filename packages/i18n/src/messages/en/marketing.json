@@ -14,7 +14,7 @@
     "subtitle": "Build the week, watch the wage cost add up as you go, then text everyone their shifts. Instead of a spreadsheet and chasing cover on WhatsApp.",
     "ctaTrial": "Start free trial",
     "ctaDemo": "See the demo restaurant →",
-    "priceLine": "{days} days free · then {currency}{price} per active employee/mo · no card needed",
+    "priceLine": "{days} days free · then from {currency}{min}/mo · no card needed",
     "wageLiveTitle": "Wage cost, live",
     "wageLiveSub": "updates as you add shifts",
     "conflictTitle": "Conflict caught",
@@ -108,9 +108,10 @@
   },
   "pricing": {
     "title": "Pay for who's working",
-    "subBold": "{currency}{price} per active employee / month.",
-    "subRest": "No tiers, no setup fee, cancel anytime.",
-    "priceUnit": "/ employee / mo",
+    "subBold": "{currency}{min}/month covers up to {covers} active staff.",
+    "subRest": "Above that it's {currency}{price} per active employee — no setup fee, cancel anytime.",
+    "priceUnit": "/ month",
+    "minimumNote": "Covers up to {covers} active staff · then {currency}{price} each",
     "trialNote": "{days} days free — billed only for active staff",
     "feature1": "Only pay for active staff",
     "feature2": "Unlimited schedules, shifts & history",
@@ -126,7 +127,9 @@
     "employees": "{count} {count, plural, one {employee} other {employees}}",
     "perMonth": "/month",
     "activeNote": "You only pay for active staff — deactivate someone and your bill drops next cycle.",
-    "breakEven": "<b>Pays for itself easily.</b> At ~{currency}{wage}/hr, trimming just <b>{min} min</b> of over-scheduling a week covers the whole bill — the live wage total helps you find it."
+    "perUnit": "{count} × {currency}{price}",
+    "minimumLine": "{currency}{min}/mo minimum",
+    "noteMinimum": "Covers up to {covers} active staff — you only pay more as you grow."
   },
   "faq": {
     "title": "Questions owners ask",
@@ -135,7 +138,7 @@
     "q2": "Do staff need to create an account?",
     "a2": "No. You add them, they get an invite link. They sign in with Google or Apple and they're in — most are set up in under a minute.",
     "q3": "What does it actually cost?",
-    "a3": "{currency}{price} per active employee per month. Deactivate someone for the season and you stop paying for them. No tiers, no setup fee.",
+    "a3": "{currency}{price} per active employee per month, with a {currency}{min}/month minimum (covers your first few staff). Deactivate someone for the season and you stop paying for them. No setup fee.",
     "q4": "Can I export hours for payroll?",
     "a4": "Yes — the labour cost view exports to CSV with hours, wage, and total pay per person, ready for your bookkeeper or payroll software.",
     "q5": "Is there a contract?",

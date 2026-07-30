@@ -8,8 +8,8 @@ import {
   Coins, Smartphone, FileSpreadsheet, CalendarCheck, MessageSquare, Clock, Wallet,
 } from "lucide-react"
 import {
-  PRICE_PER_EMPLOYEE_MONTHLY, PLAN_CURRENCY, TRIAL_DAYS,
-  hoursSavedPerMonth, MANUAL_SCHEDULING_MINUTES, SKEMAKA_SCHEDULING_MINUTES,
+  PRICE_PER_EMPLOYEE_MONTHLY, MONTHLY_MINIMUM, MINIMUM_COVERS_STAFF, PLAN_CURRENCY, TRIAL_DAYS,
+  formatPrice, hoursSavedPerMonth, MANUAL_SCHEDULING_MINUTES, SKEMAKA_SCHEDULING_MINUTES,
 } from "@/lib/pricing"
 import { PricingCalculator } from "@/components/marketing/PricingCalculator"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
@@ -72,7 +72,8 @@ export default async function HomePage() {
     q: t(`faq.q${i}` as `faq.q1`),
     a: t(`faq.a${i}` as `faq.a1`, {
       currency: PLAN_CURRENCY,
-      price: PRICE_PER_EMPLOYEE_MONTHLY,
+      price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY),
+      min: MONTHLY_MINIMUM,
       days: TRIAL_DAYS,
     }),
   }))
@@ -125,7 +126,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            {t("hero.priceLine", { days: TRIAL_DAYS, currency: PLAN_CURRENCY, price: PRICE_PER_EMPLOYEE_MONTHLY })}
+            {t("hero.priceLine", { days: TRIAL_DAYS, currency: PLAN_CURRENCY, min: MONTHLY_MINIMUM })}
           </p>
         </div>
 
@@ -231,7 +232,9 @@ export default async function HomePage() {
                 src="/marketing/bar-team.jpg"
                 alt={t("how.imgAlt")}
                 fill
-                sizes="380px"
+                /* 380px-wide column but object-cover crops a tall portrait,
+                   so the real render is ~850px wide — request that, not 380px. */
+                sizes="900px"
                 className="object-cover"
               />
             </div>
@@ -378,7 +381,7 @@ export default async function HomePage() {
               <p className="mt-3 text-sm text-gray-500 leading-relaxed">
                 {t.rich("savings.moneyBody", {
                   currency: PLAN_CURRENCY,
-                  price: PRICE_PER_EMPLOYEE_MONTHLY,
+                  price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY),
                   b: bold,
                 })}
               </p>
@@ -396,8 +399,8 @@ export default async function HomePage() {
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{t("pricing.title")}</h2>
             <p className="mt-3 text-base text-gray-500">
-              <span className="font-semibold text-gray-900">{t("pricing.subBold", { currency: PLAN_CURRENCY, price: PRICE_PER_EMPLOYEE_MONTHLY })}</span>{" "}
-              {t("pricing.subRest")}
+              <span className="font-semibold text-gray-900">{t("pricing.subBold", { currency: PLAN_CURRENCY, min: MONTHLY_MINIMUM, covers: MINIMUM_COVERS_STAFF })}</span>{" "}
+              {t("pricing.subRest", { currency: PLAN_CURRENCY, price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY) })}
             </p>
           </div>
 
@@ -405,9 +408,10 @@ export default async function HomePage() {
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               <div className="bg-slate-900 px-8 py-7 text-center">
                 <div className="flex items-end justify-center gap-1">
-                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{PRICE_PER_EMPLOYEE_MONTHLY}</span>
+                  <span className="text-5xl font-bold text-white tabular-nums">{PLAN_CURRENCY}{formatPrice(MONTHLY_MINIMUM)}</span>
                   <span className="text-white/40 pb-1.5 text-base">{t("pricing.priceUnit")}</span>
                 </div>
+                <p className="mt-1.5 text-sm font-medium text-white/70 tabular-nums">{t("pricing.minimumNote", { currency: PLAN_CURRENCY, price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY), covers: MINIMUM_COVERS_STAFF })}</p>
                 <p className="mt-2 text-sm text-white/35">{t("pricing.trialNote", { days: TRIAL_DAYS })}</p>
               </div>
               <div className="px-8 py-6 space-y-2.5">
