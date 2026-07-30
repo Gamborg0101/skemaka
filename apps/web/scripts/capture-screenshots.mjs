@@ -1,10 +1,13 @@
 // Marketing screenshot pipeline.
 //
-// Single source of truth: every product shot is rendered from the public /demo
-// route (which renders lib/demo/demoData.ts) or the landing page. Because the
-// landing page's feature images are captured FROM the same /demo DOM, marketing
-// can never drift from the real UI — change the demo data or the components and
-// the next `npm run screenshots` run updates the marketing assets to match.
+// Single source of truth: every shot here is rendered from the public /demo
+// route (which renders lib/demo/demoData.ts) or the landing page, so these
+// assets can't drift from the real UI — change the demo data or the components
+// and the next `npm run screenshots` run updates them to match.
+//
+// NOTE: the landing page's feature tiles (public/marketing/screens/shot-*.png)
+// are NOT produced here — they are committed images referenced directly by
+// app/page.tsx. This script only writes to OUT_DIR below.
 //
 // Usage:
 //   npm run screenshots              # boots `next dev`, captures, shuts down
@@ -37,9 +40,6 @@ const SHOTS = [
   { name: "landing-mobile-hero", path: "/", viewport: MOBILE },
   { name: "demo-desktop", path: "/demo", viewport: DESKTOP, fullPage: true },
   { name: "demo-mobile", path: "/demo", viewport: MOBILE, fullPage: true },
-  // Feature tiles — element shots straight from the demo DOM (no drift).
-  { name: "feature-rota", path: "/demo", viewport: DESKTOP, selector: "[data-shot='rota']" },
-  { name: "feature-conflict", path: "/demo", viewport: DESKTOP, selector: "[data-shot='conflict']" },
 ]
 
 async function waitForServer(url, timeoutMs = 90_000) {

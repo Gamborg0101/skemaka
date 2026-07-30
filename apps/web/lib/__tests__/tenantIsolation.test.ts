@@ -44,3 +44,51 @@ describe("tenant isolation: /api/orgs/[orgId]/** routes", () => {
     })
   }
 })
+
+describe("tenant isolation: server-rendered manager pages", () => {
+  // Pages under app/(manager)/ have no requireOrgMember choke point — they query
+  // Prisma directly, so the structural guard above does not cover them.
+  //
+  // /my-shifts is the load-bearing case: one findFirst resolves WHICH org the
+  // entire page renders (employee picker, coworkers, cover requests all derive
+  // from it). Employee is unique on [organizationId, email], NOT on email alone,
+  // so a person employed at two restaurants has two rows. Without an org filter
+  // Postgres returns an indeterminate one and the page shows another org's data.
+  const MY_SHIFTS = join(process.cwd(), "app/(manager)/my-shifts/page.tsx")
+
+  function selfEmployeeLookup(): string {
+    const src = readFileSync(MY_SHIFTS, "utf8")
+    const start = src.indexOf("const selfEmployee = await db.employee.findFirst(")
+    const end = src.indexOf("if (!selfEmployee)")
+    // If either anchor moves, fail loudly rather than asserting on an empty
+    // string — a restructure of this page needs re-verifying by hand.
+    expect(start, "could not locate the selfEmployee lookup in my-shifts/page.tsx").toBeGreaterThan(-1)
+    expect(end, "could not locate the selfEmployee guard in my-shifts/page.tsx").toBeGreaterThan(start)
+    return src.slice(start, end)
+  }
+
+  // `select:` also names organizationId, so matching the whole call would pass
+  // even on the unscoped version. Narrow to the filter itself.
+  function selfEmployeeWhereClause(): string {
+    const block = selfEmployeeLookup()
+    const where = block.indexOf("where:")
+    const select = block.indexOf("select:")
+    expect(where, "no where clause in the selfEmployee lookup").toBeGreaterThan(-1)
+    expect(select, "no select clause in the selfEmployee lookup").toBeGreaterThan(where)
+    return block.slice(where, select)
+  }
+
+  it("my-shifts scopes the self-employee lookup to a single organization", () => {
+    expect(
+      selfEmployeeWhereClause(),
+      "the selfEmployee findFirst must FILTER on organizationId, or /my-shifts can render another restaurant's shifts",
+    ).toContain("organizationId")
+  })
+
+  it("my-shifts orders the self-employee lookup deterministically", () => {
+    expect(
+      selfEmployeeLookup(),
+      "findFirst without orderBy returns an indeterminate row on Neon/Postgres when more than one matches",
+    ).toContain("orderBy")
+  })
+})
