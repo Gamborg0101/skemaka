@@ -95,6 +95,14 @@ model Organization {
   /// Throwaway "try the live demo" sandbox — auto-deleted by the cleanup cron
   /// 48h after creation, excluded from platform metrics, emails suppressed.
   isDemo                  Boolean                  @default(false)
+  /// Purchased seats — the Stripe subscription quantity, and the cap on active
+  /// employees. Minimum 5 (the €19/month floor covers 5 seats). NOT enforced
+  /// while TRIALING: a trial org may add freely and buys seats at checkout.
+  seats                   Int                      @default(5)
+  /// A scheduled seat REDUCTION, applied at the next billing period. Decreases
+  /// never take effect mid-cycle — the org keeps (and pays for) `seats` until
+  /// the period rolls over, at which point this replaces it. Null = no change.
+  pendingSeats            Int?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   availabilityRequests    AvailabilityRequest[]
