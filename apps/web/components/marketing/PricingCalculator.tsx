@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import {
   PRICE_PER_EMPLOYEE_MONTHLY,
-  MONTHLY_MINIMUM,
-  MINIMUM_COVERS_STAFF,
+  MONTHLY_BASE,
+  SEATS_INCLUDED,
   PLAN_CURRENCY,
   monthlyTotal,
   formatPrice,
@@ -25,9 +25,10 @@ export function PricingCalculator() {
   // entry price, not the per-employee rate that only applies above the floor.
   const [count, setCount] = useState(4)
   const total = monthlyTotal(count)
-  // Below the break-even count the €19 floor applies, so the per-employee
-  // maths would understate the bill — show the minimum framing instead.
-  const atMinimum = count * PRICE_PER_EMPLOYEE_MONTHLY < MONTHLY_MINIMUM
+  // At or below the included seats the base fee is the whole bill, so show the
+  // "included" framing. Above it, show the breakdown — base + the extra seats.
+  const withinBase = count <= SEATS_INCLUDED
+  const extraSeats = Math.max(0, count - SEATS_INCLUDED)
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
@@ -60,17 +61,22 @@ export function PricingCalculator() {
         className="mt-6 flex flex-col items-center gap-1 rounded-xl bg-gray-50 py-6"
       >
         <p className="text-sm text-gray-500 tabular-nums">
-          {atMinimum
-            ? t("minimumLine", { currency: PLAN_CURRENCY, min: MONTHLY_MINIMUM })
-            : t("perUnit", { count, currency: PLAN_CURRENCY, price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY) })}
+          {withinBase
+            ? t("minimumLine", { currency: PLAN_CURRENCY, min: MONTHLY_BASE })
+            : t("perUnit", {
+                currency: PLAN_CURRENCY,
+                base: MONTHLY_BASE,
+                extra: extraSeats,
+                price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY),
+              })}
         </p>
         <p className="text-4xl font-bold text-gray-900 tabular-nums">
           {PLAN_CURRENCY}{formatPrice(total)}
           <span className="ml-1 text-base font-medium text-gray-400">{t("perMonth")}</span>
         </p>
         <p className="text-xs text-gray-400 text-center px-4">
-          {atMinimum
-            ? t("noteMinimum", { covers: MINIMUM_COVERS_STAFF })
+          {withinBase
+            ? t("noteMinimum", { covers: SEATS_INCLUDED })
             : t("activeNote")}
         </p>
       </div>

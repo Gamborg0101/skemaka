@@ -127,7 +127,7 @@
     "employees": "{count} {count, plural, one {medarbejder} other {medarbejdere}}",
     "perMonth": "/måned",
     "activeNote": "Du betaler kun for aktive medarbejdere — deaktivér nogen, og din regning falder næste periode.",
-    "perUnit": "{count} × {currency}{price}",
+    "perUnit": "{currency}{base} + {extra} × {currency}{price}",
     "minimumLine": "{currency}{min}/md. i minimum",
     "noteMinimum": "Dækker op til {covers} aktive medarbejdere — du betaler først mere, når du vokser."
   },
