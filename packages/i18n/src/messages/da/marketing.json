@@ -107,13 +107,13 @@
     "estimateNote": "Estimater baseret på et typisk mindre sted — se dine egne tal i beregneren nedenfor."
   },
   "pricing": {
-    "title": "Betal for dem, der arbejder",
-    "subBold": "{currency}{min}/måned dækker op til {covers} aktive medarbejdere.",
-    "subRest": "Derover er det {currency}{price} pr. aktiv medarbejder — intet oprettelsesgebyr, opsig når som helst.",
+    "title": "Enkel og forudsigelig pris",
+    "subBold": "{currency}{min}/måned dækker op til {covers} medarbejdere.",
+    "subRest": "Derover er det {currency}{price} pr. person — intet oprettelsesgebyr, opsig når som helst.",
     "priceUnit": "/ måned",
     "minimumNote": "Dækker op til {covers} aktive medarbejdere · derefter {currency}{price} pr. stk.",
     "trialNote": "{days} dage gratis — du betaler kun for aktive medarbejdere",
-    "feature1": "Betal kun for aktive medarbejdere",
+    "feature1": "Tilføj folk i det øjeblik du har brug for det",
     "feature2": "Ubegrænsede vagtplaner, vagter & historik",
     "feature3": "Tilgængelighed, fridage & sms-beskeder",
     "feature4": "Lønoverblik + CSV-løneksport",
@@ -123,13 +123,13 @@
     "calcHeading": "Hvad kommer det til at koste mig?"
   },
   "calculator": {
-    "label": "Hvor mange medarbejdere planlægger du for?",
+    "label": "Hvor mange er I på holdet?",
     "employees": "{count} {count, plural, one {medarbejder} other {medarbejdere}}",
     "perMonth": "/måned",
-    "activeNote": "Du betaler kun for aktive medarbejdere — deaktivér nogen, og din regning falder næste periode.",
+    "activeNote": "Ekstra pladser er klar med det samme. Reducér din plan når du vil — det gælder fra din næste regning.",
     "perUnit": "{currency}{base} + {extra} × {currency}{price}",
     "minimumLine": "{currency}{min}/md. i minimum",
-    "noteMinimum": "Dækker op til {covers} aktive medarbejdere — du betaler først mere, når du vokser."
+    "noteMinimum": "Dækker op til {covers} medarbejdere — du betaler først mere, når du vokser."
   },
   "faq": {
     "title": "Spørgsmål fra ejere",
@@ -138,7 +138,7 @@
     "q2": "Skal medarbejderne oprette en konto?",
     "a2": "Nej. Du tilføjer dem, og de får et invitationslink. De logger ind med Google eller Apple, og så er de i gang — de fleste er klar på under et minut.",
     "q3": "Hvad koster det egentlig?",
-    "a3": "{currency}{price} pr. aktiv medarbejder pr. måned, med et minimum på {currency}{min}/måned (dækker dine første par medarbejdere). Deaktivér en sæsonmedarbejder, og du betaler ikke længere for vedkommende. Intet oprettelsesgebyr.",
+    "a3": "{currency}{min}/måned dækker op til {covers} medarbejdere, derefter {currency}{price} pr. ekstra person pr. måned. Har du brug for flere? Tilføj dem med det samme — du betaler for resten af måneden, og derefter indgår de i din normale regning. Reduktioner gælder fra din næste månedlige regning. Intet oprettelsesgebyr.",
     "q4": "Kan jeg eksportere timer til løn?",
     "a4": "Ja — lønoverblikket eksporterer til CSV med timer, timeløn og samlet løn pr. person, klar til bogholderen eller lønsystemet.",
     "q5": "Er der binding?",
