@@ -61,9 +61,32 @@ export default async function MyShiftsPage({
   })()
   const weekEnd = addDays(weekStart, 7)
 
-  // Find the logged-in user's own employee record first
+  // Which restaurant's employee record are we looking at? The JWT carries orgId
+  // for org members; fall back to the membership row for tokens that predate the
+  // field (the same slow path the manager layout uses).
+  let orgId = session.user.orgId
+  if (!orgId) {
+    const membership = await db.membership.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { joinedAt: "asc" },
+      select: { organizationId: true },
+    })
+    orgId = membership?.organizationId
+  }
+
+  // Find the logged-in user's own employee record, scoped to that org.
+  // Employee is unique on [organizationId, email] — NOT on email alone — so the
+  // same person can be an active employee in more than one restaurant. Without
+  // the org filter this returns an indeterminate row, and the whole page then
+  // renders another org's shifts and coworkers. orderBy keeps the no-org
+  // fallback deterministic instead of letting Postgres choose.
   const selfEmployee = await db.employee.findFirst({
-    where: { email: session.user.email, isActive: true },
+    where: {
+      email: session.user.email,
+      isActive: true,
+      ...(orgId ? { organizationId: orgId } : {}),
+    },
+    orderBy: { createdAt: "asc" },
     select: { id: true, organizationId: true, jobRole: true, organization: { select: { name: true } } },
   })
 
