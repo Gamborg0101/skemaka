@@ -6,6 +6,7 @@ import { recordAudit } from "@/lib/audit"
 import { syncSubscriptionQuantitySafe } from "./billingService"
 import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings } from "@/types"
 import { ServiceError } from "./errors"
+import { assertSeatAvailable } from "./seats"
 
 // ── Organization ──────────────────────────────────────────────────────────────
 
@@ -304,7 +305,11 @@ export async function syncManagerEmployee(
 
   if (existing) {
     if (!existing.isActive) {
-      await db.employee.update({ where: { id: existing.id }, data: { isActive: true } })
+      // Reactivating the manager's own record consumes a seat like any other.
+      await db.$transaction(async (tx) => {
+        await assertSeatAvailable(tx, orgId)
+        await tx.employee.update({ where: { id: existing.id }, data: { isActive: true } })
+      })
       syncSubscriptionQuantitySafe(orgId)  // one more active seat
     }
     return
@@ -329,19 +334,26 @@ export async function syncManagerEmployee(
   // reuse that row and link it rather than creating a duplicate.
   const email = manager.email?.toLowerCase().trim()
   const byEmail = email
-    ? await db.employee.findUnique({ where: { organizationId_email: { organizationId: orgId, email } }, select: { id: true } })
+    ? await db.employee.findUnique({ where: { organizationId_email: { organizationId: orgId, email } }, select: { id: true, isActive: true } })
     : null
 
   if (byEmail) {
-    await db.employee.update({
-      where: { id: byEmail.id },
-      data:  { userId: manager.userId, isActive: true },
+    await db.$transaction(async (tx) => {
+      // Only a seat consumer if the row is currently inactive — linking an
+      // already-active employee to the manager's account changes no headcount.
+      if (!byEmail.isActive) await assertSeatAvailable(tx, orgId)
+      await tx.employee.update({
+        where: { id: byEmail.id },
+        data:  { userId: manager.userId, isActive: true },
+      })
     })
     syncSubscriptionQuantitySafe(orgId)
     return
   }
 
-  await db.employee.create({
+  await db.$transaction(async (tx) => {
+    await assertSeatAvailable(tx, orgId)
+    return tx.employee.create({
     data: {
       organizationId:   orgId,
       userId:           manager.userId,
@@ -361,6 +373,7 @@ export async function syncManagerEmployee(
       inviteToken:      crypto.randomUUID(),
       inviteExpiry:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
+    })
   })
   syncSubscriptionQuantitySafe(orgId)
 }
