@@ -127,7 +127,7 @@
     "employees": "{count} {count, plural, one {employee} other {employees}}",
     "perMonth": "/month",
     "activeNote": "You only pay for active staff — deactivate someone and your bill drops next cycle.",
-    "perUnit": "{count} × {currency}{price}",
+    "perUnit": "{currency}{base} + {extra} × {currency}{price}",
     "minimumLine": "{currency}{min}/mo minimum",
     "noteMinimum": "Covers up to {covers} active staff — you only pay more as you grow."
   },

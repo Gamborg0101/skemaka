@@ -1,38 +1,45 @@
 /**
  * Public pricing shown on the marketing site.
  *
- * ⚠️ MUST match the Stripe price referenced by STRIPE_PRICE_ID. Billing is PER
- * ACTIVE EMPLOYEE with a monthly minimum — the checkout subscribes with
- * `quantity = activeSeatCount` and re-syncs on every employee change
- * (see lib/services/billingService.ts).
+ * ⚠️ MUST match the Stripe price referenced by STRIPE_PRICE_ID. Billing is per
+ * SEAT — the checkout subscribes with `quantity = purchased seats` and re-syncs
+ * when seats change (see lib/services/billingService.ts).
  *
- * The Stripe price is a VOLUME-tiered recurring price that encodes the floor:
- *   - tier 1 (up to 5 units): flat €19.00 (1900)
- *   - tier 2 (6+ units):      €3.50 (350) per unit, applied to ALL units
- * Volume tiers charge the whole quantity at the matched tier's rate, so the
- * total is exactly `max(19, units × 3.5)` — matching {@link monthlyTotal}.
- * If you change the Stripe price, change these constants in the same commit.
+ * The model is a base fee that includes the first few seats, plus a flat rate
+ * per seat above that:
+ *
+ *     total = MONTHLY_BASE + max(0, seats - SEATS_INCLUDED) × PRICE_PER_EMPLOYEE_MONTHLY
+ *
+ * The Stripe price is a GRADUATED-tiered recurring price, which charges each
+ * tier separately and so produces exactly that:
+ *   - tier 1 (up to 5 units): flat €19.00 (1900), €0 per unit
+ *   - tier 2 (6+ units):      €3.50 (350) per unit, charged only on units in
+ *                             this tier
+ *
+ * NOTE the tiering mode matters: VOLUME would re-rate *every* unit at the
+ * matched tier (giving `max(19, seats × 3.5)`), which is a different and
+ * cheaper model. If you change the Stripe price, change these constants in the
+ * same commit — pricing.test.ts pins the arithmetic to catch drift.
  */
+
+/** Flat monthly fee. Always charged; includes the first {@link SEATS_INCLUDED} seats. */
+export const MONTHLY_BASE = 19
+/** Seats covered by {@link MONTHLY_BASE} before per-seat charges begin. */
+export const SEATS_INCLUDED = 5
+/** Monthly rate for each seat beyond {@link SEATS_INCLUDED}. */
 export const PRICE_PER_EMPLOYEE_MONTHLY = 3.5
-export const MONTHLY_MINIMUM = 19
 export const PLAN_CURRENCY = "€"
 export const TRIAL_DAYS = 14
 
-/** Monthly total for a given active-employee count (floored at the minimum). */
-export function monthlyTotal(activeEmployees: number): number {
-  return Math.max(MONTHLY_MINIMUM, Math.max(0, activeEmployees) * PRICE_PER_EMPLOYEE_MONTHLY)
+/** Monthly total for a given seat count. */
+export function monthlyTotal(seats: number): number {
+  const billable = Math.max(0, Math.max(0, seats) - SEATS_INCLUDED)
+  return MONTHLY_BASE + billable * PRICE_PER_EMPLOYEE_MONTHLY
 }
 
 /**
- * Largest active-staff count still covered by the monthly minimum. Below (and
- * at) this count the €19 floor applies; above it you pay per employee.
- * 19 / 3.5 → 5, so 1–5 staff all land on the minimum.
- */
-export const MINIMUM_COVERS_STAFF = Math.floor(MONTHLY_MINIMUM / PRICE_PER_EMPLOYEE_MONTHLY)
-
-/**
  * Format a euro amount for display: whole numbers stay clean (19 → "19"),
- * fractional amounts show two decimals (3.5 → "3.50", 24.5 → "24.50").
+ * fractional amounts show two decimals (3.5 → "3.50", 22.5 → "22.50").
  */
 export function formatPrice(amount: number): string {
   return Number.isInteger(amount) ? String(amount) : amount.toFixed(2)
