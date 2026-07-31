@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/prisma"
-import { requireOrgMember, requireManagerRole } from "@/lib/apiGuard"
+import { requireOrgMember, requireManagerRole, parseBody } from "@/lib/apiGuard"
 import { rateLimitRequest, getClientIp } from "@/lib/upstash"
 import { stripe } from "@/lib/stripe"
-import { activeSeatCount } from "@/lib/services/billingService"
+import { checkoutSeatCount } from "@/lib/services/billingService"
+import { z } from "zod"
 import { logError, requestIdFrom } from "@/lib/log"
 
 interface RouteContext {
   params: Promise<{ orgId: string }>
 }
+
+// The seat count is optional: the billing page sends what the manager picked,
+// but a client that omits it falls back to the org's stored seats.
+const CheckoutSchema = z.object({
+  seats: z.number().int().min(1).max(500).optional(),
+})
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   const { orgId } = await params
@@ -19,6 +26,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const { success } = await rateLimitRequest(getClientIp(req.headers), "mutation")
   if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+
+  const parsed = await parseBody(req, CheckoutSchema)
+  if ("error" in parsed) return parsed.error
+  const body = parsed.data
 
   const org = await db.organization.findUnique({
     where: { id: orgId },
@@ -34,9 +45,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
 
-  // Per-employee pricing: subscribe with one seat per active employee.
-  // Later add/remove/deactivate operations re-sync via syncSubscriptionQuantity.
-  const quantity = await activeSeatCount(orgId)
+  // Seat licensing: subscribe with the seats the manager chose. Floored at the
+  // base allowance and at the org's active-employee count, so a trial org that
+  // added freely cannot check out with fewer seats than it has people.
+  const quantity = await checkoutSeatCount(orgId, body?.seats)
 
   try {
     const session = await stripe.checkout.sessions.create({

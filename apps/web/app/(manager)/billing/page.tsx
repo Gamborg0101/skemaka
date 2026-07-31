@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { CreditCard, Receipt, Zap, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
 import { useOrg } from "@/lib/orgContext"
+import { SeatManager } from "@/components/manager/SeatManager"
 import type { SubscriptionStatus } from "@/types"
 
 function StatusBanner({ status }: { status: SubscriptionStatus }) {
@@ -92,7 +93,14 @@ export default function BillingPage() {
     setLoading("checkout")
     setError(null)
     try {
-      const r = await fetch(`/api/orgs/${org.id}/billing/checkout`, { method: "POST" })
+      // No body: the server subscribes with the org's stored seats, floored at
+      // its active-employee count. The SeatManager above is what sets that
+      // number, so checkout never has to guess.
+      const r = await fetch(`/api/orgs/${org.id}/billing/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
       const data = await r.json() as { url?: string; error?: string }
       if (!r.ok || !data.url) throw new Error(data.error ?? "Failed to start checkout")
       window.location.href = data.url
@@ -126,6 +134,8 @@ export default function BillingPage() {
       )}
 
       <div className="space-y-3">
+        <SeatManager orgId={org.id} trialing={status === "TRIALING"} />
+
         <div className="flex items-start gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 px-5 py-4">
           <div className="mt-0.5 size-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
             <CreditCard className="size-4 text-gray-500 dark:text-gray-400" />

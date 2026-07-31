@@ -74,6 +74,7 @@ export default async function HomePage() {
       currency: PLAN_CURRENCY,
       price: formatPrice(PRICE_PER_EMPLOYEE_MONTHLY),
       min: MONTHLY_BASE,
+      covers: SEATS_INCLUDED,
       days: TRIAL_DAYS,
     }),
   }))
