@@ -40,7 +40,48 @@ const SHOTS = [
   { name: "landing-mobile-hero", path: "/", viewport: MOBILE },
   { name: "demo-desktop", path: "/demo", viewport: DESKTOP, fullPage: true },
   { name: "demo-mobile", path: "/demo", viewport: MOBILE, fullPage: true },
+  { name: "00-login", path: "/login", viewport: DESKTOP },
 ]
+
+/**
+ * Reference shots of the manager app, used by CLAUDE.md so an agent can see the
+ * UI before changing it.
+ *
+ * These need an authenticated manager, so the run clicks through /demo once and
+ * reuses that session. That means one throwaway demo org per run — `isDemo`, so
+ * the cleanup cron deletes it after 48h and it never reaches platform metrics.
+ *
+ * Previously hand-captured, which is why they went stale: CLAUDE.md asks for a
+ * retake after every UI change, and nobody re-runs a manual process.
+ *
+ * - `click` presses a button by accessible name after load (view toggles).
+ */
+const MANAGER_SHOTS = [
+  { name: "01-schedule", path: "/schedule" },
+  { name: "02-employees", path: "/employees" },
+  { name: "03-availability", path: "/availability" },
+  { name: "04-costs", path: "/costs" },
+  { name: "05-time-off", path: "/time-off" },
+  { name: "06-settings", path: "/settings" },
+  { name: "07-schedule-timeline", path: "/schedule", click: "Timeline" },
+  { name: "08-my-shifts", path: "/my-shifts" },
+]
+
+/**
+ * Chrome that is true of the capture environment but not of the product.
+ *
+ * `nextjs-portal` is the Next.js dev-tools button. It renders in the
+ * bottom-left corner whenever these run against a dev server — which is the
+ * default — and lands directly on top of the sidebar's org name. That produced
+ * a long-standing "sidebar org name is truncated / the avatar overlaps it" bug
+ * report against a UI that was never broken: the screenshots were.
+ */
+const HIDE_CAPTURE_CHROME = `
+  nextjs-portal,
+  [data-nextjs-dev-tools-button],
+  [data-demo-banner],
+  [class*="cookie"] { display: none !important; }
+`
 
 async function waitForServer(url, timeoutMs = 90_000) {
   const deadline = Date.now() + timeoutMs
@@ -54,6 +95,55 @@ async function waitForServer(url, timeoutMs = 90_000) {
     await sleep(1000)
   }
   throw new Error(`Server at ${url} did not become ready in ${timeoutMs}ms`)
+}
+
+/**
+ * Sign into a throwaway demo restaurant and capture the manager pages.
+ * One context for all of them, so the session is established once.
+ */
+async function captureManagerShots(browser) {
+  const context = await browser.newContext({
+    viewport: { width: DESKTOP.width, height: DESKTOP.height },
+    deviceScaleFactor: DESKTOP.deviceScaleFactor,
+    // Reference shots are English; without this the run inherits whatever
+    // Accept-Language the machine sends and the images flip language.
+    locale: "en-GB",
+  })
+  // Pre-consent so the banner never covers a shot. Shape must match
+  // lib/cookieConsent.ts — a malformed value just makes the banner reappear.
+  const consent = encodeURIComponent(JSON.stringify({
+    version: 1,
+    necessary: true,
+    preferences: true,
+    analytics: false,
+    decidedAt: new Date().toISOString(),
+  }))
+  await context.addCookies([
+    { name: "NEXT_LOCALE", value: "en", url: BASE_URL },
+    { name: "skemaka_cookie_consent", value: consent, url: BASE_URL },
+  ])
+
+  const page = await context.newPage()
+  await page.goto(BASE_URL + "/demo", { waitUntil: "networkidle" })
+  await page.getByRole("button", { name: /try the live demo/i }).click()
+  await page.waitForURL("**/schedule", { timeout: 60_000 })
+  await page.waitForLoadState("networkidle")
+
+  for (const shot of MANAGER_SHOTS) {
+    await page.goto(BASE_URL + shot.path, { waitUntil: "networkidle" })
+    if (shot.click) {
+      await page.getByRole("button", { name: shot.click, exact: true }).click()
+      await sleep(500)
+    }
+    await page.addStyleTag({ content: HIDE_CAPTURE_CHROME })
+    await sleep(400)
+
+    const file = `${OUT_DIR}/${shot.name}.png`
+    await page.screenshot({ path: file })
+    console.log(`✔ ${file}`)
+  }
+
+  await context.close()
 }
 
 async function main() {
@@ -82,6 +172,7 @@ async function main() {
       await page.goto(BASE_URL + path, { waitUntil: "networkidle" })
       // Let fonts/images settle so shots are deterministic across runs.
       await page.waitForLoadState("load")
+      await page.addStyleTag({ content: HIDE_CAPTURE_CHROME })
       await sleep(300)
 
       const file = `${OUT_DIR}/${name}.png`
@@ -93,6 +184,8 @@ async function main() {
       console.log(`✔ ${file}`)
       await context.close()
     }
+
+    await captureManagerShots(browser)
 
     await browser.close()
   } finally {

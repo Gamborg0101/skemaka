@@ -17,7 +17,10 @@ export function DemoBanner({ exitAction }: { exitAction: () => Promise<void> }) 
   if (!org.isDemo) return null
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-blue-600 px-4 py-1.5 text-center text-[13px] font-medium text-white">
+    <div
+      data-demo-banner
+      className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-blue-600 px-4 py-1.5 text-center text-[13px] font-medium text-white"
+    >
       <span className="inline-flex items-center gap-1.5">
         <Sparkles className="size-3.5 shrink-0" />
         {t("text")}
