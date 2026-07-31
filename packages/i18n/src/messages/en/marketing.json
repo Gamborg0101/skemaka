@@ -107,13 +107,13 @@
     "estimateNote": "Estimates based on a typical small venue — see your own numbers in the calculator below."
   },
   "pricing": {
-    "title": "Pay for who's working",
-    "subBold": "{currency}{min}/month covers up to {covers} active staff.",
-    "subRest": "Above that it's {currency}{price} per active employee — no setup fee, cancel anytime.",
+    "title": "Simple, predictable pricing",
+    "subBold": "{currency}{min}/month covers up to {covers} employees.",
+    "subRest": "Above that it's {currency}{price} per employee — no setup fee, cancel anytime.",
     "priceUnit": "/ month",
     "minimumNote": "Covers up to {covers} active staff · then {currency}{price} each",
     "trialNote": "{days} days free — billed only for active staff",
-    "feature1": "Only pay for active staff",
+    "feature1": "Add employees the moment you need to",
     "feature2": "Unlimited schedules, shifts & history",
     "feature3": "Availability, time-off & SMS alerts",
     "feature4": "Labour cost + CSV payroll export",
@@ -123,13 +123,13 @@
     "calcHeading": "What will it cost me?"
   },
   "calculator": {
-    "label": "How many staff do you schedule?",
+    "label": "How many employees do you schedule?",
     "employees": "{count} {count, plural, one {employee} other {employees}}",
     "perMonth": "/month",
-    "activeNote": "You only pay for active staff — deactivate someone and your bill drops next cycle.",
+    "activeNote": "Add employees the moment you need to. Reduce your plan whenever you like — it applies from your next bill.",
     "perUnit": "{currency}{base} + {extra} × {currency}{price}",
     "minimumLine": "{currency}{min}/mo minimum",
-    "noteMinimum": "Covers up to {covers} active staff — you only pay more as you grow."
+    "noteMinimum": "Covers up to {covers} employees — you only pay more as you grow."
   },
   "faq": {
     "title": "Questions owners ask",
@@ -138,9 +138,9 @@
     "q2": "Do staff need to create an account?",
     "a2": "No. You add them, they get an invite link. They sign in with Google or Apple and they're in — most are set up in under a minute.",
     "q3": "What does it actually cost?",
-    "a3": "{currency}{price} per active employee per month, with a {currency}{min}/month minimum (covers your first few staff). Deactivate someone for the season and you stop paying for them. No setup fee.",
+    "a3": "{currency}{min}/month covers up to {covers} employees, then {currency}{price} per extra employee per month. Need more? Add them straight away — you're billed for the rest of the month and it joins your normal bill after that. Reducing takes effect from your next monthly bill. No setup fee.",
     "q4": "Can I export hours for payroll?",
-    "a4": "Yes — the labour cost view exports to CSV with hours, wage, and total pay per person, ready for your bookkeeper or payroll software.",
+    "a4": "Yes — the labour cost view exports to CSV with hours, wage, and total pay per employee, ready for your bookkeeper or payroll software.",
     "q5": "Is there a contract?",
     "a5": "No. {days} days free with no card, then month to month. Cancel whenever — you keep access until the end of the period.",
     "q6": "I run more than one venue.",

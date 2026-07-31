@@ -171,6 +171,10 @@ export async function seedDemoOrg(locale: DemoLocale): Promise<DemoSeedResult> {
       name: orgName,
       slug: `demo-${suffix}`,
       isDemo: true,
+      // The sandbox seeds 9 employees. Demo orgs are always TRIALING so the seat
+      // cap never applies, but set it to match anyway — a demo that silently sits
+      // over its limit would be a confusing thing to inherit later.
+      seats: 9,
       subscriptionStatus: "TRIALING",
       trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       currency: isDa ? "DKK" : "EUR",

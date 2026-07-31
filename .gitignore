@@ -59,3 +59,9 @@ apps/web/.playwright-mcp/
 
 # Local agent/tooling state — never committed
 .codex/
+.vercel
+
+# `vercel link` appends a bare `.env*` here, which also hides the tracked
+# apps/web/.env.example. Lines 35-37 already cover real env files; keep the
+# example visible so new contributors can see what needs configuring.
+!apps/web/.env.example

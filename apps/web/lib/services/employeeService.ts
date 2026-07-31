@@ -7,8 +7,8 @@ import type { PaginationParams } from "@/lib/validate"
 import { sendInviteEmail } from "@/lib/resend"
 import { resolveRecipientLocale } from "@/lib/messages"
 import { recordAudit } from "@/lib/audit"
-import { syncSubscriptionQuantitySafe } from "./billingService"
 import { ServiceError } from "./errors"
+import { assertSeatAvailable } from "./seats"
 
 /** Optional filter for the paginated employee list. */
 export type EmployeeListFilter = { isActive?: boolean }
@@ -94,24 +94,30 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
 
   const org = await db.organization.findUnique({ where: { id: orgId }, select: { name: true, currency: true, locale: true } })
 
-  const employee = await db.employee.create({
-    data: {
-      organizationId:   orgId,
-      name:             input.name,
-      email:            email,
-      phone:            input.phone           ?? null,
-      // Record that the manager asserted SMS consent when a number is provided.
-      smsConsentAt:     input.phone ? new Date() : null,
-      jobRole:          input.jobRole,
-      hourlyWage:       input.hourlyWage,
-      wageBaseAmount:   input.hourlyWage,
-      wageBaseCurrency: org?.currency ?? "EUR",
-      employmentType:   resolvedType,
-      contractedHours:  input.contractedHours ?? 0,
-      notes:            input.notes           ?? null,
-      inviteToken:      crypto.randomUUID(),
-      inviteExpiry:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
+  // The seat check and the insert share one transaction: assertSeatAvailable
+  // locks the org row, and releasing that lock before the employee exists would
+  // let a concurrent add slip through on the same free seat.
+  const employee = await db.$transaction(async (tx) => {
+    await assertSeatAvailable(tx, orgId)
+    return tx.employee.create({
+      data: {
+        organizationId:   orgId,
+        name:             input.name,
+        email:            email,
+        phone:            input.phone           ?? null,
+        // Record that the manager asserted SMS consent when a number is provided.
+        smsConsentAt:     input.phone ? new Date() : null,
+        jobRole:          input.jobRole,
+        hourlyWage:       input.hourlyWage,
+        wageBaseAmount:   input.hourlyWage,
+        wageBaseCurrency: org?.currency ?? "EUR",
+        employmentType:   resolvedType,
+        contractedHours:  input.contractedHours ?? 0,
+        notes:            input.notes           ?? null,
+        inviteToken:      crypto.randomUUID(),
+        inviteExpiry:     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    })
   })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
@@ -124,7 +130,6 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
     locale:    resolveRecipientLocale(org?.locale),
   }).catch((err) => console.error("[invite] Resend error:", err))
 
-  syncSubscriptionQuantitySafe(orgId)
 
   return serEmployee(employee)
 }
@@ -170,6 +175,12 @@ export async function updateEmployee(
 
   try {
     const employee = await db.$transaction(async (tx) => {
+      // Reactivating consumes a seat exactly like hiring does. Only guard the
+      // false → true transition; edits to an already-active employee, and
+      // deactivations, must not be blocked by a full org.
+      if (input.isActive === true && !existing.isActive) {
+        await assertSeatAvailable(tx, orgId)
+      }
       const updated = await tx.employee.update({
         where: { id: employeeId },
         data: {
@@ -192,7 +203,6 @@ export async function updateEmployee(
     })
 
     if (input.isActive !== undefined && input.isActive !== existing.isActive) {
-      syncSubscriptionQuantitySafe(orgId)
     }
 
     // Audit wage changes — who changed an employee's pay, and from/to what.
@@ -245,7 +255,6 @@ export async function deleteEmployee(
     })
   }
 
-  syncSubscriptionQuantitySafe(orgId)
 }
 
 /**
