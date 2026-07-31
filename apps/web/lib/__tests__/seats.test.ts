@@ -50,8 +50,8 @@ describe("assertSeatAvailable", () => {
     await assertSeatAvailable(client, ORG).catch((err: ServiceError) => {
       expect(err.code).toBe("SEAT_LIMIT")
       // The message is customer-facing — it must say what to do about it.
-      expect(err.message).toContain("5 seats")
-      expect(err.message.toLowerCase()).toContain("add more seats")
+      expect(err.message).toContain("5 employees")
+      expect(err.message.toLowerCase()).toContain("increase your plan")
     })
     expect.assertions(3)
   })

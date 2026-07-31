@@ -73,7 +73,7 @@ export async function assertSeatAvailable(tx: Tx, orgId: string): Promise<void> 
 
   if (active >= org.seats) {
     throw new ServiceError(
-      `All ${org.seats} seats are in use. Add more seats to bring on another team member.`,
+      `Your plan covers ${org.seats} employees and they are all active. Increase your plan to add another.`,
       "SEAT_LIMIT",
     )
   }

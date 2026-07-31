@@ -87,14 +87,14 @@ export async function changeSeats(orgId: string, newSeats: number): Promise<Seat
   const active = await db.employee.count({ where: { organizationId: orgId, isActive: true } })
 
   if (newSeats < MIN_SEATS) {
-    throw new ServiceError(`Plans start at ${MIN_SEATS} seats.`, "BAD_REQUEST")
+    throw new ServiceError(`Plans start at ${MIN_SEATS} employees.`, "BAD_REQUEST")
   }
   if (newSeats < minimumSeatsFor(active)) {
     // Never auto-deactivate to make room. Removing someone's staff is the
     // manager's decision, never something we do on their behalf.
     const excess = active - newSeats
     throw new ServiceError(
-      `You have ${active} active team members. Deactivate ${excess} of them before reducing to ${newSeats} seats.`,
+      `You have ${active} active employees. Deactivate ${excess} of them before reducing your plan to ${newSeats}.`,
       "CONFLICT",
     )
   }

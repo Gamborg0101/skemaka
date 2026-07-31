@@ -109,11 +109,11 @@
   "pricing": {
     "title": "Enkel og forudsigelig pris",
     "subBold": "{currency}{min}/måned dækker op til {covers} medarbejdere.",
-    "subRest": "Derover er det {currency}{price} pr. person — intet oprettelsesgebyr, opsig når som helst.",
+    "subRest": "Derover er det {currency}{price} pr. medarbejder — intet oprettelsesgebyr, opsig når som helst.",
     "priceUnit": "/ måned",
     "minimumNote": "Dækker op til {covers} aktive medarbejdere · derefter {currency}{price} pr. stk.",
     "trialNote": "{days} dage gratis — du betaler kun for aktive medarbejdere",
-    "feature1": "Tilføj folk i det øjeblik du har brug for det",
+    "feature1": "Tilføj medarbejdere i det øjeblik du har brug for det",
     "feature2": "Ubegrænsede vagtplaner, vagter & historik",
     "feature3": "Tilgængelighed, fridage & sms-beskeder",
     "feature4": "Lønoverblik + CSV-løneksport",
@@ -123,10 +123,10 @@
     "calcHeading": "Hvad kommer det til at koste mig?"
   },
   "calculator": {
-    "label": "Hvor mange er I på holdet?",
+    "label": "Hvor mange medarbejdere planlægger du for?",
     "employees": "{count} {count, plural, one {medarbejder} other {medarbejdere}}",
     "perMonth": "/måned",
-    "activeNote": "Ekstra pladser er klar med det samme. Reducér din plan når du vil — det gælder fra din næste regning.",
+    "activeNote": "Tilføj medarbejdere i det øjeblik du har brug for det. Reducér din plan når du vil — det gælder fra din næste regning.",
     "perUnit": "{currency}{base} + {extra} × {currency}{price}",
     "minimumLine": "{currency}{min}/md. i minimum",
     "noteMinimum": "Dækker op til {covers} medarbejdere — du betaler først mere, når du vokser."
@@ -138,9 +138,9 @@
     "q2": "Skal medarbejderne oprette en konto?",
     "a2": "Nej. Du tilføjer dem, og de får et invitationslink. De logger ind med Google eller Apple, og så er de i gang — de fleste er klar på under et minut.",
     "q3": "Hvad koster det egentlig?",
-    "a3": "{currency}{min}/måned dækker op til {covers} medarbejdere, derefter {currency}{price} pr. ekstra person pr. måned. Har du brug for flere? Tilføj dem med det samme — du betaler for resten af måneden, og derefter indgår de i din normale regning. Reduktioner gælder fra din næste månedlige regning. Intet oprettelsesgebyr.",
+    "a3": "{currency}{min}/måned dækker op til {covers} medarbejdere, derefter {currency}{price} pr. ekstra medarbejder pr. måned. Har du brug for flere? Tilføj dem med det samme — du betaler for resten af måneden, og derefter indgår de i din normale regning. Reduktioner gælder fra din næste månedlige regning. Intet oprettelsesgebyr.",
     "q4": "Kan jeg eksportere timer til løn?",
-    "a4": "Ja — lønoverblikket eksporterer til CSV med timer, timeløn og samlet løn pr. person, klar til bogholderen eller lønsystemet.",
+    "a4": "Ja — lønoverblikket eksporterer til CSV med timer, timeløn og samlet løn pr. medarbejder, klar til bogholderen eller lønsystemet.",
     "q5": "Er der binding?",
     "a5": "Nej. {days} dage gratis uden kort, derefter måned til måned. Opsig når som helst — du har adgang perioden ud.",
     "q6": "Jeg har mere end ét sted.",

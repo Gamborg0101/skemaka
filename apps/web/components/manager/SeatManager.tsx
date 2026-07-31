@@ -60,8 +60,8 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
   const currentTotal = monthlyTotal(state.seats)
   const draftTotal = monthlyTotal(draft)
   const isIncrease = draft > state.seats
-  // Every place above the base costs the same, so the one-off is simply the
-  // difference in places × the per-person rate.
+  // Every employee above the base costs the same, so the one-off is simply the
+  // difference × the per-employee rate.
   const oneOff = isIncrease ? (draft - state.seats) * PRICE_PER_EMPLOYEE_MONTHLY : 0
 
   async function save() {
@@ -88,7 +88,7 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
           ? body.data.chargedNow > 0
             ? `Added. ${PLAN_CURRENCY}${formatPrice(body.data.chargedNow / 100)} for the rest of this month will appear on your next invoice.`
             : "Your plan is updated."
-          : `Scheduled. You keep ${body.data.seats} places until your next bill, then it drops to ${body.data.pendingSeats}.`,
+          : `Scheduled. Your plan covers ${body.data.seats} employees until your next bill, then ${body.data.pendingSeats}.`,
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong")
@@ -109,8 +109,8 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Your plan</p>
           <p className="text-sm text-gray-500 mt-0.5">
-            {state.activeEmployees} of {state.seats} places in use
-            {trialing && " — you can add freely during your trial"}
+            {state.activeEmployees} active · your plan covers {state.seats} employees
+            {trialing && " — add freely during your trial"}
           </p>
 
           <div className="mt-4 flex items-center gap-3">
@@ -119,7 +119,7 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
                 type="button"
                 onClick={() => setDraft(clamp(draft - 1))}
                 disabled={saving || draft <= state.minSeats}
-                aria-label="One fewer place"
+                aria-label="One fewer employee"
                 className="px-2.5 py-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Minus className="size-4" />
@@ -131,7 +131,7 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
                 type="button"
                 onClick={() => setDraft(clamp(draft + 1))}
                 disabled={saving || draft >= MAX_SEATS}
-                aria-label="One more place"
+                aria-label="One more employee"
                 className="px-2.5 py-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Plus className="size-4" />
@@ -156,7 +156,7 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
                 </>
               ) : (
                 <>
-                  You keep {state.seats} places until your next bill, then it drops to {draft} at{" "}
+                  Your plan covers {state.seats} employees until your next bill, then {draft} at{" "}
                   {PLAN_CURRENCY}{formatPrice(draftTotal)}/month. No refund for the current month.
                 </>
               )}
@@ -165,14 +165,14 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
 
           {draft <= state.minSeats && state.activeEmployees >= state.minSeats && !changed && (
             <p className="mt-3 text-xs text-gray-400 leading-relaxed">
-              To go lower, deactivate someone first — we never deactivate people for you.
+              To go lower, deactivate an employee first — we never deactivate anyone for you.
             </p>
           )}
 
           {state.pendingSeats !== null && !changed && (
             <p className="mt-3 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
               <Clock className="size-3.5 mt-px shrink-0" />
-              Dropping to {state.pendingSeats} places at your next bill.
+              Dropping to {state.pendingSeats} employees at your next bill.
             </p>
           )}
 
