@@ -100,6 +100,10 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
 
   const clamp = (n: number) => Math.max(state.minSeats, Math.min(MAX_SEATS, n))
 
+  // Functional updates, not `clamp(draft ± 1)`: two clicks inside one React
+  // batch would both read the same stale `draft` and the second would
+  // overwrite the first, so a fast double-click only moved the count by one.
+
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 px-5 py-4">
       <div className="flex items-start gap-4">
@@ -117,7 +121,7 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
             <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-600">
               <button
                 type="button"
-                onClick={() => setDraft(clamp(draft - 1))}
+                onClick={() => setDraft((d) => clamp((d ?? 0) - 1))}
                 disabled={saving || draft <= state.minSeats}
                 aria-label="One fewer employee"
                 className="px-2.5 py-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -129,7 +133,7 @@ export function SeatManager({ orgId, trialing }: { orgId: string; trialing: bool
               </span>
               <button
                 type="button"
-                onClick={() => setDraft(clamp(draft + 1))}
+                onClick={() => setDraft((d) => clamp((d ?? 0) + 1))}
                 disabled={saving || draft >= MAX_SEATS}
                 aria-label="One more employee"
                 className="px-2.5 py-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
