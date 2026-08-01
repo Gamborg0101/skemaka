@@ -103,7 +103,7 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 
 - `weekStart` is always a `YYYY-MM-DD` ISO date string (Monday). Use `getMondayOfWeek(new Date())` to get the current week.
 - Shift `date` field is also `YYYY-MM-DD`. Shifts belong to a `Schedule` (one per week per org).
-- `GET /api/orgs/[orgId]/schedules?week=YYYY-MM-DD` — use `orderBy: { createdAt: "asc" }` on the `findFirst` to always get the canonical schedule, not a potential empty duplicate.
+- `GET /api/orgs/[orgId]/schedules?weekStart=YYYY-MM-DD` — returns the single schedule for that week (`{ data: {...} }`). **The param is `weekStart`, not `week`** — passing `week` is silently ignored and you get `{ data: [...] }`, every schedule for the org, which looks like a working response until you index into it. Use `orderBy: { createdAt: "asc" }` on the `findFirst` to always get the canonical schedule, not a potential empty duplicate.
 
 ---
 
