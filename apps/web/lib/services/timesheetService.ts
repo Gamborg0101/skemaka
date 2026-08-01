@@ -1,6 +1,7 @@
 import { db } from "@/lib/prisma"
 import { calcHours } from "@/lib/dateUtils"
 import { ServiceError } from "./errors"
+import { NOT_SICK } from "./shiftFilters"
 
 export type TimesheetSource = "scheduled" | "clocked"
 export type TimesheetView = "summary" | "detail"
@@ -67,7 +68,7 @@ async function scheduledRows(orgId: string, dateFrom: string, dateTo: string): P
         lte: new Date(dateTo + "T00:00:00Z"),
       },
       // Sick and cancelled shifts carry no worked hours — mirrors getLaborCosts.
-      colorTag: { not: "sick" },
+      ...NOT_SICK,
       cancelledAt: null,
     },
     include: { employee: { select: ROW_EMPLOYEE_SELECT } },
