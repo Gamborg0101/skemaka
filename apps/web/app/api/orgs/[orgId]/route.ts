@@ -63,7 +63,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ orgId
     return NextResponse.json({ data: org })
   } catch (err) {
     if (err instanceof ServiceError) {
-      return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
+      return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
     }
     logError("orgs PATCH", err, { requestId: requestIdFrom(req.headers) })
     return NextResponse.json({ error: "Failed to update organization" }, { status: 500 })

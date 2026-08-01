@@ -23,7 +23,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     if (err instanceof ServiceError) {
-      return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
+      return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
     }
     throw err
   }

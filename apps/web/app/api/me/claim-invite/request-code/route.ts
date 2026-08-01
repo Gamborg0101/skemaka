@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     if (err instanceof ServiceError) {
-      return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
+      return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
     }
     logError("POST /api/me/claim-invite/request-code", err, { requestId: requestIdFrom(req.headers) })
     return NextResponse.json({ error: "Failed to send code" }, { status: 500 })
