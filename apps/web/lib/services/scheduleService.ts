@@ -16,6 +16,7 @@ import type { Locale } from "@skemaka/i18n"
 import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
+import { NOT_SICK } from "./shiftFilters"
 
 // Full select — only used in manager-only contexts (cost calculations, SMS notifications).
 const SHIFT_EMPLOYEE_SELECT = {
@@ -394,7 +395,7 @@ export async function publishSchedule(
     where: { id: scheduleId, organizationId: orgId },
     include: {
       shifts: {
-        where: { colorTag: { not: "sick" }, cancelledAt: null, publishedAt: null },
+        where: { ...NOT_SICK, cancelledAt: null, publishedAt: null },
         include: { employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },
@@ -481,7 +482,7 @@ export interface PendingRolloutWeek {
 /** Weeks with at least one draft (unsent) shift, oldest first. */
 export async function getPendingRollout(orgId: string): Promise<PendingRolloutWeek[]> {
   const drafts = await db.shift.findMany({
-    where: { organizationId: orgId, publishedAt: null, cancelledAt: null, colorTag: { not: "sick" } },
+    where: { organizationId: orgId, publishedAt: null, cancelledAt: null, ...NOT_SICK },
     select: {
       employeeId: true,
       employee: { select: { name: true } },
@@ -532,7 +533,7 @@ export async function rollOut(
   const weekKey = (d: Date) => d.toISOString().split("T")[0]
 
   const drafts = await db.shift.findMany({
-    where: { organizationId: orgId, publishedAt: null, cancelledAt: null, colorTag: { not: "sick" } },
+    where: { organizationId: orgId, publishedAt: null, cancelledAt: null, ...NOT_SICK },
     include: {
       employee: { select: { id: true, name: true, phone: true, email: true, userId: true, locale: true } },
       schedule: { select: { id: true, weekStart: true } },
@@ -1003,7 +1004,7 @@ export async function getLaborCosts(orgId: string, weekStart: string): Promise<W
     where: { organizationId: orgId, weekStart: new Date(weekStart + "T00:00:00Z") },
     include: {
       shifts: {
-        where: { colorTag: { not: "sick" }, cancelledAt: null },
+        where: { ...NOT_SICK, cancelledAt: null },
         include: { employee: { select: SHIFT_EMPLOYEE_SELECT } },
         orderBy: [{ date: "asc" }, { startTime: "asc" }],
       },

@@ -78,9 +78,22 @@ describe("scheduled summary", () => {
     await getTimesheetCsv("org1", "2026-07-06", "2026-07-12", "scheduled", "summary")
     expect(mockShifts).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ colorTag: { not: "sick" } }),
+        where: expect.objectContaining({
+          OR: [{ colorTag: null }, { colorTag: { not: "sick" } }],
+        }),
       }),
     )
+  })
+
+  it("still counts shifts that have no colour set", async () => {
+    // `colorTag: { not: "sick" }` compiles to `colorTag <> 'sick'`, which is NULL
+    // — not true — for uncoloured shifts, so SQL drops them. Silently omitting
+    // someone's hours from a payroll export is the worst version of this bug, so
+    // pin the NULL branch explicitly.
+    mockShifts.mockResolvedValue([] as never)
+    await getTimesheetCsv("org1", "2026-07-06", "2026-07-12", "scheduled", "summary")
+    const where = mockShifts.mock.calls[0]?.[0]?.where as { OR?: unknown[] } | undefined
+    expect(where?.OR).toContainEqual({ colorTag: null })
   })
 })
 
