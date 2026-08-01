@@ -44,7 +44,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const role = await orgService.createJobRole(orgId, parsed.data.name, parsed.data.color)
     return NextResponse.json({ data: role }, { status: 201 })
   } catch (err) {
-    if (err instanceof ServiceError) return NextResponse.json({ error: err.message }, { status: serviceErrorStatus(err.code) })
+    if (err instanceof ServiceError) return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
     throw err
   }
 }
