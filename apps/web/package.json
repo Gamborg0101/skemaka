@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
@@ -18,7 +18,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "screenshots": "node scripts/capture-screenshots.mjs",
-    "screenshots:check": "node scripts/capture-screenshots.mjs && git diff --exit-code -- screenshots"
+    "screenshots:check": "node scripts/capture-screenshots.mjs && git diff --exit-code -- screenshots",
+    "test:integration": "vitest run --project integration"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
