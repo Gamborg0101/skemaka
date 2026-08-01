@@ -52,6 +52,63 @@ jobs:
       - name: Test
         run: npm test
 
+  # Service-layer tests against a REAL Postgres. The unit suite mocks Prisma, so
+  # it asserts the shape of a query and can say nothing about what SQL does with
+  # it — which is how `colorTag: { not: "sick" }` shipped: that compiles to
+  # `colorTag <> 'sick'`, NULL for uncoloured rows, so they were silently dropped
+  # from roll-out and from payroll export. Runs on every push/PR: it is fast, and
+  # the bugs it catches are the expensive kind.
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: it
+          POSTGRES_PASSWORD: it
+          POSTGRES_DB: it
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      # lib/prisma.ts always uses the Neon serverless driver, which speaks
+      # WebSockets — wsproxy lets it talk to a plain Postgres.
+      wsproxy:
+        image: ghcr.io/neondatabase/wsproxy:latest
+        env:
+          APPEND_PORT: "postgres:5432"
+          ALLOW_ADDR_REGEX: ".*"
+          LOG_TRAFFIC: "true"
+        ports: ["5433:80"]
+    env:
+      DATABASE_URL: postgres://it:it@localhost:5432/it?sslmode=disable
+      DIRECT_URL: postgres://it:it@localhost:5432/it?sslmode=disable
+      NEON_WS_PROXY: localhost:5433/v1
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: apps/web
+        run: npx prisma generate
+
+      - name: Apply schema
+        working-directory: apps/web
+        run: npx prisma migrate deploy
+
+      - name: Integration tests
+        working-directory: apps/web
+        run: npm run test:integration
+
   # Browser E2E for the money path (access control, trial paywall, invite claim).
   # Nightly + manual only. Runs the Neon serverless driver against a plain Postgres
   # via the Neon wsproxy (see lib/prisma.ts NEON_WS_PROXY).
