@@ -30,5 +30,40 @@
   "cover": {
     "poolTitle": "Shifts you can cover",
     "claim": "I'll cover it"
+  },
+  "common": {
+    "email": "Email",
+    "name": "Name",
+    "phone": "Phone",
+    "role": "Role",
+    "close": "Close",
+    "signOut": "Sign out",
+    "version": "Version"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "accountRole": "Account role",
+    "app": "App",
+    "security": "Security",
+    "orgId": "Org ID",
+    "dangerZone": "Danger zone",
+    "deleteAccount": "Delete account",
+    "devPreview": "Developer — UI preview"
+  },
+  "clock": {
+    "live": "Live",
+    "workedToday": "Worked today"
+  },
+  "week": {
+    "previous": "Previous week",
+    "next": "Next week",
+    "jumpToToday": "Jump to today"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "addShift": "Add shift",
+    "noShifts": "No shifts scheduled",
+    "noShiftsHint": "Tap “Add shift” to schedule someone"
   }
 }

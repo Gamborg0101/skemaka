@@ -30,5 +30,40 @@
   "cover": {
     "poolTitle": "Vagter du kan tage",
     "claim": "Jeg tager den"
+  },
+  "common": {
+    "email": "E-mail",
+    "name": "Navn",
+    "phone": "Telefon",
+    "role": "Rolle",
+    "close": "Luk",
+    "signOut": "Log ud",
+    "version": "Version"
+  },
+  "settings": {
+    "title": "Indstillinger",
+    "account": "Konto",
+    "accountRole": "Kontorolle",
+    "app": "App",
+    "security": "Sikkerhed",
+    "orgId": "Organisations-id",
+    "dangerZone": "Farezone",
+    "deleteAccount": "Slet konto",
+    "devPreview": "Udvikler — UI-forhåndsvisning"
+  },
+  "clock": {
+    "live": "Live",
+    "workedToday": "Arbejdet i dag"
+  },
+  "week": {
+    "previous": "Forrige uge",
+    "next": "Næste uge",
+    "jumpToToday": "Gå til i dag"
+  },
+  "schedule": {
+    "title": "Vagtplan",
+    "addShift": "Tilføj vagt",
+    "noShifts": "Ingen vagter planlagt",
+    "noShiftsHint": "Tryk på “Tilføj vagt” for at planlægge en vagt"
   }
 }

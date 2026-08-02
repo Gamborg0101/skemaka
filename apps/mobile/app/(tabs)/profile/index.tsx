@@ -70,11 +70,11 @@ export default function ProfileScreen() {
 
         {/* Details */}
         <Card elevation="flat" padded={false} className="px-4">
-          <InfoRow label="Email" value={employee?.email} />
+          <InfoRow label={t("common.email")} value={employee?.email} />
           <Divider />
-          <InfoRow label="Phone" value={employee?.phone ?? "Not set"} />
+          <InfoRow label={t("common.phone")} value={employee?.phone ?? "Not set"} />
           <Divider />
-          <InfoRow label="Role" value={employee?.jobRole} />
+          <InfoRow label={t("common.role")} value={employee?.jobRole} />
         </Card>
 
         {/* Actions */}
