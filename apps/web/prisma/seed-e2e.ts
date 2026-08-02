@@ -124,6 +124,30 @@ async function main() {
     update: {},
   })
 
+  // A user with no membership at all: what a customer looks like the moment
+  // they finish signing up and before they have a workspace. Creating one here
+  // is the whole point — the onboarding spec must exercise the real first-run
+  // path, not a pre-made org.
+  const onboarder = await db.user.upsert({
+    where: { email: E2E.onboarder },
+    create: { email: E2E.onboarder, name: "Onboarder" },
+    update: {},
+  })
+
+  // Reset them to org-less. The onboarding spec CREATES an org for this user, so
+  // without this the second run finds /api/me/context returning 200 instead of
+  // 404 and the spec fails on a stale fixture rather than a real regression.
+  // Seeds must leave the same state every time they run.
+  const previous = await db.membership.findMany({
+    where: { userId: onboarder.id },
+    select: { organizationId: true },
+  })
+  if (previous.length > 0) {
+    await db.organization.deleteMany({
+      where: { id: { in: previous.map((m) => m.organizationId) } },
+    })
+  }
+
   console.log("E2E seed complete.")
 }
 
