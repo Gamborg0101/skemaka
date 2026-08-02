@@ -103,21 +103,40 @@ export async function createCoverRequest(
     throw new ServiceError("You can only offer up your own shifts", "FORBIDDEN")
   }
 
-  const existing = await db.shiftCoverRequest.findFirst({
-    where: { shiftId, status: { in: ACTIVE_STATUSES } },
-    select: { id: true },
-  })
-  if (existing) throw new ServiceError("This shift is already up for cover", "CONFLICT")
+  // Check-then-act, so it has to be serialised: without the lock two offers that
+  // interleave between the read and the insert both see nothing and both create
+  // a request. A double-tap on "I'll cover it" is enough, and the result is two
+  // OPEN requests for one shift — two teammates can each claim it, and the
+  // manager gets two approvals for a single slot.
+  //
+  // The lock is taken on the SHIFT row rather than on the cover requests,
+  // because the row being contended is the shift: the thing there can only be
+  // one active offer for. Locking a row that does not exist yet is not possible,
+  // which is exactly why the naive version had nothing to serialise on.
+  //
+  // Same pattern as assertSeatAvailable in lib/services/seats.ts. The insert
+  // must stay inside this transaction — if it lands after commit the lock is
+  // already released and the race reopens.
+  const created = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Shift" WHERE "id" = ${shiftId} FOR UPDATE`
 
-  const created = await db.shiftCoverRequest.create({
-    data: {
-      organizationId: orgId,
-      shiftId,
-      requesterEmployeeId: employee.id,
-      status: "OPEN",
-      note: note?.trim() || null,
-    },
-    include: COVER_INCLUDE,
+    const existing = await tx.shiftCoverRequest.findFirst({
+      where: { shiftId, status: { in: ACTIVE_STATUSES } },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    })
+    if (existing) throw new ServiceError("This shift is already up for cover", "CONFLICT")
+
+    return tx.shiftCoverRequest.create({
+      data: {
+        organizationId: orgId,
+        shiftId,
+        requesterEmployeeId: employee.id,
+        status: "OPEN",
+        note: note?.trim() || null,
+      },
+      include: COVER_INCLUDE,
+    })
   })
 
   // Notify eligible teammates: active, same job role, not the requester, opted in.
@@ -171,9 +190,24 @@ export async function claimCoverRequest(
     throw new ServiceError("You can't claim your own shift", "CONFLICT")
   }
 
-  const updated = await db.shiftCoverRequest.update({
-    where: { id: requestId },
+  // Compare-and-swap: `status: "OPEN"` in the WHERE is what makes this safe.
+  // The check above is a courtesy that produces a good error message — it cannot
+  // enforce anything, because another claimer can take the shift between that
+  // read and this write. Postgres evaluates one UPDATE atomically, so exactly
+  // one of N simultaneous claims matches a row and the rest report 0.
+  //
+  // Without it, three teammates tapping "I'll cover it" together all succeeded,
+  // each overwriting the last, and each was told they got the shift.
+  const swap = await db.shiftCoverRequest.updateMany({
+    where: { id: requestId, organizationId: orgId, status: "OPEN" },
     data: { status: "CLAIMED", claimedByEmployeeId: claimer.id },
+  })
+  if (swap.count === 0) {
+    throw new ServiceError("This shift is no longer open to claim", "CONFLICT")
+  }
+
+  const updated = await db.shiftCoverRequest.findUniqueOrThrow({
+    where: { id: requestId },
     include: COVER_INCLUDE,
   })
 
@@ -219,10 +253,24 @@ export async function approveCoverRequest(
   const claimedById = req.claimedByEmployeeId
   const updated = await db.$transaction(async (tx) => {
     const client = tx as unknown as PrismaClient
-    await client.shift.update({ where: { id: req.shiftId }, data: { employeeId: claimedById } })
-    return client.shiftCoverRequest.update({
-      where: { id: requestId },
+
+    // Swap first, reassign second, both inside the transaction. Approving is the
+    // only step that moves a shift between people, so it must happen if and only
+    // if this call is the one that resolved the request. A concurrent deny that
+    // won the write would otherwise leave the roster reassigned while the record
+    // says DENIED — the shift changes hands with nothing to show for it.
+    const swap = await client.shiftCoverRequest.updateMany({
+      where: { id: requestId, organizationId: orgId, status: "CLAIMED" },
       data: { status: "APPROVED", resolvedAt: new Date(), resolvedByUserId: managerUserId },
+    })
+    if (swap.count === 0) {
+      throw new ServiceError("This request has already been resolved", "CONFLICT")
+    }
+
+    await client.shift.update({ where: { id: req.shiftId }, data: { employeeId: claimedById } })
+
+    return client.shiftCoverRequest.findUniqueOrThrow({
+      where: { id: requestId },
       include: COVER_INCLUDE,
     })
   })
@@ -259,9 +307,19 @@ export async function denyCoverRequest(
     throw new ServiceError("This request is already resolved", "CONFLICT")
   }
 
-  const updated = await db.shiftCoverRequest.update({
-    where: { id: requestId },
+  // Same compare-and-swap as approve, so the two cannot both win. Denying does
+  // not touch the roster, so losing this race is harmless — the request is
+  // simply already resolved.
+  const swap = await db.shiftCoverRequest.updateMany({
+    where: { id: requestId, organizationId: orgId, status: { in: ACTIVE_STATUSES } },
     data: { status: "DENIED", resolvedAt: new Date(), resolvedByUserId: managerUserId },
+  })
+  if (swap.count === 0) {
+    throw new ServiceError("This request is already resolved", "CONFLICT")
+  }
+
+  const updated = await db.shiftCoverRequest.findUniqueOrThrow({
+    where: { id: requestId },
     include: COVER_INCLUDE,
   })
 
