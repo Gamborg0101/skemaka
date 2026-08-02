@@ -97,6 +97,20 @@ export function assertDisposableDatabase(url: string | undefined): string {
  */
 const TEST_SESSION_TIMEZONE = "Pacific/Kiritimati"
 
+/**
+ * Opt out of the non-UTC requirement, for a run that mirrors production.
+ *
+ * Neon runs sessions in UTC, so a UTC+14 run alone proves the code is correct
+ * under a timezone production never uses, and proves nothing about the one it
+ * does. CI therefore runs this suite twice: once at UTC+14 to expose
+ * naive-vs-timestamptz bugs, and once at UTC with this flag set, which is the
+ * production-faithful run.
+ *
+ * Only the offset-sensitive comparisons differ between the two; everything else
+ * is identical, so the second run is cheap insurance rather than duplication.
+ */
+const ALLOW_UTC = process.env.ALLOW_UTC_TEST_DB === "1"
+
 beforeAll(async () => {
   assertDisposableDatabase(process.env.DATABASE_URL)
 
@@ -110,7 +124,7 @@ beforeAll(async () => {
     "SELECT current_setting('TimeZone')::text AS tz",
   )
 
-  if (tz === "UTC" || tz === "Etc/UTC") {
+  if ((tz === "UTC" || tz === "Etc/UTC") && !ALLOW_UTC) {
     throw new Error(
       `REFUSING TO RUN: the test database session timezone is "${tz}".\n\n` +
         "Under UTC this suite cannot see naive-vs-timestamptz bugs, because the\n" +
@@ -118,7 +132,10 @@ beforeAll(async () => {
         "applied scheduled seat reductions early for exactly this reason, and the\n" +
         "test covering it passed in CI regardless.\n\n" +
         "Point the database at a large offset so such bugs fail loudly:\n" +
-        `  psql -c "ALTER DATABASE <db> SET TimeZone='${TEST_SESSION_TIMEZONE}';"`,
+        `  psql -c "ALTER DATABASE <db> SET TimeZone='${TEST_SESSION_TIMEZONE}';"\n\n` +
+        "If you meant to run the production-parity pass (Neon sessions are UTC),\n" +
+        "say so explicitly with ALLOW_UTC_TEST_DB=1. Do not set it as a default —\n" +
+        "it turns off the only check that catches this class of bug.",
     )
   }
 })
