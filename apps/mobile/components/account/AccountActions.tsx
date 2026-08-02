@@ -60,7 +60,7 @@ export function AccountActions() {
         accessibilityLabel={t("common.signOut")}
         onPress={handleSignOut}
       >
-        Sign Out
+        {t("common.signOut")}
       </Button>
 
       <Pressable

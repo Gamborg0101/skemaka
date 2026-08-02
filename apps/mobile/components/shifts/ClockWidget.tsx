@@ -56,7 +56,7 @@ export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
         <View className="absolute inset-0 bg-success/5" />
         <View className="gap-1">
           <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide">
-            Worked today
+            {t("clock.workedToday")}
           </Text>
           <Text className="text-xl font-bold text-ink tracking-tight">
             {formatClockTime(todayShift!.clockedInAt!)} – {formatClockTime(todayShift!.clockedOutAt!)}

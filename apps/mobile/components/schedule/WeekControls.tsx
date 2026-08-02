@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics"
 import { currentWeek, weekRangeLabel } from "@/lib/dates"
 import { isToday } from "@/lib/utils"
 import { useTranslations } from "@/lib/i18n"
+import { getLocaleTag } from "@/lib/localeTag"
 
 // ─── Week navigation ──────────────────────────────────────────────────────────
 // Padding-free — callers wrap with `px-4`.
@@ -80,12 +81,12 @@ export function DayStrip({
         const today = isToday(date)
         const d = new Date(date + "T00:00:00Z")
         const abbr = d
-          .toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
+          .toLocaleDateString(getLocaleTag(), { weekday: "short", timeZone: "UTC" })
           .slice(0, 3)
           .toUpperCase()
         const num = d.getUTCDate()
 
-        const fullLabel = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+        const fullLabel = d.toLocaleDateString(getLocaleTag(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
         return (
           <Pressable
             key={date}

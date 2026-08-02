@@ -34,6 +34,7 @@ function WeekNav({
   onNext: () => void
   onReset: () => void
 }) {
+  const t = useTranslations("mobile")
   const isThisWeek = week === currentWeek()
 
   return (
@@ -42,7 +43,7 @@ function WeekNav({
         onPress={onPrev}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Previous week"
+        accessibilityLabel={t("week.previous")}
         className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
       >
         <Ionicons name="chevron-back" size={18} color="#A1A1AE" />
@@ -56,7 +57,7 @@ function WeekNav({
       >
         <Text className="text-sm font-semibold text-ink">{weekRangeLabel(week)}</Text>
         {!isThisWeek && (
-          <Text className="text-[11px] text-brand font-medium mt-0.5">Jump to today</Text>
+          <Text className="text-[11px] text-brand font-medium mt-0.5">{t("week.jumpToToday")}</Text>
         )}
       </Pressable>
 
@@ -64,7 +65,7 @@ function WeekNav({
         onPress={onNext}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Next week"
+        accessibilityLabel={t("week.next")}
         className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
       >
         <Ionicons name="chevron-forward" size={18} color="#A1A1AE" />
@@ -161,7 +162,7 @@ function EmployeeShiftsScreen() {
   return (
     <Screen scroll={false} padded={false} edges={["top"]}>
       <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
-        <Text className="text-2xl font-bold text-ink">My Shifts</Text>
+        <Text className="text-2xl font-bold text-ink">{t("myShifts.title")}</Text>
         <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
       </View>
 

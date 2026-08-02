@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { getLocales } from "expo-localization"
+import { setLocaleTag } from "@/lib/localeTag"
 import {
   getMessages,
   matchLocale,
@@ -49,6 +50,14 @@ export function I18nProvider({
   locale?: Locale
 }) {
   const resolved = locale ?? deviceLocale()
+
+  // Keep the date/time singleton in step. lib/dates.ts and lib/utils.ts are
+  // plain functions called from outside React, so they read the tag from a
+  // module singleton rather than this context. Set during render, before any
+  // child formats a date — an effect would run too late and the first paint
+  // would show English dates under Danish headings.
+  setLocaleTag(resolved)
+
   return <LocaleContext.Provider value={resolved}>{children}</LocaleContext.Provider>
 }
 

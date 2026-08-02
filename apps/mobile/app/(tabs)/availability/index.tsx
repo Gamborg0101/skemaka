@@ -22,8 +22,30 @@ import { weekDays, currentWeek, offsetWeek, weekRangeLabel } from "@/lib/dates"
 import { DEFAULT_ORG_HOURS } from "@skemaka/api"
 import type { Employee, AvailabilityDay, DayHours } from "@skemaka/types"
 import type { ShiftInput } from "@skemaka/api"
+import { useTranslations } from "@/lib/i18n"
+import { getLocaleTag } from "@/lib/localeTag"
 
-const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+/**
+ * Weekday names in the active language, derived rather than listed.
+ *
+ * A hardcoded English array is one more thing to translate for every locale and
+ * one more thing to get out of step; Intl already knows the answer. Computed
+ * lazily and cached because the device language cannot change without an app
+ * restart. 2024-01-01 is a Monday, which fixes index 0 = Monday.
+ */
+let _dayLabels: string[] | null = null
+function dayLabels(): string[] {
+  if (!_dayLabels) {
+    const monday = Date.UTC(2024, 0, 1)
+    _dayLabels = Array.from({ length: 7 }, (_, i) =>
+      new Date(monday + i * 86_400_000).toLocaleDateString(getLocaleTag(), {
+        weekday: "long",
+        timeZone: "UTC",
+      }),
+    )
+  }
+  return _dayLabels
+}
 const DAY_SHORT  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 // ─── Day state ────────────────────────────────────────────────────────────────
@@ -32,9 +54,11 @@ type DayStatus = "available" | "off"
 
 type DayEntry = { status: DayStatus; start: string; end: string }
 
-const STATUS_CONFIG: Record<DayStatus, { label: string; color: string; bg: string; border: string }> = {
-  available: { label: "Available",     color: "#30D158", bg: "rgba(48,209,88,0.12)", border: "rgba(48,209,88,0.25)" },
-  off:       { label: "Not available", color: "#4A4A57", bg: "rgba(74,74,87,0.10)",  border: "rgba(74,74,87,0.15)"  },
+// labelKey rather than label: this is module scope, so it cannot call the
+// translation hook. Call sites resolve it with t() at render time.
+const STATUS_CONFIG: Record<DayStatus, { labelKey: string; color: string; bg: string; border: string }> = {
+  available: { labelKey: "availability.statusAvailable", color: "#30D158", bg: "rgba(48,209,88,0.12)", border: "rgba(48,209,88,0.25)" },
+  off:       { labelKey: "availability.statusOff",       color: "#4A4A57", bg: "rgba(74,74,87,0.10)",  border: "rgba(74,74,87,0.15)"  },
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -55,6 +79,7 @@ function WeekNav({
   canGoBack?: boolean
   canGoForward: boolean
 }) {
+  const t = useTranslations("mobile")
   return (
     <View className="flex-row items-center justify-between px-4 pb-3 pt-1">
       <Pressable
@@ -62,7 +87,7 @@ function WeekNav({
         hitSlop={8}
         disabled={!canGoBack}
         accessibilityRole="button"
-        accessibilityLabel="Previous week"
+        accessibilityLabel={t("week.previous")}
         accessibilityState={{ disabled: !canGoBack }}
         className="w-8 h-8 items-center justify-center rounded-full active:opacity-60"
         style={{ backgroundColor: canGoBack ? "rgba(255,255,255,0.06)" : "transparent" }}
@@ -79,7 +104,7 @@ function WeekNav({
         hitSlop={8}
         disabled={!canGoForward}
         accessibilityRole="button"
-        accessibilityLabel="Next week"
+        accessibilityLabel={t("week.next")}
         accessibilityState={{ disabled: !canGoForward }}
         className="w-8 h-8 items-center justify-center rounded-full active:opacity-60"
         style={{ backgroundColor: canGoForward ? "rgba(255,255,255,0.06)" : "transparent" }}
@@ -113,6 +138,7 @@ function DayCard({
   onEdit?: () => void
   onClose?: () => void
 }) {
+  const t = useTranslations("mobile")
   const [picker, setPicker] = useState<"start" | "end" | null>(null)
   const dayNum  = new Date(date + "T00:00:00Z").getUTCDate()
   const cfg      = STATUS_CONFIG[entry.status]
@@ -154,10 +180,10 @@ function DayCard({
         }} />
         <View className="flex-1">
           <Text style={{ fontSize: 14, fontWeight: "700", color: "#F2F2F7" }}>
-            {DAY_LABELS[index]} {dayNum}
+            {dayLabels()[index]} {dayNum}
           </Text>
           <Text style={{ fontSize: 12, marginTop: 2, color: cfg.color, fontWeight: "600" }}>
-            {cfg.label}{readOnly && showTimes ? `  ·  ${formatTime(entry.start)} – ${formatTime(entry.end)}` : ""}
+            {t(cfg.labelKey)}{readOnly && showTimes ? `  ·  ${formatTime(entry.start)} – ${formatTime(entry.end)}` : ""}
           </Text>
         </View>
         {readOnly && onEdit && (
@@ -165,12 +191,15 @@ function DayCard({
             onPress={() => { void Haptics.selectionAsync(); onEdit() }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={`${entry.status === "available" ? "Edit" : "Set"} availability for ${DAY_LABELS[index]}`}
+            accessibilityLabel={t("availability.a11ySetFor", {
+              action: entry.status === "available" ? t("availability.edit") : t("availability.set"),
+              day: dayLabels()[index],
+            })}
             className="px-3 py-1.5 rounded-xl active:opacity-70"
             style={{ backgroundColor: "rgba(123,110,248,0.12)", borderWidth: 1, borderColor: "rgba(123,110,248,0.25)" }}
           >
             <Text style={{ fontSize: 12, fontWeight: "600", color: "#7B6EF8" }}>
-              {entry.status === "available" ? "Edit" : "Set"}
+              {entry.status === "available" ? t("availability.edit") : t("availability.set")}
             </Text>
           </Pressable>
         )}
@@ -179,7 +208,7 @@ function DayCard({
             onPress={() => { void Haptics.selectionAsync(); onClose() }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={`Close editor for ${DAY_LABELS[index]}`}
+            accessibilityLabel={t("availability.a11yCloseEditor", { day: dayLabels()[index] })}
             className="w-7 h-7 items-center justify-center rounded-full active:opacity-70"
             style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
           >
@@ -199,7 +228,7 @@ function DayCard({
                 key={s}
                 onPress={() => selectStatus(s)}
                 accessibilityRole="button"
-                accessibilityLabel={c.label}
+                accessibilityLabel={t(c.labelKey)}
                 accessibilityState={{ selected: active }}
                 className="flex-1 py-2 items-center rounded-xl active:opacity-70"
                 style={{
@@ -209,7 +238,7 @@ function DayCard({
                 }}
               >
                 <Text style={{ fontSize: 12, fontWeight: "600", color: active ? c.color : "#9898A8" }}>
-                  {c.label}
+                  {t(c.labelKey)}
                 </Text>
               </Pressable>
             )
@@ -230,7 +259,7 @@ function DayCard({
             className="flex-1 items-center rounded-xl py-2.5 active:opacity-70"
             style={{ backgroundColor: "#141417", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}
           >
-            <Text style={{ fontSize: 10, color: "#6B6B7B" }}>From</Text>
+            <Text style={{ fontSize: 10, color: "#6B6B7B" }}>{t("availability.from")}</Text>
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#F2F2F7" }}>{formatTime(entry.start)}</Text>
           </Pressable>
 
@@ -244,7 +273,7 @@ function DayCard({
             className="flex-1 items-center rounded-xl py-2.5 active:opacity-70"
             style={{ backgroundColor: "#141417", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}
           >
-            <Text style={{ fontSize: 10, color: "#6B6B7B" }}>Until</Text>
+            <Text style={{ fontSize: 10, color: "#6B6B7B" }}>{t("availability.until")}</Text>
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#F2F2F7" }}>{formatTime(entry.end)}</Text>
           </Pressable>
         </View>
@@ -269,16 +298,17 @@ function DayCard({
 // ─── Summary strip ────────────────────────────────────────────────────────────
 
 function SummaryStrip({ available, off }: { available: number; off: number }) {
+  const t = useTranslations("mobile")
   return (
     <View className="flex-row items-center gap-4 px-4 pb-3">
       <View className="flex-row items-center gap-1.5">
         {/* Color dot is decorative — text below carries the meaning */}
         <View importantForAccessibility="no" accessibilityElementsHidden style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: STATUS_CONFIG.available.color }} />
-        <Text style={{ fontSize: 12, color: "#9898A8" }}>{available} available</Text>
+        <Text style={{ fontSize: 12, color: "#9898A8" }}>{t("availability.countAvailable", { n: available })}</Text>
       </View>
       <View className="flex-row items-center gap-1.5">
         <View importantForAccessibility="no" accessibilityElementsHidden style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: STATUS_CONFIG.off.color }} />
-        <Text style={{ fontSize: 12, color: "#9898A8" }}>{off} not available</Text>
+        <Text style={{ fontSize: 12, color: "#9898A8" }}>{t("availability.countOff", { n: off })}</Text>
       </View>
     </View>
   )
@@ -294,6 +324,7 @@ function submittedDayToEntry(day: AvailabilityDay | undefined): DayEntry {
 }
 
 function EmployeeAvailabilityView() {
+  const t = useTranslations("mobile")
   const [weekStart, setWeekStart] = useState<string>(currentWeek)
   const { data, isLoading: loadingReq, isError, refetch } = useOpenRequest(weekStart)
   const request  = data?.request ?? null
@@ -322,22 +353,22 @@ function EmployeeAvailabilityView() {
     setEditingDate(date)
   }
 
-  if (isLoading) return <LoadingState label="Loading…" />
+  if (isLoading) return <LoadingState label={t("common.loading")} />
   if (isError)   return <ErrorState onRetry={() => void refetch()} />
 
   if (!request) {
     return (
       <Screen scroll={false} padded={false} edges={["top"]}>
         <View className="flex-row items-center justify-between px-4 pt-4 pb-1 pr-3">
-          <Text className="text-2xl font-bold text-ink">Availability</Text>
+          <Text className="text-2xl font-bold text-ink">{t("availability.title")}</Text>
           <RefreshButton onPress={() => void refetch()} isRefreshing={loadingReq} />
         </View>
         <WeekNav weekStart={weekStart} onChange={changeWeek} canGoBack={canGoBack} canGoForward={canGoForward} />
         <View className="flex-1 items-center justify-center gap-3 px-8">
           <Text style={{ fontSize: 36 }}>📅</Text>
-          <Text className="text-base font-semibold text-ink text-center">Nothing here</Text>
+          <Text className="text-base font-semibold text-ink text-center">{t("availability.nothingHere")}</Text>
           <Text className="text-sm text-ink-muted text-center">
-            No availability recorded for this week.
+            {t("availability.noneThisWeek")}
           </Text>
         </View>
       </Screen>
@@ -360,18 +391,18 @@ function EmployeeAvailabilityView() {
     <Screen scroll={false} padded={false} edges={["top"]}>
       <View className="px-4 pt-4 pb-1 pr-3">
         <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-ink">Availability</Text>
+          <Text className="text-2xl font-bold text-ink">{t("availability.title")}</Text>
           <View className="flex-row items-center gap-2">
             {isEditing && (
               <Pressable
                 onPress={() => { setEditingDate(null); setDayEntries({}) }}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel availability editing"
+                accessibilityLabel={t("availability.a11yCancelEdit")}
                 className="px-3 py-1.5 rounded-xl active:opacity-70"
                 style={{ backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#9898A8" }}>Cancel</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#9898A8" }}>{t("common.cancel")}</Text>
               </Pressable>
             )}
             <RefreshButton onPress={() => void refetch()} isRefreshing={loadingReq} />
@@ -379,10 +410,10 @@ function EmployeeAvailabilityView() {
         </View>
         <Text className="text-sm text-ink-secondary mt-0.5">
           {isEditing
-            ? "Update your availability for this week"
+            ? t("availability.updateForWeek")
             : existing
-            ? "Submitted"
-            : "Set your availability for this week"}
+            ? t("availability.submitted")
+            : t("availability.setForWeek")}
         </Text>
       </View>
       <WeekNav weekStart={weekStart} onChange={changeWeek} canGoBack={canGoBack} canGoForward={canGoForward} />
@@ -437,7 +468,7 @@ function EmployeeAvailabilityView() {
               })
             }}
           >
-            Update Availability
+            {t("availability.update")}
           </Button>
         </View>
       )}
@@ -452,6 +483,7 @@ type SheetState =
   | { open: true; date: string; scheduleId: string; employeeId: string; start: string; end: string }
 
 function ManagerAvailabilityView() {
+  const t = useTranslations("mobile")
   const [mgrWeekStart, setMgrWeekStart] = useState<string>(currentWeek)
   const { data, isLoading: loadingReq, isError, refetch } = useOpenRequest(mgrWeekStart)
   const request = data?.request ?? null
@@ -495,20 +527,20 @@ function ManagerAvailabilityView() {
     [schedule, effectiveDate],
   )
 
-  if (isLoading) return <LoadingState label="Loading…" />
+  if (isLoading) return <LoadingState label={t("common.loading")} />
   if (isError)   return <ErrorState onRetry={() => void refetch()} />
 
   if (!request) {
     return (
       <Screen scroll={false} padded={false} edges={["top"]}>
         <View className="flex-row items-center justify-between px-4 pt-4 pb-1 pr-3">
-          <Text className="text-2xl font-bold text-ink">Availability</Text>
+          <Text className="text-2xl font-bold text-ink">{t("availability.title")}</Text>
           <RefreshButton onPress={() => void refetch()} isRefreshing={loadingReq} />
         </View>
         <WeekNav weekStart={mgrWeekStart} onChange={(w) => { setMgrWeekStart(w); setSelectedDate("") }} canGoBack={mgrWeekStart > offsetWeek(currentWeek(), -MAX_WEEKS_BACK)} canGoForward={mgrCanGoForward} />
         <View className="flex-1 items-center justify-center gap-3 px-8">
           <Text style={{ fontSize: 36 }}>📋</Text>
-          <Text className="text-base font-semibold text-ink text-center">No request for this week</Text>
+          <Text className="text-base font-semibold text-ink text-center">{t("availability.noRequestThisWeek")}</Text>
           <Text className="text-sm text-ink-muted text-center">
             Open the web dashboard to create an availability request, or adjust the availability window in Settings.
           </Text>
@@ -560,7 +592,7 @@ function ManagerAvailabilityView() {
       <View>
         <View className="px-4 pt-4 pb-1 pr-3">
           <View className="flex-row items-center justify-between">
-            <Text className="text-2xl font-bold text-ink">Availability</Text>
+            <Text className="text-2xl font-bold text-ink">{t("availability.title")}</Text>
             <RefreshButton onPress={() => void refetch()} isRefreshing={loadingReq} />
           </View>
           <Text className="text-sm text-ink-secondary mt-0.5">
@@ -573,15 +605,15 @@ function ManagerAvailabilityView() {
         <View className="flex-row gap-2 px-4 py-3">
           <View className="flex-1 bg-success/10 border border-success/20 rounded-xl px-3 py-2 items-center">
             <Text className="text-lg font-bold text-success">{submissions.length}</Text>
-            <Text className="text-[10px] text-ink-muted mt-0.5">Responded</Text>
+            <Text className="text-[10px] text-ink-muted mt-0.5">{t("availability.responded")}</Text>
           </View>
           <View className="flex-1 bg-elevated border border-line/40 rounded-xl px-3 py-2 items-center">
             <Text className="text-lg font-bold text-ink-secondary">{employees.length - submissions.length}</Text>
-            <Text className="text-[10px] text-ink-muted mt-0.5">Pending</Text>
+            <Text className="text-[10px] text-ink-muted mt-0.5">{t("availability.pending")}</Text>
           </View>
           <View className="flex-1 bg-elevated border border-line/40 rounded-xl px-3 py-2 items-center">
             <Text className="text-lg font-bold text-ink">{employees.length}</Text>
-            <Text className="text-[10px] text-ink-muted mt-0.5">Total</Text>
+            <Text className="text-[10px] text-ink-muted mt-0.5">{t("common.total")}</Text>
           </View>
         </View>
 
@@ -649,8 +681,8 @@ function ManagerAvailabilityView() {
         }
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-16 gap-1">
-            <Text className="text-sm text-ink-secondary">No responses yet</Text>
-            <Text className="text-xs text-ink-muted">Employees haven&apos;t submitted for this week</Text>
+            <Text className="text-sm text-ink-secondary">{t("availability.noResponses")}</Text>
+            <Text className="text-xs text-ink-muted">{t("availability.notSubmitted")}</Text>
           </View>
         }
         renderItem={({ item: employee, index }) => {
@@ -724,7 +756,7 @@ function ManagerAvailabilityView() {
                       style={{ backgroundColor: "rgba(123,110,248,0.12)" }}
                     >
                       <Text style={{ fontSize: 11, color: "#7B6EF8", fontWeight: "600" }}>
-                        Scheduled ✓
+                        {t("availability.scheduled")}
                       </Text>
                     </View>
                   ) : (
@@ -738,7 +770,7 @@ function ManagerAvailabilityView() {
                       style={{ backgroundColor: "rgba(48,209,88,0.12)", borderWidth: 1, borderColor: "rgba(48,209,88,0.2)" }}
                     >
                       <Text style={{ fontSize: 12, color: "#30D158", fontWeight: "600" }}>
-                        Assign Shift
+                        {t("availability.assignShift")}
                       </Text>
                     </Pressable>
                   )
