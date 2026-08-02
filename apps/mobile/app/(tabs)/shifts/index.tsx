@@ -8,6 +8,7 @@ import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { ShiftCardSkeleton, ClockWidgetSkeleton } from "@/components/ui/Skeleton"
 import { EmptyState } from "@/components/feedback/EmptyState"
 import { ErrorState } from "@/components/feedback/ErrorState"
+import { NoEmployeeProfile } from "@/components/feedback/NoEmployeeProfile"
 import { Divider } from "@/components/ui/Divider"
 import { ManagerScheduleView } from "@/components/schedule/ManagerScheduleView"
 import { CoverPool } from "@/components/cover/CoverPool"
@@ -104,12 +105,27 @@ export default function ShiftsScreen() {
 }
 
 function EmployeeShiftsScreen() {
-  const { data: currentUser, isError: userError, refetch: refetchUser } = useCurrentUser()
+  const {
+    data: currentUser,
+    isError: userError,
+    refetch: refetchUser,
+    noEmployeeRecord,
+  } = useCurrentUser()
   const router = useRouter()
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
   const [tab, setTab] = useState<Tab>("upcoming")
 
   const { data: shifts, isLoading, isFetching, refetch } = useMyShifts(selectedWeek)
+
+  // Checked before userError: "you are not an employee" is an answer, not a
+  // failure, and offering a retry for it strands the user.
+  if (noEmployeeRecord) {
+    return (
+      <Screen>
+        <NoEmployeeProfile testID="no-employee-profile" />
+      </Screen>
+    )
+  }
 
   if (userError) {
     return (

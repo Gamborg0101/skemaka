@@ -90,6 +90,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          tabBarButtonTestID: "tab-profile",
           title: "Profile",
           tabBarIcon: tabIcon("person-circle", "person-circle-outline"),
         }}

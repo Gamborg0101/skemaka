@@ -36,6 +36,14 @@ appId: com.skemaka.app
 - assertVisible:
     id: "tab-settings"
 
+# The demo signs in as a MANAGER, who has no Employee record, so
+# /api/orgs/:id/me returns 404. That must read as an explanation, not as a
+# failure with a retry button that can never succeed.
+- assertVisible:
+    id: "no-employee-profile"
+- assertVisible: "No employee profile found"
+- assertNotVisible: "Could not load your profile."
+
 # Each tab must render without crashing the app.
 - tapOn:
     id: "tab-availability"
@@ -51,6 +59,13 @@ appId: com.skemaka.app
     id: "tab-settings"
 - assertVisible:
     id: "tab-settings"
+
+# Profile keys off the same 404 and had the identical dead end.
+- tapOn:
+    id: "tab-profile"
+- assertVisible:
+    id: "no-employee-profile"
+- assertNotVisible: "Could not load your profile."
 
 - tapOn:
     id: "tab-shifts"
