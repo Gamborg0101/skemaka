@@ -105,6 +105,16 @@ jobs:
         working-directory: apps/web
         run: npx prisma migrate deploy
 
+      # A UTC database cannot expose naive-vs-timestamptz bugs — the offset it
+      # would misread by is zero. seats.ts applied scheduled seat reductions
+      # early for exactly that reason and this suite still went green. UTC+14 is
+      # the largest real offset, so those bugs now fail here instead of in
+      # production. test/integration-setup.ts refuses to run under UTC.
+      - name: Force a non-UTC session timezone
+        run: |
+          PGPASSWORD=it psql -h localhost -U it -d it \
+            -c "ALTER DATABASE it SET TimeZone='Pacific/Kiritimati';"
+
       - name: Integration tests
         working-directory: apps/web
         run: npm run test:integration
