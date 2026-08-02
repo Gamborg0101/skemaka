@@ -356,9 +356,20 @@ export async function cancelCoverRequest(
     throw new ServiceError("This request is already resolved", "CONFLICT")
   }
 
-  const updated = await db.shiftCoverRequest.update({
-    where: { id: requestId },
+  // Guarded like the other transitions. A requester withdrawing at the same
+  // moment a manager approves must not undo the approval — approve reassigns the
+  // shift, so an unguarded cancel landing afterwards would mark the request
+  // CANCELLED while the roster had already changed hands.
+  const swap = await db.shiftCoverRequest.updateMany({
+    where: { id: requestId, organizationId: orgId, status: { in: ACTIVE_STATUSES } },
     data: { status: "CANCELLED", resolvedAt: new Date() },
+  })
+  if (swap.count === 0) {
+    throw new ServiceError("This request is already resolved", "CONFLICT")
+  }
+
+  const updated = await db.shiftCoverRequest.findUniqueOrThrow({
+    where: { id: requestId },
     include: COVER_INCLUDE,
   })
   return serCover(updated as unknown as CoverRow)
