@@ -7,6 +7,7 @@ import { useState } from "react"
 import { useAuthStore, type ActiveView } from "@/store/authStore"
 import { apiClient } from "@/lib/apiClient"
 import { ApiError } from "@skemaka/api"
+import { useTranslations } from "@/lib/i18n"
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ function DevViewSwitcher() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
+  const t = useTranslations("mobile")
   const { signOut, employee, role, orgId } = useAuthStore()
   const version = Constants.expoConfig?.version ?? "—"
   const canSwitchView = role === "MANAGER" || role === "ADMIN"
@@ -214,33 +216,33 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-base">
       <View className="px-4 pt-4 pb-2">
-        <Text className="text-2xl font-bold text-ink">Settings</Text>
+        <Text className="text-2xl font-bold text-ink">{t("settings.title")}</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
         {/* Account */}
-        <SectionHeader title="Account" />
+        <SectionHeader title={t("settings.account")} />
         <Card>
-          <Row icon="person-outline" iconBg="#1C2A3A" iconColor="#60A5FA" label="Name" value={employee?.name ?? "—"} />
+          <Row icon="person-outline" iconBg="#1C2A3A" iconColor="#60A5FA" label={t("common.name")} value={employee?.name ?? "—"} />
           <RowDivider />
-          <Row icon="mail-outline" iconBg="#1C2A3A" iconColor="#60A5FA" label="Email" value={employee?.email ?? "—"} />
+          <Row icon="mail-outline" iconBg="#1C2A3A" iconColor="#60A5FA" label={t("common.email")} value={employee?.email ?? "—"} />
           <RowDivider />
           <Row
             icon="shield-checkmark-outline"
             iconBg="#1A2A1A"
             iconColor="#30D158"
-            label="Account role"
+            label={t("settings.accountRole")}
             value={role === "ADMIN" ? "Admin" : role === "MANAGER" ? "Manager" : "Employee"}
           />
           <RowDivider />
-          <Row icon="business-outline" iconBg="#1C2A3A" iconColor="#60A5FA" label="Org ID" value={orgId ? `${orgId.slice(0, 8)}…` : "—"} />
+          <Row icon="business-outline" iconBg="#1C2A3A" iconColor="#60A5FA" label={t("settings.orgId")} value={orgId ? `${orgId.slice(0, 8)}…` : "—"} />
         </Card>
 
         {/* Dev-only view switcher — only rendered for manager accounts */}
         {canSwitchView && (
           <>
-            <SectionHeader title="Developer — UI preview" color="#D97706" />
+            <SectionHeader title={t("settings.devPreview")} color="#D97706" />
             <View className="mx-4 mb-2 px-3 py-2 rounded-xl" style={{ backgroundColor: "rgba(245,158,11,0.07)", borderWidth: 1, borderColor: "rgba(245,158,11,0.2)" }}>
               <Text style={{ fontSize: 11, color: "#D97706", lineHeight: 16 }}>
                 Temporary testing feature. Switches the UI between manager and employee layouts without changing your real account permissions. All backend checks still use your actual role.
@@ -251,13 +253,13 @@ export default function SettingsScreen() {
         )}
 
         {/* Security */}
-        <SectionHeader title="Security" />
+        <SectionHeader title={t("settings.security")} />
         <Card>
-          <Row icon="log-out-outline" iconColor="#FF453A" iconBg="#2A1515" label="Sign out" onPress={handleSignOut} destructive />
+          <Row icon="log-out-outline" iconColor="#FF453A" iconBg="#2A1515" label={t("common.signOut")} onPress={handleSignOut} destructive />
         </Card>
 
         {/* Danger zone */}
-        <SectionHeader title="Danger zone" color="#FF453A" />
+        <SectionHeader title={t("settings.dangerZone")} color="#FF453A" />
         <Card>
           <Row
             icon="trash-outline"
@@ -270,9 +272,9 @@ export default function SettingsScreen() {
         </Card>
 
         {/* App */}
-        <SectionHeader title="App" />
+        <SectionHeader title={t("settings.app")} />
         <Card>
-          <Row icon="information-circle-outline" label="Version" value={version} />
+          <Row icon="information-circle-outline" label={t("common.version")} value={version} />
         </Card>
 
       </ScrollView>

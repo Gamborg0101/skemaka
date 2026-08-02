@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { formatTime, shiftDuration, isToday, isShiftDone } from "@/lib/utils"
 import { pickShiftQuote, type Shift } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 
 type Props = {
   shift: Shift
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export function ShiftCard({ shift, onPress, compact = false, industry }: Props) {
+  const t = useTranslations("mobile")
   const today = isToday(shift.date)
   const done  = isShiftDone(shift.date, shift.endTime)
   const start = formatTime(shift.startTime)
@@ -32,7 +34,7 @@ export function ShiftCard({ shift, onPress, compact = false, industry }: Props) 
       {today && (
         <View className="flex-row items-center gap-1.5 mb-2.5">
           <View className="w-1.5 h-1.5 rounded-full bg-brand" />
-          <Text className="text-xs font-semibold text-brand tracking-wide uppercase">Today</Text>
+          <Text className="text-xs font-semibold text-brand tracking-wide uppercase">{t("state.today")}</Text>
         </View>
       )}
 
