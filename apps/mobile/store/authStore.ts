@@ -126,36 +126,71 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ activeView: view })
   },
 
+  /**
+   * Restore the session from the keychain on cold start.
+   *
+   * MUST NEVER REJECT, and must always end with `isLoading: false`. The root
+   * layout calls this fire-and-forget (`void hydrate()`) and keeps the splash
+   * screen up until `isLoading` clears — so a rejection here leaves the app
+   * stuck on the splash forever, with no error, no retry and no way out but a
+   * reinstall. SecureStore genuinely does fail in the wild: a locked device, a
+   * restore-from-backup that did not migrate keychain items, or plain keychain
+   * corruption. None of those should brick the app.
+   *
+   * On any failure we fall through as signed-out, which lands the user on the
+   * login screen — recoverable, and honest about what happened.
+   */
   hydrate: async () => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY)
-
-    if (!token) {
-      set({ isLoading: false })
-      return
+    /** A keychain read that resolves to null rather than throwing. */
+    const read = async (key: string): Promise<string | null> => {
+      try {
+        return await SecureStore.getItemAsync(key)
+      } catch (err) {
+        console.warn(`[auth] could not read "${key}" from the keychain:`, err)
+        return null
+      }
+    }
+    /** A keychain delete that never throws — best effort cleanup. */
+    const forget = async (key: string): Promise<void> => {
+      try {
+        await SecureStore.deleteItemAsync(key)
+      } catch (err) {
+        console.warn(`[auth] could not delete "${key}" from the keychain:`, err)
+      }
     }
 
-    const payload = decodeJwtPayload(token)
+    try {
+      const token = await read(TOKEN_KEY)
+      if (!token) return
 
-    // decodeJwtPayload returns {} when the token is malformed or missing `sub`.
-    // Treat that as an invalid token — delete it and continue as unauthenticated.
-    if (!payload.sub) {
-      await SecureStore.deleteItemAsync(TOKEN_KEY)
-      await SecureStore.deleteItemAsync(VIEW_KEY)
+      const payload = decodeJwtPayload(token)
+
+      // decodeJwtPayload returns {} when the token is malformed or missing
+      // `sub`. Treat that as invalid — drop it and continue as unauthenticated.
+      if (!payload.sub) {
+        await forget(TOKEN_KEY)
+        await forget(VIEW_KEY)
+        return
+      }
+
+      // Remove tokens that are already expired — the ApiClient refresher handles
+      // expiry during an active session (401 → refresh → retry).
+      if (payload.exp && (payload.exp as number) * 1000 < Date.now()) {
+        await forget(VIEW_KEY)
+        await forget(TOKEN_KEY)
+        return
+      }
+
+      const savedView = await read(VIEW_KEY)
+      const activeView: ActiveView = savedView === "MANAGER" ? "MANAGER" : "EMPLOYEE"
+      set({ ...claimsFromToken(token), activeView })
+    } catch (err) {
+      // Anything unexpected: stay signed out rather than hang.
+      console.error("[auth] hydrate failed; continuing as signed out:", err)
+      set({ token: null, userId: null, orgId: null, role: null, employee: null })
+    } finally {
+      // The one line that must always run.
       set({ isLoading: false })
-      return
     }
-
-    // Remove tokens that are already expired — the ApiClient refresher handles
-    // expiry during an active session (401 → refresh → retry).
-    if (payload.exp && (payload.exp as number) * 1000 < Date.now()) {
-      await SecureStore.deleteItemAsync(VIEW_KEY)
-      await SecureStore.deleteItemAsync(TOKEN_KEY)
-      set({ isLoading: false })
-      return
-    }
-
-    const savedView = await SecureStore.getItemAsync(VIEW_KEY)
-    const activeView: ActiveView = savedView === "MANAGER" ? "MANAGER" : "EMPLOYEE"
-    set({ ...claimsFromToken(token), isLoading: false, activeView })
   },
 }))
