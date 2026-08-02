@@ -9,7 +9,12 @@ import {
 
 vi.mock("@/lib/prisma", () => ({
   db: {
-    shiftOffer: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+    shiftOffer: {
+      findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(),
+      // cancelOffer resolves via compare-and-swap so a concurrent confirm — which
+      // creates a real Shift — cannot be overwritten after the fact.
+      updateMany: vi.fn(), findUniqueOrThrow: vi.fn(),
+    },
     shiftOfferRecipient: { update: vi.fn() },
     employee: { findFirst: vi.fn(), findMany: vi.fn() },
     organization: { findUnique: vi.fn() },
@@ -39,7 +44,8 @@ vi.mock("@/lib/messages", () => ({
 
 const soFindFirst = vi.mocked(db.shiftOffer.findFirst)
 const soCreate = vi.mocked(db.shiftOffer.create)
-const soUpdate = vi.mocked(db.shiftOffer.update)
+const soUpdateMany = vi.mocked(db.shiftOffer.updateMany)
+const soFindUniqueOrThrow = vi.mocked(db.shiftOffer.findUniqueOrThrow)
 const recUpdate = vi.mocked(db.shiftOfferRecipient.update)
 const empFindFirst = vi.mocked(db.employee.findFirst)
 const empFindMany = vi.mocked(db.employee.findMany)
@@ -214,11 +220,15 @@ describe("cancelOffer", () => {
 
   it("marks an open offer CANCELLED", async () => {
     soFindFirst.mockResolvedValue({ id: "off_1", status: "OPEN" } as never)
-    soUpdate.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
+    soUpdateMany.mockResolvedValue({ count: 1 } as never)
+    soFindUniqueOrThrow.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
 
     const result = await cancelOffer(ORG, "off_1")
     expect(result.status).toBe("CANCELLED")
-    expect(soUpdate).toHaveBeenCalledWith(expect.objectContaining({
+    // `status: "OPEN"` in the WHERE is the guard: a confirm that already filled
+    // the offer must not be cancellable out from under the shift it created.
+    expect(soUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: "off_1", status: "OPEN" }),
       data: expect.objectContaining({ status: "CANCELLED" }),
     }))
   })
