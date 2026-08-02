@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Button } from "@/components/ui/Button"
 import { useAuthStore } from "@/store/authStore"
 import { API_URL } from "@/lib/constants"
+import { DevLogin } from "@/components/DevLogin"
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -214,6 +215,9 @@ export default function LoginScreen() {
                 style={{ height: 50, opacity: appleLoading ? 0.6 : 1 }}
               />
             )}
+
+            {/* Returns null unless __DEV__ — never renders in a release build. */}
+            <DevLogin />
 
             <Text className="text-xs text-ink-muted text-center">
               Your manager sends an invite link to get started.

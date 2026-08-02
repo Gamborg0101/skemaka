@@ -1,0 +1,18 @@
+# Cold start.
+#
+# This is the flow that would have caught the launch hang: hydrate() rejected on
+# a keychain read, isLoading never cleared, and the app sat on the splash screen
+# forever with no error. Nothing in typecheck, lint or the JS bundle sees that —
+# only launching it does.
+appId: com.skemaka.app
+---
+- launchApp:
+    clearState: true
+
+# Past the splash means hydrate() settled. If the splash never lifts this fails
+# here, which is exactly the regression worth guarding.
+- assertVisible: "Skemaka"
+- assertVisible: "Your shifts, always with you"
+
+# Unauthenticated cold start must land on sign-in, not a blank screen.
+- assertVisible: "Continue with Google"
