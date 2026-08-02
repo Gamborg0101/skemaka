@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuthStore } from "@/store/authStore"
 import { NoOrgScreen } from "@/components/account/NoOrgScreen"
+import { useTranslations } from "@/lib/i18n"
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"]
 
@@ -15,6 +16,12 @@ function tabIcon(active: IconName, inactive: IconName) {
 }
 
 export default function TabsLayout() {
+  // Tab labels have to fit five across on the narrowest phone. Danish
+  // "Tilgængelighed" does not — it rendered as "Tilgængeli…" — so mobile.tabs
+  // .availability uses the same "Tilgæng." abbreviation the web sidebar already
+  // uses for this exact problem (manager.nav.availabilityShort). Check any new
+  // translation on a device rather than trusting that it fits.
+  const t = useTranslations("mobile")
   const insets = useSafeAreaInsets()
   const { activeView, orgId } = useAuthStore()
   const isManager = activeView === "MANAGER"
@@ -50,7 +57,7 @@ export default function TabsLayout() {
         name="shifts"
         options={{
           tabBarButtonTestID: "tab-shifts",
-          title: "Shifts",
+          title: t("tabs.shifts"),
           tabBarIcon: tabIcon("calendar", "calendar-outline"),
         }}
       />
@@ -58,7 +65,7 @@ export default function TabsLayout() {
         name="availability/index"
         options={{
           tabBarButtonTestID: "tab-availability",
-          title: "Availability",
+          title: t("tabs.availability"),
           tabBarIcon: tabIcon("checkmark-circle", "checkmark-circle-outline"),
         }}
       />
@@ -66,7 +73,7 @@ export default function TabsLayout() {
         name="requests/index"
         options={{
           tabBarButtonTestID: "tab-timeoff",
-          title: "Time Off",
+          title: t("tabs.timeOff"),
           tabBarIcon: tabIcon("calendar-clear", "calendar-clear-outline"),
         }}
       />
@@ -74,7 +81,7 @@ export default function TabsLayout() {
         name="team/index"
         options={{
           tabBarButtonTestID: "tab-team",
-          title: "Team",
+          title: t("tabs.team"),
           tabBarIcon: tabIcon("people", "people-outline"),
           href: isManager ? undefined : null,
         }}
@@ -83,7 +90,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           tabBarButtonTestID: "tab-settings",
-          title: "Settings",
+          title: t("tabs.settings"),
           tabBarIcon: tabIcon("settings", "settings-outline"),
         }}
       />
@@ -91,7 +98,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           tabBarButtonTestID: "tab-profile",
-          title: "Profile",
+          title: t("tabs.profile"),
           tabBarIcon: tabIcon("person-circle", "person-circle-outline"),
         }}
       />

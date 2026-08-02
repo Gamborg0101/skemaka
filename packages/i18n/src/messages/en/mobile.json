@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Skemaka",
+    "tagline": "Your shifts, always with you"
+  },
+  "auth": {
+    "continueWithGoogle": "Continue with Google",
+    "continueWithApple": "Continue with Apple",
+    "inviteHint": "Your manager sends an invite link to get started."
+  },
+  "tabs": {
+    "shifts": "Shifts",
+    "availability": "Availability",
+    "timeOff": "Time Off",
+    "team": "Team",
+    "settings": "Settings",
+    "profile": "Profile"
+  },
+  "state": {
+    "error": "Error",
+    "somethingWentWrong": "Something went wrong",
+    "tryAgain": "Try again",
+    "refresh": "Refresh",
+    "today": "Today",
+    "noEmployeeProfileTitle": "No employee profile found",
+    "noEmployeeProfileBody": "Add yourself as an employee to see your shifts here.",
+    "noTeamYet": "You're not on a team yet",
+    "couldNotLoadProfile": "Could not load your profile."
+  },
+  "cover": {
+    "poolTitle": "Shifts you can cover",
+    "claim": "I'll cover it"
+  }
+}

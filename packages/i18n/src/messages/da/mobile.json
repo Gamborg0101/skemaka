@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Skemaka",
+    "tagline": "Dine vagter, altid med dig"
+  },
+  "auth": {
+    "continueWithGoogle": "Fortsæt med Google",
+    "continueWithApple": "Fortsæt med Apple",
+    "inviteHint": "Din leder sender dig et invitationslink, så du kan komme i gang."
+  },
+  "tabs": {
+    "shifts": "Vagter",
+    "availability": "Tilgæng.",
+    "timeOff": "Fridage",
+    "team": "Medarbejdere",
+    "settings": "Indstillinger",
+    "profile": "Profil"
+  },
+  "state": {
+    "error": "Fejl",
+    "somethingWentWrong": "Noget gik galt",
+    "tryAgain": "Prøv igen",
+    "refresh": "Opdatér",
+    "today": "I dag",
+    "noEmployeeProfileTitle": "Ingen medarbejderprofil",
+    "noEmployeeProfileBody": "Tilføj dig selv som medarbejder for at se dine vagter her.",
+    "noTeamYet": "Du er ikke på et team endnu",
+    "couldNotLoadProfile": "Din profil kunne ikke indlæses."
+  },
+  "cover": {
+    "poolTitle": "Vagter du kan tage",
+    "claim": "Jeg tager den"
+  }
+}

@@ -1,4 +1,5 @@
 import { View, Text } from "react-native"
+import { useTranslations } from "@/lib/i18n"
 
 /**
  * Shown on employee-facing screens when the signed-in user has no Employee
@@ -14,13 +15,17 @@ import { View, Text } from "react-native"
  * same explanation in both places.
  */
 export function NoEmployeeProfile({ testID }: { testID?: string }) {
+  const t = useTranslations("mobile")
+
   return (
     <View testID={testID} className="flex-1 items-center justify-center gap-4 px-8">
       <Text className="text-3xl">👤</Text>
       <View className="items-center gap-1">
-        <Text className="text-base font-semibold text-ink">No employee profile found</Text>
+        <Text className="text-base font-semibold text-ink">
+          {t("state.noEmployeeProfileTitle")}
+        </Text>
         <Text className="text-sm text-ink-secondary text-center">
-          Add yourself as an employee to see your shifts here.
+          {t("state.noEmployeeProfileBody")}
         </Text>
       </View>
     </View>

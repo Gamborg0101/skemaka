@@ -1,5 +1,5 @@
 /**
- * @skemaka/i18n — shared message catalogs for web and (later) mobile.
+ * @skemaka/i18n — shared message catalogs for web and mobile.
  *
  * Messages are namespaced JSON files under `messages/<locale>/`. English is
  * the source language; every other locale must mirror its key set exactly
@@ -13,6 +13,7 @@ import enCommon from "./messages/en/common.json"
 import enDialogs from "./messages/en/dialogs.json"
 import enEmails from "./messages/en/emails.json"
 import enManager from "./messages/en/manager.json"
+import enMobile from "./messages/en/mobile.json"
 import enMarketing from "./messages/en/marketing.json"
 import enOnboarding from "./messages/en/onboarding.json"
 import enPortal from "./messages/en/portal.json"
@@ -23,6 +24,7 @@ import daCommon from "./messages/da/common.json"
 import daDialogs from "./messages/da/dialogs.json"
 import daEmails from "./messages/da/emails.json"
 import daManager from "./messages/da/manager.json"
+import daMobile from "./messages/da/mobile.json"
 import daMarketing from "./messages/da/marketing.json"
 import daOnboarding from "./messages/da/onboarding.json"
 import daPortal from "./messages/da/portal.json"
@@ -34,6 +36,7 @@ const en = {
   dialogs: enDialogs,
   emails: enEmails,
   manager: enManager,
+  mobile: enMobile,
   marketing: enMarketing,
   onboarding: enOnboarding,
   portal: enPortal,
@@ -51,6 +54,7 @@ const MESSAGES: Record<Locale, Messages> = {
     dialogs: daDialogs,
     emails: daEmails,
     manager: daManager,
+    mobile: daMobile,
     marketing: daMarketing,
     onboarding: daOnboarding,
     portal: daPortal,
