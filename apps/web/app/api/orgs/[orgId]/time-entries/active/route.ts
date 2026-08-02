@@ -13,7 +13,7 @@ interface RouteContext {
 const ClockOutSchema = z.object({
   employeeId:   z.string().optional(),
   breakMinutes: z.number().int().min(0, "must be a non-negative integer").optional(),
-  note:         z.string().max(500, "note must be at most 500 characters").optional(),
+  note:         z.string().max(500, "note must be at most 500 characters").nullable().optional(),
 })
 
 // GET /api/orgs/[orgId]/time-entries/active
