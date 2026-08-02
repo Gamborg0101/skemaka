@@ -10,13 +10,18 @@ interface RouteContext {
   params: Promise<{ orgId: string }>
 }
 
+// `.nullable()` on the free-text fields is load-bearing, not decoration: the
+// dialogs send `notes.trim() || null` for an empty box, so `.optional()` alone
+// rejects every employee added without a note. This schema's PATCH sibling in
+// [employeeId]/route.ts already allows null — the two must agree, or editing an
+// employee accepts input that creating one refuses.
 const CreateEmployeeSchema = z.object({
   name:            z.string().min(1).max(200, "name must be at most 200 characters"),
   email:           z.string().refine(isValidEmail, "email must be a valid email address"),
-  phone:           z.string().max(20, "phone must be at most 20 characters").optional(),
+  phone:           z.string().max(20, "phone must be at most 20 characters").nullable().optional(),
   jobRole:         z.string().min(1).max(100, "jobRole must be at most 100 characters"),
   hourlyWage:      z.number().refine(isValidWage, "hourlyWage must be a positive number up to 100000"),
-  notes:           z.string().max(5000, "notes must be at most 5000 characters").optional(),
+  notes:           z.string().max(5000, "notes must be at most 5000 characters").nullable().optional(),
   employmentType:  z.string().optional(),
   contractedHours: z.number().int().min(0, "contractedHours must be a non-negative integer").optional(),
 })
