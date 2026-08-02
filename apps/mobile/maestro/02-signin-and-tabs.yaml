@@ -1,0 +1,58 @@
+# Sign in, then visit every authenticated tab.
+#
+# Uses the dev-only sign-in (components/DevLogin.tsx), which authenticates
+# through the PUBLIC live-demo provider into a throwaway org — no password, no
+# server flag, no real customer data. Requires a dev build (`__DEV__`) and an
+# API reachable at EXPO_PUBLIC_API_URL.
+#
+# Tabs are selected by testID, not by their visible title: React Navigation's
+# native tab bar does not expose its labels in the accessibility tree, so
+# `assertVisible: "Availability"` fails even while the label is plainly on
+# screen. tabBarButtonTestID in app/(tabs)/_layout.tsx provides stable handles.
+appId: com.skemaka.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Continue with Google"
+
+- tapOn:
+    id: "dev-signin"
+
+# A failed sign-in surfaces here rather than as a mystery timeout below.
+- assertNotVisible:
+    id: "dev-error"
+
+# Seeding a demo restaurant takes a moment. Reaching the tab bar at all is the
+# proof we are past auth and inside the app.
+- extendedWaitUntil:
+    visible:
+      id: "tab-shifts"
+    timeout: 40000
+
+- assertVisible:
+    id: "tab-availability"
+- assertVisible:
+    id: "tab-timeoff"
+- assertVisible:
+    id: "tab-settings"
+
+# Each tab must render without crashing the app.
+- tapOn:
+    id: "tab-availability"
+- assertVisible:
+    id: "tab-availability"
+
+- tapOn:
+    id: "tab-timeoff"
+- assertVisible:
+    id: "tab-timeoff"
+
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "tab-settings"
+
+- tapOn:
+    id: "tab-shifts"
+- assertVisible:
+    id: "tab-shifts"

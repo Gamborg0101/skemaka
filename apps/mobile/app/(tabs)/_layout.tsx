@@ -49,6 +49,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="shifts"
         options={{
+          tabBarButtonTestID: "tab-shifts",
           title: "Shifts",
           tabBarIcon: tabIcon("calendar", "calendar-outline"),
         }}
@@ -56,6 +57,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="availability/index"
         options={{
+          tabBarButtonTestID: "tab-availability",
           title: "Availability",
           tabBarIcon: tabIcon("checkmark-circle", "checkmark-circle-outline"),
         }}
@@ -63,6 +65,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="requests/index"
         options={{
+          tabBarButtonTestID: "tab-timeoff",
           title: "Time Off",
           tabBarIcon: tabIcon("calendar-clear", "calendar-clear-outline"),
         }}
@@ -70,6 +73,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="team/index"
         options={{
+          tabBarButtonTestID: "tab-team",
           title: "Team",
           tabBarIcon: tabIcon("people", "people-outline"),
           href: isManager ? undefined : null,
@@ -78,6 +82,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
+          tabBarButtonTestID: "tab-settings",
           title: "Settings",
           tabBarIcon: tabIcon("settings", "settings-outline"),
         }}
