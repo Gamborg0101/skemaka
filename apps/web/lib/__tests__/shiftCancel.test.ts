@@ -15,6 +15,10 @@ vi.mock("@/lib/prisma", () => ({
   db: {
     shift: {
       findFirst: vi.fn(),
+      // cancelShift resolves via compare-and-swap on `cancelledAt: null`, so a
+      // double-click cannot send the employee two cancellation notices.
+      updateMany: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -96,14 +100,17 @@ beforeEach(() => {
 describe("cancelShift", () => {
   it("sets cancelledAt, keeps the schedule published, and notifies via SMS + email + push", async () => {
     vi.mocked(db.shift.findFirst).mockResolvedValue(shiftRow() as never)
-    vi.mocked(db.shift.update).mockResolvedValue(
+    vi.mocked(db.shift.updateMany).mockResolvedValue({ count: 1 } as never)
+    vi.mocked(db.shift.findUniqueOrThrow).mockResolvedValue(
       shiftRow({ cancelledAt: new Date() }) as never,
     )
 
     await cancelShift(ORG, SCHEDULE, SHIFT)
 
-    expect(db.shift.update).toHaveBeenCalledWith({
-      where: { id: SHIFT },
+    // `cancelledAt: null` in the WHERE is the guard — it is what stops a second
+    // concurrent cancel from re-notifying the employee.
+    expect(db.shift.updateMany).toHaveBeenCalledWith({
+      where: { id: SHIFT, organizationId: ORG, cancelledAt: null },
       data: { cancelledAt: expect.any(Date) },
     })
     // The whole point of cancel vs delete: the published week stands.
@@ -121,13 +128,14 @@ describe("cancelShift", () => {
         employee: { name: "Sarah Chen", phone: null, email: null, userId: null, locale: null },
       }) as never,
     )
-    vi.mocked(db.shift.update).mockResolvedValue(
+    vi.mocked(db.shift.updateMany).mockResolvedValue({ count: 1 } as never)
+    vi.mocked(db.shift.findUniqueOrThrow).mockResolvedValue(
       shiftRow({ cancelledAt: new Date() }) as never,
     )
 
     await cancelShift(ORG, SCHEDULE, SHIFT)
 
-    expect(db.shift.update).toHaveBeenCalledTimes(1)
+    expect(db.shift.updateMany).toHaveBeenCalledTimes(1)
     expect(sendShiftCancelledSms).not.toHaveBeenCalled()
     expect(sendShiftCancelledEmail).not.toHaveBeenCalled()
     expect(sendPushToUsers).not.toHaveBeenCalled()
@@ -139,7 +147,7 @@ describe("cancelShift", () => {
     )
 
     await expect(cancelShift(ORG, SCHEDULE, SHIFT)).rejects.toThrow("already cancelled")
-    expect(db.shift.update).not.toHaveBeenCalled()
+    expect(db.shift.updateMany).not.toHaveBeenCalled()
   })
 
   it("refuses a draft shift — drafts are deleted, not cancelled", async () => {
@@ -148,7 +156,7 @@ describe("cancelShift", () => {
     )
 
     await expect(cancelShift(ORG, SCHEDULE, SHIFT)).rejects.toThrow("Draft shifts")
-    expect(db.shift.update).not.toHaveBeenCalled()
+    expect(db.shift.updateMany).not.toHaveBeenCalled()
   })
 
   it("refuses a sick-day marker", async () => {
@@ -157,7 +165,7 @@ describe("cancelShift", () => {
     )
 
     await expect(cancelShift(ORG, SCHEDULE, SHIFT)).rejects.toThrow("Sick days")
-    expect(db.shift.update).not.toHaveBeenCalled()
+    expect(db.shift.updateMany).not.toHaveBeenCalled()
   })
 
   it("throws NOT_FOUND for a shift outside the org/schedule", async () => {
@@ -179,7 +187,7 @@ describe("cancelled shifts stay read-only", () => {
     await expect(updateShift(ORG, SCHEDULE, SHIFT, { startTime: "10:00" })).rejects.toThrow(
       "cannot be edited",
     )
-    expect(db.shift.update).not.toHaveBeenCalled()
+    expect(db.shift.updateMany).not.toHaveBeenCalled()
   })
 
   it("deleteShift removes a cancelled record without re-texting the employee", async () => {
