@@ -26,6 +26,7 @@ import { useMyTimeOff, useSubmitTimeOff, useAllTimeOff, useReviewTimeOff } from 
 import { useAuthStore } from "@/store/authStore"
 import { formatDateLong } from "@/lib/utils"
 import type { TimeOffRequest } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 
 const ISO_DATE_RE = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/
 
@@ -60,10 +61,11 @@ function RequestCard({ item }: { item: TimeOffRequest }) {
 // ─── Manager view ─────────────────────────────────────────────────────────────
 
 function ManagerTimeOffView() {
+  const t = useTranslations("mobile")
   const { data: requests = [], isLoading, isError, isFetching, refetch } = useAllTimeOff()
   const review = useReviewTimeOff()
 
-  if (isLoading) return <LoadingState label="Loading requests…" />
+  if (isLoading) return <LoadingState label={t("timeOff.loading")} />
   if (isError)   return <ErrorState onRetry={() => void refetch()} />
 
   const pending  = requests.filter((r) => r.status === "PENDING")
@@ -107,7 +109,7 @@ function ManagerTimeOffView() {
         ListHeaderComponent={
           <View className="mb-2">
             <View className="flex-row items-center justify-between">
-              <Text className="text-2xl font-bold text-ink">Time Off</Text>
+              <Text className="text-2xl font-bold text-ink">{t("timeOff.title")}</Text>
               <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching && !isLoading} />
             </View>
             <Text className="text-sm text-ink-secondary mt-0.5">
@@ -120,8 +122,8 @@ function ManagerTimeOffView() {
         ListEmptyComponent={
           <EmptyState
             icon="🌴"
-            title="No requests yet"
-            description="Employees can request time off from the app."
+            title={t("timeOff.empty")}
+            description={t("timeOff.emptyHintManager")}
           />
         }
         renderItem={({ item }) => {
@@ -166,7 +168,7 @@ function ManagerTimeOffView() {
                     style={{ backgroundColor: "rgba(48,209,88,0.12)", borderWidth: 1, borderColor: "rgba(48,209,88,0.25)" }}
                   >
                     <Ionicons name="checkmark" size={14} color="#30D158" importantForAccessibility="no" />
-                    <Text className="text-sm font-semibold" style={{ color: "#30D158" }}>Approve</Text>
+                    <Text className="text-sm font-semibold" style={{ color: "#30D158" }}>{t("timeOff.approve")}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => handleReview(item, "DENIED")}
@@ -178,7 +180,7 @@ function ManagerTimeOffView() {
                     style={{ backgroundColor: "rgba(255,69,58,0.1)", borderWidth: 1, borderColor: "rgba(255,69,58,0.2)" }}
                   >
                     <Ionicons name="close" size={14} color="#FF453A" importantForAccessibility="no" />
-                    <Text className="text-sm font-semibold" style={{ color: "#FF453A" }}>Deny</Text>
+                    <Text className="text-sm font-semibold" style={{ color: "#FF453A" }}>{t("timeOff.deny")}</Text>
                   </Pressable>
                 </View>
               )}
@@ -196,6 +198,7 @@ function ManagerTimeOffView() {
 type FormState = { startDate: string; endDate: string; reason: string }
 
 function EmployeeTimeOffView() {
+  const t = useTranslations("mobile")
   const { data: requests, isLoading, isError, isFetching, refetch } = useMyTimeOff()
   const submit = useSubmitTimeOff()
   const reduceMotion = useReducedMotion()
@@ -207,7 +210,7 @@ function EmployeeTimeOffView() {
   const endDateRef = useRef<TextInputType>(null)
   const reasonRef  = useRef<TextInputType>(null)
 
-  if (isLoading) return <LoadingState label="Loading requests…" />
+  if (isLoading) return <LoadingState label={t("timeOff.loading")} />
   if (isError)   return <ErrorState onRetry={() => void refetch()} />
 
   function openModal() {
@@ -245,8 +248,8 @@ function EmployeeTimeOffView() {
         ListHeaderComponent={
           <View className="flex-row items-center justify-between mb-1">
             <View>
-              <Text className="text-2xl font-bold text-ink">Time Off</Text>
-              <Text className="text-sm text-ink-secondary mt-0.5">Your requests</Text>
+              <Text className="text-2xl font-bold text-ink">{t("timeOff.title")}</Text>
+              <Text className="text-sm text-ink-secondary mt-0.5">{t("timeOff.yourRequests")}</Text>
             </View>
             <View className="flex-row items-center gap-2">
               <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching && !isLoading} />
@@ -254,7 +257,7 @@ function EmployeeTimeOffView() {
                 variant="primary"
                 size="sm"
                 onPress={openModal}
-                accessibilityLabel="Request time off"
+                accessibilityLabel={t("timeOff.a11yRequest")}
               >
                 + Request
               </Button>
@@ -264,8 +267,8 @@ function EmployeeTimeOffView() {
         ListEmptyComponent={
           <EmptyState
             icon="🌴"
-            title="No requests yet"
-            description="Tap the button above to request time off."
+            title={t("timeOff.empty")}
+            description={t("timeOff.emptyHintEmployee")}
           />
         }
         renderItem={({ item }) => <RequestCard item={item} />}
@@ -285,15 +288,15 @@ function EmployeeTimeOffView() {
         >
           <View className="flex-1 px-6 pt-6 pb-10">
             <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-ink">New Request</Text>
+              <Text className="text-xl font-bold text-ink">{t("timeOff.newRequest")}</Text>
               <Pressable
                 onPress={closeModal}
                 hitSlop={12}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel"
+                accessibilityLabel={t("common.cancel")}
                 className="px-3 py-2 active:opacity-60"
               >
-                <Text className="text-sm text-ink-secondary">Cancel</Text>
+                <Text className="text-sm text-ink-secondary">{t("common.cancel")}</Text>
               </Pressable>
             </View>
 
@@ -305,7 +308,7 @@ function EmployeeTimeOffView() {
               ) : null}
 
               <View className="gap-1.5">
-                <Text className="text-sm font-medium text-ink-secondary">Start Date</Text>
+                <Text className="text-sm font-medium text-ink-secondary">{t("timeOff.startDate")}</Text>
                 <TextInput
                   className="bg-elevated border border-line rounded-xl px-4 py-3 text-ink text-sm"
                   placeholder="2025-07-14"
@@ -318,12 +321,12 @@ function EmployeeTimeOffView() {
                   selectionColor="#7B6EF8"
                   onSubmitEditing={() => endDateRef.current?.focus()}
                   blurOnSubmit={false}
-                  accessibilityLabel="Start date in YYYY-MM-DD format"
+                  accessibilityLabel={t("timeOff.a11yStartDate")}
                 />
               </View>
 
               <View className="gap-1.5">
-                <Text className="text-sm font-medium text-ink-secondary">End Date</Text>
+                <Text className="text-sm font-medium text-ink-secondary">{t("timeOff.endDate")}</Text>
                 <TextInput
                   ref={endDateRef}
                   className="bg-elevated border border-line rounded-xl px-4 py-3 text-ink text-sm"
@@ -337,7 +340,7 @@ function EmployeeTimeOffView() {
                   selectionColor="#7B6EF8"
                   onSubmitEditing={() => reasonRef.current?.focus()}
                   blurOnSubmit={false}
-                  accessibilityLabel="End date in YYYY-MM-DD format"
+                  accessibilityLabel={t("timeOff.a11yEndDate")}
                 />
               </View>
 
@@ -349,7 +352,7 @@ function EmployeeTimeOffView() {
                 <TextInput
                   ref={reasonRef}
                   className="bg-elevated border border-line rounded-xl px-4 py-3 text-ink text-sm"
-                  placeholder="e.g. Vacation, medical, family"
+                  placeholder={t("timeOff.reasonPlaceholder")}
                   placeholderTextColor="#4A4A57"
                   value={form.reason}
                   onChangeText={(v) => setForm((f) => ({ ...f, reason: v }))}
@@ -360,7 +363,7 @@ function EmployeeTimeOffView() {
                   numberOfLines={3}
                   textAlignVertical="top"
                   style={{ minHeight: 80 }}
-                  accessibilityLabel="Reason for time off, optional"
+                  accessibilityLabel={t("timeOff.a11yReason")}
                 />
               </View>
 
@@ -368,10 +371,10 @@ function EmployeeTimeOffView() {
                 variant="primary"
                 fullWidth
                 loading={submit.isPending}
-                accessibilityLabel="Submit time-off request"
+                accessibilityLabel={t("timeOff.a11ySubmit")}
                 onPress={handleSubmit}
               >
-                Submit Request
+                {t("timeOff.submit")}
               </Button>
             </View>
           </View>

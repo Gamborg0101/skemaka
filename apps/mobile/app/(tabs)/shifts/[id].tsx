@@ -9,8 +9,10 @@ import { useCurrentUser } from "@/hooks/useEmployee"
 import { useCoverRequests, useOfferCover, useCancelCover } from "@/hooks/useCover"
 import { formatTime, shiftDuration, formatDateLong, isToday, todayISO } from "@/lib/utils"
 import { pickShiftQuote } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 
 export default function ShiftDetailScreen() {
+  const t = useTranslations("mobile")
   const router = useRouter()
   const { id, week } = useLocalSearchParams<{ id: string; week: string }>()
 
@@ -25,7 +27,7 @@ export default function ShiftDetailScreen() {
     (r) => r.shiftId === id && (r.status === "OPEN" || r.status === "CLAIMED"),
   )
 
-  if (isLoading) return <LoadingState label="Loading shift…" />
+  if (isLoading) return <LoadingState label={t("shiftDetail.loading")} />
 
   if (!shift) {
     return (
@@ -33,14 +35,14 @@ export default function ShiftDetailScreen() {
         edges={["top", "bottom"]}
         className="flex-1 bg-base items-center justify-center px-8"
       >
-        <Text className="text-ink-secondary text-center mb-4">Shift details not available.</Text>
+        <Text className="text-ink-secondary text-center mb-4">{t("shiftDetail.unavailable")}</Text>
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("common.goBack")}
           className="active:opacity-60"
         >
-          <Text className="text-brand font-semibold">Go back</Text>
+          <Text className="text-brand font-semibold">{t("common.goBack")}</Text>
         </Pressable>
       </SafeAreaView>
     )
@@ -55,7 +57,7 @@ export default function ShiftDetailScreen() {
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Back to shifts"
+          accessibilityLabel={t("shiftDetail.backToShifts")}
           className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
         >
           <Ionicons name="chevron-back" size={18} color="#7B6EF8" importantForAccessibility="no" />
@@ -74,7 +76,7 @@ export default function ShiftDetailScreen() {
         <View className="bg-surface border border-line/60 rounded-2xl p-5 gap-4">
           <View>
             <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
-              Time
+              {t("shiftDetail.time")}
             </Text>
             <Text className="text-3xl font-bold text-ink tracking-tight">
               {formatTime(shift.startTime)} – {formatTime(shift.endTime)}
@@ -82,12 +84,12 @@ export default function ShiftDetailScreen() {
           </View>
           <View className="flex-row gap-6">
             <View>
-              <Text className="text-xs text-ink-muted mb-0.5">Duration</Text>
+              <Text className="text-xs text-ink-muted mb-0.5">{t("shiftDetail.duration")}</Text>
               <Text className="text-base font-semibold text-ink">{duration}</Text>
             </View>
             {shift.breakMinutes > 0 && (
               <View>
-                <Text className="text-xs text-ink-muted mb-0.5">Break</Text>
+                <Text className="text-xs text-ink-muted mb-0.5">{t("shiftDetail.break")}</Text>
                 <Text className="text-base font-semibold text-ink">{shift.breakMinutes} min</Text>
               </View>
             )}
@@ -97,7 +99,7 @@ export default function ShiftDetailScreen() {
         {/* Role */}
         <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4">
           <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
-            Role
+            {t("common.role")}
           </Text>
           <Text className="text-base font-semibold text-ink">{shift.jobRole}</Text>
         </View>
@@ -105,7 +107,7 @@ export default function ShiftDetailScreen() {
         {/* Notes — the manager's note, or a friendly fallback line */}
         <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4">
           <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
-            Notes
+            {t("shiftDetail.notes")}
           </Text>
           {shift.notes ? (
             <Text className="text-sm text-ink leading-relaxed">{shift.notes}</Text>
@@ -121,7 +123,7 @@ export default function ShiftDetailScreen() {
           <View className="bg-surface border border-line/60 rounded-2xl px-4 py-4 gap-3">
             <View>
               <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide mb-1">
-                Can&apos;t make it?
+                {t("shiftDetail.cantMakeIt")}
               </Text>
               {myCover ? (
                 <Text className="text-sm text-ink-secondary">
@@ -131,7 +133,7 @@ export default function ShiftDetailScreen() {
                 </Text>
               ) : (
                 <Text className="text-sm text-ink-secondary">
-                  Offer this shift up and let a teammate claim it (your manager approves the swap).
+                  {t("shiftDetail.offerHint")}
                 </Text>
               )}
             </View>
