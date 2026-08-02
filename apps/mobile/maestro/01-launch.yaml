@@ -12,7 +12,9 @@ appId: com.skemaka.app
 # Past the splash means hydrate() settled. If the splash never lifts this fails
 # here, which is exactly the regression worth guarding.
 - assertVisible: "Skemaka"
-- assertVisible: "Your shifts, always with you"
+- assertVisible: "Dine vagter, altid med dig"
 
 # Unauthenticated cold start must land on sign-in, not a blank screen.
-- assertVisible: "Continue with Google"
+# Asserted in Danish: the simulator runs da-DK, so this doubles as proof
+# that the shared @skemaka/i18n catalogs actually reach the device.
+- assertVisible: "Fortsæt med Google"

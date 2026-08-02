@@ -13,7 +13,7 @@ appId: com.skemaka.app
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Continue with Google"
+- assertVisible: "Fortsæt med Google"
 
 - tapOn:
     id: "dev-signin"
@@ -41,8 +41,8 @@ appId: com.skemaka.app
 # failure with a retry button that can never succeed.
 - assertVisible:
     id: "no-employee-profile"
-- assertVisible: "No employee profile found"
-- assertNotVisible: "Could not load your profile."
+- assertVisible: "Ingen medarbejderprofil"
+- assertNotVisible: "Din profil kunne ikke indlæses."
 
 # Each tab must render without crashing the app.
 - tapOn:
@@ -65,7 +65,7 @@ appId: com.skemaka.app
     id: "tab-profile"
 - assertVisible:
     id: "no-employee-profile"
-- assertNotVisible: "Could not load your profile."
+- assertNotVisible: "Din profil kunne ikke indlæses."
 
 - tapOn:
     id: "tab-shifts"

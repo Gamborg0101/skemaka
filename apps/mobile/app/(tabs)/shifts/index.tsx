@@ -19,6 +19,7 @@ import { useAuthStore } from "@/store/authStore"
 import { isToday, todayISO, formatWeekday, formatDate } from "@/lib/utils"
 import { currentWeek, weekDays, weekRangeLabel, offsetWeek, isPast } from "@/lib/dates"
 import type { Shift } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 
 type DayRow = { date: string; shift: Shift }
 
@@ -105,6 +106,7 @@ export default function ShiftsScreen() {
 }
 
 function EmployeeShiftsScreen() {
+  const t = useTranslations("mobile")
   const {
     data: currentUser,
     isError: userError,
@@ -131,7 +133,7 @@ function EmployeeShiftsScreen() {
     return (
       <Screen>
         <ErrorState
-          message="Could not load your profile."
+          message={t("state.couldNotLoadProfile")}
           onRetry={() => void refetchUser()}
         />
       </Screen>

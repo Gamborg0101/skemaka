@@ -7,6 +7,7 @@ import { NoEmployeeProfile } from "@/components/feedback/NoEmployeeProfile"
 import { AccountActions } from "@/components/account/AccountActions"
 import { useAuthStore } from "@/store/authStore"
 import { useCurrentUser } from "@/hooks/useEmployee"
+import { useTranslations } from "@/lib/i18n"
 
 type InfoRowProps = { label: string; value: string | null | undefined }
 
@@ -20,6 +21,7 @@ function InfoRow({ label, value }: InfoRowProps) {
 }
 
 export default function ProfileScreen() {
+  const t = useTranslations("mobile")
   const { employee } = useAuthStore()
   const { isError, refetch, noEmployeeRecord } = useCurrentUser()
 
@@ -37,7 +39,7 @@ export default function ProfileScreen() {
     return (
       <Screen>
         <ErrorState
-          message="Could not load your profile."
+          message={t("state.couldNotLoadProfile")}
           onRetry={() => void refetch()}
         />
       </Screen>
