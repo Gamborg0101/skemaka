@@ -285,13 +285,19 @@ export function checkDemoPlan(plan: DemoPlan): DemoViolation[] {
   )
   if (cost <= 0) err("DEMO-040", "landing-week labour cost is 0 — the Costs page opens empty")
 
-  const lastWeek = (shiftsByWeek.get(-1) ?? []).filter(isLive)
+  // Only shifts that have actually ended can have been clocked. Week boundaries
+  // are local while clock times are UTC, so for a visitor far enough east the
+  // tail of "last week" is still in the future — counting those in the
+  // denominator would fail this invariant for a demo that is entirely correct.
+  const lastWeek = (shiftsByWeek.get(-1) ?? [])
+    .filter(isLive)
+    .filter((s) => new Date(`${s.date}T${s.endTime}:00Z`) < plan.now)
   const lastWeekEntries = plan.timeEntries.filter((t) => lastWeek.some((s) => s.id === t.shiftId))
   if (lastWeekEntries.length < MIN_LAST_WEEK_ENTRIES) {
     err("DEMO-041", `last week has ${lastWeekEntries.length} time entries — timesheets look unused`)
   }
   if (lastWeek.length > 0 && lastWeekEntries.length / lastWeek.length < MIN_CLOCKED_RATIO) {
-    err("DEMO-041", `only ${Math.round((lastWeekEntries.length / lastWeek.length) * 100)}% of last week's shifts were clocked`)
+    err("DEMO-041", `only ${Math.round((lastWeekEntries.length / lastWeek.length) * 100)}% of last week's completed shifts were clocked`)
   }
   for (const e of plan.employees) {
     if (e.hourlyWage <= 0 || e.contractedHours <= 0) {

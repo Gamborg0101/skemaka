@@ -403,13 +403,22 @@ export function buildDemoPlan({ locale, now = new Date(), newId }: BuildDemoPlan
       if (w < 0 && hash(w * 31 + s.day * 7 + s.employeeIdx) % 7 !== 0) {
         const jitterIn = (hash(w * 11 + s.employeeIdx) % 3) * 5 - 5 // -5 | 0 | +5 min
         const jitterOut = (hash(w * 3 + s.day) % 4) * 5 // 0 … +15 min
-        timeEntries.push({
-          employeeId: employeeIds[s.employeeIdx],
-          shiftId: id,
-          clockIn: new Date(new Date(`${date}T${s.startTime}:00Z`).getTime() + jitterIn * 60_000),
-          clockOut: new Date(new Date(`${date}T${s.endTime}:00Z`).getTime() + jitterOut * 60_000),
-          breakMinutes: s.breakMinutes,
-        })
+        const clockIn = new Date(new Date(`${date}T${s.startTime}:00Z`).getTime() + jitterIn * 60_000)
+        const clockOut = new Date(new Date(`${date}T${s.endTime}:00Z`).getTime() + jitterOut * 60_000)
+        // Week boundaries are local (getMondayOfWeek) but clock times are UTC,
+        // so for a visitor far enough east the tail of "last week" is still in
+        // the future — and you cannot clock out of a shift that hasn't ended.
+        // Guarding on the instant rather than the week index keeps this true in
+        // every timezone instead of only the ones west of the server.
+        if (clockOut < now) {
+          timeEntries.push({
+            employeeId: employeeIds[s.employeeIdx],
+            shiftId: id,
+            clockIn,
+            clockOut,
+            breakMinutes: s.breakMinutes,
+          })
+        }
       }
     }
   }
