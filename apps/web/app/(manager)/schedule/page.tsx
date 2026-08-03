@@ -12,7 +12,7 @@ import { CoverRequestsPanel, type CoverFocus } from "@/components/manager/CoverR
 import { ShiftOffersPanel } from "@/components/manager/ShiftOffersPanel"
 import { OfferShiftDialog } from "@/components/manager/OfferShiftDialog"
 import { getOrgSettings } from "@/lib/orgSettings"
-import { getMondayOfWeek, addDays } from "@/lib/dateUtils"
+import { getMondayOfWeek, addDays, todayISO } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { RollOutDialog } from "@/components/manager/RollOutDialog"
 import { useOrg } from "@/lib/orgContext"
@@ -27,7 +27,7 @@ export default function SchedulePage() {
 
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
   const [viewMode, setViewMode] = useState<"week" | "timeline">(() => getOrgSettings().defaultScheduleView)
-  const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split("T")[0])
+  const [selectedDay, setSelectedDay] = useState<string>(todayISO())
   const [dayCount, setDayCount] = useState<1 | 3 | 5 | 7>(1)
   const [hintDismissed, setHintDismissed] = useState(false)
   const [rollOutOpen, setRollOutOpen] = useState(false)
@@ -74,7 +74,7 @@ export default function SchedulePage() {
 
   const goToToday = () => {
     setWeekStart(getMondayOfWeek(new Date()))
-    setSelectedDay(new Date().toISOString().split("T")[0])
+    setSelectedDay(todayISO())
   }
 
   const jumpToWeek = (newWeekStart: string) => {
@@ -95,7 +95,7 @@ export default function SchedulePage() {
     if (newWeekStart !== weekStart) setWeekStart(newWeekStart)
   }
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayISO()
   const isCurrentWeek = getMondayOfWeek(new Date()) === weekStart
 
   const timelineDates = useMemo(() => {

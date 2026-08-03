@@ -182,7 +182,10 @@ describe("confirmOffer", () => {
     const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 1 })
     const offerTxUpdate = vi.fn().mockResolvedValue(offerRow({ status: "FILLED", filledEmployeeId: "emp_A" }))
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
-      cb({ shift: { create: shiftCreate }, shiftOffer: { updateMany: offerTxUpdateMany, update: offerTxUpdate } }),
+      cb({
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
+        shiftOffer: { updateMany: offerTxUpdateMany, update: offerTxUpdate },
+      }),
     )
 
     const result = await confirmOffer(ORG, "mgr_1", "off_1", "emp_A")
@@ -204,7 +207,26 @@ describe("confirmOffer", () => {
     // Another transaction filled the offer between our read and our claim.
     const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 0 })
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
-      cb({ shift: { create: shiftCreate }, shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() } }),
+      cb({
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
+        shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
+      }),
+    )
+
+    await expect(confirmOffer(ORG, "mgr_1", "off_1", "emp_A")).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(shiftCreate).not.toHaveBeenCalled()
+  })
+
+  it("refuses to double-book someone who picked up a shift after accepting", async () => {
+    const shiftCreate = vi.fn()
+    const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 1 })
+    txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({
+        // They already have a live shift that date — confirming would silently
+        // give them two overlapping shifts, which is what used to happen.
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue({ id: "shift_existing" }) },
+        shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
+      }),
     )
 
     await expect(confirmOffer(ORG, "mgr_1", "off_1", "emp_A")).rejects.toMatchObject({ code: "CONFLICT" })

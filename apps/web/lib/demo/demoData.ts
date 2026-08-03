@@ -4,12 +4,18 @@
  * This data is READ-ONLY and lives entirely in code — the /demo route renders it
  * directly and never touches the database, NextAuth, Stripe, or any org. There is
  * therefore no way for the demo to pollute real customer data: it has no write
- * path at all. The same fixture is the source for the marketing screenshots
- * (see screenshots strategy), so the demo and the landing page never disagree.
+ * path at all.
  *
- * "The Copper Pan" is a 6-person neighbourhood bistro: closed Monday, dinner
- * service Tue–Sun. The week intentionally contains two conflicts so visitors see
- * Skemaka catch problems before publishing.
+ * NOT the same data as the live sandbox. This fixture is a small still-life for
+ * the marketing preview; the real sandbox a visitor gets after clicking "start
+ * demo" is built by lib/demo/demoPlan.ts and has 9 staff, 16 weeks of history
+ * and a live current week. Keep the *impression* consistent (same restaurant
+ * name, same roles, same colour language) but don't try to keep the rows in
+ * sync — they answer different questions. An earlier version of this comment
+ * claimed the two could never disagree, which was never true.
+ *
+ * "The Copper Pan" is a neighbourhood bistro. The week intentionally contains
+ * two conflicts so visitors see Skemaka catch problems before publishing.
  */
 
 export type DemoRole = "Kitchen" | "Front of house" | "Bar"
