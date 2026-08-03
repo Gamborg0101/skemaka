@@ -52,6 +52,20 @@ jobs:
       - name: Test
         run: npm test
 
+      # The runner is UTC, so date bugs that only bite users east or west of it
+      # pass here and fail in production. The demo sandbox is dated relative to
+      # "now" and computes week boundaries locally while stamping clock times in
+      # UTC, which made it seed time entries for shifts that hadn't happened yet
+      # at UTC+14 — green on this runner, wrong for a real visitor in Auckland.
+      # Kiritimati (+14) and Midway (-11) are the extremes of the inhabited range.
+      - name: Test (timezone extremes)
+        run: |
+          for tz in Pacific/Kiritimati Pacific/Midway; do
+            echo "::group::TZ=$tz"
+            TZ=$tz npm test
+            echo "::endgroup::"
+          done
+
   # Service-layer tests against a REAL Postgres. The unit suite mocks Prisma, so
   # it asserts the shape of a query and can say nothing about what SQL does with
   # it — which is how `colorTag: { not: "sick" }` shipped: that compiles to
