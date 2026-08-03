@@ -8,6 +8,7 @@ import {
   DragStartEvent,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDraggable,
@@ -22,8 +23,10 @@ import { SickDayDialog } from "@/components/manager/SickDayDialog"
 import { CancelledShiftDialog } from "@/components/manager/CancelledShiftDialog"
 import type { Shift, Employee, JobRole, ShiftTemplate } from "@/types"
 import type { AvailabilityConflict } from "@/lib/useScheduleData"
-import { formatTime } from "@/lib/dateUtils"
+import { formatTime, todayISO } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 const DEFAULT_START_HOUR = 6
 const DEFAULT_END_HOUR = 23
@@ -115,9 +118,9 @@ function nowPercent(now: Date, startHour: number, totalMinutes: number): number 
   return ((now.getHours() * 60 + now.getMinutes() - startHour * 60) / totalMinutes) * 100
 }
 
-function todayStr(): string {
-  return new Date().toISOString().split("T")[0]
-}
+// Deliberately not toISOString() — that yields the UTC date, so anywhere east
+// of Greenwich the "Today" badge and the red now-line jumped to tomorrow during
+// the evening while nowPercent() below kept using local hours.
 
 // ── Employee chip (draggable) ─────────────────────────────────────────────────
 
@@ -165,7 +168,9 @@ function EmployeeChip({ employee, missing, over, scheduled, contracted, isOverla
       {...listeners}
       {...attributes}
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 select-none shadow-sm transition-all shrink-0 cursor-grab active:cursor-grabbing",
+        // touch-none: without it the browser claims the press as a scroll and
+        // fires pointercancel, so the drag never starts on a phone.
+        "flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-2 select-none touch-none shadow-sm transition-all shrink-0 cursor-grab active:cursor-grabbing",
         isDragging && !isOverlay && "opacity-40 scale-95",
         isOverlay && "rotate-1 shadow-xl scale-105"
       )}
@@ -210,13 +215,14 @@ interface RowProps {
   totalMinutes: number
   hourMarkers: number[]
   hoverSnap: { time: string; pct: number } | null
+  closedLabel: string
   onShiftClick: (shift: Shift) => void
   onRowClick: (employeeId: string, date: string) => void
   onShiftResize: (shiftId: string, startTime: string, endTime: string) => void
 }
 
 function TimelineRow({
-  employee, date, isClosed, shifts, jobRoles, isEven,
+  employee, date, isClosed, shifts, jobRoles, isEven, closedLabel,
   draggingEmpScheduledHere, conflict, todayLine,
   startHour, endHour, totalMinutes, hourMarkers,
   hoverSnap, onShiftClick, onRowClick, onShiftResize,
@@ -289,8 +295,13 @@ function TimelineRow({
 
   return (
     <div className={cn("flex border-b border-gray-200 dark:border-gray-700", isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50/60 dark:bg-gray-800/40")}>
-      {/* Name column */}
-      <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-3 flex items-center justify-between">
+      {/* Name column — sticky so names stay readable while the hours axis is
+          scrolled horizontally, which on a phone it always is. Matches the
+          treatment WeeklyScheduleGrid already gives its own name column. */}
+      <div className={cn(
+        "sticky left-0 z-[7] w-32 sm:w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-3 flex items-center justify-between",
+        isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800",
+      )}>
         <div className="min-w-0">
           <div className="flex items-center gap-1">
             <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
@@ -311,10 +322,10 @@ function TimelineRow({
           <Tooltip content="Add shift" side="right">
             <button
               onClick={() => onRowClick(employee.id, date)}
-              className="shrink-0 size-5 rounded-full bg-blue-100 dark:bg-gray-700/60 text-blue-500 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-gray-100 flex items-center justify-center transition-colors ml-1"
+              className="shrink-0 size-8 sm:size-5 rounded-full bg-blue-100 dark:bg-gray-700/60 text-blue-500 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-gray-100 flex items-center justify-center transition-colors ml-1"
               aria-label={`Add shift for ${employee.name}`}
             >
-              <Plus className="size-3" />
+              <Plus className="size-4 sm:size-3" />
             </button>
           </Tooltip>
         )}
@@ -349,7 +360,7 @@ function TimelineRow({
         {isClosed && isEmpty && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-[10px] font-medium uppercase tracking-widest text-gray-300 dark:text-gray-600 select-none">
-              Closed
+              {closedLabel}
             </span>
           </div>
         )}
@@ -477,6 +488,8 @@ interface DaySectionProps {
   activeRowId: string | null
   hoverSnap: { time: string; pct: number } | null
   currentTime: Date
+  localeTag: string
+  labels: { employee: string; today: string; closed: string }
   getConflict?: (employeeId: string, date: string) => AvailabilityConflict | null
   onShiftClick: (shift: Shift) => void
   onRowClick: (employeeId: string, date: string) => void
@@ -485,22 +498,22 @@ interface DaySectionProps {
 
 const DaySection = memo(function DaySection({
   date, isClosed, employees, allShifts, jobRoles, draggingEmp,
-  startHour, endHour, totalMinutes, hourMarkers,
+  startHour, endHour, totalMinutes, hourMarkers, localeTag, labels,
   activeRowId, hoverSnap, currentTime, getConflict, onShiftClick, onRowClick, onShiftResize,
 }: DaySectionProps) {
-  const isToday = date === todayStr()
+  const isToday = date === todayISO()
   const todayLine = isToday ? nowPercent(currentTime, startHour, totalMinutes) : null
   const dayShifts = useMemo(() => allShifts.filter((s) => s.date === date), [allShifts, date])
 
-  // A closed day with nothing scheduled collapses to a single "Closed" banner —
-  // no employee rows, so there's nothing to drop a name onto. If the day already
-  // has shifts (e.g. hours were changed after scheduling), keep the rows so those
-  // shifts stay visible and editable.
-  const collapsed = isClosed && dayShifts.length === 0
-
+  // A closed, empty day used to collapse to a single banner with NO employee
+  // rows. When it was the only day in view — which it always is on mobile,
+  // where dayCount is clamped to 1 — that left the roster strip above listing
+  // every employee over a body containing nobody, which reads as "the data
+  // failed to load", not "we're shut today". The rows always render now; the
+  // per-row "Closed" watermark carries the message and canDrop blocks drops.
   const dateObj = new Date(date + "T12:00:00")
-  const dayLabel = dateObj.toLocaleDateString("en-GB", {
-    weekday: "long", day: "numeric", month: "short", timeZone: "UTC",
+  const dayLabel = dateObj.toLocaleDateString(localeTag, {
+    weekday: "long", day: "numeric", month: "short",
   })
 
   return (
@@ -508,87 +521,84 @@ const DaySection = memo(function DaySection({
       {/* Sticky day header — sticks within the scrollable container */}
       <div className={cn("sticky top-0 z-[8] border-b border-gray-200 dark:border-gray-700", isToday ? "bg-blue-50 dark:bg-gray-700/30" : "bg-gray-50 dark:bg-gray-800")}>
         {/* Date label */}
-        <div className={cn("flex items-center gap-2 px-4 py-1.5 border-b", isToday ? "border-blue-100 dark:border-gray-600" : "border-gray-100 dark:border-gray-700")}>
+        {/* sticky left-0 + w-fit: the date is the one thing that must stay
+            readable while the hours axis is panned sideways on a phone. */}
+        <div className={cn("sticky left-0 flex w-fit items-center gap-2 px-4 py-1.5 border-b", isToday ? "border-blue-100 dark:border-gray-600" : "border-gray-100 dark:border-gray-700")}>
           <span className={cn("text-xs font-semibold", isToday ? "text-blue-700 dark:text-gray-100" : "text-gray-600 dark:text-gray-400")}>
             {dayLabel}
           </span>
           {isToday && (
             <span className="text-[10px] font-bold px-1.5 py-px bg-blue-600 text-white rounded-full">
-              Today
+              {labels.today}
             </span>
           )}
           {isClosed && (
-            <span className="text-[10px] font-bold px-1.5 py-px bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 rounded-full uppercase tracking-wide">
-              Closed
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-px bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 rounded-full uppercase tracking-wide">
+              <Moon className="size-2.5" />
+              {labels.closed}
             </span>
           )}
         </div>
 
-        {/* Time axis — hidden on a collapsed closed day (no rows to align to) */}
-        {!collapsed && (
-          <div className="flex">
-            <div className="w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                Employee
-              </span>
-            </div>
-            <div className="relative flex-1 h-8">
-              {hourMarkers.map((hour) => {
-                const pct = ((hour - startHour) / (endHour - startHour)) * 100
-                return (
-                  <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
-                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
-                      {hour.toString().padStart(2, "0")}:00
-                    </span>
-                  </div>
-                )
-              })}
-              {todayLine !== null && todayLine >= 0 && todayLine <= 100 && (
-                <div className="absolute top-0 bottom-0 w-px bg-red-400" style={{ left: `${todayLine}%` }} />
-              )}
-            </div>
+        {/* Time axis */}
+        <div className="flex">
+          {/* Explicit background, not bg-inherit — the immediate parent has no
+              background of its own, so bg-inherit resolved to transparent and
+              the scrolling hour labels showed through this cell. */}
+          <div className={cn(
+            "sticky left-0 z-[9] w-32 sm:w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-1.5",
+            isToday ? "bg-blue-50 dark:bg-gray-700" : "bg-gray-50 dark:bg-gray-800",
+          )}>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              {labels.employee}
+            </span>
           </div>
-        )}
+          <div className="relative flex-1 h-8">
+            {hourMarkers.map((hour) => {
+              const pct = ((hour - startHour) / (endHour - startHour)) * 100
+              return (
+                <div key={hour} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${pct}%` }}>
+                  <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 -translate-x-1/2 select-none">
+                    {hour.toString().padStart(2, "0")}:00
+                  </span>
+                </div>
+              )
+            })}
+            {todayLine !== null && todayLine >= 0 && todayLine <= 100 && (
+              <div className="absolute top-0 bottom-0 w-px bg-red-400" style={{ left: `${todayLine}%` }} />
+            )}
+          </div>
+        </div>
       </div>
 
-      {collapsed ? (
-        /* Collapsed closed day — one banner, no drop targets */
-        <div className="flex items-center justify-center gap-2 px-4 py-6 bg-gray-50 dark:bg-gray-800/30 border-b border-gray-200 dark:border-gray-700">
-          <Moon className="size-4 text-gray-300 dark:text-gray-600" />
-          <span className="text-xs font-medium uppercase tracking-widest text-gray-400 dark:text-gray-500 select-none">
-            Closed — no shifts scheduled
-          </span>
-        </div>
-      ) : (
-        /* Employee rows */
-        employees.map((emp, idx) => {
-          const rowId = `row-${emp.id}--${date}`
-          return (
-            <TimelineRow
-              key={emp.id}
-              employee={emp}
-              date={date}
-              isClosed={isClosed}
-              shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
-              jobRoles={jobRoles}
-              isEven={idx % 2 === 0}
-              draggingEmpScheduledHere={
-                draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
-              }
-              conflict={getConflict?.(emp.id, date) ?? null}
-              todayLine={todayLine}
-              startHour={startHour}
-              endHour={endHour}
-              totalMinutes={totalMinutes}
-              hourMarkers={hourMarkers}
-              hoverSnap={activeRowId === rowId ? hoverSnap : null}
-              onShiftClick={onShiftClick}
-              onRowClick={onRowClick}
-              onShiftResize={onShiftResize}
-            />
-          )
-        })
-      )}
+      {employees.map((emp, idx) => {
+        const rowId = `row-${emp.id}--${date}`
+        return (
+          <TimelineRow
+            key={emp.id}
+            employee={emp}
+            date={date}
+            isClosed={isClosed}
+            shifts={dayShifts.filter((s) => s.employeeId === emp.id)}
+            jobRoles={jobRoles}
+            isEven={idx % 2 === 0}
+            draggingEmpScheduledHere={
+              draggingEmp ? dayShifts.some((s) => s.employeeId === draggingEmp.id && !s.cancelledAt) : null
+            }
+            conflict={getConflict?.(emp.id, date) ?? null}
+            todayLine={todayLine}
+            startHour={startHour}
+            endHour={endHour}
+            totalMinutes={totalMinutes}
+            hourMarkers={hourMarkers}
+            hoverSnap={activeRowId === rowId ? hoverSnap : null}
+            closedLabel={labels.closed}
+            onShiftClick={onShiftClick}
+            onRowClick={onRowClick}
+            onShiftResize={onShiftResize}
+          />
+        )
+      })}
     </div>
   )
 })
@@ -648,6 +658,13 @@ export function ShiftTimeline({
   const [draggingEmp, setDraggingEmp] = useState<Employee | null>(null)
   const [currentTime, setCurrentTime] = useState(() => new Date())
 
+  const t = useTranslations("manager.schedule")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const dayLabels = useMemo(
+    () => ({ employee: t("employee"), today: t("today"), closed: t("closed") }),
+    [t],
+  )
+
   // Update the current-time indicator every minute so it doesn't go stale.
   useEffect(() => {
     const id = setInterval(() => setCurrentTime(new Date()), 60_000)
@@ -667,7 +684,16 @@ export function ShiftTimeline({
     dates.filter((d) => !storeHours[(new Date(d + "T12:00:00").getDay() + 6) % 7]?.isOpen)
   )
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  // PointerSensor alone made dragging impossible on a phone: the chip strip and
+  // the hours grid are both scroll containers, and a 5px pointer threshold loses
+  // every gesture to the scroller before dnd-kit claims it. TouchSensor with a
+  // press delay is the standard fix — hold to drag, swipe to scroll — and needs
+  // `touch-none` on the draggable so the browser stops treating the press as a
+  // pan. See EmployeeChip's className.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  )
 
   function snapTimeFromPointer(pointerX: number, rowRect: { left: number; width: number }): { time: string; pct: number } {
     const relX = pointerX - rowRect.left
@@ -752,7 +778,10 @@ export function ShiftTimeline({
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* One horizontally-scrolling row on a phone: nine wrapped chips took
+              ~5 rows and pushed the timeline itself below the fold. Wraps
+              normally from sm up, where there's width for it. */}
+          <div className="flex gap-2 overflow-x-auto pb-1 -mb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mb-0">
             {employees.map((emp) => {
               const scheduled = scheduledHoursMap[emp.id] ?? 0
               const contracted = emp.contractedHours
@@ -770,8 +799,9 @@ export function ShiftTimeline({
           </div>
         </div>
 
-        {/* Day sections */}
-        <div className="flex-1 overflow-auto">
+        {/* Day sections — pb-20 keeps the last employee row clear of the fixed
+            mobile bottom nav, which used to sit on top of it. */}
+        <div className="flex-1 overflow-auto pb-20 md:pb-0">
           <div className="min-w-[560px]">
             {dates.map((date, i) => (
               <div key={date}>
@@ -787,6 +817,8 @@ export function ShiftTimeline({
                   endHour={endHour}
                   totalMinutes={totalMinutes}
                   hourMarkers={hourMarkers}
+                  localeTag={localeTag}
+                  labels={dayLabels}
                   activeRowId={activeRowId}
                   hoverSnap={hoverSnap}
                   currentTime={currentTime}

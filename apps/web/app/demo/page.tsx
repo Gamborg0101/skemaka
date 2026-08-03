@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server"
 import { signIn } from "@/lib/auth"
 import { SchedulePreview } from "@/components/marketing/SchedulePreview"
 import { DemoLaunchButton } from "@/components/marketing/DemoLaunchButton"
+import { LangQuerySync } from "@/components/marketing/LocaleToggle"
 
 export async function generateMetadata() {
   const t = await getTranslations("marketing.demo")
@@ -28,6 +29,11 @@ export default async function DemoPage() {
 
   return (
     <div className="min-h-dvh bg-gray-50">
+      {/* Honour ?lang= here too — the sandbox reads the NEXT_LOCALE cookie when
+          it seeds, so a Danish campaign link that lands straight on /demo has to
+          set the cookie before the visitor clicks, or they get an English
+          restaurant from a Danish ad. */}
+      <LangQuerySync />
       <div className="mx-auto flex max-w-5xl flex-col items-center px-4 py-16 sm:px-6 lg:py-24">
         <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-blue-700">
           <span className="size-1.5 animate-pulse rounded-full bg-green-500" />

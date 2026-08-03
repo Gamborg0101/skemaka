@@ -45,7 +45,9 @@
     "dismiss": "Dismiss",
     "noEmployees": "No employees yet",
     "noEmployeesHint": "Add your first employee to start building a schedule.",
-    "addFirstEmployee": "Add your first employee"
+    "addFirstEmployee": "Add your first employee",
+    "employee": "Employee",
+    "closed": "Closed"
   },
   "settings": {
     "title": "Organization settings",
