@@ -32,6 +32,30 @@ export async function createOrg(
   userId: string,
   input: CreateOrgInput,
 ): Promise<Organization> {
+  // One org per manager (see project notes). A user who already manages an
+  // organisation must not silently end up with a second, orphaned one — e.g. a
+  // returning manager whose "already have an org?" check on /onboarding raced
+  // a Neon cold start and missed the redirect, or a double-submit. Both
+  // lib/auth.ts's JWT mint and getOrgContext below already pick the EARLIEST
+  // MANAGER membership as "the" org (orderBy joinedAt asc), so a second org
+  // would be permanently unreachable dead weight, not a usable workspace.
+  //
+  // Hard-erroring here (ServiceError "CONFLICT") was the obvious option, but
+  // it would strand the onboarding wizard on step 1 with no way forward for a
+  // legitimate retry/race — the user did nothing wrong. Handing back their
+  // existing org instead lets the flow continue exactly as if the check had
+  // redirected them correctly in the first place.
+  //
+  // Scoped to MANAGER memberships only: employeeService.claimInvite lets one
+  // person legitimately hold an EMPLOYEE membership in a second org (e.g.
+  // working two jobs) — that must keep working and is untouched by this guard.
+  const existingManagerMembership = await db.membership.findFirst({
+    where: { userId, role: "MANAGER" },
+    include: { organization: true },
+    orderBy: { joinedAt: "asc" },
+  })
+  if (existingManagerMembership) return serOrg(existingManagerMembership.organization)
+
   const { name, currency, country, timezone, locale, industry, timeFormat, userEmail, userName } = input
   const trimmedName     = name.trim()
   const resolvedCurrency = currency && (VALID_CURRENCIES as readonly string[]).includes(currency) ? currency : "EUR"

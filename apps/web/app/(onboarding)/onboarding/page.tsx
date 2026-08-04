@@ -72,6 +72,55 @@ const ROLE_COLORS = ROLE_COLOR_TOKENS
 // Sentinel option value that triggers the inline "add a role" input.
 const ADD_ROLE = "__add_role__"
 
+// Steps 2 and 3 aren't separate routes, so a refresh or browser-back re-runs
+// this component from scratch with fresh useState. Without persistence, that
+// re-run also re-triggers the "does this user already have an org" check —
+// which now succeeds, because the org WAS created in step 1 — and silently
+// bounces the user to /schedule, losing "add your team" with no indication
+// anything was lost. Persisting just enough to resume steps 2/3 (not step 1,
+// which has no data-loss risk since nothing has been submitted yet) closes
+// that gap. sessionStorage (not localStorage) so it's scoped to this tab and
+// doesn't leak a stale in-progress wizard into a different session.
+const PROGRESS_STORAGE_KEY = "skemaka.onboarding.progress"
+
+type PersistedProgress = { step: 2 | 3; orgId: string; addedEmployees: string[] }
+
+function loadOnboardingProgress(): PersistedProgress | null {
+  try {
+    const raw = sessionStorage.getItem(PROGRESS_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<PersistedProgress>
+    if (typeof parsed.orgId !== "string" || !parsed.orgId) return null
+    if (parsed.step !== 2 && parsed.step !== 3) return null
+    return {
+      step: parsed.step,
+      orgId: parsed.orgId,
+      addedEmployees: Array.isArray(parsed.addedEmployees)
+        ? parsed.addedEmployees.filter((x): x is string => typeof x === "string")
+        : [],
+    }
+  } catch {
+    // Safari private mode (and similar) can throw on storage access.
+    return null
+  }
+}
+
+function saveOnboardingProgress(progress: PersistedProgress) {
+  try {
+    sessionStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress))
+  } catch {
+    // Non-fatal — a refresh just won't resume; the wizard still works.
+  }
+}
+
+function clearOnboardingProgress() {
+  try {
+    sessionStorage.removeItem(PROGRESS_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
 const STEPS = [
   { n: 1 as Step, labelKey: "step1Label", descKey: "step1Desc" },
   { n: 2 as Step, labelKey: "step2Label", descKey: "step2Desc" },
@@ -89,8 +138,17 @@ export default function OnboardingPage() {
   const t = useTranslations("onboarding")
   const tCommon = useTranslations("common")
   const router = useRouter()
-  const [step, setStep] = useState<Step>(1)
-  const [checking, setChecking] = useState(true)
+
+  // Resume an in-progress wizard (step 2/3, refresh or browser-back) by
+  // seeding state straight from sessionStorage on first render — a lazy
+  // useState initializer, not an effect, so the resume is synchronous (no
+  // flash of "checking", no risk of racing the "already have an org?" check
+  // below). See PROGRESS_STORAGE_KEY above for why this must win over that
+  // check. `restoredProgress` never changes after mount.
+  const [restoredProgress] = useState(() => loadOnboardingProgress())
+
+  const [step, setStep] = useState<Step>(restoredProgress?.step ?? 1)
+  const [checking, setChecking] = useState(restoredProgress === null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -104,7 +162,7 @@ export default function OnboardingPage() {
   const [locale, setLocale] = useState("")
 
   // After step 1
-  const [orgId, setOrgId] = useState<string | null>(null)
+  const [orgId, setOrgId] = useState<string | null>(restoredProgress?.orgId ?? null)
 
   // Step 2
   const [empName, setEmpName] = useState("")
@@ -116,17 +174,81 @@ export default function OnboardingPage() {
   const [savingRole, setSavingRole] = useState(false)
   const [roleError, setRoleError] = useState<string | null>(null)
   const [empWage, setEmpWage] = useState("")
-  const [addedEmployees, setAddedEmployees] = useState<string[]>([])
+  const [addedEmployees, setAddedEmployees] = useState<string[]>(restoredProgress?.addedEmployees ?? [])
   const [addingEmp, setAddingEmp] = useState(false)
   const [empError, setEmpError] = useState<string | null>(null)
 
-  // If user already has an org, redirect them away
+  // If a step 2/3 wizard was resumed above, re-fetch the org's job roles (not
+  // persisted) so the Team step's dropdown matches the DB, same as right
+  // after creating the org in handleCreateOrg below.
   useEffect(() => {
-    fetch("/api/me/context", { cache: "no-store" })
-      .then((r) => { if (r.ok) router.replace("/schedule") })
-      .catch(() => {})
-      .finally(() => setChecking(false))
-  }, [router])
+    if (!restoredProgress) return
+    let cancelled = false
+    fetch(`/api/orgs/${restoredProgress.orgId}/roles`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rd: { data?: { name: string }[] } | null) => {
+        if (cancelled) return
+        const names = (rd?.data ?? []).map((x) => x.name)
+        if (names.length > 0) {
+          setAvailableRoles(names)
+          setEmpRole(names[0])
+        }
+      })
+      .catch(() => {
+        // keep FALLBACK_ROLES — they mirror the seed, so they still exist
+      })
+    return () => { cancelled = true }
+  }, [restoredProgress])
+
+  // If the user already has an org, redirect them away. Matches OrgProvider's
+  // retry behaviour (lib/orgContext.tsx): a returning manager landing here
+  // during a Neon cold start must not be shown the create-an-org wizard just
+  // because a single fetch happened to fail. Only a definitive 404 means "no
+  // org yet, show the wizard" — any other non-OK response or network error is
+  // treated as transient and retried with backoff. Skipped entirely when a
+  // step 2/3 wizard was just resumed above (see restoredProgress above).
+  useEffect(() => {
+    if (restoredProgress) return
+    let cancelled = false
+    async function checkExistingOrg(retries = 3, delayMs = 1500) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const r = await fetch("/api/me/context", { cache: "no-store" })
+          if (r.status === 404) return // no org yet — show the wizard
+          if (r.ok) {
+            if (!cancelled) router.replace("/schedule")
+            return
+          }
+          // Any other non-OK status: treat as transient (cold start) and retry.
+        } catch {
+          // network hiccup — retry below
+        }
+        if (i < retries - 1) await new Promise((res) => setTimeout(res, delayMs * (i + 1)))
+      }
+      // Retries exhausted with no definitive answer — fail open to the wizard.
+      // If the user genuinely already has an org, createOrg's server-side
+      // guard (orgService.ts) hands back their existing org instead of
+      // creating a duplicate, so this can't produce an orphaned second org.
+    }
+    checkExistingOrg().finally(() => { if (!cancelled) setChecking(false) })
+    return () => { cancelled = true }
+  }, [router, restoredProgress])
+
+  // Keep sessionStorage in sync with step 2/3 progress so a refresh resumes.
+  // Deliberately does NOT persist step 1 — nothing has been submitted there
+  // yet (org creation is what step 1 IS), so there's no risk of data loss and
+  // no reason to skip the normal "already have an org" check on that step.
+  useEffect(() => {
+    if (!orgId) return
+    if (step === 2 || step === 3) {
+      saveOnboardingProgress({ step, orgId, addedEmployees })
+    } else {
+      // Deliberately went back to step 1 — drop any stale step 2/3 entry so a
+      // refresh here doesn't resume somewhere the user just navigated away
+      // from on purpose.
+      clearOnboardingProgress()
+    }
+  }, [orgId, step, addedEmployees])
 
   // Capture timezone + locale silently, and pre-select the country (and thus
   // currency) from the browser locale's region so the user usually doesn't have
@@ -629,7 +751,7 @@ export default function OnboardingPage() {
                   <ChevronLeft className="size-4" /> {tCommon("back")}
                 </button>
                 <button
-                  onClick={() => router.push("/schedule")}
+                  onClick={() => { clearOnboardingProgress(); router.push("/schedule") }}
                   className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   {t("step3.finish")}
