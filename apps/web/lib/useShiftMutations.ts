@@ -1,6 +1,7 @@
 import { useCallback } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import type { Schedule, Shift } from "@/types"
 
 export function useShiftMutations(
@@ -10,6 +11,7 @@ export function useShiftMutations(
   employees: Array<{ id: string; name: string }>,
   ensureSchedule: () => Promise<Schedule>,
 ) {
+  const t = useTranslations("manager.toasts")
   const patchShift = useCallback((id: string, update: Partial<Shift>) => {
     setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === id ? { ...sh, ...update } : sh) } : s)
   }, [setSchedule])
@@ -45,12 +47,12 @@ export function useShiftMutations(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: newDate, employeeId: newEmployeeId }),
       }).then(async (r) => {
-        if (r.ok) { toast.success("Shift moved"); return }
+        if (r.ok) { toast.success(t("shiftMoved")); return }
         const msg = await r.json().then((b) => b.error).catch(() => null)
-        rollbackShift(shiftId, prev); toast.error(msg ?? "Failed to move shift")
-      }).catch(() => { rollbackShift(shiftId, prev); toast.error("Failed to move shift") })
+        rollbackShift(shiftId, prev); toast.error(msg ?? t("shiftMoveFailed"))
+      }).catch(() => { rollbackShift(shiftId, prev); toast.error(t("shiftMoveFailed")) })
     },
-    [schedule, orgId, patchShift, rollbackShift]
+    [schedule, orgId, patchShift, rollbackShift, t]
   )
 
   const handleShiftCreate = useCallback(
@@ -79,13 +81,13 @@ export function useShiftMutations(
           body: JSON.stringify(data),
         })
         const res = (await r.json()) as { data?: Shift; error?: string }
-        if (res.data) { replaceShift(tempId, res.data); toast.success("Shift added"); return true }
-        deleteShift(tempId); toast.error(res.error ?? "Failed to add shift"); return false
+        if (res.data) { replaceShift(tempId, res.data); toast.success(t("shiftAdded")); return true }
+        deleteShift(tempId); toast.error(res.error ?? t("shiftAddFailed")); return false
       } catch {
-        deleteShift(tempId); toast.error("Failed to add shift"); return false
+        deleteShift(tempId); toast.error(t("shiftAddFailed")); return false
       }
     },
-    [ensureSchedule, orgId, appendShift, replaceShift, deleteShift]
+    [ensureSchedule, orgId, appendShift, replaceShift, deleteShift, t]
   )
 
   const handleShiftUpdate = useCallback(
@@ -98,12 +100,12 @@ export function useShiftMutations(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }).then(async (r) => {
-        if (r.ok) { toast.success("Shift updated"); return }
+        if (r.ok) { toast.success(t("shiftUpdated")); return }
         const msg = await r.json().then((b) => b.error).catch(() => null)
-        rollbackShift(data.id!, prev); toast.error(msg ?? "Failed to update shift")
-      }).catch(() => { rollbackShift(data.id!, prev); toast.error("Failed to update shift") })
+        rollbackShift(data.id!, prev); toast.error(msg ?? t("shiftUpdateFailed"))
+      }).catch(() => { rollbackShift(data.id!, prev); toast.error(t("shiftUpdateFailed")) })
     },
-    [schedule, orgId, patchShift, rollbackShift]
+    [schedule, orgId, patchShift, rollbackShift, t]
   )
 
   const handleShiftDelete = useCallback(
@@ -113,11 +115,11 @@ export function useShiftMutations(
       deleteShift(shiftId)
       fetch(`/api/orgs/${orgId}/schedules/${schedule.id}/shifts/${shiftId}`, { method: "DELETE" })
         .then((r) => {
-          if (r.ok) toast.success("Shift deleted")
-          else { if (prev) restoreShift(prev); toast.error("Failed to delete shift") }
-        }).catch(() => { if (prev) restoreShift(prev); toast.error("Failed to delete shift") })
+          if (r.ok) toast.success(t("shiftDeleted"))
+          else { if (prev) restoreShift(prev); toast.error(t("shiftDeleteFailed")) }
+        }).catch(() => { if (prev) restoreShift(prev); toast.error(t("shiftDeleteFailed")) })
     },
-    [schedule, orgId, deleteShift, restoreShift]
+    [schedule, orgId, deleteShift, restoreShift, t]
   )
 
   const handleShiftCancel = useCallback(
@@ -130,14 +132,14 @@ export function useShiftMutations(
           if (r.ok) {
             const res = (await r.json()) as { data?: Shift }
             if (res.data) patchShift(shiftId, res.data)
-            toast.success("Shift cancelled — the employee has been notified")
+            toast.success(t("shiftCancelled"))
             return
           }
           const msg = await r.json().then((b) => b.error).catch(() => null)
-          rollbackShift(shiftId, prev); toast.error(msg ?? "Failed to cancel shift")
-        }).catch(() => { rollbackShift(shiftId, prev); toast.error("Failed to cancel shift") })
+          rollbackShift(shiftId, prev); toast.error(msg ?? t("shiftCancelFailed"))
+        }).catch(() => { rollbackShift(shiftId, prev); toast.error(t("shiftCancelFailed")) })
     },
-    [schedule, orgId, patchShift, rollbackShift]
+    [schedule, orgId, patchShift, rollbackShift, t]
   )
 
   const handleMarkSick = useCallback(
@@ -171,14 +173,14 @@ export function useShiftMutations(
         if (res.data) {
           replaceShift(tempId, res.data)
           const emp = employees.find((e) => e.id === employeeId)
-          toast.success(`Sick day registered${emp ? ` for ${emp.name}` : ""}`)
+          toast.success(emp ? t("sickDayRegisteredFor", { name: emp.name }) : t("sickDayRegistered"))
         } else {
           deleteShift(tempId)
-          toast.error(res.error ?? "Failed to register sick day")
+          toast.error(res.error ?? t("sickDayRegisterFailed"))
         }
-      }).catch(() => { deleteShift(tempId); toast.error("Failed to register sick day") })
+      }).catch(() => { deleteShift(tempId); toast.error(t("sickDayRegisterFailed")) })
     },
-    [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift]
+    [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift, t]
   )
 
   return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleShiftCancel, handleMarkSick }

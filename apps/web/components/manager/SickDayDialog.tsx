@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useLocale } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import type { Shift, Employee } from "@/types"
 
 interface SickDayDialogProps {
@@ -29,7 +31,8 @@ export function SickDayDialog({
   onDelete,
 }: SickDayDialogProps) {
   const tf = getOrgSettings().timeFormat
-  const date = new Date(shift.date + "T12:00:00").toLocaleDateString("en-GB", {
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const date = new Date(shift.date + "T12:00:00").toLocaleDateString(localeTag, {
     weekday: "long",
     day: "numeric",
     month: "long",

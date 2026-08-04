@@ -27,6 +27,7 @@ const PAGE_SIZE = 25
 export default function EmployeesPage() {
   const t = useTranslations("manager.employees")
   const tCommon = useTranslations("common")
+  const tToasts = useTranslations("manager.toasts")
   const { orgId, jobRoles, org } = useOrg()
 
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -60,9 +61,9 @@ export default function EmployeesPage() {
     try {
       const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}/invite`, { method: "POST" })
       if (!r.ok) throw new Error()
-      toast.success(`Invite resent to ${emp.email}`)
+      toast.success(tToasts("inviteResent", { email: emp.email }))
     } catch {
-      toast.error("Failed to resend invite")
+      toast.error(tToasts("inviteResendFailed"))
     } finally {
       setResendingInvite(null)
     }
@@ -85,13 +86,13 @@ export default function EmployeesPage() {
         setActiveCount(m.activeCount)
         setInactiveCount(m.inactiveCount)
       } catch {
-        if (!cancelled) toast.error("Failed to load employees")
+        if (!cancelled) toast.error(tToasts("employeesLoadFailed"))
       } finally {
         if (!cancelled) setLoadedKey(`${orgId}|${activeTab}|${offset}`)
       }
     })()
     return () => { cancelled = true }
-  }, [orgId, activeTab, offset, reloadToken])
+  }, [orgId, activeTab, offset, reloadToken, tToasts])
 
   // Switch tab: reset to the first page (the effect above reloads).
   const changeTab = (tab: "active" | "inactive") => {
@@ -112,13 +113,13 @@ export default function EmployeesPage() {
     })
     const res = await r.json() as { data?: Employee; error?: string }
     if (res.data) {
-      toast.success(`${data.name} added — invite email sent`)
+      toast.success(tToasts("employeeAdded", { name: data.name }))
       // New employees are active; surface them on the active tab's first page.
       if (activeTab === "active" && offset === 0) reload()
       else changeTab("active")
       return true
     }
-    toast.error(res.error ?? "Failed to add employee")
+    toast.error(res.error ?? tToasts("employeeAddFailed"))
     return false
   }
 
@@ -131,8 +132,8 @@ export default function EmployeesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: false }),
     })
-    if (!r.ok) { toast.error("Failed to deactivate employee"); return }
-    toast.success(`${target.name} deactivated`)
+    if (!r.ok) { toast.error(tToasts("employeeDeactivateFailed")); return }
+    toast.success(tToasts("employeeDeactivated", { name: target.name }))
     reload()
   }
 
@@ -142,16 +143,16 @@ export default function EmployeesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: true }),
     })
-    if (!r.ok) { toast.error("Failed to reactivate employee"); return }
-    toast.success(`${emp.name} reactivated`)
+    if (!r.ok) { toast.error(tToasts("employeeReactivateFailed")); return }
+    toast.success(tToasts("employeeReactivated", { name: emp.name }))
     reload()
   }
 
   const handleRemove = async (empId: string, name: string) => {
     setDeleteTarget(null)
     const r = await fetch(`/api/orgs/${orgId}/employees/${empId}`, { method: "DELETE" })
-    if (!r.ok) { toast.error("Failed to remove employee"); return }
-    toast.success(`${name} removed`)
+    if (!r.ok) { toast.error(tToasts("employeeRemoveFailed")); return }
+    toast.success(tToasts("employeeRemoved", { name }))
     reload()
   }
 
@@ -165,9 +166,9 @@ export default function EmployeesPage() {
     if (res.data) {
       setEmployees((prev) => prev.map((e) => e.id === empId ? res.data! : e))
       setSelectedEmployee((prev) => prev?.id === empId ? res.data! : prev)
-      toast.success("Employee updated")
+      toast.success(tToasts("employeeUpdated"))
     } else {
-      toast.error(res.error ?? "Failed to update employee")
+      toast.error(res.error ?? tToasts("employeeUpdateFailed"))
     }
   }
 

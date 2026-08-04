@@ -5,6 +5,8 @@ import { AlertTriangle, ChevronDown, Clock, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useLocale } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import type { Shift } from "@/types"
 
 interface SickDaysSectionProps {
@@ -12,8 +14,8 @@ interface SickDaysSectionProps {
   employeeId: string
 }
 
-function formatSickDate(isoDate: string): string {
-  return new Date(isoDate + "T12:00:00").toLocaleDateString("en-GB", {
+function formatSickDate(isoDate: string, localeTag: string): string {
+  return new Date(isoDate + "T12:00:00").toLocaleDateString(localeTag, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -23,13 +25,14 @@ function formatSickDate(isoDate: string): string {
 
 function SickDayRow({ shift }: { shift: Shift }) {
   const tf = getOrgSettings().timeFormat
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
   // Legacy sick days were stored as a bare 00:00–00:00 marker with no hours.
   const hasHours = shift.startTime !== "00:00" || shift.endTime !== "00:00"
   return (
     <div className="py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
       <div className="flex items-center gap-2">
         <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-          {formatSickDate(shift.date)}
+          {formatSickDate(shift.date, localeTag)}
         </p>
         {hasHours && (
           <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">

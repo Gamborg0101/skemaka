@@ -23,6 +23,7 @@ import {
 import { TimePicker } from "@/components/manager/TimePicker"
 import { Send } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 import { addDays, todayISO } from "@/lib/dateUtils"
 import type { Employee, JobRole } from "@/types"
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function OfferShiftDialog({ open, onOpenChange, orgId, jobRoles, employees, onCreated }: Props) {
+  const t = useTranslations("manager.toasts")
   const activeEmployees = employees.filter((e) => e.isActive)
 
   const [date, setDate] = useState(() => addDays(todayISO(), 1))
@@ -104,12 +106,12 @@ export function OfferShiftDialog({ open, onOpenChange, orgId, jobRoles, employee
         }),
       })
       const res = (await r.json().catch(() => ({}))) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? "Failed to send shift offer")
-      toast.success(`Shift offered to ${selected.size} ${selected.size === 1 ? "person" : "people"}`)
+      if (!r.ok) throw new Error(res.error ?? t("offerSendFailed"))
+      toast.success(t("offerSent", { n: selected.size }))
       onCreated()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send shift offer")
+      toast.error(err instanceof Error ? err.message : t("offerSendFailed"))
     } finally {
       setSubmitting(false)
     }
