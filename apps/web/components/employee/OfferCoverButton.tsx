@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ArrowLeftRight, Clock, X } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import type { CoverRequestStatus } from "@/types"
 
 type Active = { id: string; status: Extract<CoverRequestStatus, "OPEN" | "CLAIMED"> }
@@ -21,6 +22,7 @@ export function OfferCoverButton({
   shiftId: string
   initial?: Active | null
 }) {
+  const tToast = useTranslations("manager.toasts")
   const [active, setActive] = useState<Active | null>(initial)
   const [busy, setBusy] = useState(false)
 
@@ -35,7 +37,7 @@ export function OfferCoverButton({
       const res = (await r.json()) as { data?: { id: string; status: string }; error?: string }
       if (!r.ok || !res.data) throw new Error(res.error ?? "Couldn't offer this shift")
       setActive({ id: res.data.id, status: "OPEN" })
-      toast.success("Shift offered — teammates have been notified")
+      toast.success(tToast("coverOffered"))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {
@@ -51,7 +53,7 @@ export function OfferCoverButton({
       const res = (await r.json()) as { error?: string }
       if (!r.ok) throw new Error(res.error ?? "Couldn't withdraw the offer")
       setActive(null)
-      toast.success("Cover offer withdrawn")
+      toast.success(tToast("coverOfferWithdrawn"))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong")
     } finally {

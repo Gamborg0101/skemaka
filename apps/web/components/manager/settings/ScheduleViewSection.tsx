@@ -5,10 +5,12 @@ import { CalendarDays, LayoutGrid, AlignLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getOrgSettings, updateOrgSettings } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
 export function ScheduleViewSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId } = useOrg()
   const [defaultScheduleView, setDefaultScheduleView] = useState<"week" | "timeline">(
     () => getOrgSettings().defaultScheduleView
@@ -29,7 +31,7 @@ export function ScheduleViewSection() {
     } catch {
       setDefaultScheduleView(prev)
       updateOrgSettings({ defaultScheduleView: prev })
-      toast.error("Failed to update schedule view")
+      toast.error(tToast("scheduleViewUpdateFailed"))
     }
   }
 

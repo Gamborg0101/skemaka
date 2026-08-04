@@ -5,6 +5,7 @@ import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getOrgSettings, updateOrgSettings } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
@@ -16,6 +17,7 @@ const OPTIONS: { value: TimeFormat; label: string; example: string }[] = [
 ]
 
 export function TimeFormatSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId } = useOrg()
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => getOrgSettings().timeFormat)
 
@@ -35,7 +37,7 @@ export function TimeFormatSection() {
     } catch {
       setTimeFormat(prev)
       updateOrgSettings({ timeFormat: prev })
-      toast.error("Failed to update time format")
+      toast.error(tToast("timeFormatUpdateFailed"))
     }
   }
 

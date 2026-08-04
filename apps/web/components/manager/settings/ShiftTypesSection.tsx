@@ -17,6 +17,7 @@ import { TimePicker } from "@/components/manager/TimePicker"
 import { formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { useOptimisticList } from "@/lib/useOptimisticList"
 import type { ShiftTemplate } from "@/types"
@@ -39,6 +40,7 @@ function formatTemplateSummary(t: ShiftTemplate) {
 }
 
 export function ShiftTypesSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId, jobRoles, shiftTemplates, setShiftTemplates } = useOrg()
   const { remove: removeTemplate } = useOptimisticList(shiftTemplates, setShiftTemplates)
 
@@ -92,7 +94,7 @@ export function ShiftTypesSection() {
   async function handleDeleteTemplate(tmpl: ShiftTemplate) {
     await removeTemplate(tmpl.id, async () => {
       const r = await fetch(`/api/orgs/${orgId}/shift-templates/${tmpl.id}`, { method: "DELETE" })
-      if (!r.ok) { toast.error("Failed to delete shift type"); throw new Error() }
+      if (!r.ok) { toast.error(tToast("shiftTypeDeleteFailed")); throw new Error() }
       toast.success(`"${tmpl.name}" deleted`)
     })
   }
