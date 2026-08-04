@@ -269,10 +269,10 @@ export default function TimeOffPage() {
                     className="flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="destructive" onClick={() => handleDeny(r.id)}>
+                    <Button size="sm" variant="destructive" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => handleDeny(r.id)}>
                       Confirm
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDenyId(null)}>
+                    <Button size="sm" variant="ghost" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => setDenyId(null)}>
                       Cancel
                     </Button>
                   </div>
@@ -284,7 +284,7 @@ export default function TimeOffPage() {
                   <>
                     <Button
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="h-11 sm:h-7 px-4 sm:px-2.5 bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => handleApprove(r.id)}
                     >
                       <Check className="size-3.5 mr-1" />
@@ -293,7 +293,7 @@ export default function TimeOffPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-red-200 text-red-600 hover:bg-red-50"
+                      className="h-11 sm:h-7 px-4 sm:px-2.5 border-red-200 text-red-600 hover:bg-red-50"
                       onClick={() => handleDeny(r.id)}
                     >
                       <X className="size-3.5 mr-1" />
@@ -305,7 +305,7 @@ export default function TimeOffPage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-gray-400 hover:text-red-500"
+                    className="h-11 sm:h-7 px-4 sm:px-2.5 text-gray-400 hover:text-red-500"
                     onClick={() => handleDelete(r.id)}
                   >
                     <Trash2 className="size-3.5 mr-1" />
@@ -315,7 +315,7 @@ export default function TimeOffPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-gray-600 ml-auto"
+                  className="h-11 sm:h-7 px-4 sm:px-2.5 text-gray-600 ml-auto"
                   onClick={() => setViewRequest(r)}
                 >
                   <CalendarDays className="size-3.5 mr-1.5" />
