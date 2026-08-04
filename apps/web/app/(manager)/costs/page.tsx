@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { LaborCostTable } from "@/components/manager/LaborCostTable"
 import { ExportTimesheetDialog } from "@/components/manager/ExportTimesheetDialog"
@@ -13,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useOrg } from "@/lib/orgContext"
 
 export default function CostsPage() {
+  const t = useTranslations("manager.costs")
   const { orgId } = useOrg()
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
   const [costs, setCosts] = useState<WeeklyLaborCost | null>(null)
@@ -54,35 +56,35 @@ export default function CostsPage() {
     <div className="flex flex-col h-full">
       {/* Desktop header */}
       <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Labour Cost</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setWeekStart(getMondayOfWeek(new Date()))} disabled={isCurrentWeek} className="mr-1">
-            Today
+            {t("today")}
           </Button>
-          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week">
+          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label={t("prevWeek")}>
             <ChevronLeft className="size-4" />
           </Button>
           <WeekPicker weekStart={weekStart} onChange={setWeekStart} />
-          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week">
+          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label={t("nextWeek")}>
             <ChevronRight className="size-4" />
           </Button>
           <div className="ml-2 border-l border-gray-200 pl-2">
             <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
               <Download className="size-4 mr-1.5" />
-              Export CSV
+              {t("exportCsv")}
             </Button>
           </div>
         </div>
       </div>
       {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between gap-2 px-4 pt-6 pb-2 flex-wrap">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Labour Cost</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={() => setWeekStart(getMondayOfWeek(new Date()))} disabled={isCurrentWeek}>Today</Button>
-          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label="Previous week"><ChevronLeft className="size-4" /></Button>
+          <Button variant="outline" size="sm" onClick={() => setWeekStart(getMondayOfWeek(new Date()))} disabled={isCurrentWeek}>{t("today")}</Button>
+          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(-1)} aria-label={t("prevWeek")}><ChevronLeft className="size-4" /></Button>
           <WeekPicker weekStart={weekStart} onChange={setWeekStart} />
-          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label="Next week"><ChevronRight className="size-4" /></Button>
-          <Button variant="outline" size="icon-sm" onClick={() => setExportOpen(true)} aria-label="Export timesheet CSV"><Download className="size-4" /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => navigateWeek(1)} aria-label={t("nextWeek")}><ChevronRight className="size-4" /></Button>
+          <Button variant="outline" size="icon-sm" onClick={() => setExportOpen(true)} aria-label={t("exportCsvAria")}><Download className="size-4" /></Button>
         </div>
       </div>
 

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeftRight, Check, X, MapPin, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { useOrg } from "@/lib/orgContext"
 import { formatDayLabel, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
@@ -25,6 +27,8 @@ export type CoverFocus = {
  * being given up (source) and where it would move (destination).
  */
 export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | null) => void }) {
+  const t = useTranslations("manager.coverRequests")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const { orgId } = useOrg()
   const [requests, setRequests] = useState<CoverRequest[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -106,18 +110,18 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
       >
         <ArrowLeftRight className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-          Cover requests
+          {t("title")}
           <span className="ml-1.5 rounded-full bg-amber-200 dark:bg-amber-900/60 px-1.5 py-px text-xs tabular-nums">
             {requests.length}
           </span>
         </p>
         {!expanded && readyCount > 0 && (
           <span className="text-[11px] font-medium text-green-700 dark:text-green-400">
-            {readyCount} ready to approve
+            {t("readyToApprove", { n: readyCount })}
           </span>
         )}
         <span className="ml-auto hidden sm:inline text-[11px] text-amber-700/80 dark:text-amber-400/80">
-          {expanded ? "Tap one to show it on the schedule" : "Tap to review"}
+          {expanded ? t("tapToShowOnSchedule") : t("tapToReview")}
         </span>
         <ChevronDown
           className={`size-4 shrink-0 text-amber-600 dark:text-amber-400 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -137,17 +141,17 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
                 className="min-w-0 flex-1 text-left text-sm cursor-pointer group"
               >
                 <p className="font-medium text-gray-900 dark:text-gray-100 truncate flex items-center gap-1">
-                  {req.requesterName}&rsquo;s {req.shift.jobRole} shift
+                  {t("requesterShift", { name: req.requesterName, jobRole: req.shift.jobRole })}
                   <MapPin className={`size-3 shrink-0 transition-opacity ${isSelected ? "text-amber-600 opacity-100" : "text-amber-500 opacity-0 group-hover:opacity-70"}`} />
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {formatDayLabel(req.shift.date)} · {formatTime(req.shift.startTime, tf)}–{formatTime(req.shift.endTime, tf)}
+                  {formatDayLabel(req.shift.date, localeTag)} · {formatTime(req.shift.startTime, tf)}–{formatTime(req.shift.endTime, tf)}
                 </p>
                 <p className="text-xs mt-0.5">
                   {claimed ? (
-                    <span className="text-green-700 dark:text-green-400 font-medium">{req.claimedByName} will cover</span>
+                    <span className="text-green-700 dark:text-green-400 font-medium">{t("willCover", { name: req.claimedByName ?? "" })}</span>
                   ) : (
-                    <span className="text-amber-700 dark:text-amber-400">Waiting for a teammate to claim</span>
+                    <span className="text-amber-700 dark:text-amber-400">{t("waitingForTeammate")}</span>
                   )}
                 </p>
               </button>
@@ -156,10 +160,10 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
                   type="button"
                   disabled={!claimed || busyId === req.id}
                   onClick={() => act(req.id, "approve")}
-                  title={claimed ? "Approve — reassign the shift" : "No one has claimed this yet"}
+                  title={claimed ? t("approveTooltipReady") : t("approveTooltipWaiting")}
                   className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Check className="size-3.5" /> Approve
+                  <Check className="size-3.5" /> {t("approveBtn")}
                 </button>
                 <button
                   type="button"
@@ -167,7 +171,7 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
                   onClick={() => act(req.id, "deny")}
                   className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
                 >
-                  <X className="size-3.5" /> Deny
+                  <X className="size-3.5" /> {t("denyBtn")}
                 </button>
               </div>
             </li>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { UserPlus, Power, Trash2, Pencil, MailCheck } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/tooltip"
 import {
@@ -24,6 +25,8 @@ import { fetchPage } from "@/lib/pagination"
 const PAGE_SIZE = 25
 
 export default function EmployeesPage() {
+  const t = useTranslations("manager.employees")
+  const tCommon = useTranslations("common")
   const { orgId, jobRoles, org } = useOrg()
 
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -179,26 +182,26 @@ export default function EmployeesPage() {
       {/* Desktop header */}
       <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Employees</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{activeCount} active · {inactiveCount} inactive</p>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t("activeInactiveCount", { active: activeCount, inactive: inactiveCount })}</p>
         </div>
         {activeTab === "active" && (
           <Button onClick={() => setAddOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
             <UserPlus className="size-4" />
-            Add Employee
+            {t("addEmployee")}
           </Button>
         )}
       </div>
       {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between gap-3 px-4 pt-6 pb-2">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Employees</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{activeCount} active · {inactiveCount} inactive</p>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t("activeInactiveCount", { active: activeCount, inactive: inactiveCount })}</p>
         </div>
         {activeTab === "active" && (
           <Button onClick={() => setAddOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
             <UserPlus className="size-4" />
-            Add Employee
+            {t("addEmployee")}
           </Button>
         )}
       </div>
@@ -213,7 +216,7 @@ export default function EmployeesPage() {
               activeTab === tab ? "border-blue-600 text-blue-600 dark:border-gray-400 dark:text-slate-200" : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
           >
-            {tab}
+            {tab === "active" ? t("tabActive") : t("tabInactive")}
             {(tab === "active" ? activeCount : inactiveCount) > 0 && (
               <span className="ml-1.5 text-xs rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 tabular-nums">
                 {tab === "active" ? activeCount : inactiveCount}
@@ -259,11 +262,11 @@ export default function EmployeesPage() {
         <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-16 text-center">
           {activeTab === "active" ? (
             <>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No active employees</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Add your first employee to get started.</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("emptyActive")}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("emptyActiveHint")}</p>
             </>
           ) : (
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No inactive employees</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("emptyInactive")}</p>
           )}
         </div>
       ) : (
@@ -271,10 +274,10 @@ export default function EmployeesPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800">
-                <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">Name</TableHead>
-                <TableHead className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-semibold">Job Role</TableHead>
-                <TableHead className="hidden md:table-cell text-right text-gray-700 dark:text-gray-300 font-semibold">Hourly Wage</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300 font-semibold">Actions</TableHead>
+                <TableHead className="text-gray-700 dark:text-gray-300 font-semibold">{t("colName")}</TableHead>
+                <TableHead className="hidden sm:table-cell text-gray-700 dark:text-gray-300 font-semibold">{t("colJobRole")}</TableHead>
+                <TableHead className="hidden md:table-cell text-right text-gray-700 dark:text-gray-300 font-semibold">{t("colHourlyWage")}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300 font-semibold">{t("colActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -289,10 +292,10 @@ export default function EmployeesPage() {
                       <div className="flex items-center gap-1.5">
                         <p className="font-semibold text-gray-900 dark:text-gray-50">{emp.name}</p>
                         {emp.isActive && !emp.userId && (
-                          <Tooltip content="Hasn't created their account yet — they won't get shift notifications until they do.">
+                          <Tooltip content={t("notActivatedTooltip")}>
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/30 px-1.5 py-px text-[10px] font-medium text-amber-700 dark:text-amber-300">
                               <span className="size-1.5 rounded-full bg-amber-500" />
-                              Not activated
+                              {t("notActivatedBadge")}
                             </span>
                           </Tooltip>
                         )}
@@ -309,28 +312,28 @@ export default function EmployeesPage() {
                     {/* On mobile, tapping the row opens the sheet — action buttons shown on sm+ */}
                     <div className="hidden sm:flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" onClick={() => openSheet(emp)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xs">
-                        View
+                        {t("viewAction")}
                       </Button>
-                      <Tooltip content="Edit employee">
+                      <Tooltip content={t("editTooltip")}>
                         <Button variant="ghost" size="icon-sm" onClick={() => openSheetInEditMode(emp)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 min-w-[36px] min-h-[36px]">
                           <Pencil className="size-3.5" />
                         </Button>
                       </Tooltip>
                       {emp.isActive ? (
-                        <Tooltip content="Deactivate employee">
+                        <Tooltip content={t("deactivateTooltip")}>
                           <Button variant="ghost" size="icon-sm" onClick={() => setDeactivateTarget(emp)} className="text-gray-500 hover:text-amber-600 hover:bg-amber-50 min-w-[36px] min-h-[36px]">
                             <Power className="size-3.5" />
                           </Button>
                         </Tooltip>
                       ) : (
-                        <Tooltip content="Reactivate employee">
+                        <Tooltip content={t("reactivateTooltip")}>
                           <Button variant="ghost" size="icon-sm" onClick={() => handleReactivate(emp)} className="text-green-600 hover:text-green-700 hover:bg-green-50 min-w-[36px] min-h-[36px]">
                             <Power className="size-3.5" />
                           </Button>
                         </Tooltip>
                       )}
                       {!emp.userId && (
-                        <Tooltip content="Resend invite email">
+                        <Tooltip content={t("resendInviteTooltip")}>
                           <Button
                             variant="ghost"
                             size="icon-sm"
@@ -342,7 +345,7 @@ export default function EmployeesPage() {
                           </Button>
                         </Tooltip>
                       )}
-                      <Tooltip content="Remove employee">
+                      <Tooltip content={t("removeTooltip")}>
                         <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(emp)} className="text-red-500 hover:text-red-600 hover:bg-red-50 min-w-[36px] min-h-[36px]">
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -398,20 +401,21 @@ export default function EmployeesPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove employee?</DialogTitle>
+            <DialogTitle>{t("removeDialogTitle")}</DialogTitle>
             <DialogDescription>
-              This will permanently remove{" "}
-              <span className="font-medium text-gray-900 dark:text-gray-50">{deleteTarget?.name}</span>{" "}
-              from the system. This action cannot be undone.
+              {t.rich("removeDialogDesc", {
+                name: deleteTarget?.name ?? "",
+                strong: (chunks) => <span className="font-medium text-gray-900 dark:text-gray-50">{chunks}</span>,
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>{tCommon("cancel")}</Button>
             <Button
               variant="destructive"
               onClick={() => { if (deleteTarget) handleRemove(deleteTarget.id, deleteTarget.name) }}
             >
-              Remove
+              {t("removeBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
