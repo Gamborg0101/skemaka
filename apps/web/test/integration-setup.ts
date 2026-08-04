@@ -26,9 +26,24 @@ const ALLOWED_HOST_FRAGMENTS = ["localhost", "127.0.0.1", "0.0.0.0", "postgres"]
 export function assertDisposableDatabase(url: string | undefined): string {
   if (!url) {
     throw new Error(
-      "Integration tests need DATABASE_URL pointing at a disposable Postgres.\n" +
-        "  local:  docker run --rm -e POSTGRES_PASSWORD=x -p 5432:5432 postgres:16\n" +
-        "          DATABASE_URL=postgresql://postgres:x@localhost:5432/postgres npm run test:integration",
+      "Integration tests need DATABASE_URL pointing at a disposable Postgres,\n" +
+        "plus a wsproxy — lib/prisma.ts always uses the Neon serverless driver,\n" +
+        "which speaks WebSockets and cannot talk to a plain Postgres directly.\n\n" +
+        "  With Docker:\n" +
+        "    docker run --rm -e POSTGRES_PASSWORD=x -p 5432:5432 postgres:16\n" +
+        "    docker run --rm -p 5433:80 -e APPEND_PORT=host.docker.internal:5432 \\\n" +
+        "      -e ALLOW_ADDR_REGEX='.*' ghcr.io/neondatabase/wsproxy:latest\n\n" +
+        "  Without Docker (macOS):\n" +
+        "    brew install postgresql@16 go && brew services start postgresql@16\n" +
+        "    go install github.com/neondatabase/wsproxy@latest\n" +
+        "    LISTEN_PORT=:5433 APPEND_PORT=localhost:5432 ALLOW_ADDR_REGEX='.*' \\\n" +
+        "      ~/go/bin/wsproxy &\n\n" +
+        "  Then, from apps/web:\n" +
+        "    createdb skemaka_test\n" +
+        "    psql -d skemaka_test -c \"ALTER DATABASE skemaka_test SET TimeZone='Pacific/Kiritimati';\"\n" +
+        "    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skemaka_test \\\n" +
+        "      NEON_WS_PROXY=localhost:5433/v1 npx prisma migrate deploy\n" +
+        "    DATABASE_URL=... NEON_WS_PROXY=localhost:5433/v1 npm run test:integration",
     )
   }
 
@@ -62,6 +77,65 @@ export function assertDisposableDatabase(url: string | undefined): string {
   return url
 }
 
-beforeAll(() => {
+/**
+ * A deliberately non-UTC session timezone for the test database.
+ *
+ * Prisma maps `DateTime` to `timestamp WITHOUT time zone` and writes UTC
+ * wall-clock into it. Raw SQL that compares such a column against `NOW()` (a
+ * timestamptz) makes Postgres reinterpret the stored value in the SESSION's
+ * timezone — so the comparison is wrong by the UTC offset. Under UTC the offset
+ * is zero and the bug is invisible, which is exactly the condition every CI
+ * runner provides by default.
+ *
+ * That is not hypothetical: `assertSeatAvailable` applied scheduled seat
+ * reductions early for precisely this reason, and the test covering it passed in
+ * CI regardless. Pinning a large positive offset means any future naive-vs-
+ * timestamptz comparison fails loudly, in CI, on the first run.
+ *
+ * UTC+14 is the largest real offset there is, so it maximises the gap a bug has
+ * to hide in.
+ */
+const TEST_SESSION_TIMEZONE = "Pacific/Kiritimati"
+
+/**
+ * Opt out of the non-UTC requirement, for a run that mirrors production.
+ *
+ * Neon runs sessions in UTC, so a UTC+14 run alone proves the code is correct
+ * under a timezone production never uses, and proves nothing about the one it
+ * does. CI therefore runs this suite twice: once at UTC+14 to expose
+ * naive-vs-timestamptz bugs, and once at UTC with this flag set, which is the
+ * production-faithful run.
+ *
+ * Only the offset-sensitive comparisons differ between the two; everything else
+ * is identical, so the second run is cheap insurance rather than duplication.
+ */
+const ALLOW_UTC = process.env.ALLOW_UTC_TEST_DB === "1"
+
+beforeAll(async () => {
   assertDisposableDatabase(process.env.DATABASE_URL)
+
+  // ASSERT, don't set. `ALTER DATABASE … SET TimeZone` only applies to
+  // connections opened afterwards, so doing it here races with connections the
+  // driver has already established — which produced a run where the suite went
+  // green against code that was definitely broken. Asserting is deterministic:
+  // the timezone is either already right or the suite refuses to run.
+  const { db } = await import("@/lib/prisma")
+  const [{ tz }] = await db.$queryRawUnsafe<{ tz: string }[]>(
+    "SELECT current_setting('TimeZone')::text AS tz",
+  )
+
+  if ((tz === "UTC" || tz === "Etc/UTC") && !ALLOW_UTC) {
+    throw new Error(
+      `REFUSING TO RUN: the test database session timezone is "${tz}".\n\n` +
+        "Under UTC this suite cannot see naive-vs-timestamptz bugs, because the\n" +
+        "offset it would misread by is zero. That is not theoretical: seats.ts\n" +
+        "applied scheduled seat reductions early for exactly this reason, and the\n" +
+        "test covering it passed in CI regardless.\n\n" +
+        "Point the database at a large offset so such bugs fail loudly:\n" +
+        `  psql -c "ALTER DATABASE <db> SET TimeZone='${TEST_SESSION_TIMEZONE}';"\n\n` +
+        "If you meant to run the production-parity pass (Neon sessions are UTC),\n" +
+        "say so explicitly with ALLOW_UTC_TEST_DB=1. Do not set it as a default —\n" +
+        "it turns off the only check that catches this class of bug.",
+    )
+  }
 })

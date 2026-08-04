@@ -40,6 +40,16 @@ export async function assertSeatAvailable(tx: Tx, orgId: string): Promise<void> 
   // A due reduction is honoured here rather than by a cron or webhook: resolving
   // it inside the same locked read that enforces the cap means it can never be
   // late, double-applied, or lost to a missed event.
+  //
+  // `NOW() AT TIME ZONE 'UTC'`, not plain `NOW()`. Prisma maps DateTime to
+  // `timestamp WITHOUT time zone` and writes UTC wall-clock into it, but NOW()
+  // is a timestamptz — so comparing them makes Postgres reinterpret the stored
+  // naive value in the SESSION's timezone. Under Europe/Copenhagen that fires a
+  // scheduled reduction two hours early, silently dropping a seat the org is
+  // still paying for. It only looks correct where the session happens to be UTC,
+  // which is every CI runner and no guarantee at all. `AT TIME ZONE 'UTC'`
+  // converts NOW() to the same naive-UTC basis the column is stored in, so the
+  // comparison is correct under any session timezone.
   const rows = await tx.$queryRaw<
     { seats: number; subscriptionStatus: string }[]
   >`
@@ -47,7 +57,7 @@ export async function assertSeatAvailable(tx: Tx, orgId: string): Promise<void> 
       CASE
         WHEN "pendingSeats" IS NOT NULL
          AND "pendingSeatsEffectiveAt" IS NOT NULL
-         AND "pendingSeatsEffectiveAt" <= NOW()
+         AND "pendingSeatsEffectiveAt" <= (NOW() AT TIME ZONE 'UTC')
         THEN "pendingSeats"
         ELSE "seats"
       END AS "seats",

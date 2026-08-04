@@ -11,6 +11,7 @@ import { queryClient } from "@/lib/queryClient"
 import { apiClient } from "@/lib/apiClient"
 import { useAuthStore } from "@/store/authStore"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { I18nProvider } from "@/lib/i18n"
 
 // Keep the splash screen visible until the auth store hydrates.
 SplashScreen.preventAutoHideAsync()
@@ -57,14 +58,17 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <ApiClientProvider client={apiClient}>
-              <StatusBar style="light" />
-              <AuthGate />
-            </ApiClientProvider>
-          </QueryClientProvider>
-        </ErrorBoundary>
+        {/* Outside ErrorBoundary so the boundary's own copy is translated. */}
+        <I18nProvider>
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <ApiClientProvider client={apiClient}>
+                <StatusBar style="light" />
+                <AuthGate />
+              </ApiClientProvider>
+            </QueryClientProvider>
+          </ErrorBoundary>
+        </I18nProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )

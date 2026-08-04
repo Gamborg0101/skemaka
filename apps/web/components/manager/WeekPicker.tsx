@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel } from "@/lib/dateUtils"
+import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel, todayISO } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
 
 interface WeekPickerProps {
@@ -65,7 +65,7 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
     return () => document.removeEventListener("mousedown", handler)
   }, [open])
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = todayISO()
   const isoWeek = getISOWeek(weekStart)
   const weeks = getCalendarWeeks(viewYear, viewMonth)
 

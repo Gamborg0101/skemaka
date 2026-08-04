@@ -1,3 +1,4 @@
+import { getLocaleTag } from "@/lib/localeTag"
 /** Monday of the current ISO week as YYYY-MM-DD (UTC) */
 export function currentWeek(): string {
   const now = new Date()
@@ -34,7 +35,7 @@ export function weekDays(weekStart: string): string[] {
 export function weekRangeLabel(weekStart: string): string {
   const days = weekDays(weekStart)
   const fmt = (iso: string) =>
-    new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", {
+    new Date(iso + "T00:00:00Z").toLocaleDateString(getLocaleTag(), {
       weekday: "short", day: "numeric", month: "short", timeZone: "UTC",
     })
   return `${fmt(days[0])} – ${fmt(days[6])}`

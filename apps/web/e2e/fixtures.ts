@@ -14,5 +14,8 @@ export const E2E = {
   managerExpired: "manager-expired@e2e.test",
   // Claim flow
   claimer: "claimer@e2e.test",
+  // Onboarding: a user with NO membership, i.e. a brand-new paying customer.
+  // Deliberately never given an org by the seed — the spec creates one.
+  onboarder: "onboarder@e2e.test",
   inviteToken: "e2e-invite-token-001",
 } as const

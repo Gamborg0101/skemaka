@@ -938,10 +938,19 @@ export async function cancelShift(
   // A draft was never sent, so there is nothing to cancel — just delete it.
   if (!existing.publishedAt) throw new ServiceError("Draft shifts cannot be cancelled — delete them instead", "BAD_REQUEST")
 
-  const shift = await db.shift.update({
-    where: { id: shiftId },
+  // Compare-and-swap on `cancelledAt: null`. The read above cannot enforce
+  // once-only: a double-click sends two cancels, both see an uncancelled shift,
+  // and both proceed — so the employee gets two "your shift is cancelled" texts
+  // and the audit log gets two SHIFT_CANCELLED events for one shift.
+  const swap = await db.shift.updateMany({
+    where: { id: shiftId, organizationId: orgId, cancelledAt: null },
     data: { cancelledAt: new Date() },
   })
+  if (swap.count === 0) {
+    throw new ServiceError("Shift is already cancelled", "CONFLICT")
+  }
+
+  const shift = await db.shift.findUniqueOrThrow({ where: { id: shiftId } })
 
   void db.schedulingEvent.create({
     data: {

@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuthStore } from "@/store/authStore"
 import { NoOrgScreen } from "@/components/account/NoOrgScreen"
+import { useTranslations } from "@/lib/i18n"
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"]
 
@@ -15,6 +16,12 @@ function tabIcon(active: IconName, inactive: IconName) {
 }
 
 export default function TabsLayout() {
+  // Tab labels have to fit five across on the narrowest phone. Danish
+  // "Tilgængelighed" does not — it rendered as "Tilgængeli…" — so mobile.tabs
+  // .availability uses the same "Tilgæng." abbreviation the web sidebar already
+  // uses for this exact problem (manager.nav.availabilityShort). Check any new
+  // translation on a device rather than trusting that it fits.
+  const t = useTranslations("mobile")
   const insets = useSafeAreaInsets()
   const { activeView, orgId } = useAuthStore()
   const isManager = activeView === "MANAGER"
@@ -49,28 +56,32 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="shifts"
         options={{
-          title: "Shifts",
+          tabBarButtonTestID: "tab-shifts",
+          title: t("tabs.shifts"),
           tabBarIcon: tabIcon("calendar", "calendar-outline"),
         }}
       />
       <Tabs.Screen
         name="availability/index"
         options={{
-          title: "Availability",
+          tabBarButtonTestID: "tab-availability",
+          title: t("tabs.availability"),
           tabBarIcon: tabIcon("checkmark-circle", "checkmark-circle-outline"),
         }}
       />
       <Tabs.Screen
         name="requests/index"
         options={{
-          title: "Time Off",
+          tabBarButtonTestID: "tab-timeoff",
+          title: t("tabs.timeOff"),
           tabBarIcon: tabIcon("calendar-clear", "calendar-clear-outline"),
         }}
       />
       <Tabs.Screen
         name="team/index"
         options={{
-          title: "Team",
+          tabBarButtonTestID: "tab-team",
+          title: t("tabs.team"),
           tabBarIcon: tabIcon("people", "people-outline"),
           href: isManager ? undefined : null,
         }}
@@ -78,14 +89,16 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          tabBarButtonTestID: "tab-settings",
+          title: t("tabs.settings"),
           tabBarIcon: tabIcon("settings", "settings-outline"),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          tabBarButtonTestID: "tab-profile",
+          title: t("tabs.profile"),
           tabBarIcon: tabIcon("person-circle", "person-circle-outline"),
         }}
       />

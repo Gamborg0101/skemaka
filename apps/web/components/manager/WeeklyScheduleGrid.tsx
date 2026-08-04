@@ -14,6 +14,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { todayISO } from "@/lib/dateUtils";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ShiftCard } from "@/components/manager/ShiftCard";
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog";
@@ -100,8 +101,12 @@ function formatHeaderDate(date: Date) {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+// Local date components, never toISOString() — east of Greenwich the UTC date
+// is tomorrow's for part of every evening, which silently selected the wrong day.
 function toISODate(date: Date) {
-  return date.toISOString().split("T")[0];
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${mm}-${dd}`;
 }
 
 // ── Droppable cell ────────────────────────────────────────────────────────────
@@ -322,8 +327,7 @@ export function WeeklyScheduleGrid({
   const [prevWeekStart, setPrevWeekStart] = useState("");
   if (schedule.weekStart !== prevWeekStart) {
     setPrevWeekStart(schedule.weekStart);
-    const todayISO = new Date().toISOString().split("T")[0];
-    const idx = days.findIndex((d) => toISODate(d) === todayISO);
+    const idx = days.findIndex((d) => toISODate(d) === todayISO());
     setMobileDay(idx >= 0 ? idx : 0);
   }
 

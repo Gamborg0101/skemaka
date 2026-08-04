@@ -3,6 +3,7 @@ import { ApiError } from "@skemaka/api"
 import { Button } from "@/components/ui/Button"
 import { useAuthStore } from "@/store/authStore"
 import { useDeleteAccount } from "@/hooks/useEmployee"
+import { useTranslations } from "@/lib/i18n"
 
 /**
  * Sign Out + Delete Account controls. Shared by the Profile tab and the
@@ -10,6 +11,7 @@ import { useDeleteAccount } from "@/hooks/useEmployee"
  * reachable even before the user belongs to a team.
  */
 export function AccountActions() {
+  const t = useTranslations("mobile")
   const signOut = useAuthStore((s) => s.signOut)
   const deleteAccount = useDeleteAccount()
 
@@ -55,17 +57,17 @@ export function AccountActions() {
         variant="danger"
         size="md"
         fullWidth
-        accessibilityLabel="Sign out"
+        accessibilityLabel={t("common.signOut")}
         onPress={handleSignOut}
       >
-        Sign Out
+        {t("common.signOut")}
       </Button>
 
       <Pressable
         onPress={handleDeleteAccount}
         disabled={deleteAccount.isPending}
         accessibilityRole="button"
-        accessibilityLabel="Delete account"
+        accessibilityLabel={t("settings.deleteAccount")}
         className="items-center py-2 active:opacity-60"
       >
         <Text className="text-sm font-medium text-danger">

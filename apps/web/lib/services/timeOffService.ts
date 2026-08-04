@@ -107,9 +107,21 @@ export async function reviewTimeOff(
   if (!existing) throw new ServiceError("Not found", "NOT_FOUND")
   if (existing.status !== "PENDING") throw new ServiceError("Request is no longer pending", "CONFLICT")
 
-  const updated = await db.timeOffRequest.update({
-    where: { id: requestId },
+  // Compare-and-swap on PENDING. The read above cannot enforce anything: two
+  // managers reviewing the same request at once both passed it, both wrote, and
+  // — because the SMS is sent per call — the employee received "your time off is
+  // approved" AND "your time off is denied" for one request, with the database
+  // keeping whichever write landed last.
+  const swap = await db.timeOffRequest.updateMany({
+    where: { id: requestId, organizationId: orgId, status: "PENDING" },
     data: { status, reviewNote: reviewNote ?? null },
+  })
+  if (swap.count === 0) {
+    throw new ServiceError("Request is no longer pending", "CONFLICT")
+  }
+
+  const updated = await db.timeOffRequest.findUniqueOrThrow({
+    where: { id: requestId },
     include: { employee: { select: { id: true, name: true, jobRole: true } } },
   })
 

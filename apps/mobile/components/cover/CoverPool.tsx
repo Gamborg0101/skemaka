@@ -2,12 +2,14 @@ import { View, Text, Pressable, Alert } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useCoverRequests, useClaimCover } from "@/hooks/useCover"
 import { formatTime, formatDateLong } from "@/lib/utils"
+import { useTranslations } from "@/lib/i18n"
 
 /**
  * "Shifts you can cover" — the open pool a teammate has offered up. Renders
  * nothing when empty. Claiming puts the user forward; a manager confirms it.
  */
 export function CoverPool() {
+  const t = useTranslations("mobile")
   const { data } = useCoverRequests()
   const claim = useClaimCover()
   const pool = data?.pool ?? []
@@ -18,7 +20,7 @@ export function CoverPool() {
     <View className="mb-4 rounded-2xl border border-brand/30 bg-brand/5 overflow-hidden">
       <View className="flex-row items-center gap-2 px-4 py-2.5 border-b border-brand/20">
         <Ionicons name="swap-horizontal" size={16} color="#7B6EF8" />
-        <Text className="text-sm font-semibold text-ink">Shifts you can cover</Text>
+        <Text className="text-sm font-semibold text-ink">{t("cover.poolTitle")}</Text>
       </View>
       {pool.map((req, i) => (
         <View
@@ -50,7 +52,7 @@ export function CoverPool() {
             accessibilityLabel={`Cover the ${req.shift.jobRole} shift`}
             className="shrink-0 h-9 px-3 rounded-xl bg-brand items-center justify-center active:opacity-80 disabled:opacity-40"
           >
-            <Text className="text-xs font-semibold text-white">I&apos;ll cover it</Text>
+            <Text className="text-xs font-semibold text-white">{t("cover.claim")}</Text>
           </Pressable>
         </View>
       ))}
