@@ -8,12 +8,14 @@ import { cn } from "@/lib/utils"
 import { getOrgSettings, updateOrgSettings, MIN_TIMELINE_BUFFER_HOURS, MAX_TIMELINE_BUFFER_HOURS } from "@/lib/orgSettings"
 import type { DayHours } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 export function StoreHoursSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId } = useOrg()
   const [hours, setHours] = useState<DayHours[]>(() => getOrgSettings().hours)
   const [buffer, setBuffer] = useState<number>(() => getOrgSettings().timelineBufferHours)
@@ -40,9 +42,9 @@ export function StoreHoursSection() {
       if (!r.ok) throw new Error()
       updateOrgSettings({ hours, timelineBufferHours: buffer })
       setDirty(false)
-      toast.success("Store hours saved")
+      toast.success(tToast("storeHoursSaved"))
     } catch {
-      toast.error("Failed to save store hours")
+      toast.error(tToast("storeHoursSaveFailed"))
     } finally {
       setSaving(false)
     }
