@@ -324,5 +324,19 @@
     "delete": "Slet",
     "denyReasonPlaceholder": "Begrundelse for afvisning (valgfri)",
     "noShiftsScheduled": "Ingen vagter planlagt"
+  },
+  "demoTour": {
+    "step1Title": "Det her er din uge",
+    "step1Body": "Hver række er en person, hver kolonne en dag. Klik på en tom celle for at tilføje en vagt, eller træk en vagt for at flytte den.",
+    "step2Title": "Udrul når du er klar",
+    "step2Body": "Vagter er private kladder, indtil du udruller dem. Først da får dine medarbejdere besked.",
+    "step3Title": "Medarbejdere kan bytte",
+    "step3Body": "Kan en medarbejder ikke tage sin vagt, beder de om dækning her, og du godkender eller afviser. Det samme gælder fridage.",
+    "step4Title": "Så er rundvisningen slut",
+    "step4Body": "Du må gerne rode med det hele — det er en sandkasse. Åbn Mine vagter for at se, hvad dine medarbejdere ser.",
+    "next": "Næste",
+    "back": "Tilbage",
+    "skip": "Spring over",
+    "done": "Forstået"
   }
 }

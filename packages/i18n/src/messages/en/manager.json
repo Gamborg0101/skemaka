@@ -324,5 +324,19 @@
     "delete": "Delete",
     "denyReasonPlaceholder": "Reason for denial (optional)",
     "noShiftsScheduled": "No shifts scheduled"
+  },
+  "demoTour": {
+    "step1Title": "This is your week",
+    "step1Body": "Every row is a person, every column a day. Click any empty cell to add a shift, or drag a shift to move it.",
+    "step2Title": "Roll out when you're ready",
+    "step2Body": "Shifts stay private drafts until you roll them out. Then your staff get notified — and only then.",
+    "step3Title": "Staff can ask to swap",
+    "step3Body": "When someone can't make a shift they request cover here, and you approve or deny it. Same for time off.",
+    "step4Title": "That's the tour",
+    "step4Body": "Everything here is yours to break — it's a sandbox. Open My Shifts to see what your staff see.",
+    "next": "Next",
+    "back": "Back",
+    "skip": "Skip",
+    "done": "Got it"
   }
 }
