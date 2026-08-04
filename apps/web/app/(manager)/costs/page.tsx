@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useOrg } from "@/lib/orgContext"
 
 export default function CostsPage() {
+  const tToast = useTranslations("manager.toasts")
   const t = useTranslations("manager.costs")
   const { orgId } = useOrg()
   const [weekStart, setWeekStart] = useState<string>(getMondayOfWeek(new Date()))
@@ -39,13 +40,13 @@ export default function CostsPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Failed to load costs")
+          toast.error(tToast("costsLoadFailed"))
           setFetchedKey(`${orgId}__${weekStart}`)
         }
       })
 
     return () => { cancelled = true }
-  }, [weekStart, orgId])
+  }, [weekStart, orgId, tToast])
 
   const navigateWeek = (direction: -1 | 1) => setWeekStart((ws) => addDays(ws, direction * 7))
   const isCurrentWeek = getMondayOfWeek(new Date()) === weekStart

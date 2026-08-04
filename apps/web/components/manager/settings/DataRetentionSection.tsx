@@ -5,12 +5,14 @@ import { Archive } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { RETENTION } from "@/lib/cleanupConfig"
 import type { CleanupPreview } from "@/lib/cleanupConfig"
 import { SettingsSection } from "./SettingsSection"
 
 export function DataRetentionSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId } = useOrg()
   const [preview, setPreview] = useState<CleanupPreview | null>(null)
   const [previewing, setPreviewing] = useState(false)
@@ -25,7 +27,7 @@ export function DataRetentionSection() {
       const data = await r.json() as { data?: CleanupPreview }
       setPreview(data.data ?? null)
     } catch {
-      toast.error("Failed to load cleanup preview")
+      toast.error(tToast("cleanupPreviewFailed"))
     } finally {
       setPreviewing(false)
     }
@@ -38,9 +40,9 @@ export function DataRetentionSection() {
       const data = await r.json() as { data?: CleanupPreview }
       setDone(data.data ?? null)
       setPreview(null)
-      toast.success("Cleanup complete")
+      toast.success(tToast("cleanupComplete"))
     } catch {
-      toast.error("Cleanup failed")
+      toast.error(tToast("cleanupFailed"))
     } finally {
       setRunning(false)
     }

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 interface BugReportDialogProps {
   prefillError?: { message: string; stack?: string; component?: string; url?: string }
@@ -20,6 +21,7 @@ interface BugReportDialogProps {
 }
 
 export function BugReportDialog({ prefillError, defaultOpen = false, onClose }: BugReportDialogProps) {
+  const tToast = useTranslations("manager.toasts")
   const [open, setOpen] = useState(defaultOpen)
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
@@ -58,11 +60,11 @@ export function BugReportDialog({ prefillError, defaultOpen = false, onClose }: 
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error()
-      toast.success("Bug report sent — thanks!")
+      toast.success(tToast("bugReportSent"))
       setMessage("")
       handleOpenChange(false)
     } catch {
-      toast.error("Failed to send. Please try again.")
+      toast.error(tToast("bugReportFailed"))
     } finally {
       setSending(false)
     }

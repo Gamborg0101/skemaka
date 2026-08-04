@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Tooltip } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
@@ -18,6 +19,7 @@ type TeamMember = {
 }
 
 export function TeamAccessSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId } = useOrg()
   const [team, setTeam] = useState<TeamMember[]>([])
   const [inviteEmail, setInviteEmail] = useState("")
@@ -58,13 +60,13 @@ export function TeamAccessSection() {
       const r = await fetch(`/api/orgs/${orgId}/team/${member.userId}`, { method: "DELETE" })
       if (!r.ok) {
         setTeam((prev) => [...prev, member])
-        toast.error("Failed to revoke access")
+        toast.error(tToast("accessRevokeFailed"))
       } else {
         toast.success(`Manager access removed for ${member.email}`)
       }
     } catch {
       setTeam((prev) => [...prev, member])
-      toast.error("Failed to revoke access")
+      toast.error(tToast("accessRevokeFailed"))
     }
   }
 
