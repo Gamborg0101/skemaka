@@ -5,6 +5,8 @@ import { Plus, CalendarCheck, Thermometer } from "lucide-react"
 import type { AvailabilityRequest, Employee, AvailabilitySubmission, AvailabilityDay, Shift } from "@/types"
 import { getWeekDays, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useLocale } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 interface AvailabilityGridProps {
   request: AvailabilityRequest
@@ -13,7 +15,12 @@ interface AvailabilityGridProps {
   onBookShift: (employeeId: string, date: string, startTime: string | null, endTime: string | null) => void
 }
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+/** Short weekday names from Intl rather than a hardcoded English list — same
+ *  reasoning as WeekPicker.tsx's monthNames/dayHeaders. */
+function dayNames(localeTag: string): string[] {
+  const fmt = new Intl.DateTimeFormat(localeTag, { weekday: "short", timeZone: "UTC" })
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2024, 0, 1 + i))))
+}
 
 function DayCell({
   day,
@@ -90,6 +97,8 @@ function DayCell({
 }
 
 export function AvailabilityGrid({ request, employees, shifts, onBookShift }: AvailabilityGridProps) {
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const DAY_NAMES = dayNames(localeTag)
   const days = getWeekDays(request.weekStart)
   const submissions: AvailabilitySubmission[] = request.submissions ?? []
 
@@ -195,7 +204,7 @@ export function AvailabilityGrid({ request, employees, shifts, onBookShift }: Av
                 {DAY_NAMES[i]}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                {new Date(date + "T12:00:00").toLocaleDateString("en-GB", {
+                {new Date(date + "T12:00:00").toLocaleDateString(localeTag, {
                   day: "numeric",
                   month: "short",
                 })}

@@ -23,6 +23,7 @@ const RESPONSE_CLASSNAME: Record<ShiftOfferResponse, string> = {
 export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refreshToken: number }) {
   const t = useTranslations("manager.shiftOffers")
   const tCommon = useTranslations("common")
+  const tToasts = useTranslations("manager.toasts")
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const RESPONSE_STYLES: Record<ShiftOfferResponse, { label: string; className: string }> = {
     ACCEPTED: { label: t("responseAccepted"), className: RESPONSE_CLASSNAME.ACCEPTED },
@@ -59,11 +60,11 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
         body: JSON.stringify({ employeeId }),
       })
       const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? "Something went wrong")
-      toast.success("Shift confirmed — it's on the schedule")
+      if (!r.ok) throw new Error(res.error ?? tCommon("somethingWentWrong"))
+      toast.success(tToasts("offerConfirmed"))
       setOffers((prev) => prev.filter((o) => o.id !== offerId))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : tCommon("somethingWentWrong"))
     } finally {
       setBusyId(null)
     }
@@ -74,11 +75,11 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
     try {
       const r = await fetch(`/api/orgs/${orgId}/shift-offers/${offerId}/cancel`, { method: "POST" })
       const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? "Something went wrong")
-      toast.success("Offer cancelled")
+      if (!r.ok) throw new Error(res.error ?? tCommon("somethingWentWrong"))
+      toast.success(tToasts("offerCancelled"))
       setOffers((prev) => prev.filter((o) => o.id !== offerId))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : tCommon("somethingWentWrong"))
     } finally {
       setBusyId(null)
     }

@@ -15,8 +15,17 @@ import { cn } from "@/lib/utils"
 import { fetchAllPages } from "@/lib/pagination"
 import { getMondayOfWeek, addDays, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 type Tab = "PENDING" | "APPROVED" | "DENIED"
+
+const TAB_KEY: Record<Tab, "tabPending" | "tabApproved" | "tabDenied"> = {
+  PENDING: "tabPending", APPROVED: "tabApproved", DENIED: "tabDenied",
+}
+const EMPTY_KEY: Record<Tab, "emptyPending" | "emptyApproved" | "emptyDenied"> = {
+  PENDING: "emptyPending", APPROVED: "emptyApproved", DENIED: "emptyDenied",
+}
 
 const STATUS_STYLE: Record<Tab, string> = {
   PENDING:  "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300",
@@ -24,16 +33,20 @@ const STATUS_STYLE: Record<Tab, string> = {
   DENIED:   "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300",
 }
 
-function formatDateRange(start: string, end: string) {
+// The copy on this page is still English by design (deep manager screen, see
+// CLAUDE.md), but dates are not copy — a Danish org should read "3. aug." here
+// regardless, and hardcoding en-GB is the one thing the i18n rules call out
+// explicitly. The locale tag is threaded in from the component.
+function formatDateRange(start: string, end: string, localeTag: string) {
   const s = new Date(start + "T00:00:00Z")
   const e = new Date(end + "T00:00:00Z")
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }
-  if (start === end) return s.toLocaleDateString("en-GB", opts)
-  return `${s.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} – ${e.toLocaleDateString("en-GB", opts)}`
+  if (start === end) return s.toLocaleDateString(localeTag, opts)
+  return `${s.toLocaleDateString(localeTag, { day: "numeric", month: "short", timeZone: "UTC" })} – ${e.toLocaleDateString(localeTag, opts)}`
 }
 
-function formatDayHeading(iso: string) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {
+function formatDayHeading(iso: string, localeTag: string) {
+  return new Date(iso + "T12:00:00").toLocaleDateString(localeTag, {
     weekday: "long", day: "numeric", month: "long",
   })
 }
@@ -62,6 +75,9 @@ function getDaysInRange(startDate: string, endDate: string): string[] {
 
 export default function TimeOffPage() {
   const { orgId } = useOrg()
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const tt = useTranslations("manager.toasts")
+  const t = useTranslations("manager.timeOff")
   const tf = getOrgSettings().timeFormat
   const [tab, setTab] = useState<Tab>("PENDING")
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
@@ -101,12 +117,12 @@ export default function TimeOffPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Failed to load requests")
+          toast.error(tt("timeOffLoadFailed"))
           setFetchedOrgId(orgId)
         }
       })
     return () => { cancelled = true }
-  }, [orgId])
+  }, [orgId, tt])
 
   // Fetch shifts for a request's date range. Pure fetch — state updates happen
   // in the effect's promise callbacks below.
@@ -129,10 +145,10 @@ export default function TimeOffPage() {
     let cancelled = false
     fetchPreview(viewRequest)
       .then((shifts) => { if (!cancelled) setPreviewShifts(shifts) })
-      .catch(() => { if (!cancelled) toast.error("Failed to load schedule") })
+      .catch(() => { if (!cancelled) toast.error(tt("timeOffScheduleLoadFailed")) })
       .finally(() => { if (!cancelled) setPreviewLoading(false) })
     return () => { cancelled = true }
-  }, [viewRequest, fetchPreview])
+  }, [viewRequest, fetchPreview, tt])
 
   const tabs: Tab[] = ["PENDING", "APPROVED", "DENIED"]
   const filtered = requests.filter((r) => r.status === tab)
@@ -144,9 +160,9 @@ export default function TimeOffPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "APPROVED" }),
       })
-      if (!res.ok) { toast.error("Failed to approve"); throw new Error() }
+      if (!res.ok) { toast.error(tt("timeOffApproveFailed")); throw new Error() }
       const data = await res.json() as { data: TimeOffRequest }
-      toast.success("Request approved")
+      toast.success(tt("timeOffApproved"))
       return data.data
     })
   }
@@ -161,9 +177,9 @@ export default function TimeOffPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "DENIED", reviewNote: note }),
       })
-      if (!res.ok) { toast.error("Failed to deny"); throw new Error() }
+      if (!res.ok) { toast.error(tt("timeOffDenyFailed")); throw new Error() }
       const data = await res.json() as { data: TimeOffRequest }
-      toast.success("Request denied")
+      toast.success(tt("timeOffDenied"))
       return data.data
     })
   }
@@ -171,8 +187,8 @@ export default function TimeOffPage() {
   async function handleDelete(id: string) {
     await removeRequest(id, async () => {
       const res = await fetch(`/api/orgs/${orgId}/time-off/${id}`, { method: "DELETE" })
-      if (!res.ok) { toast.error("Failed to delete"); throw new Error() }
-      toast.success("Request deleted")
+      if (!res.ok) { toast.error(tt("timeOffDeleteFailed")); throw new Error() }
+      toast.success(tt("timeOffDeleted"))
     })
   }
 
@@ -180,30 +196,30 @@ export default function TimeOffPage() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="hidden md:flex items-center px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Time Off</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
       </div>
       <div className="md:hidden px-4 pt-6 pb-2">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Time Off</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-6">
-        {tabs.map((t) => (
+        {tabs.map((tabName) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabName}
+            onClick={() => setTab(tabName)}
             className={cn(
               "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-              tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              tab === tabName ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             )}
           >
-            {t.charAt(0) + t.slice(1).toLowerCase()}
+            {t(TAB_KEY[tabName])}
             <span className={cn(
               "text-xs px-1.5 py-px rounded-full font-semibold",
-              tab === t ? "bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+              tab === tabName ? "bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
             )}>
-              {requests.filter((r) => r.status === t).length}
+              {requests.filter((r) => r.status === tabName).length}
             </span>
           </button>
         ))}
@@ -235,7 +251,7 @@ export default function TimeOffPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-base font-medium">No {tab.toLowerCase()} requests</p>
+          <p className="text-base font-medium">{t(EMPTY_KEY[tab])}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -248,7 +264,7 @@ export default function TimeOffPage() {
                     <span className="text-xs text-gray-400 dark:text-gray-600">·</span>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{r.employee?.jobRole}</p>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{formatDateRange(r.startDate, r.endDate)}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{formatDateRange(r.startDate, r.endDate, localeTag)}</p>
                   {r.reason && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{r.reason}</p>}
                   {r.reviewNote && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Note: {r.reviewNote}</p>}
                 </div>
@@ -262,19 +278,15 @@ export default function TimeOffPage() {
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input
                     type="text"
-                    placeholder="Reason for denial (optional)"
+                    placeholder={t("denyReasonPlaceholder")}
                     value={reviewNote}
                     onChange={(e) => setReviewNote(e.target.value)}
                     autoFocus
                     className="flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="destructive" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => handleDeny(r.id)}>
-                      Confirm
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => setDenyId(null)}>
-                      Cancel
-                    </Button>
+                    <Button size="sm" variant="destructive" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => handleDeny(r.id)}>{t("confirm")}</Button>
+                    <Button size="sm" variant="ghost" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => setDenyId(null)}>{t("cancel")}</Button>
                   </div>
                 </div>
               )}
@@ -287,18 +299,14 @@ export default function TimeOffPage() {
                       className="h-11 sm:h-7 px-4 sm:px-2.5 bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => handleApprove(r.id)}
                     >
-                      <Check className="size-3.5 mr-1" />
-                      Approve
-                    </Button>
+                      <Check className="size-3.5 mr-1" />{t("approve")}</Button>
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-11 sm:h-7 px-4 sm:px-2.5 border-red-200 text-red-600 hover:bg-red-50"
                       onClick={() => handleDeny(r.id)}
                     >
-                      <X className="size-3.5 mr-1" />
-                      Deny
-                    </Button>
+                      <X className="size-3.5 mr-1" />{t("deny")}</Button>
                   </>
                 )}
                 {tab !== "PENDING" && (
@@ -308,9 +316,7 @@ export default function TimeOffPage() {
                     className="h-11 sm:h-7 px-4 sm:px-2.5 text-gray-400 hover:text-red-500"
                     onClick={() => handleDelete(r.id)}
                   >
-                    <Trash2 className="size-3.5 mr-1" />
-                    Delete
-                  </Button>
+                    <Trash2 className="size-3.5 mr-1" />{t("delete")}</Button>
                 )}
                 <Button
                   size="sm"
@@ -318,9 +324,7 @@ export default function TimeOffPage() {
                   className="h-11 sm:h-7 px-4 sm:px-2.5 text-gray-600 ml-auto"
                   onClick={() => setViewRequest(r)}
                 >
-                  <CalendarDays className="size-3.5 mr-1.5" />
-                  View schedule
-                </Button>
+                  <CalendarDays className="size-3.5 mr-1.5" />{t("viewSchedule")}</Button>
               </div>
             </div>
           ))}
@@ -333,7 +337,7 @@ export default function TimeOffPage() {
           <SheetHeader className="pb-2">
             <SheetTitle>{viewRequest?.employee?.name ?? "Schedule"}</SheetTitle>
             <SheetDescription>
-              {viewRequest ? formatDateRange(viewRequest.startDate, viewRequest.endDate) : ""}
+              {viewRequest ? formatDateRange(viewRequest.startDate, viewRequest.endDate, localeTag) : ""}
               {viewRequest?.reason ? ` · ${viewRequest.reason}` : ""}
             </SheetDescription>
           </SheetHeader>
@@ -357,10 +361,10 @@ export default function TimeOffPage() {
                 return (
                   <div key={day}>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                      {formatDayHeading(day)}
+                      {formatDayHeading(day, localeTag)}
                     </p>
                     {dayShifts.length === 0 ? (
-                      <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">No shifts scheduled</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">{t("noShiftsScheduled")}</p>
                     ) : (
                       <div className="space-y-1.5">
                         {dayShifts.map((shift) => {

@@ -83,19 +83,18 @@ function getWeekDays(weekStart: string): Date[] {
   });
 }
 
-/** Tooltip copy for the amber warning triangle on a scheduled cell. */
-function conflictTooltip(c: AvailabilityConflict, t: ReturnType<typeof useTranslations>): string {
-  switch (c.type) {
-    case "timeoff":
-      return t("conflictTimeoff");
-    case "unavailable":
-      return t("conflictUnavailable");
-    case "rest":
-      return t("conflictRest", { hours: c.hours });
-    case "longDay":
-      return t("conflictLongDay", { hours: c.hours });
-  }
-}
+/**
+ * Conflict tooltip copy is resolved inline at the call site rather than in a
+ * helper that takes the translator.
+ *
+ * `ReturnType<typeof useTranslations>` un-parameterised resolves to a union
+ * over every message key in the catalogue; once the manager namespace grew past
+ * ~270 keys TypeScript gave up with "Type instantiation is excessively deep".
+ * A compile error caused by adding *translations* is very hard to attribute
+ * after the fact, and narrowing the type instead trips contravariance because
+ * next-intl's translator only accepts its own literal keys. Same treatment as
+ * ShiftTimeline.
+ */
 
 function formatHeaderDate(date: Date, localeTag: string) {
   return date.toLocaleDateString(localeTag, { day: "numeric", month: "short" });
@@ -240,7 +239,15 @@ function DroppableCell({
       {coverBadge}
       {dayOffBadge}
       {conflict && conflict.type !== "unavailable" && !isEmpty && (
-        <Tooltip content={conflictTooltip(conflict, t)} side="top">
+        <Tooltip
+          content={
+            conflict.type === "timeoff" ? t("conflictTimeoff")
+            : conflict.type === "rest" ? t("conflictRest", { hours: conflict.hours })
+            : conflict.type === "longDay" ? t("conflictLongDay", { hours: conflict.hours })
+            : t("conflictUnavailable")
+          }
+          side="top"
+        >
           <span className="absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/60 cursor-help">
             <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-300" />
           </span>

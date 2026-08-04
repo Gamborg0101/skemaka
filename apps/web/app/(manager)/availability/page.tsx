@@ -8,6 +8,8 @@ import { AvailabilityGrid } from "@/components/manager/AvailabilityGrid"
 import { AddShiftDialog } from "@/components/manager/AddShiftDialog"
 import { SendAvailabilityDialog } from "@/components/manager/SendAvailabilityDialog"
 import { toast } from "sonner"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { useOrg } from "@/lib/orgContext"
 import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel } from "@/lib/dateUtils"
 import type { AvailabilityRequest, Employee, Shift, Schedule } from "@/types"
@@ -18,6 +20,8 @@ type AvailabilitySubmission = NonNullable<AvailabilityRequest["submissions"]>[nu
 
 export default function AvailabilityPage() {
   const { orgId, jobRoles, shiftTemplates } = useOrg()
+  const t = useTranslations("manager.toasts")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
 
   // All known requests — used only to look up whether a request exists for the current week
   const [allRequests, setAllRequests] = useState<AvailabilityRequest[]>([])
@@ -124,9 +128,9 @@ export default function AvailabilityPage() {
           const json = await r.json() as { data?: Schedule }
           sid = json.data?.id ?? null
           if (sid) setScheduleId(sid)
-          else { toast.error("Failed to get schedule"); return }
+          else { toast.error(t("availabilityGetScheduleFailed")); return }
         } catch {
-          toast.error("Failed to get schedule")
+          toast.error(t("availabilityGetScheduleFailed"))
           return
         }
       }
@@ -148,17 +152,17 @@ export default function AvailabilityPage() {
         const res = await r.json() as { data?: Shift }
         if (res.data) {
           setShifts((prev) => prev.map((s) => (s.id === tempId ? res.data! : s)))
-          toast.success("Shift booked")
+          toast.success(t("availabilityShiftBooked"))
         } else {
           setShifts((prev) => prev.filter((s) => s.id !== tempId))
-          toast.error("Failed to book shift")
+          toast.error(t("availabilityShiftBookFailed"))
         }
       } catch {
         setShifts((prev) => prev.filter((s) => s.id !== tempId))
-        toast.error("Failed to book shift")
+        toast.error(t("availabilityShiftBookFailed"))
       }
     },
-    [scheduleId, weekStart, orgId]
+    [scheduleId, weekStart, orgId, t]
   )
 
   const handleSendRequest = async (deadline: string) => {
@@ -171,7 +175,7 @@ export default function AvailabilityPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(json.error ?? "Failed to send availability request")
+        toast.error(json.error ?? t("availabilityRequestSendFailed"))
         return
       }
       const newReq: AvailabilityRequest = { ...json.data, submissions: [] }
@@ -180,16 +184,16 @@ export default function AvailabilityPage() {
       ))
       setRequest(newReq)
       setSendDialogOpen(false)
-      toast.success("Availability request sent to all active employees")
+      toast.success(t("availabilityRequestSent"))
     } catch {
-      toast.error("Failed to send availability request")
+      toast.error(t("availabilityRequestSendFailed"))
     } finally {
       setSending(false)
     }
   }
 
   const deadline = request
-    ? new Date(request.deadline).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
+    ? new Date(request.deadline).toLocaleDateString(localeTag, { weekday: "long", day: "numeric", month: "long" })
     : null
 
   return (

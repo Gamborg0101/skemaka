@@ -10,6 +10,8 @@ import {
   BadgeCheck,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import {
   Sheet,
   SheetContent,
@@ -37,10 +39,15 @@ import { isEmploymentType } from "@/types"
 import type { Employee, EmploymentType, JobRole } from "@/types"
 
 /** Employment-type label using the org's configured full-time / reduced hours. */
-function employmentTypeLabel(type: EmploymentType, fullTimeHours: number, reducedHours: number): string {
-  if (type === "FULL_TIME") return `Full Time (${fullTimeHours}h/week)`
-  if (type === "REDUCED_FULL_TIME") return `Reduced Full Time (${reducedHours}h/week)`
-  return "Part Time"
+function employmentTypeLabel(
+  t: ReturnType<typeof useTranslations<"manager.employment">>,
+  type: EmploymentType,
+  fullTimeHours: number,
+  reducedHours: number,
+): string {
+  if (type === "FULL_TIME") return t("fullTime", { hours: fullTimeHours })
+  if (type === "REDUCED_FULL_TIME") return t("reducedFullTime", { hours: reducedHours })
+  return t("partTime")
 }
 
 interface EmployeeDetailSheetProps {
@@ -53,8 +60,8 @@ interface EmployeeDetailSheetProps {
   initialMode?: "view" | "edit"
 }
 
-function formatDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString("en-GB", {
+function formatDate(isoDate: string, localeTag: string): string {
+  return new Date(isoDate).toLocaleDateString(localeTag, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -63,10 +70,15 @@ function formatDate(isoDate: string): string {
 
 // View label reflects the employee's own stored hours (not the org default), so
 // it stays accurate even if the org later changes what full-time means.
-function formatContractLabel(type: EmploymentType, contractedHours: number): string {
-  if (type === "FULL_TIME") return `Full Time (${contractedHours}h/week)`
-  if (type === "REDUCED_FULL_TIME") return `Reduced Full Time (${contractedHours}h/week)`
-  return `Part Time (${contractedHours}h/week)`
+function formatContractLabel(
+  t: ReturnType<typeof useTranslations<"manager.employment">>,
+  tDetail: ReturnType<typeof useTranslations<"manager.employeeDetail">>,
+  type: EmploymentType,
+  contractedHours: number,
+): string {
+  if (type === "FULL_TIME") return t("fullTime", { hours: contractedHours })
+  if (type === "REDUCED_FULL_TIME") return t("reducedFullTime", { hours: contractedHours })
+  return tDetail("contractPartTime", { hours: contractedHours })
 }
 
 // ── View mode ─────────────────────────────────────────────────────────────────
@@ -106,6 +118,13 @@ export function EmployeeDetailSheet({
 }: EmployeeDetailSheetProps) {
   const { org } = useOrg()
   const { fullTimeHours, reducedFullTimeHours } = getOrgSettings()
+  const t = useTranslations("manager.employeeDetail")
+  const tFields = useTranslations("manager.employeeFields")
+  const tEmployment = useTranslations("manager.employment")
+  const tEmployees = useTranslations("manager.employees")
+  const tToasts = useTranslations("manager.toasts")
+  const tCommon = useTranslations("common")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const [isEditing, setIsEditing] = useState(initialMode === "edit")
   const [sendingInvite, setSendingInvite] = useState(false)
 
@@ -117,9 +136,9 @@ export function EmployeeDetailSheet({
         method: "POST",
       })
       if (!r.ok) throw new Error("Failed")
-      toast.success(`Invite sent to ${employee.email}`)
+      toast.success(tToasts("inviteSent", { email: employee.email }))
     } catch {
-      toast.error("Failed to send invite")
+      toast.error(tToasts("inviteSendFailed"))
     } finally {
       setSendingInvite(false)
     }
@@ -234,7 +253,7 @@ export function EmployeeDetailSheet({
                       : "text-gray-500 text-xs"
                   }
                 >
-                  {employee.isActive ? "Active" : "Inactive"}
+                  {employee.isActive ? t("active") : t("inactive")}
                 </Badge>
               </div>
             </div>
@@ -245,7 +264,7 @@ export function EmployeeDetailSheet({
                 onClick={() => setIsEditing(true)}
                 className="shrink-0 mr-8"
               >
-                Edit
+                {t("editButton")}
               </Button>
             )}
           </div>
@@ -259,7 +278,7 @@ export function EmployeeDetailSheet({
             // ── Edit mode ────────────────────────────────────────────────────
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="edit-name">Name</Label>
+                <Label htmlFor="edit-name">{tFields("name")}</Label>
                 <Input
                   id="edit-name"
                   value={editName}
@@ -267,7 +286,7 @@ export function EmployeeDetailSheet({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-email">Email</Label>
+                <Label htmlFor="edit-email">{tFields("email")}</Label>
                 <Input
                   id="edit-email"
                   type="email"
@@ -276,20 +295,20 @@ export function EmployeeDetailSheet({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-phone">Phone (optional)</Label>
+                <Label htmlFor="edit-phone">{tFields("phoneOptional")}</Label>
                 <Input
                   id="edit-phone"
                   type="tel"
-                  placeholder="Not set"
+                  placeholder={tFields("phoneNotSet")}
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-role">Job Role</Label>
+                <Label htmlFor="edit-role">{tFields("jobRole")}</Label>
                 <Select value={editJobRole} onValueChange={(val) => setEditJobRole(val ?? "")}>
                   <SelectTrigger id="edit-role" className="w-full">
-                    <SelectValue placeholder="Select a role" />
+                    <SelectValue placeholder={tFields("jobRolePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {jobRoles.map((r) => (
@@ -301,7 +320,7 @@ export function EmployeeDetailSheet({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-wage">Hourly Wage ({getCurrencySymbol()})</Label>
+                <Label htmlFor="edit-wage">{tFields("hourlyWage", { symbol: getCurrencySymbol() })}</Label>
                 <Input
                   id="edit-wage"
                   type="number"
@@ -312,24 +331,24 @@ export function EmployeeDetailSheet({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-employment-type">Employment Type</Label>
+                <Label htmlFor="edit-employment-type">{tFields("employmentType")}</Label>
                 <Select
                   value={editEmploymentType}
                   onValueChange={(val) => { if (val && isEmploymentType(val)) setEditEmploymentType(val) }}
                 >
                   <SelectTrigger id="edit-employment-type" className="w-full">
-                    <SelectValue>{employmentTypeLabel(editEmploymentType, fullTimeHours, reducedFullTimeHours)}</SelectValue>
+                    <SelectValue>{employmentTypeLabel(tEmployment, editEmploymentType, fullTimeHours, reducedFullTimeHours)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="FULL_TIME">{employmentTypeLabel("FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
-                    <SelectItem value="REDUCED_FULL_TIME">{employmentTypeLabel("REDUCED_FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
-                    <SelectItem value="PART_TIME">Part Time</SelectItem>
+                    <SelectItem value="FULL_TIME">{employmentTypeLabel(tEmployment, "FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
+                    <SelectItem value="REDUCED_FULL_TIME">{employmentTypeLabel(tEmployment, "REDUCED_FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
+                    <SelectItem value="PART_TIME">{tEmployment("partTime")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {editEmploymentType === "PART_TIME" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-contracted-hours">Contracted Hours / week</Label>
+                  <Label htmlFor="edit-contracted-hours">{tFields("contractedHours")}</Label>
                   <Input
                     id="edit-contracted-hours"
                     type="number"
@@ -341,10 +360,10 @@ export function EmployeeDetailSheet({
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label htmlFor="edit-notes">Notes (optional)</Label>
+                <Label htmlFor="edit-notes">{tFields("notes")}</Label>
                 <Textarea
                   id="edit-notes"
-                  placeholder="Any notes about this employee..."
+                  placeholder={tFields("notesPlaceholder")}
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   className="min-h-[80px]"
@@ -354,7 +373,7 @@ export function EmployeeDetailSheet({
           ) : (
             // ── View mode ────────────────────────────────────────────────────
             <div className="space-y-4">
-              <InfoRow icon={Mail} label="Email">
+              <InfoRow icon={Mail} label={tFields("email")}>
                 <a
                   href={`mailto:${employee.email}`}
                   className="text-blue-600 hover:underline"
@@ -363,7 +382,7 @@ export function EmployeeDetailSheet({
                 </a>
               </InfoRow>
 
-              <InfoRow icon={Phone} label="Phone">
+              <InfoRow icon={Phone} label={tFields("phone")}>
                 {employee.phone ? (
                   <span className="inline-flex items-center gap-1.5">
                     <a href={`tel:${employee.phone}`} className="text-blue-600 hover:underline">
@@ -371,29 +390,29 @@ export function EmployeeDetailSheet({
                     </a>
                     {employee.phoneVerified && (
                       <span
-                        title="Confirmed by the employee via SMS"
+                        title={t("phoneVerifiedTitle")}
                         className="inline-flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700"
                       >
                         <BadgeCheck className="size-3" />
-                        Verified
+                        {t("phoneVerified")}
                       </span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-gray-400">Not set</span>
+                  <span className="text-gray-400">{tFields("phoneNotSet")}</span>
                 )}
               </InfoRow>
 
-              <InfoRow icon={Briefcase} label="Hourly rate">
-                <span>{formatCurrency(employee.hourlyWage, org?.currency)} / hour</span>
+              <InfoRow icon={Briefcase} label={t("hourlyRate")}>
+                <span>{formatCurrency(employee.hourlyWage, org?.currency)} {t("perHour")}</span>
               </InfoRow>
 
-              <InfoRow icon={Briefcase} label="Contract">
-                <span>{formatContractLabel(employee.employmentType, employee.contractedHours)}</span>
+              <InfoRow icon={Briefcase} label={t("contract")}>
+                <span>{formatContractLabel(tEmployment, t, employee.employmentType, employee.contractedHours)}</span>
               </InfoRow>
 
-              <InfoRow icon={Calendar} label="Member since">
-                <span>{formatDate(employee.createdAt)}</span>
+              <InfoRow icon={Calendar} label={t("memberSince")}>
+                <span>{formatDate(employee.createdAt, localeTag)}</span>
               </InfoRow>
 
               {employee.notes && (
@@ -401,7 +420,7 @@ export function EmployeeDetailSheet({
                   <Separator />
                   <div>
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-                      Notes
+                      {t("notesTitle")}
                     </p>
                     <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                       {employee.notes}
@@ -426,7 +445,7 @@ export function EmployeeDetailSheet({
                   className="w-full gap-2"
                 >
                   <Send className="size-3.5" />
-                  {sendingInvite ? "Sending…" : employee.inviteToken ? "Resend invite email" : "Send invite email"}
+                  {sendingInvite ? t("sendingInvite") : employee.inviteToken ? tEmployees("resendInviteTooltip") : t("sendInviteEmail")}
                 </Button>
               )}
             </div>
@@ -439,13 +458,13 @@ export function EmployeeDetailSheet({
             <Separator />
             <div className="px-6 py-4 flex justify-end gap-2">
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button
                 onClick={handleSave}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Save changes
+                {t("saveChanges")}
               </Button>
             </div>
           </>
