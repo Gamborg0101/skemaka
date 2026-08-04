@@ -57,9 +57,14 @@ apps/web/.playwright-mcp/
 test-results/
 playwright-report/
 
-# Ad-hoc QA / demo screenshots dropped at the repo root
-/demo-desktop.png
-/qa-*.png
+# Ad-hoc QA / demo / audit screenshots dropped at the repo root.
+# Browser tooling writes relative filenames into whatever CWD it inherits, which
+# is the repo root — so a `git add -A` sweeps them into an unrelated commit.
+# That has happened; keep this broad rather than naming each new prefix.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
 
 # Local agent/tooling state — never committed
 .codex/
