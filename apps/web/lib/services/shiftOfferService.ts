@@ -3,7 +3,7 @@ import { resolveRecipientLocale, recipientLocaleTag } from "@/lib/messages"
 import { getMondayOfWeek } from "@/lib/dateUtils"
 import { isValidDate, isValidTime, timesAreDifferent, isNonNegativeInt } from "@/lib/validate"
 import { getOrCreateSchedule } from "@/lib/services/scheduleService"
-import { sendShiftOfferEmail, sendShiftOfferResultEmail } from "@/lib/resend"
+import { sendShiftOfferEmail, sendShiftOfferResultEmail, type ShiftOfferOutcome } from "@/lib/resend"
 import { sendShiftOfferedSms, sendShiftOfferResultSms } from "@/lib/sms"
 import { sendPushToUsers } from "@/lib/push"
 import { getMessageTranslator } from "@/lib/messages"
@@ -350,7 +350,7 @@ export async function confirmOffer(
     select: { id: true, name: true, email: true, phone: true, smsConsentAt: true, locale: true, userId: true },
   })
   for (const emp of employees) {
-    notifyOfferResult(emp, emp.id === employeeId, {
+    notifyOfferResult(emp, emp.id === employeeId ? "won" : "filled", {
       orgName: org?.name ?? "", orgLocale: org?.locale, dateISO,
       startTime: offer.startTime, endTime: offer.endTime, jobRole: offer.jobRole,
     })
@@ -359,9 +359,15 @@ export async function confirmOffer(
   return serOffer(updated as unknown as OfferRow)
 }
 
+const PUSH_KEYS = {
+  won: { title: "push.shiftOfferWonTitle", body: "push.shiftOfferWonBody" },
+  filled: { title: "push.shiftOfferFilledTitle", body: "push.shiftOfferFilledBody" },
+  withdrawn: { title: "push.shiftOfferWithdrawnTitle", body: "push.shiftOfferWithdrawnBody" },
+} as const satisfies Record<ShiftOfferOutcome, { title: string; body: string }>
+
 function notifyOfferResult(
   emp: NotifyEmployee,
-  won: boolean,
+  outcome: ShiftOfferOutcome,
   ctx: {
     orgName: string; orgLocale: string | null | undefined; dateISO: string
     startTime: string; endTime: string; jobRole: string
@@ -375,23 +381,22 @@ function notifyOfferResult(
       to: emp.email, name: firstName, orgName: ctx.orgName,
       dateLabel: dayLabel(ctx.dateISO, locale),
       startTime: ctx.startTime, endTime: ctx.endTime, jobRole: ctx.jobRole,
-      won, locale,
+      outcome, locale,
     }))
   }
   if (emp.phone && emp.smsConsentAt) {
     notify(sendShiftOfferResultSms({
       to: emp.phone, name: firstName, orgName: ctx.orgName,
-      date: ctx.dateISO, startTime: ctx.startTime, endTime: ctx.endTime, won, locale,
+      date: ctx.dateISO, startTime: ctx.startTime, endTime: ctx.endTime, outcome, locale,
     }))
   }
   if (emp.userId) {
     const t = getMessageTranslator(locale, "sms")
     const when = dayLabel(ctx.dateISO, locale, { weekday: "short", month: "short" })
+    const keys = PUSH_KEYS[outcome]
     notify(sendPushToUsers([emp.userId], {
-      title: won ? t("push.shiftOfferWonTitle") : t("push.shiftOfferFilledTitle"),
-      body: won
-        ? t("push.shiftOfferWonBody", { orgName: ctx.orgName, when })
-        : t("push.shiftOfferFilledBody", { orgName: ctx.orgName, when }),
+      title: t(keys.title),
+      body: t(keys.body, { orgName: ctx.orgName, when }),
       url: "/portal",
     }))
   }
@@ -405,7 +410,10 @@ export async function cancelOffer(
 ): Promise<ShiftOffer> {
   const offer = await db.shiftOffer.findFirst({
     where: { id: offerId, organizationId: orgId },
-    select: { id: true, status: true },
+    select: {
+      id: true, status: true, date: true, startTime: true, endTime: true, jobRole: true,
+      recipients: { select: { employeeId: true, response: true } },
+    },
   })
   if (!offer) throw new ServiceError("Shift offer not found", "NOT_FOUND")
   if (offer.status !== "OPEN") throw new ServiceError("This offer is already resolved", "CONFLICT")
@@ -426,6 +434,28 @@ export async function cancelOffer(
     where: { id: offerId },
     include: OFFER_INCLUDE,
   })
+
+  // Notify everyone who had already accepted — the offer just vanishing from
+  // their list next time the portal loads is the bug this fixes. People who
+  // never responded or declined were never expecting this shift, so leave them be.
+  const acceptedIds = offer.recipients.filter((r) => r.response === "ACCEPTED").map((r) => r.employeeId)
+  if (acceptedIds.length > 0) {
+    const dateISO = offer.date.toISOString().slice(0, 10)
+    const [org, employees] = await Promise.all([
+      db.organization.findUnique({ where: { id: orgId }, select: { name: true, locale: true } }),
+      db.employee.findMany({
+        where: { id: { in: acceptedIds } },
+        select: { id: true, name: true, email: true, phone: true, smsConsentAt: true, locale: true, userId: true },
+      }),
+    ])
+    for (const emp of employees) {
+      notifyOfferResult(emp, "withdrawn", {
+        orgName: org?.name ?? "", orgLocale: org?.locale, dateISO,
+        startTime: offer.startTime, endTime: offer.endTime, jobRole: offer.jobRole,
+      })
+    }
+  }
+
   return serOffer(updated as unknown as OfferRow)
 }
 

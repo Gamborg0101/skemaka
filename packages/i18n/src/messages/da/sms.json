@@ -18,6 +18,7 @@
   "shiftOffered": "Hej {name}, du er blevet tilbudt en {jobRole}-vagt hos {orgName}: {when}. Åbn appen for at tage den.",
   "shiftOfferWon": "Hej {name}, du fik vagten hos {orgName} {when}. Den står nu på din vagtplan.",
   "shiftOfferFilled": "Hej {name}, vagten hos {orgName} {when} er blevet dækket af en anden. Tak fordi du tilbød dig.",
+  "shiftOfferWithdrawn": "Hej {name}, vagten hos {orgName} {when}, som du havde sagt ja til, er blevet trukket tilbage. Kontakt din leder, hvis du har spørgsmål.",
   "push": {
     "publishedTitle": "Din vagtplan er klar",
     "publishedBody": "{orgName} har udgivet vagtplanen for {week}. Tryk for at se dine vagter.",
@@ -30,6 +31,8 @@
     "shiftOfferWonTitle": "Du fik vagten",
     "shiftOfferWonBody": "{orgName} har bekræftet dig til vagten {when}. Tryk for at se den.",
     "shiftOfferFilledTitle": "Vagt dækket",
-    "shiftOfferFilledBody": "Vagten hos {orgName} {when} blev dækket af en anden."
+    "shiftOfferFilledBody": "Vagten hos {orgName} {when} blev dækket af en anden.",
+    "shiftOfferWithdrawnTitle": "Tilbud trukket tilbage",
+    "shiftOfferWithdrawnBody": "{orgName} har trukket vagten {when} tilbage, som du havde sagt ja til."
   }
 }
