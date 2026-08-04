@@ -79,6 +79,45 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("noShiftsHint")}</p>
           </div>
         ) : (
+        <>
+        {/* Mobile: stacked cards — the 5-column table doesn't fit under ~640px */}
+        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+          {costs.entries.map((entry) => (
+            <div key={entry.employee.id} className="px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-50 truncate">
+                    {entry.employee.name}
+                    <span className="text-gray-400 dark:text-gray-600 font-normal"> · </span>
+                    <span className="text-gray-500 dark:text-gray-400 font-normal">{entry.employee.jobRole}</span>
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">
+                    {t("colHours")}: {formatHours(entry.totalHours)}
+                    <span className="text-gray-300 dark:text-gray-700"> · </span>
+                    {t("colRatePerHr")}: {formatCurrency(entry.employee.hourlyWage)}
+                  </p>
+                </div>
+                <p className="shrink-0 text-base font-bold tabular-nums text-gray-900 dark:text-gray-50">
+                  {formatCurrency(entry.totalCost)}
+                </p>
+              </div>
+            </div>
+          ))}
+          <div className="px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700">
+            <div>
+              <p className="font-bold text-sm text-gray-900 dark:text-gray-50">{t("totals")}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 tabular-nums mt-0.5">
+                {t("colHours")}: {formatHours(costs.totalHours)}
+              </p>
+            </div>
+            <p className="text-base font-bold tabular-nums text-gray-900 dark:text-gray-50">
+              {formatCurrency(costs.totalCost)}
+            </p>
+          </div>
+        </div>
+
+        {/* Desktop / tablet: full table */}
+        <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -121,6 +160,8 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
             </TableRow>
           </TableFooter>
         </Table>
+        </div>
+        </>
         )}
       </div>
     </div>
