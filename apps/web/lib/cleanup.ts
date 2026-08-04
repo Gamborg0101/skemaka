@@ -85,6 +85,25 @@ export async function cleanupDemoSandboxes(): Promise<{ orgs: number; users: num
   return { orgs, users }
 }
 
+/**
+ * Deletes ONE sandbox on demand — the "Reset demo" affordance, as opposed to
+ * the TTL sweep above.
+ *
+ * Guarded on `isDemo` so this can never be pointed at a real organization even
+ * if the caller gets the id wrong: a reset that deletes a paying customer's org
+ * is not a bug anyone recovers from. Org data cascades; the demo user is
+ * removed separately once it has no memberships left, exactly as the TTL sweep
+ * does it.
+ */
+export async function deleteDemoSandbox(orgId: string): Promise<boolean> {
+  const { count } = await db.organization.deleteMany({ where: { id: orgId, isDemo: true } })
+  if (count === 0) return false
+  await db.user.deleteMany({
+    where: { email: { endsWith: `@${DEMO_EMAIL_DOMAIN}` }, memberships: { none: {} } },
+  })
+  return true
+}
+
 export async function runGlobalCleanup(): Promise<CleanupResult> {
   const demo = await cleanupDemoSandboxes()
 
