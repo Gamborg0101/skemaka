@@ -71,16 +71,16 @@ function toMinutes(time: string): number {
 }
 
 /** Tooltip copy for the amber warning triangle on a scheduled row. */
-function conflictTooltip(c: AvailabilityConflict): string {
+function conflictTooltip(c: AvailabilityConflict, t: ReturnType<typeof useTranslations>): string {
   switch (c.type) {
     case "timeoff":
-      return "Scheduled during approved time off"
+      return t("conflictTimeoff")
     case "unavailable":
-      return "Scheduled on a day they marked unavailable"
+      return t("conflictUnavailable")
     case "rest":
-      return `Only ${c.hours}h rest since their previous shift — the rules say at least 11`
+      return t("conflictRest", { hours: c.hours })
     case "longDay":
-      return `${c.hours}h working day — the rules cap a day at 13 hours`
+      return t("conflictLongDay", { hours: c.hours })
   }
 }
 
@@ -134,6 +134,7 @@ interface ChipProps {
 }
 
 function EmployeeChip({ employee, missing, over, scheduled, contracted, isOverlay = false }: ChipProps) {
+  const t = useTranslations("manager.schedule")
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `chip-${employee.id}`,
     data: { type: "chip", employee },
@@ -157,10 +158,10 @@ function EmployeeChip({ employee, missing, over, scheduled, contracted, isOverla
   // to a non-technical manager without it.
   const badgeTooltip =
     over > 0
-      ? `${scheduled.toFixed(0)}h scheduled — ${over.toFixed(0)}h over their ${contracted}h contract`
+      ? t("badgeOver", { scheduled: scheduled.toFixed(0), over: over.toFixed(0), contracted })
       : missing > 0
-      ? `${scheduled.toFixed(0)}h scheduled — ${missing.toFixed(0)}h short of their ${contracted}h contract`
-      : `${scheduled.toFixed(0)}h scheduled — right on their ${contracted}h contract`
+      ? t("badgeUnder", { scheduled: scheduled.toFixed(0), missing: missing.toFixed(0), contracted })
+      : t("badgeMet", { scheduled: scheduled.toFixed(0), contracted })
 
   return (
     <div
@@ -182,8 +183,8 @@ function EmployeeChip({ employee, missing, over, scheduled, contracted, isOverla
         <div className="flex items-center gap-1">
           <p className="text-xs font-semibold leading-tight truncate text-gray-900 dark:text-gray-100">{employee.name}</p>
           {!employee.userId && (
-            <Tooltip content="Has not confirmed their email yet" side="top">
-              <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+            <Tooltip content={t("emailUnconfirmed")} side="top">
+              <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label={t("emailUnconfirmed")} />
             </Tooltip>
           )}
         </div>
@@ -227,6 +228,7 @@ function TimelineRow({
   startHour, endHour, totalMinutes, hourMarkers,
   hoverSnap, onShiftClick, onRowClick, onShiftResize,
 }: RowProps) {
+  const t = useTranslations("manager.schedule")
   const isEmpty = shifts.length === 0
   const canDrop = !isClosed && draggingEmpScheduledHere === false
   const tf = getOrgSettings().timeFormat
@@ -306,24 +308,24 @@ function TimelineRow({
           <div className="flex items-center gap-1">
             <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{employee.name}</p>
             {!employee.userId && (
-              <Tooltip content="Has not confirmed their email yet" side="right">
-                <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+              <Tooltip content={t("emailUnconfirmed")} side="right">
+                <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label={t("emailUnconfirmed")} />
               </Tooltip>
             )}
             {conflict && !isEmpty && (
-              <Tooltip content={conflictTooltip(conflict)} side="right">
-                <AlertTriangle className="size-3 shrink-0 text-amber-500 cursor-help" aria-label="Availability conflict" />
+              <Tooltip content={conflictTooltip(conflict, t)} side="right">
+                <AlertTriangle className="size-3 shrink-0 text-amber-500 cursor-help" aria-label={t("availabilityConflict")} />
               </Tooltip>
             )}
           </div>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{employee.jobRole}</p>
         </div>
         {isEmpty && !isClosed && (
-          <Tooltip content="Add shift" side="right">
+          <Tooltip content={t("addShift")} side="right">
             <button
               onClick={() => onRowClick(employee.id, date)}
               className="shrink-0 size-8 sm:size-5 rounded-full bg-blue-100 dark:bg-gray-700/60 text-blue-500 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-gray-100 flex items-center justify-center transition-colors ml-1"
-              aria-label={`Add shift for ${employee.name}`}
+              aria-label={t("addShiftFor", { name: employee.name })}
             >
               <Plus className="size-4 sm:size-3" />
             </button>
@@ -401,7 +403,7 @@ function TimelineRow({
                     )
               )}
               style={{ left: `${left}%`, width: `${width}%` }}
-              title={isCancelled ? `${employee.name} · Cancelled` : `${employee.name} · ${startTime}–${endTime}`}
+              title={isCancelled ? t("cancelledTitle", { name: employee.name }) : t("shiftTitle", { name: employee.name, start: startTime, end: endTime })}
             >
               {!isSick && width > 6 && (
                 <span className={cn(
@@ -421,7 +423,7 @@ function TimelineRow({
                     onPointerDown={(e) => startResize(e, shift, "start")}
                     onClick={(e) => e.stopPropagation()}
                     className="absolute inset-y-0 left-0 w-3 cursor-ew-resize flex items-center justify-center touch-none"
-                    aria-label="Drag to change start time"
+                    aria-label={t("dragStartHandle")}
                   >
                     <span className="h-5 w-1 rounded-full bg-white/50 group-hover:bg-white/90 shadow-sm ring-1 ring-black/5 group-hover:h-6 transition-all" />
                   </span>
@@ -429,7 +431,7 @@ function TimelineRow({
                     onPointerDown={(e) => startResize(e, shift, "end")}
                     onClick={(e) => e.stopPropagation()}
                     className="absolute inset-y-0 right-0 w-3 cursor-ew-resize flex items-center justify-center touch-none"
-                    aria-label="Drag to change end time"
+                    aria-label={t("dragEndHandle")}
                   >
                     <span className="h-5 w-1 rounded-full bg-white/50 group-hover:bg-white/90 shadow-sm ring-1 ring-black/5 group-hover:h-6 transition-all" />
                   </span>
@@ -453,7 +455,7 @@ function TimelineRow({
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-xs font-semibold text-blue-700 dark:text-gray-200 bg-blue-100 dark:bg-gray-700/60 border border-blue-300 dark:border-gray-600 px-2.5 py-1 rounded-full shadow-sm">
-                  Drop to schedule
+                  {t("dropToSchedule")}
                 </span>
               </div>
             )}
@@ -463,7 +465,7 @@ function TimelineRow({
         {isOver && draggingEmpScheduledHere && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 border border-red-200 dark:border-red-800 px-2.5 py-1 rounded-full shadow-sm">
-              Already has a shift
+              {t("alreadyHasShift")}
             </span>
           </div>
         )}
@@ -763,18 +765,18 @@ export function ShiftTimeline({
         <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-              Drag a name onto a day to add a shift
+              {t("dragHint")}
             </p>
             {/* Legend — explains the hours badge colours */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400 dark:text-gray-500">
               <span className="inline-flex items-center gap-1">
-                <span className="size-2 rounded-full bg-green-400" /> Hours met
+                <span className="size-2 rounded-full bg-green-400" /> {t("legendHoursMet")}
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="size-2 rounded-full bg-amber-400" /> Under contract
+                <span className="size-2 rounded-full bg-amber-400" /> {t("legendUnderContract")}
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="size-2 rounded-full bg-orange-400" /> Over contract
+                <span className="size-2 rounded-full bg-orange-400" /> {t("legendOverContract")}
               </span>
             </div>
           </div>

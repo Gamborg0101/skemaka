@@ -169,7 +169,19 @@ export interface BuildDemoPlanOptions {
 
 // ── Cast ──────────────────────────────────────────────────────────────────────
 
-const ROLES = { kitchen: "Kitchen", foh: "Front of house", bar: "Bar" } as const
+/**
+ * Job roles are seeded *data*, not UI copy, so next-intl never touches them —
+ * which meant a Danish sandbox showed "Kitchen" / "Front of house" / "Bar" on
+ * every single shift card, on the flagship screen, surrounded by otherwise
+ * fluent Danish. They have to be localized at the point they are created.
+ * `roleColor` and the invariants key off these same values, so keep them the
+ * single source for a plan's role names.
+ */
+function rolesFor(locale: DemoLocale) {
+  return locale === "da"
+    ? { kitchen: "Køkken", foh: "Servering", bar: "Bar" }
+    : { kitchen: "Kitchen", foh: "Front of house", bar: "Bar" }
+}
 
 /** Index layout: 0–3 Kitchen (0 = head chef), 4–6 Front of house, 7–8 Bar. */
 interface CastMember {
@@ -179,7 +191,7 @@ interface CastMember {
 }
 
 function cast(locale: DemoLocale): CastMember[] {
-  const k = ROLES.kitchen, f = ROLES.foh, b = ROLES.bar
+  const { kitchen: k, foh: f, bar: b } = rolesFor(locale)
   if (locale === "da") {
     return [
       { name: "Mads Jensen", jobRole: k, wage: 139 },
@@ -317,6 +329,7 @@ export function buildDemoPlan({ locale, now = new Date(), newId }: BuildDemoPlan
   const suffix = nextId().slice(0, 8)
   const people = cast(locale)
   const isDa = locale === "da"
+  const ROLES = rolesFor(locale)
 
   const monday0 = getMondayOfWeek(now)
 

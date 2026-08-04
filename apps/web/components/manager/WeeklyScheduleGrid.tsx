@@ -13,6 +13,8 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useLocale, useTranslations } from "next-intl";
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n";
 import { cn } from "@/lib/utils";
 import { todayISO } from "@/lib/dateUtils";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -81,24 +83,26 @@ function getWeekDays(weekStart: string): Date[] {
   });
 }
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 /** Tooltip copy for the amber warning triangle on a scheduled cell. */
-function conflictTooltip(c: AvailabilityConflict): string {
+function conflictTooltip(c: AvailabilityConflict, t: ReturnType<typeof useTranslations>): string {
   switch (c.type) {
     case "timeoff":
-      return "Scheduled during approved time off";
+      return t("conflictTimeoff");
     case "unavailable":
-      return "Scheduled on a day they marked unavailable";
+      return t("conflictUnavailable");
     case "rest":
-      return `Only ${c.hours}h rest since their previous shift — the rules say at least 11`;
+      return t("conflictRest", { hours: c.hours });
     case "longDay":
-      return `${c.hours}h working day — the rules cap a day at 13 hours`;
+      return t("conflictLongDay", { hours: c.hours });
   }
 }
 
-function formatHeaderDate(date: Date) {
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+function formatHeaderDate(date: Date, localeTag: string) {
+  return date.toLocaleDateString(localeTag, { day: "numeric", month: "short" });
+}
+
+function formatDayName(date: Date, localeTag: string) {
+  return date.toLocaleDateString(localeTag, { weekday: "short" });
 }
 
 // Local date components, never toISOString() — east of Greenwich the UTC date
@@ -144,6 +148,7 @@ function DroppableCell({
   onAddClick,
   onShiftClick,
 }: DroppableCellProps) {
+  const t = useTranslations("manager.schedule");
   const { setNodeRef, isOver } = useDroppable({ id: cellId });
 
   const isEmpty = shifts.length === 0;
@@ -160,7 +165,7 @@ function DroppableCell({
         coverRole === "source" ? "bg-amber-500" : "bg-green-600",
       )}
     >
-      {coverRole === "source" ? "Giving up" : "Would cover"}
+      {coverRole === "source" ? t("coverGivingUp") : t("coverWouldCover")}
     </span>
   );
 
@@ -170,7 +175,7 @@ function DroppableCell({
   const isUnavailable = conflict?.type === "unavailable";
   const dayOffBadge = isUnavailable && (
     <span className="inline-block mb-1 rounded px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide bg-rose-100 text-rose-600 dark:bg-rose-900/60 dark:text-rose-300 select-none">
-      Day Off
+      {t("unavailableBadge")}
     </span>
   );
 
@@ -186,7 +191,7 @@ function DroppableCell({
       >
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300 dark:text-gray-600 select-none">
-            Closed
+            {t("closed")}
           </span>
         </div>
       </div>
@@ -202,7 +207,7 @@ function DroppableCell({
         {coverBadge}
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 dark:text-rose-700 select-none">
-            Time Off
+            {t("timeOffBadge")}
           </span>
         </div>
       </div>
@@ -235,7 +240,7 @@ function DroppableCell({
       {coverBadge}
       {dayOffBadge}
       {conflict && conflict.type !== "unavailable" && !isEmpty && (
-        <Tooltip content={conflictTooltip(conflict)} side="top">
+        <Tooltip content={conflictTooltip(conflict, t)} side="top">
           <span className="absolute top-1 right-1 z-10 flex size-4 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/60 cursor-help">
             <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-300" />
           </span>
@@ -255,14 +260,14 @@ function DroppableCell({
       {/* Action button — only shown on empty cells. Sick day lives inside Add shift. */}
       {isEmpty && (
         <div className="absolute bottom-1 right-1 hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Tooltip content="Add shift" side="top">
+          <Tooltip content={t("addShift")} side="top">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onAddClick(employeeId, date);
               }}
               className="size-5 rounded-full bg-blue-100 dark:bg-gray-700/60 text-blue-600 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-gray-700 flex items-center justify-center"
-              aria-label="Add shift"
+              aria-label={t("addShift")}
             >
               <Plus className="size-3" />
             </button>
@@ -291,6 +296,8 @@ export function WeeklyScheduleGrid({
   onShiftCancel,
   onMarkSick,
 }: WeeklyScheduleGridProps) {
+  const t = useTranslations("manager.schedule");
+  const localeTag = LOCALE_TAGS[useLocale() as Locale];
   const [addDialog, setAddDialog] = useState<{
     open: boolean;
     employeeId: string;
@@ -456,7 +463,7 @@ export function WeeklyScheduleGrid({
                             : "text-gray-500 dark:text-gray-400",
                     )}
                   >
-                    {DAY_NAMES[i]}
+                    {formatDayName(day, localeTag)}
                   </span>
                   <span
                     className={cn(
@@ -504,8 +511,8 @@ export function WeeklyScheduleGrid({
                           {employee.name}
                         </p>
                         {!employee.userId && (
-                          <Tooltip content="Has not confirmed their email yet" side="top">
-                            <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+                          <Tooltip content={t("emailUnconfirmed")} side="top">
+                            <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label={t("emailUnconfirmed")} />
                           </Tooltip>
                         )}
                       </div>
@@ -518,7 +525,7 @@ export function WeeklyScheduleGrid({
                           if (over > 0)
                             return (
                               <Tooltip
-                                content={`${over.toFixed(1)}h over contracted hours this week`}
+                                content={t("overWeeklyTooltip", { over: over.toFixed(1) })}
                                 side="right"
                               >
                                 <p className="text-xs mt-0.5 text-orange-500 cursor-default w-fit">
@@ -532,8 +539,8 @@ export function WeeklyScheduleGrid({
                           const pct = scheduled / contracted;
                           const label =
                             pct >= 1
-                              ? "Fully scheduled this week"
-                              : `${Math.round(pct * 100)}% of contracted hours scheduled`;
+                              ? t("fullyScheduled")
+                              : t("pctScheduled", { pct: Math.round(pct * 100) });
                           return (
                             <Tooltip content={label} side="right">
                               <p
@@ -547,11 +554,11 @@ export function WeeklyScheduleGrid({
                     </div>
                     {!isClosed && !isTimeOff && (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Tooltip content="Add shift" side="top">
+                        <Tooltip content={t("addShift")} side="top">
                           <button
                             onClick={() => openAddDialog(employee.id, date)}
                             className="size-10 rounded-full bg-blue-50 dark:bg-gray-800/60 text-blue-600 hover:bg-blue-100 dark:hover:bg-gray-700/50 flex items-center justify-center transition-colors"
-                            aria-label={`Add shift for ${employee.name}`}
+                            aria-label={t("addShiftFor", { name: employee.name })}
                           >
                             <Plus className="size-4" />
                           </button>
@@ -561,17 +568,17 @@ export function WeeklyScheduleGrid({
                   </div>
                   {isClosed && (
                     <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-gray-300 dark:text-gray-600">
-                      Closed
+                      {t("closed")}
                     </p>
                   )}
                   {isTimeOff && !isClosed && (
                     <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-300 dark:text-rose-600">
-                      Time Off
+                      {t("timeOffBadge")}
                     </p>
                   )}
                   {isUnavailable && !isClosed && !isTimeOff && (
                     <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-rose-400 dark:text-rose-500">
-                      Day Off
+                      {t("unavailableBadge")}
                     </p>
                   )}
                   {cellShifts.length > 0 && (
@@ -605,7 +612,7 @@ export function WeeklyScheduleGrid({
             {/* Header row */}
             <div className="sticky left-0 z-10 bg-gray-100 dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 px-3 py-2.5 flex items-center justify-between gap-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Employee
+                {t("employee")}
               </span>
             </div>
             {days.map((day, di) => {
@@ -638,7 +645,7 @@ export function WeeklyScheduleGrid({
                               : "text-gray-600 dark:text-gray-400",
                       )}
                     >
-                      {DAY_NAMES[di]}
+                      {formatDayName(day, localeTag)}
                     </p>
                     <p
                       className={cn(
@@ -652,11 +659,11 @@ export function WeeklyScheduleGrid({
                               : "text-gray-800 dark:text-gray-200",
                       )}
                     >
-                      {formatHeaderDate(day)}
+                      {formatHeaderDate(day, localeTag)}
                     </p>
                     {isClosed && (
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-0.5">
-                        Closed
+                        {t("closed")}
                       </p>
                     )}
                   </div>
@@ -672,8 +679,8 @@ export function WeeklyScheduleGrid({
                       {employee.name}
                     </p>
                     {!employee.userId && (
-                      <Tooltip content="Has not confirmed their email yet" side="top">
-                        <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label="Has not confirmed their email yet" />
+                      <Tooltip content={t("emailUnconfirmed")} side="top">
+                        <span className="size-1.5 shrink-0 rounded-full bg-red-500 cursor-help" aria-label={t("emailUnconfirmed")} />
                       </Tooltip>
                     )}
                   </div>
