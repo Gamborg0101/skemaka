@@ -41,7 +41,7 @@
     "draft": "Kladde",
     "rollOut": "Udrul",
     "hintBold": "Byg din første vagtplan.",
-    "hintRest": "Klik på en tom celle i gitteret for at tilføje en vagt.",
+    "hintRest": "Udfyld den med ét klik, eller klik på en tom celle for selv at tilføje en vagt.",
     "dismiss": "Afvis",
     "noEmployees": "Ingen medarbejdere endnu",
     "noEmployeesHint": "Tilføj din første medarbejder for at begynde på vagtplanen.",
@@ -77,7 +77,10 @@
     "fullyScheduled": "Fuldt planlagt denne uge",
     "pctScheduled": "{pct}% af de aftalte timer planlagt",
     "offerShift": "Tilbyd vagt",
-    "breakMinutes": "{n}m pause"
+    "breakMinutes": "{n}m pause",
+    "fillWeek": "Udfyld ugen",
+    "fillingWeek": "Udfylder…",
+    "copyLastWeek": "Kopiér sidste uge"
   },
   "coverRequests": {
     "title": "Dækningsanmodninger",
