@@ -52,6 +52,7 @@ export default function SchedulePage() {
   const {
     schedule, loading, employees, approvedTimeOff, getConflict,
     reloadSchedule, handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleShiftCancel, handleMarkSick,
+    generating, generateWeek,
   } = useScheduleData(orgId, weekStart)
 
   // A schedule is created lazily (on first shift add), so it can be null even
@@ -374,13 +375,36 @@ export default function SchedulePage() {
               <span className="font-semibold">{t("hintBold")}</span>{" "}
               {t("hintRest")}
             </span>
-            <button
-              onClick={() => setHintDismissed(true)}
-              aria-label={t("dismiss")}
-              className="shrink-0 text-blue-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-            >
-              <X className="size-4" />
-            </button>
+            {/* The one-click fill was fully built — route, service, and
+                useScheduleData.generateWeek — but no component ever called it,
+                so a manager staring at an empty grid had no way to reach it.
+                This hint is exactly where it belongs. */}
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                size="sm"
+                disabled={generating}
+                onClick={() => generateWeek("starter")}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {generating ? t("fillingWeek") : t("fillWeek")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={generating}
+                onClick={() => generateWeek("copyPrevious")}
+                className="hidden sm:inline-flex"
+              >
+                {t("copyLastWeek")}
+              </Button>
+              <button
+                onClick={() => setHintDismissed(true)}
+                aria-label={t("dismiss")}
+                className="shrink-0 text-blue-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
         )}
         {loading ? (
