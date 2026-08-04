@@ -328,6 +328,9 @@ export async function sendShiftOfferEmail({
   })
 }
 
+/** Outcome of an offer for a given recipient: won it, lost it to someone else, or the manager withdrew it entirely. */
+export type ShiftOfferOutcome = "won" | "filled" | "withdrawn"
+
 interface ShiftOfferResultEmailOptions {
   to: string
   name: string
@@ -336,16 +339,23 @@ interface ShiftOfferResultEmailOptions {
   startTime: string
   endTime: string
   jobRole: string
-  won: boolean
+  outcome: ShiftOfferOutcome
   locale?: Locale
 }
 
-/** Sent after a manager confirms: "you got it" to the winner, "filled" to others. */
+const SHIFT_OFFER_RESULT_KEY: Record<ShiftOfferOutcome, "shiftOfferWon" | "shiftOfferFilled" | "shiftOfferWithdrawn"> = {
+  won: "shiftOfferWon",
+  filled: "shiftOfferFilled",
+  withdrawn: "shiftOfferWithdrawn",
+}
+
+/** Sent after an offer resolves: "you got it" to the winner, "filled" to other accepters, "withdrawn" if the manager cancelled it. */
 export async function sendShiftOfferResultEmail({
-  to, name, orgName, dateLabel, startTime, endTime, jobRole, won, locale = "en",
+  to, name, orgName, dateLabel, startTime, endTime, jobRole, outcome, locale = "en",
 }: ShiftOfferResultEmailOptions) {
   const t = getMessageTranslator(locale, "emails")
-  const key = won ? "shiftOfferWon" : "shiftOfferFilled"
+  const key = SHIFT_OFFER_RESULT_KEY[outcome]
+  const won = outcome === "won"
   return deliver({
     from: emailFrom(),
     to,

@@ -54,6 +54,11 @@
     "intro": "The shift at <strong>{orgName}</strong> you offered to take has been filled by someone else.",
     "footer": "Thanks for offering to help out."
   },
+  "shiftOfferWithdrawn": {
+    "subject": "The shift on {date} has been withdrawn — {orgName}",
+    "intro": "The shift at <strong>{orgName}</strong> you'd accepted has been withdrawn by your manager — you no longer need to come in for it.",
+    "footer": "Contact your manager if you have questions."
+  },
   "rolledOut": {
     "subject": "New shifts in Skemaka",
     "body": "<strong>{orgName}</strong> just rolled out the schedule for <strong>{period}</strong>. Open Skemaka to see your shifts.",
