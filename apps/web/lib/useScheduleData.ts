@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { Employee, Schedule, TimeOffRequest } from "@/types";
 import { useShiftMutations } from "@/lib/useShiftMutations";
 import { fetchAllPages } from "@/lib/pagination";
@@ -19,6 +20,7 @@ export type AvailabilityConflict =
   | { type: "longDay"; hours: number };
 
 export function useScheduleData(orgId: string, weekStart: string) {
+  const t = useTranslations("manager.toasts");
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [publishing, setPublishing] = useState(false);
@@ -51,8 +53,8 @@ export function useScheduleData(orgId: string, weekStart: string) {
         if (i < 2) await new Promise((res) => setTimeout(res, 1000 * (i + 1)));
       }
     }
-    toast.error("Failed to load employees");
-  }, [orgId]);
+    toast.error(t("employeesLoadFailed"));
+  }, [orgId, t]);
 
   useEffect(() => {
     loadEmployees();
@@ -112,14 +114,14 @@ export function useScheduleData(orgId: string, weekStart: string) {
         if (!cancelled) {
           setLoadError(true);
           setFetchedKey(`${orgId}__${weekStart}`);
-          toast.error("Failed to load schedule");
+          toast.error(t("scheduleLoadFailed"));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [weekStart, orgId, reloadNonce]);
+  }, [weekStart, orgId, reloadNonce, t]);
 
   // Lazily creates the schedule for a week on first shift add. Returns the
   // schedule (existing or newly created) so callers can immediately use its id.
@@ -207,17 +209,17 @@ export function useScheduleData(orgId: string, weekStart: string) {
         const res = (await r.json()) as { data?: Schedule; error?: string };
         if (res.data) {
           setSchedule(res.data);
-          toast.success(mode === "copyPrevious" ? "Copied last week's schedule" : "Starter schedule created");
+          toast.success(mode === "copyPrevious" ? t("scheduleCopiedLastWeek") : t("scheduleStarterCreated"));
         } else {
-          toast.error(res.error ?? "Failed to generate schedule");
+          toast.error(res.error ?? t("scheduleGenerateFailed"));
         }
       } catch {
-        toast.error("Failed to generate schedule");
+        toast.error(t("scheduleGenerateFailed"));
       } finally {
         setGenerating(false);
       }
     },
-    [orgId, weekStart],
+    [orgId, weekStart, t],
   );
 
   const handlePublish = async () => {
@@ -237,14 +239,14 @@ export function useScheduleData(orgId: string, weekStart: string) {
         const n = res.notified ?? 0;
         toast.success(
           n > 0
-            ? `Schedule rolled out — ${n} ${n === 1 ? "person" : "people"} notified`
-            : "Schedule rolled out — your team can see it now",
+            ? t("scheduleRolledOutCount", { n })
+            : t("scheduleRolledOutNoOne"),
         );
       } else {
-        toast.error(res.error ?? "Failed to roll out schedule");
+        toast.error(res.error ?? t("scheduleRollOutFailed"));
       }
     } catch {
-      toast.error("Failed to roll out schedule");
+      toast.error(t("scheduleRollOutFailed"));
     } finally {
       setPublishing(false);
     }

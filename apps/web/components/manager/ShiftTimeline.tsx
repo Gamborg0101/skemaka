@@ -72,19 +72,18 @@ function toMinutes(time: string): number {
   return h * 60 + m
 }
 
-/** Tooltip copy for the amber warning triangle on a scheduled row. */
-function conflictTooltip(c: AvailabilityConflict, t: ReturnType<typeof useTranslations>): string {
-  switch (c.type) {
-    case "timeoff":
-      return t("conflictTimeoff")
-    case "unavailable":
-      return t("conflictUnavailable")
-    case "rest":
-      return t("conflictRest", { hours: c.hours })
-    case "longDay":
-      return t("conflictLongDay", { hours: c.hours })
-  }
-}
+/**
+ * Copy for the amber conflict triangle is resolved inline at the call site
+ * (see TimelineRow) rather than in a helper taking the translator.
+ *
+ * Passing `t` around needs it typed, and `ReturnType<typeof useTranslations>`
+ * un-parameterised resolves to a union over every message key in the catalogue.
+ * Once the manager namespace grew past ~150 keys TypeScript gave up with "Type
+ * instantiation is excessively deep" — a compile error caused by adding
+ * *translations*, which is very hard to attribute after the fact. Narrowing the
+ * type instead trips contravariance, because next-intl's translator only
+ * accepts its own literal keys.
+ */
 
 // Snap a pixel X position (within the time-bars strip) to the nearest 15-minute
 // mark, returning an "HH:MM" string clamped to the visible [startHour, endHour].
@@ -319,7 +318,15 @@ function TimelineRow({
               </Tooltip>
             )}
             {conflict && !isEmpty && (
-              <Tooltip content={conflictTooltip(conflict, t)} side="right">
+              <Tooltip
+                content={
+                  conflict.type === "timeoff" ? t("conflictTimeoff")
+                  : conflict.type === "unavailable" ? t("conflictUnavailable")
+                  : conflict.type === "rest" ? t("conflictRest", { hours: conflict.hours })
+                  : t("conflictLongDay", { hours: conflict.hours })
+                }
+                side="right"
+              >
                 <AlertTriangle className="size-3 shrink-0 text-amber-500 cursor-help" aria-label={t("availabilityConflict")} />
               </Tooltip>
             )}
