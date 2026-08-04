@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { AddEmployeeDialog } from "@/components/manager/AddEmployeeDialog"
 import { EmployeeDetailSheet } from "@/components/manager/EmployeeDetailSheet"
-import { DeactivateEmployeeDialog } from "@/components/manager/DeactivateEmployeeDialog"
+import { DeactivateEmployeeDialog, type UpcomingShift } from "@/components/manager/DeactivateEmployeeDialog"
 import { toast } from "sonner"
 import type { Employee, EmploymentType } from "@/types"
 import { useOrg } from "@/lib/orgContext"
@@ -37,6 +37,7 @@ export default function EmployeesPage() {
   const [sheetMode, setSheetMode] = useState<"view" | "edit">("view")
   const [activeTab, setActiveTab] = useState<"active" | "inactive">("active")
   const [deactivateTarget, setDeactivateTarget] = useState<Employee | null>(null)
+  const [deactivateUpcomingShifts, setDeactivateUpcomingShifts] = useState<UpcomingShift[]>([])
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
   const [resendingInvite, setResendingInvite] = useState<string | null>(null)
 
@@ -123,14 +124,29 @@ export default function EmployeesPage() {
     return false
   }
 
-  const handleDeactivateConfirm = async () => {
+  const openDeactivateDialog = async (emp: Employee) => {
+    setDeactivateTarget(emp)
+    setDeactivateUpcomingShifts([])
+    try {
+      const r = await fetch(`/api/orgs/${orgId}/employees/${emp.id}/upcoming-shifts`, { cache: "no-store" })
+      if (!r.ok) return
+      const res = await r.json() as { data?: UpcomingShift[] }
+      setDeactivateUpcomingShifts(res.data ?? [])
+    } catch {
+      // Non-fatal: the dialog still works without the shift list, just
+      // without the "also delete N upcoming shifts" option pre-populated.
+    }
+  }
+
+  const handleDeactivateConfirm = async (deleteShifts: boolean) => {
     if (!deactivateTarget) return
     const target = deactivateTarget
     setDeactivateTarget(null)
+    setDeactivateUpcomingShifts([])
     const r = await fetch(`/api/orgs/${orgId}/employees/${target.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: false }),
+      body: JSON.stringify({ isActive: false, deleteFutureShifts: deleteShifts }),
     })
     if (!r.ok) { toast.error(tToasts("employeeDeactivateFailed")); return }
     toast.success(tToasts("employeeDeactivated", { name: target.name }))
@@ -322,7 +338,7 @@ export default function EmployeesPage() {
                       </Tooltip>
                       {emp.isActive ? (
                         <Tooltip content={t("deactivateTooltip")}>
-                          <Button variant="ghost" size="icon-sm" onClick={() => setDeactivateTarget(emp)} className="text-gray-500 hover:text-amber-600 hover:bg-amber-50 min-w-[36px] min-h-[36px]">
+                          <Button variant="ghost" size="icon-sm" onClick={() => openDeactivateDialog(emp)} className="text-gray-500 hover:text-amber-600 hover:bg-amber-50 min-w-[36px] min-h-[36px]">
                             <Power className="size-3.5" />
                           </Button>
                         </Tooltip>
@@ -392,9 +408,9 @@ export default function EmployeesPage() {
       {deactivateTarget && (
         <DeactivateEmployeeDialog
           open={!!deactivateTarget}
-          onOpenChange={(v) => { if (!v) setDeactivateTarget(null) }}
+          onOpenChange={(v) => { if (!v) { setDeactivateTarget(null); setDeactivateUpcomingShifts([]) } }}
           employee={deactivateTarget}
-          upcomingShifts={[]}
+          upcomingShifts={deactivateUpcomingShifts}
           onConfirm={handleDeactivateConfirm}
         />
       )}
