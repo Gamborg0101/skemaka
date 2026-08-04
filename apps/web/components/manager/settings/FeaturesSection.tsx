@@ -5,6 +5,7 @@ import { ToggleRight, CalendarX2, CalendarClock, CalendarPlus } from "lucide-rea
 import { cn } from "@/lib/utils"
 import { getOrgSettings, updateOrgSettings } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
@@ -16,6 +17,7 @@ const WINDOW_OPTIONS = [
 ]
 
 export function FeaturesSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks } = useOrg()
   const [includeManager, setIncludeManager] = useState(() => getOrgSettings().includeManagerInSchedule)
   const [savingManager, setSavingManager] = useState(false)
@@ -39,7 +41,7 @@ export function FeaturesSection() {
     } catch {
       setIncludeManager(!enabled)
       updateOrgSettings({ includeManagerInSchedule: !enabled })
-      toast.error("Failed to update settings")
+      toast.error(tToast("settingsUpdateFailed"))
     } finally {
       setSavingManager(false)
     }
@@ -59,7 +61,7 @@ export function FeaturesSection() {
     } catch {
       setTimeOffEnabled(!enabled)
       updateOrgSettings({ timeOffEnabled: !enabled })
-      toast.error("Failed to update settings")
+      toast.error(tToast("settingsUpdateFailed"))
     }
   }
 
@@ -76,7 +78,7 @@ export function FeaturesSection() {
       toast.success(`Employees can now submit availability up to ${weeks} week${weeks > 1 ? "s" : ""} ahead`)
     } catch {
       setAvailabilityWindowWeeks(prev)
-      toast.error("Failed to update settings")
+      toast.error(tToast("settingsUpdateFailed"))
     }
   }
 

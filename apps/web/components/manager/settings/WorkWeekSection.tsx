@@ -12,10 +12,12 @@ import {
   MAX_WORK_WEEK_HOURS,
 } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
 export function WorkWeekSection() {
+  const tToast = useTranslations("manager.toasts")
   const { orgId } = useOrg()
   const [fullTime, setFullTime] = useState(() => String(getOrgSettings().fullTimeHours))
   const [reduced, setReduced] = useState(() => String(getOrgSettings().reducedFullTimeHours))
@@ -43,9 +45,9 @@ export function WorkWeekSection() {
       })
       if (!r.ok) throw new Error()
       updateOrgSettings({ fullTimeHours: fullTimeNum, reducedFullTimeHours: reducedNum })
-      toast.success("Full-time hours updated")
+      toast.success(tToast("fullTimeHoursUpdated"))
     } catch {
-      toast.error("Failed to update full-time hours")
+      toast.error(tToast("fullTimeHoursUpdateFailed"))
     } finally {
       setSaving(false)
     }
