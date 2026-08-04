@@ -20,6 +20,13 @@ import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 type Tab = "PENDING" | "APPROVED" | "DENIED"
 
+const TAB_KEY: Record<Tab, "tabPending" | "tabApproved" | "tabDenied"> = {
+  PENDING: "tabPending", APPROVED: "tabApproved", DENIED: "tabDenied",
+}
+const EMPTY_KEY: Record<Tab, "emptyPending" | "emptyApproved" | "emptyDenied"> = {
+  PENDING: "emptyPending", APPROVED: "emptyApproved", DENIED: "emptyDenied",
+}
+
 const STATUS_STYLE: Record<Tab, string> = {
   PENDING:  "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300",
   APPROVED: "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300",
@@ -70,6 +77,7 @@ export default function TimeOffPage() {
   const { orgId } = useOrg()
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const tt = useTranslations("manager.toasts")
+  const t = useTranslations("manager.timeOff")
   const tf = getOrgSettings().timeFormat
   const [tab, setTab] = useState<Tab>("PENDING")
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
@@ -188,30 +196,30 @@ export default function TimeOffPage() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="hidden md:flex items-center px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Time Off</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
       </div>
       <div className="md:hidden px-4 pt-6 pb-2">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">Time Off</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-50">{t("title")}</h1>
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit mb-6">
-        {tabs.map((t) => (
+        {tabs.map((tabName) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabName}
+            onClick={() => setTab(tabName)}
             className={cn(
               "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-              tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              tab === tabName ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             )}
           >
-            {t.charAt(0) + t.slice(1).toLowerCase()}
+            {t(TAB_KEY[tabName])}
             <span className={cn(
               "text-xs px-1.5 py-px rounded-full font-semibold",
-              tab === t ? "bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+              tab === tabName ? "bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
             )}>
-              {requests.filter((r) => r.status === t).length}
+              {requests.filter((r) => r.status === tabName).length}
             </span>
           </button>
         ))}
@@ -243,7 +251,7 @@ export default function TimeOffPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-base font-medium">No {tab.toLowerCase()} requests</p>
+          <p className="text-base font-medium">{t(EMPTY_KEY[tab])}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -270,19 +278,15 @@ export default function TimeOffPage() {
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input
                     type="text"
-                    placeholder="Reason for denial (optional)"
+                    placeholder={t("denyReasonPlaceholder")}
                     value={reviewNote}
                     onChange={(e) => setReviewNote(e.target.value)}
                     autoFocus
                     className="flex-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="destructive" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => handleDeny(r.id)}>
-                      Confirm
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => setDenyId(null)}>
-                      Cancel
-                    </Button>
+                    <Button size="sm" variant="destructive" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => handleDeny(r.id)}>{t("confirm")}</Button>
+                    <Button size="sm" variant="ghost" className="h-11 sm:h-7 px-4 sm:px-2.5" onClick={() => setDenyId(null)}>{t("cancel")}</Button>
                   </div>
                 </div>
               )}
@@ -295,18 +299,14 @@ export default function TimeOffPage() {
                       className="h-11 sm:h-7 px-4 sm:px-2.5 bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => handleApprove(r.id)}
                     >
-                      <Check className="size-3.5 mr-1" />
-                      Approve
-                    </Button>
+                      <Check className="size-3.5 mr-1" />{t("approve")}</Button>
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-11 sm:h-7 px-4 sm:px-2.5 border-red-200 text-red-600 hover:bg-red-50"
                       onClick={() => handleDeny(r.id)}
                     >
-                      <X className="size-3.5 mr-1" />
-                      Deny
-                    </Button>
+                      <X className="size-3.5 mr-1" />{t("deny")}</Button>
                   </>
                 )}
                 {tab !== "PENDING" && (
@@ -316,9 +316,7 @@ export default function TimeOffPage() {
                     className="h-11 sm:h-7 px-4 sm:px-2.5 text-gray-400 hover:text-red-500"
                     onClick={() => handleDelete(r.id)}
                   >
-                    <Trash2 className="size-3.5 mr-1" />
-                    Delete
-                  </Button>
+                    <Trash2 className="size-3.5 mr-1" />{t("delete")}</Button>
                 )}
                 <Button
                   size="sm"
@@ -326,9 +324,7 @@ export default function TimeOffPage() {
                   className="h-11 sm:h-7 px-4 sm:px-2.5 text-gray-600 ml-auto"
                   onClick={() => setViewRequest(r)}
                 >
-                  <CalendarDays className="size-3.5 mr-1.5" />
-                  View schedule
-                </Button>
+                  <CalendarDays className="size-3.5 mr-1.5" />{t("viewSchedule")}</Button>
               </div>
             </div>
           ))}
@@ -368,7 +364,7 @@ export default function TimeOffPage() {
                       {formatDayHeading(day, localeTag)}
                     </p>
                     {dayShifts.length === 0 ? (
-                      <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">No shifts scheduled</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">{t("noShiftsScheduled")}</p>
                     ) : (
                       <div className="space-y-1.5">
                         {dayShifts.map((shift) => {

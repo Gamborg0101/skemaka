@@ -304,5 +304,22 @@
     "timeOffDenyFailed": "Kunne ikke afvise",
     "timeOffDeleted": "Anmodning slettet",
     "timeOffDeleteFailed": "Kunne ikke slette"
+  },
+  "timeOff": {
+    "title": "Fridage",
+    "tabPending": "Afventer",
+    "tabApproved": "Godkendt",
+    "tabDenied": "Afvist",
+    "emptyPending": "Ingen afventende anmodninger",
+    "emptyApproved": "Ingen godkendte anmodninger",
+    "emptyDenied": "Ingen afviste anmodninger",
+    "approve": "Godkend",
+    "deny": "Afvis",
+    "viewSchedule": "Se vagtplan",
+    "confirm": "Bekræft",
+    "cancel": "Annuller",
+    "delete": "Slet",
+    "denyReasonPlaceholder": "Begrundelse for afvisning (valgfri)",
+    "noShiftsScheduled": "Ingen vagter planlagt"
   }
 }

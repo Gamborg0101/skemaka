@@ -304,5 +304,22 @@
     "timeOffDenyFailed": "Failed to deny",
     "timeOffDeleted": "Request deleted",
     "timeOffDeleteFailed": "Failed to delete"
+  },
+  "timeOff": {
+    "title": "Time Off",
+    "tabPending": "Pending",
+    "tabApproved": "Approved",
+    "tabDenied": "Denied",
+    "emptyPending": "No pending requests",
+    "emptyApproved": "No approved requests",
+    "emptyDenied": "No denied requests",
+    "approve": "Approve",
+    "deny": "Deny",
+    "viewSchedule": "View schedule",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "denyReasonPlaceholder": "Reason for denial (optional)",
+    "noShiftsScheduled": "No shifts scheduled"
   }
 }
