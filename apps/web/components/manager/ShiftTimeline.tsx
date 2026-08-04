@@ -25,6 +25,7 @@ import type { Shift, Employee, JobRole, ShiftTemplate } from "@/types"
 import type { AvailabilityConflict } from "@/lib/useScheduleData"
 import { formatTime, todayISO } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { shiftColorToken } from "@/lib/roleColors"
 import { useLocale, useTranslations } from "next-intl"
 import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
@@ -392,7 +393,7 @@ function TimelineRow({
           const left  = isSick ? 0 : toPercent(startTime, startHour, totalMinutes)
           const width = isSick ? 100 : durationPercent(startTime, endTime, startHour, totalMinutes)
 
-          const tag = isSick ? "sick" : (jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray")
+          const tag = shiftColorToken(shift, employee.jobRole, jobRoles)
           // Draft = private placeholder not yet rolled out; dashed orange outline.
           const isDraft = !isSick && !shift.publishedAt
           // Sick markers span the whole day and aren't time-bounded, and

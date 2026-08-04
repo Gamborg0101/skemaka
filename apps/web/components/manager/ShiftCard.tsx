@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import type { Shift, Employee, JobRole } from "@/types"
 import { formatTime, calcNetHours } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { shiftColorToken } from "@/lib/roleColors"
 import { useTranslations } from "next-intl"
 
 const COLOR_BG: Record<string, string> = {
@@ -115,7 +116,7 @@ export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps
     )
   }
 
-  const tag = jobRoles.find((r) => r.name === employee.jobRole)?.color ?? "gray"
+  const tag = shiftColorToken(shift, employee.jobRole, jobRoles)
   const bgClass   = COLOR_BG[tag]   ?? "bg-gray-100"
   const textClass = COLOR_TEXT[tag] ?? "text-gray-700"
 

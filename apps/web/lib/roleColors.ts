@@ -45,3 +45,26 @@ export const ROLE_COLOR_SWATCH: Record<string, string> = {
 export function roleColorSwatch(token: string): string {
   return ROLE_COLOR_SWATCH[token] ?? token
 }
+
+/**
+ * The colour token a scheduled shift should be painted in.
+ *
+ * Keyed on the SHIFT's job role, not the employee's. A shift can be scheduled
+ * under a role other than the person's default — a chef covering the bar — and
+ * colouring by the employee made the grid claim the kitchen was staffed on a
+ * night nobody was in it. Both the week grid (ShiftCard) and the timeline
+ * (ShiftTimeline) resolve colour through here so they can't drift apart.
+ *
+ * Sick days win over everything: they're an absence, not a role.
+ * `employeeJobRole` is the fallback for older shifts stored without a role, and
+ * unknown roles land on "gray" rather than rendering an unstyled bar.
+ */
+export function shiftColorToken(
+  shift: { jobRole?: string | null; colorTag?: string | null },
+  employeeJobRole: string,
+  jobRoles: { name: string; color: string }[],
+): string {
+  if (shift.colorTag === "sick") return "sick"
+  const role = shift.jobRole || employeeJobRole
+  return jobRoles.find((r) => r.name === role)?.color ?? "gray"
+}
