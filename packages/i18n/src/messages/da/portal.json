@@ -63,7 +63,10 @@
     "preferredStart": "Foretrukket start (valgfrit)",
     "preferredEnd": "Foretrukket slut (valgfrit)",
     "submit": "Send tilgængelighed",
-    "submitting": "Sender…"
+    "submitting": "Sender…",
+    "submitFailed": "Din tilgængelighed kunne ikke sendes. Prøv igen.",
+    "submitClosed": "Denne forespørgsel tager ikke imod flere svar — bed din leder om at åbne den igen.",
+    "submitTooMany": "For mange forsøg. Vent et øjeblik, og prøv igen."
   },
   "demoPreview": "Du ser {name}s uge — sådan ser dine medarbejdere det. Skift person ovenfor.",
   "demoPreviewShort": "Medarbejdervisning"

@@ -88,9 +88,9 @@ async function ShiftPreview({ weekNum }: { weekNum: number }) {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, error } = await searchParams;
   const t = await getTranslations("auth.login");
   const tCommon = await getTranslations("common");
   const weekNum = getISOWeek(getMondayOfWeek(new Date()));
@@ -99,6 +99,25 @@ export default async function LoginPage({
     { icon: DollarSign, title: t("feature2Title"), description: t("feature2Text") },
     { icon: Clock, title: t("feature3Title"), description: t("feature3Text") },
   ];
+  // NextAuth redirects every failed sign-in back here with ?error=<code>. This
+  // page used to read only callbackUrl, so a failure rendered an identical
+  // blank form and looked like a dead button. That includes the site's headline
+  // CTA: when the demo hits its rate limit or the concurrent-sandbox cap,
+  // authorize() returns null and the visitor lands here with no explanation.
+  // Unknown codes fall back to the generic message rather than leaking a
+  // NextAuth internal string to a restaurant manager.
+  const signInError = error
+    ? error === "Verification"
+      ? t("errorExpiredLink")
+      : error === "OAuthAccountNotLinked"
+      ? t("errorAccountExists")
+      : error === "CredentialsSignin"
+      ? t("errorBusy")
+      : error === "AccessDenied"
+      ? t("errorAccessDenied")
+      : t("errorDefault")
+    : null;
+
   // Use only the path+search so NextAuth's origin check always passes —
   // the full URL may use a LAN IP that doesn't match NEXTAUTH_URL.
   let redirectTo = "/onboarding";
@@ -188,6 +207,16 @@ export default async function LoginPage({
               {t("welcomeSub")}
             </p>
           </div>
+
+          {signInError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-3"
+            >
+              <p className="text-sm font-semibold text-red-800 dark:text-red-200">{t("errorTitle")}</p>
+              <p className="mt-0.5 text-sm text-red-700 dark:text-red-300">{signInError}</p>
+            </div>
+          )}
 
           <div className="space-y-4">
             <form
