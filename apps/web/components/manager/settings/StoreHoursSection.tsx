@@ -39,12 +39,19 @@ export function StoreHoursSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hours, timelineBufferHours: buffer }),
       })
-      if (!r.ok) throw new Error()
+      if (!r.ok) {
+        // The API rejects a close time that isn't after the open time, with a
+        // specific reason. Show it — "Failed to save store hours" gives the
+        // manager nothing to act on when the actual problem is one bad row.
+        const body = (await r.json().catch(() => null)) as { error?: string } | null
+        throw new Error(body?.error || "")
+      }
       updateOrgSettings({ hours, timelineBufferHours: buffer })
       setDirty(false)
       toast.success(tToast("storeHoursSaved"))
-    } catch {
-      toast.error(tToast("storeHoursSaveFailed"))
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : ""
+      toast.error(detail || tToast("storeHoursSaveFailed"))
     } finally {
       setSaving(false)
     }
