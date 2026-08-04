@@ -41,7 +41,7 @@
     "draft": "Draft",
     "rollOut": "Roll out",
     "hintBold": "Build your first schedule.",
-    "hintRest": "Click any empty cell in the grid to add a shift.",
+    "hintRest": "Fill it in one click, or click any empty cell to add a shift yourself.",
     "dismiss": "Dismiss",
     "noEmployees": "No employees yet",
     "noEmployeesHint": "Add your first employee to start building a schedule.",
@@ -77,7 +77,10 @@
     "fullyScheduled": "Fully scheduled this week",
     "pctScheduled": "{pct}% of contracted hours scheduled",
     "offerShift": "Offer shift",
-    "breakMinutes": "{n}m break"
+    "breakMinutes": "{n}m break",
+    "fillWeek": "Fill this week",
+    "fillingWeek": "Filling…",
+    "copyLastWeek": "Copy last week"
   },
   "coverRequests": {
     "title": "Cover requests",
