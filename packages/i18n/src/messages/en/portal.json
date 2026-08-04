@@ -63,7 +63,10 @@
     "preferredStart": "Preferred start (optional)",
     "preferredEnd": "Preferred end (optional)",
     "submit": "Submit Availability",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "submitFailed": "Couldn't send your availability. Please try again.",
+    "submitClosed": "This request is no longer accepting replies — ask your manager to reopen it.",
+    "submitTooMany": "Too many attempts. Wait a moment and try again."
   },
   "demoPreview": "Previewing {name}'s week — this is what your staff see. Switch person above.",
   "demoPreviewShort": "Staff preview"
