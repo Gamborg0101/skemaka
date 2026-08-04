@@ -27,7 +27,7 @@ vi.mock("@/lib/prisma", () => ({
 }))
 
 import { sendShiftAssignedEmail } from "@/lib/resend"
-import { cleanupDemoSandboxes } from "@/lib/cleanup"
+import { cleanupDemoSandboxes, deleteDemoSandbox } from "@/lib/cleanup"
 import { db } from "@/lib/prisma"
 
 beforeEach(() => {
@@ -71,5 +71,28 @@ describe("cleanupDemoSandboxes", () => {
         memberships: { none: {} },
       }),
     }))
+  })
+})
+
+describe("deleteDemoSandbox", () => {
+  it("only ever deletes an org that is flagged isDemo", async () => {
+    vi.mocked(db.organization.deleteMany).mockResolvedValue({ count: 1 } as never)
+    vi.mocked(db.user.deleteMany).mockResolvedValue({ count: 1 } as never)
+
+    await expect(deleteDemoSandbox("org_demo")).resolves.toBe(true)
+
+    // The isDemo guard is the whole safety story: this runs from a user-facing
+    // "Reset demo" button, and a reset that could delete a paying customer's
+    // organization is not a bug anyone recovers from.
+    expect(db.organization.deleteMany).toHaveBeenCalledWith({
+      where: { id: "org_demo", isDemo: true },
+    })
+  })
+
+  it("touches no users when the org was not a demo org", async () => {
+    vi.mocked(db.organization.deleteMany).mockResolvedValue({ count: 0 } as never)
+
+    await expect(deleteDemoSandbox("org_real")).resolves.toBe(false)
+    expect(db.user.deleteMany).not.toHaveBeenCalled()
   })
 })
