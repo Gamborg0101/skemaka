@@ -306,7 +306,7 @@ export default function SchedulePage() {
       className="shrink-0"
     >
       <Megaphone className="size-4" />
-      <span className="hidden sm:inline">Offer shift</span>
+      <span className="hidden sm:inline">{t("offerShift")}</span>
     </Button>
   )
 

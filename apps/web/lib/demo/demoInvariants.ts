@@ -326,15 +326,21 @@ export function checkDemoPlan(plan: DemoPlan): DemoViolation[] {
     }
   }
   if (plan.locale === "da") {
-    const english = /^(Kitchen early|Kitchen late|Dinner service|Evening bar|Flu|Holiday|Family visit|Sick Day)$/
+    // Job roles are seeded data that next-intl never sees, so they shipped as
+    // "Kitchen" / "Front of house" on every shift card of the Danish demo while
+    // this check was only looking at template names and notes. Any user-visible
+    // seeded string belongs in this list — that is the whole point of it.
+    const english = /^(Kitchen|Front of house|Kitchen early|Kitchen late|Dinner service|Evening bar|Flu|Holiday|Family visit|Sick Day)$/
     const strings = [
       plan.org.name,
+      ...plan.jobRoles.map((r) => r.name),
+      ...plan.employees.map((e) => e.jobRole),
       ...plan.shiftTemplates.map((t) => t.name),
+      ...plan.shifts.map((s) => s.jobRole),
       ...plan.timeOff.map((t) => t.reason),
       ...plan.shifts.map((s) => s.notes ?? ""),
-      ...plan.shifts.filter((s) => s.colorTag === "sick").map((s) => s.jobRole),
     ]
-    for (const s of strings) {
+    for (const s of new Set(strings)) {
       if (english.test(s)) warn("DEMO-052", `untranslated string in the Danish sandbox: "${s}"`)
     }
   }

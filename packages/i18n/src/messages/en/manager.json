@@ -75,7 +75,9 @@
     "coverWouldCover": "Would cover",
     "overWeeklyTooltip": "{over}h over contracted hours this week",
     "fullyScheduled": "Fully scheduled this week",
-    "pctScheduled": "{pct}% of contracted hours scheduled"
+    "pctScheduled": "{pct}% of contracted hours scheduled",
+    "offerShift": "Offer shift",
+    "breakMinutes": "{n}m break"
   },
   "coverRequests": {
     "title": "Cover requests",

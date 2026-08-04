@@ -75,7 +75,9 @@
     "coverWouldCover": "Vil dække",
     "overWeeklyTooltip": "{over}h over de aftalte timer denne uge",
     "fullyScheduled": "Fuldt planlagt denne uge",
-    "pctScheduled": "{pct}% af de aftalte timer planlagt"
+    "pctScheduled": "{pct}% af de aftalte timer planlagt",
+    "offerShift": "Tilbyd vagt",
+    "breakMinutes": "{n}m pause"
   },
   "coverRequests": {
     "title": "Dækningsanmodninger",
