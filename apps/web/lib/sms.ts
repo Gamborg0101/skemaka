@@ -3,6 +3,7 @@ import twilio from "twilio";
 import { db } from "@/lib/prisma";
 import type { Locale } from "@skemaka/i18n";
 import { getMessageTranslator, recipientLocaleTag } from "@/lib/messages";
+import type { ShiftOfferOutcome } from "@/lib/resend";
 
 // Inbound keyword sets (case-insensitive). STOP/START mirror Twilio's standard
 // Advanced Opt-Out keywords; we maintain our own list as a belt-and-suspenders
@@ -440,7 +441,7 @@ export async function sendShiftOfferResultSms({
   date,
   startTime,
   endTime,
-  won,
+  outcome,
   locale = "en",
 }: {
   to: string;
@@ -449,16 +450,11 @@ export async function sendShiftOfferResultSms({
   date: string;
   startTime: string;
   endTime: string;
-  won: boolean;
+  outcome: ShiftOfferOutcome;
   locale?: Locale;
 }): Promise<void> {
   const t = getMessageTranslator(locale, "sms");
   const when = formatShiftDate(date, startTime, endTime, locale);
-  await send(
-    to,
-    won
-      ? t("shiftOfferWon", { name, orgName, when })
-      : t("shiftOfferFilled", { name, orgName, when }),
-    locale,
-  );
+  const key = outcome === "won" ? "shiftOfferWon" : outcome === "filled" ? "shiftOfferFilled" : "shiftOfferWithdrawn";
+  await send(to, t(key, { name, orgName, when }), locale);
 }

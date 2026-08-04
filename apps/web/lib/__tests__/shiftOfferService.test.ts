@@ -6,6 +6,9 @@ import {
   confirmOffer,
   cancelOffer,
 } from "@/lib/services/shiftOfferService"
+import { sendShiftOfferResultEmail } from "@/lib/resend"
+import { sendShiftOfferResultSms } from "@/lib/sms"
+import { sendPushToUsers } from "@/lib/push"
 
 vi.mock("@/lib/prisma", () => ({
   db: {
@@ -52,6 +55,9 @@ const empFindMany = vi.mocked(db.employee.findMany)
 const orgFindUnique = vi.mocked(db.organization.findUnique)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const txMock = vi.mocked(db.$transaction as any)
+const resultEmail = vi.mocked(sendShiftOfferResultEmail)
+const resultSms = vi.mocked(sendShiftOfferResultSms)
+const pushToUsers = vi.mocked(sendPushToUsers)
 
 const ORG = "org_1"
 const FUTURE = "2999-01-01T00:00:00Z"
@@ -235,13 +241,32 @@ describe("confirmOffer", () => {
 })
 
 describe("cancelOffer", () => {
+  // Base offer used across cancellation tests: one recipient who accepted, one
+  // who never responded, one who declined. Only the accepter should hear about it.
+  function cancelSourceRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "off_1",
+      status: "OPEN",
+      date: new Date("2026-07-20T00:00:00Z"),
+      startTime: "17:00",
+      endTime: "23:00",
+      jobRole: "Waiter",
+      recipients: [
+        { employeeId: "emp_A", response: "ACCEPTED" },
+        { employeeId: "emp_B", response: "PENDING" },
+        { employeeId: "emp_C", response: "DECLINED" },
+      ],
+      ...overrides,
+    }
+  }
+
   it("rejects cancelling an already-resolved offer", async () => {
     soFindFirst.mockResolvedValue({ id: "off_1", status: "FILLED" } as never)
     await expect(cancelOffer(ORG, "off_1")).rejects.toMatchObject({ code: "CONFLICT" })
   })
 
   it("marks an open offer CANCELLED", async () => {
-    soFindFirst.mockResolvedValue({ id: "off_1", status: "OPEN" } as never)
+    soFindFirst.mockResolvedValue(cancelSourceRow({ recipients: [] }) as never)
     soUpdateMany.mockResolvedValue({ count: 1 } as never)
     soFindUniqueOrThrow.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
 
@@ -253,5 +278,62 @@ describe("cancelOffer", () => {
       where: expect.objectContaining({ id: "off_1", status: "OPEN" }),
       data: expect.objectContaining({ status: "CANCELLED" }),
     }))
+  })
+
+  it("notifies everyone who ACCEPTED, and nobody who didn't", async () => {
+    soFindFirst.mockResolvedValue(cancelSourceRow() as never)
+    soUpdateMany.mockResolvedValue({ count: 1 } as never)
+    soFindUniqueOrThrow.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
+    empFindMany.mockResolvedValue([
+      { id: "emp_A", name: "Alice", email: "alice@example.com", phone: "+15551234567", smsConsentAt: new Date(), locale: null, userId: "user_A" },
+    ] as never)
+
+    await cancelOffer(ORG, "off_1")
+
+    // Only the accepted employee's id was looked up — the pending and declined
+    // recipients were never even fetched for notification.
+    expect(empFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: { in: ["emp_A"] } },
+    }))
+    expect(resultEmail).toHaveBeenCalledTimes(1)
+    expect(resultEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "alice@example.com", outcome: "withdrawn" }))
+    expect(resultSms).toHaveBeenCalledTimes(1)
+    expect(resultSms).toHaveBeenCalledWith(expect.objectContaining({ to: "+15551234567", outcome: "withdrawn" }))
+    expect(pushToUsers).toHaveBeenCalledTimes(1)
+    expect(pushToUsers).toHaveBeenCalledWith(["user_A"], expect.objectContaining({
+      title: "push.shiftOfferWithdrawnTitle",
+      body: "push.shiftOfferWithdrawnBody",
+    }))
+  })
+
+  it("sends nobody a notification when nobody had accepted", async () => {
+    soFindFirst.mockResolvedValue(cancelSourceRow({
+      recipients: [
+        { employeeId: "emp_B", response: "PENDING" },
+        { employeeId: "emp_C", response: "DECLINED" },
+      ],
+    }) as never)
+    soUpdateMany.mockResolvedValue({ count: 1 } as never)
+    soFindUniqueOrThrow.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
+
+    await cancelOffer(ORG, "off_1")
+
+    expect(empFindMany).not.toHaveBeenCalled()
+    expect(resultEmail).not.toHaveBeenCalled()
+    expect(resultSms).not.toHaveBeenCalled()
+    expect(pushToUsers).not.toHaveBeenCalled()
+  })
+
+  it("still resolves the cancellation even if the notification fails", async () => {
+    soFindFirst.mockResolvedValue(cancelSourceRow() as never)
+    soUpdateMany.mockResolvedValue({ count: 1 } as never)
+    soFindUniqueOrThrow.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
+    empFindMany.mockResolvedValue([
+      { id: "emp_A", name: "Alice", email: "alice@example.com", phone: null, smsConsentAt: null, locale: null, userId: null },
+    ] as never)
+    resultEmail.mockRejectedValueOnce(new Error("Resend is down"))
+
+    const result = await cancelOffer(ORG, "off_1")
+    expect(result.status).toBe("CANCELLED")
   })
 })
