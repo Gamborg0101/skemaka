@@ -64,5 +64,7 @@
     "preferredEnd": "Preferred end (optional)",
     "submit": "Submit Availability",
     "submitting": "Submitting..."
-  }
+  },
+  "demoPreview": "Previewing {name}'s week — this is what your staff see. Switch person above.",
+  "demoPreviewShort": "Staff preview"
 }
