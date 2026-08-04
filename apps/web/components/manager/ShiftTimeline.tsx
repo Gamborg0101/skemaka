@@ -30,6 +30,8 @@ import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 const DEFAULT_START_HOUR = 6
 const DEFAULT_END_HOUR = 23
+/** Width of the sticky name column (w-32 on mobile) — the hour grid is the rest. */
+const NAME_COL_PX = 128
 
 const COLOR_BAR: Record<string, string> = {
   blue:   "bg-blue-400 hover:bg-blue-500",
@@ -295,13 +297,17 @@ function TimelineRow({
     window.addEventListener("pointerup", onUp)
   }
 
+  // `relative z-0` makes the row its own stacking context, so the sticky name
+  // column below can outrank the red now-line (which would otherwise paint
+  // across the employee names) without also outranking the sticky day header,
+  // which sits at z-8 in the parent.
   return (
-    <div className={cn("flex border-b border-gray-200 dark:border-gray-700", isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50/60 dark:bg-gray-800/40")}>
+    <div className={cn("relative z-0 flex border-b border-gray-200 dark:border-gray-700", isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50/60 dark:bg-gray-800/40")}>
       {/* Name column — sticky so names stay readable while the hours axis is
           scrolled horizontally, which on a phone it always is. Matches the
           treatment WeeklyScheduleGrid already gives its own name column. */}
       <div className={cn(
-        "sticky left-0 z-[7] w-32 sm:w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-3 flex items-center justify-between",
+        "sticky left-0 z-30 w-32 sm:w-44 shrink-0 border-r border-gray-200 dark:border-gray-700 px-3 py-3 flex items-center justify-between",
         isEven ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800",
       )}>
         <div className="min-w-0">
@@ -660,6 +666,7 @@ export function ShiftTimeline({
   const [draggingEmp, setDraggingEmp] = useState<Employee | null>(null)
   const [currentTime, setCurrentTime] = useState(() => new Date())
 
+  const scrollRef = useRef<HTMLDivElement | null>(null)
   const t = useTranslations("manager.schedule")
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const dayLabels = useMemo(
@@ -696,6 +703,28 @@ export function ShiftTimeline({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   )
+
+  // The hour grid is 560px wide inside a ~390px phone, and the axis starts a
+  // couple of hours before opening — so the default (unscrolled) view was mostly
+  // empty morning, with the dinner service that every shift actually falls in
+  // sitting off the right edge with no hint it was there. Scroll to just before
+  // the day's first shift so the schedule is the thing you see.
+  const firstShiftHour = useMemo(() => {
+    const onScreen = shifts.filter((s) => dates.includes(s.date) && !s.cancelledAt && s.colorTag !== "sick")
+    if (onScreen.length === 0) return null
+    return Math.min(...onScreen.map((s) => Number(s.startTime.slice(0, 2))))
+  }, [shifts, dates])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || firstShiftHour === null) return
+    // Only when the grid actually overflows — on a desktop it all fits and
+    // scrolling would just look like a glitch.
+    if (el.scrollWidth <= el.clientWidth) return
+    const gridWidth = el.scrollWidth - NAME_COL_PX
+    const target = ((firstShiftHour - 0.5 - startHour) / (endHour - startHour)) * gridWidth
+    el.scrollLeft = Math.max(0, Math.min(target, el.scrollWidth - el.clientWidth))
+  }, [firstShiftHour, startHour, endHour, dates])
 
   function snapTimeFromPointer(pointerX: number, rowRect: { left: number; width: number }): { time: string; pct: number } {
     const relX = pointerX - rowRect.left
@@ -762,13 +791,16 @@ export function ShiftTimeline({
       <div className="flex flex-col h-full">
 
         {/* Employee chips */}
-        <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shrink-0">
+        <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 py-2 sm:px-4 sm:py-3 shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
               {t("dragHint")}
             </p>
-            {/* Legend — explains the hours badge colours */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400 dark:text-gray-500">
+            {/* Legend — explains the hours badge colours. Hidden on phones: it
+                costs a whole row above the fold to explain colours the badges
+                themselves already carry, on the screen where vertical space is
+                scarcest. The per-badge tooltips still spell it out. */}
+            <div className="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400 dark:text-gray-500">
               <span className="inline-flex items-center gap-1">
                 <span className="size-2 rounded-full bg-green-400" /> {t("legendHoursMet")}
               </span>
@@ -803,7 +835,7 @@ export function ShiftTimeline({
 
         {/* Day sections — pb-20 keeps the last employee row clear of the fixed
             mobile bottom nav, which used to sit on top of it. */}
-        <div className="flex-1 overflow-auto pb-20 md:pb-0">
+        <div ref={scrollRef} className="flex-1 overflow-auto pb-20 md:pb-0">
           <div className="min-w-[560px]">
             {dates.map((date, i) => (
               <div key={date}>
