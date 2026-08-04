@@ -9,6 +9,12 @@ export const authConfig = {
   providers: [Google({ checks: ["state"] })],
   pages: {
     signIn: "/login",
+    // Without this, provider-level failures (expired magic link, OAuth error)
+    // render NextAuth's stock /api/auth/error page — an unstyled <h1>Error</h1>
+    // shipping default CSS for a dozen OAuth providers we don't use. Pointing
+    // it at /login reuses the branded, localized message there; NextAuth
+    // appends ?error=<code>, which the page now reads.
+    error: "/login",
   },
   session: {
     // 30-minute inactivity timeout. The Edge middleware re-signs the JWT on every
