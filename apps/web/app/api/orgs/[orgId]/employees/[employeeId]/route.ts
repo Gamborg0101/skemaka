@@ -20,6 +20,8 @@ const UpdateEmployeeSchema = z.object({
   isActive:        z.boolean().optional(),
   employmentType:  z.string().optional(),
   contractedHours: z.number().int().min(0, "contractedHours must be a non-negative integer").optional(),
+  // Only acted on alongside `isActive: false` — see employeeService.updateEmployee.
+  deleteFutureShifts: z.boolean().optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
