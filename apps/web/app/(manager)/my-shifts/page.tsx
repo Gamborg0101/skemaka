@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { formatTime, calcNetHours, getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
@@ -49,6 +49,7 @@ export default async function MyShiftsPage({
   if (!session?.user?.email) redirect("/login")
 
   const localeTag = LOCALE_TAGS[(await getLocale()) as Locale]
+  const t = await getTranslations("portal")
 
   const { employee: employeeParam, week: weekParam } = await searchParams
 
@@ -94,18 +95,53 @@ export default async function MyShiftsPage({
     select: { id: true, organizationId: true, jobRole: true, organization: { select: { name: true } } },
   })
 
-  if (!selfEmployee) {
+  // In a sandbox the visitor signs in as the manager, who is deliberately not
+  // seeded as staff — so this page dead-ended on "No employee profile found"
+  // and the employee-facing half of the product, which is half the sales story,
+  // was unreachable. Stand in one of the seeded staff instead. The employee
+  // picker below already exists, so they can switch to anyone; a banner says
+  // plainly whose week they are looking at, because silently showing someone
+  // else's shifts as "My shifts" would be worse than the dead end.
+  let previewOf: string | null = null
+  let viewer = selfEmployee
+
+  if (!viewer && orgId) {
+    const org = await db.organization.findUnique({ where: { id: orgId }, select: { isDemo: true } })
+    if (org?.isDemo) {
+      // Prefer someone actually rostered this week, so the page has content.
+      const staffed = await db.shift.findFirst({
+        where: {
+          organizationId: orgId,
+          cancelledAt: null,
+          publishedAt: { not: null },
+          date: { gte: new Date(weekStart + "T00:00:00.000Z"), lt: new Date(weekEnd + "T00:00:00.000Z") },
+        },
+        orderBy: { date: "asc" },
+        select: { employee: { select: { id: true, organizationId: true, jobRole: true, organization: { select: { name: true } } } } },
+      })
+      viewer = staffed?.employee
+        ?? (await db.employee.findFirst({
+          where: { organizationId: orgId, isActive: true },
+          orderBy: { name: "asc" },
+          select: { id: true, organizationId: true, jobRole: true, organization: { select: { name: true } } },
+        }))
+      if (viewer) previewOf = viewer.id
+    }
+  }
+
+  if (!viewer) {
     return (
       <div className="flex flex-col items-center justify-center py-32 px-4">
-        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">No employee profile found</p>
-        <p className="text-sm text-gray-500">Add yourself as an employee to see your shifts here.</p>
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{t("noProfile")}</p>
+        <p className="text-sm text-gray-500">{t("noProfileHint")}</p>
       </div>
     )
   }
+  const selfEmployeeResolved = viewer
 
   // All active employees in the org for the picker
   const allEmployees = await db.employee.findMany({
-    where: { organizationId: selfEmployee.organizationId, isActive: true },
+    where: { organizationId: selfEmployeeResolved.organizationId, isActive: true },
     select: { id: true, name: true, jobRole: true },
     orderBy: { name: "asc" },
   })
@@ -113,9 +149,9 @@ export default async function MyShiftsPage({
   // Resolve which employee we're viewing
   const selectedId = employeeParam && allEmployees.some((e) => e.id === employeeParam)
     ? employeeParam
-    : selfEmployee.id
+    : selfEmployeeResolved.id
 
-  const viewingSelf = selectedId === selfEmployee.id
+  const viewingSelf = selectedId === selfEmployeeResolved.id
 
   // Fetch the selected employee's profile + shifts for the selected week
   const employee = await db.employee.findUnique({
@@ -168,7 +204,7 @@ export default async function MyShiftsPage({
   // Which of my shifts are already up for cover (to seed the per-shift button).
   const myActiveCover = viewingSelf
     ? await db.shiftCoverRequest.findMany({
-        where: { requesterEmployeeId: selfEmployee.id, status: { in: ["OPEN", "CLAIMED"] } },
+        where: { requesterEmployeeId: selfEmployeeResolved.id, status: { in: ["OPEN", "CLAIMED"] } },
         select: { id: true, shiftId: true, status: true },
       })
     : []
@@ -195,11 +231,18 @@ export default async function MyShiftsPage({
             <EmployeePicker
               employees={allEmployees}
               selectedId={selectedId}
-              selfId={selfEmployee.id}
+              selfId={selfEmployeeResolved.id}
             />
           )}
         </div>
       </div>
+      {/* Sandbox only: this page is headed "My Shifts", so say plainly that the
+          week belongs to a seeded employee rather than the signed-in manager. */}
+      {previewOf && (
+        <div className="mx-4 md:mx-6 mt-2 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-2 text-xs text-blue-800 dark:text-blue-200">
+          {t("demoPreview", { name: employee.name })}
+        </div>
+      )}
       {/* Mobile header */}
       <div className="md:hidden px-4 pt-6 pb-2">
         <div className="flex items-start justify-between gap-3">
@@ -217,7 +260,7 @@ export default async function MyShiftsPage({
               <EmployeePicker
                 employees={allEmployees}
                 selectedId={selectedId}
-                selfId={selfEmployee.id}
+                selfId={selfEmployeeResolved.id}
               />
             )}
           </div>
@@ -225,8 +268,8 @@ export default async function MyShiftsPage({
       </div>
 
       <div className="flex-1 overflow-auto px-4 md:px-6 py-6 pb-20 md:pb-6">
-      {viewingSelf && <MyShiftOffersPanel orgId={selfEmployee.organizationId} />}
-      {viewingSelf && <CoverPoolPanel orgId={selfEmployee.organizationId} />}
+      {viewingSelf && <MyShiftOffersPanel orgId={selfEmployeeResolved.organizationId} />}
+      {viewingSelf && <CoverPoolPanel orgId={selfEmployeeResolved.organizationId} />}
       {shifts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-base font-medium">No shifts this week</p>
@@ -328,7 +371,7 @@ export default async function MyShiftsPage({
                   {viewingSelf && !isCancelled && shift.date >= today && (
                     <div className="mt-auto pt-1">
                       <OfferCoverButton
-                        orgId={selfEmployee.organizationId}
+                        orgId={selfEmployeeResolved.organizationId}
                         shiftId={shift.id}
                         initial={coverByShift.get(shift.id) ?? null}
                       />

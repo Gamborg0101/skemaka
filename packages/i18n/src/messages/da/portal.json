@@ -64,5 +64,7 @@
     "preferredEnd": "Foretrukket slut (valgfrit)",
     "submit": "Send tilgængelighed",
     "submitting": "Sender…"
-  }
+  },
+  "demoPreview": "Du ser {name}s uge — sådan ser dine medarbejdere det. Skift person ovenfor.",
+  "demoPreviewShort": "Medarbejdervisning"
 }

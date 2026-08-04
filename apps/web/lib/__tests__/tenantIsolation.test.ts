@@ -59,7 +59,10 @@ describe("tenant isolation: server-rendered manager pages", () => {
   function selfEmployeeLookup(): string {
     const src = readFileSync(MY_SHIFTS, "utf8")
     const start = src.indexOf("const selfEmployee = await db.employee.findFirst(")
-    const end = src.indexOf("if (!selfEmployee)")
+    // Anchor moved when the demo stand-in fallback was added below this lookup;
+    // the isolation property was re-verified by hand at that point, and the
+    // fallback now has its own coverage in the demo test below.
+    const end = src.indexOf("let previewOf")
     // If either anchor moves, fail loudly rather than asserting on an empty
     // string — a restructure of this page needs re-verifying by hand.
     expect(start, "could not locate the selfEmployee lookup in my-shifts/page.tsx").toBeGreaterThan(-1)
@@ -83,6 +86,30 @@ describe("tenant isolation: server-rendered manager pages", () => {
       selfEmployeeWhereClause(),
       "the selfEmployee findFirst must FILTER on organizationId, or /my-shifts can render another restaurant's shifts",
     ).toContain("organizationId")
+  })
+
+  // The demo stand-in is a SECOND path that decides which org's data the page
+  // renders — if it ever resolved an employee without an org filter, a sandbox
+  // visitor would be shown a real restaurant's roster.
+  it("my-shifts scopes the demo stand-in lookup to a single organization", () => {
+    const src = readFileSync(MY_SHIFTS, "utf8")
+    const start = src.indexOf("let previewOf")
+    const end = src.indexOf("if (!viewer)")
+    expect(start, "could not locate the demo stand-in block in my-shifts/page.tsx").toBeGreaterThan(-1)
+    expect(end, "could not locate the end of the demo stand-in block").toBeGreaterThan(start)
+    const block = src.slice(start, end)
+
+    // Gated on a resolved orgId at all.
+    expect(block, "the demo stand-in must only run once an orgId is known").toContain("orgId")
+    // Every query inside it filters by that org.
+    const queries = block.split("db.").slice(1)
+    expect(queries.length, "expected the stand-in block to query the database").toBeGreaterThan(0)
+    for (const q of queries) {
+      const scoped = q.includes("organizationId: orgId") || q.includes("where: { id: orgId }")
+      expect(scoped, `an unscoped query in the demo stand-in block: db.${q.slice(0, 60)}`).toBe(true)
+    }
+    // And it only ever fires for a sandbox.
+    expect(block, "the demo stand-in must be gated on isDemo").toContain("isDemo")
   })
 
   it("my-shifts orders the self-employee lookup deterministically", () => {

@@ -15,6 +15,7 @@ import { getOrgSettings } from "@/lib/orgSettings"
 import { getMondayOfWeek, addDays, todayISO } from "@/lib/dateUtils"
 import { WeekPicker } from "@/components/manager/WeekPicker"
 import { RollOutDialog } from "@/components/manager/RollOutDialog"
+import { DemoTour } from "@/components/manager/DemoTour"
 import { useOrg } from "@/lib/orgContext"
 import { useScheduleData } from "@/lib/useScheduleData"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -290,6 +291,7 @@ export default function SchedulePage() {
       ) : null}
       <Button
         size="sm"
+        data-tour="rollout"
         onClick={() => setRollOutOpen(true)}
         className="bg-blue-600 hover:bg-blue-700 text-white"
       >
@@ -359,7 +361,9 @@ export default function SchedulePage() {
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
         {!loading && employees.length > 0 && (
           <div className="px-3 pt-2 sm:px-4 sm:pt-4">
-            <CoverRequestsPanel onFocus={focusCover} />
+            <div data-tour="cover">
+              <CoverRequestsPanel onFocus={focusCover} />
+            </div>
             <ShiftOffersPanel orgId={orgId} refreshToken={offersRefresh} />
           </div>
         )}
@@ -430,6 +434,7 @@ export default function SchedulePage() {
             </div>
           </div>
         ) : viewMode === "week" ? (
+          <div data-tour="grid">
           <WeeklyScheduleGrid
             schedule={schedule ?? placeholderSchedule}
             employees={employees}
@@ -446,6 +451,7 @@ export default function SchedulePage() {
             onShiftCancel={handleShiftCancel}
             onMarkSick={handleMarkSick}
           />
+          </div>
         ) : (
           <ShiftTimeline
             dates={timelineDates}
@@ -480,6 +486,7 @@ export default function SchedulePage() {
         employees={employees}
         onCreated={() => setOffersRefresh((n) => n + 1)}
       />
+      <DemoTour />
     </div>
   )
 }
