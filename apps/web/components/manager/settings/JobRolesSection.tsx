@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip } from "@/components/ui/tooltip"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { useOptimisticList } from "@/lib/useOptimisticList"
 import { ROLE_COLOR_TOKENS, roleColorSwatch } from "@/lib/roleColors"
 import type { JobRole } from "@/types"
 import { SettingsSection } from "./SettingsSection"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 const DEFAULT_COLOR = ROLE_COLOR_TOKENS[0]
 
@@ -48,11 +50,17 @@ function ColorPicker({
 }
 
 export function JobRolesSection() {
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
   const { orgId, jobRoles, setJobRoles } = useOrg()
   const { patch, remove, addOptimistic } = useOptimisticList(jobRoles, setJobRoles)
 
   // Add form
   const [showAddForm, setShowAddForm] = useState(false)
+  // A one-click delete with no prompt, unlike every other destructive action in
+  // Settings. The service refuses to delete a role still assigned to anyone, so
+  // the blast radius is small — but the inconsistency is the friction.
+  const [deleteTarget, setDeleteTarget] = useState<JobRole | null>(null)
   const [addName, setAddName] = useState("")
   const [addColor, setAddColor] = useState<string>(DEFAULT_COLOR)
   const [addSaving, setAddSaving] = useState(false)
@@ -283,7 +291,7 @@ export function JobRolesSection() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => handleDeleteRole(role)}
+                      onClick={() => setDeleteTarget(role)}
                       className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-950/40 shrink-0"
                     >
                       <Trash2 className="size-3.5" />
@@ -302,6 +310,37 @@ export function JobRolesSection() {
           </Button>
         )}
       </div>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{tSettings("deleteRoleTitle")}</DialogTitle>
+            <DialogDescription>
+              {tSettings.rich("deleteRoleDesc", {
+                name: deleteTarget?.name ?? "",
+                strong: (chunks) => (
+                  <span className="font-medium text-gray-900 dark:text-gray-50">{chunks}</span>
+                ),
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                const target = deleteTarget
+                setDeleteTarget(null)
+                if (target) handleDeleteRole(target)
+              }}
+            >
+              {tSettings("deleteRoleConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SettingsSection>
   )
 }

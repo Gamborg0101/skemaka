@@ -125,7 +125,7 @@
     "resendInviteTooltip": "Resend invite email",
     "removeTooltip": "Remove employee",
     "removeDialogTitle": "Remove employee?",
-    "removeDialogDesc": "This will permanently remove <strong>{name}</strong> from the system. This action cannot be undone.",
+    "removeDialogDesc": "This permanently deletes <strong>{name}</strong> and everything recorded for them: past and scheduled shifts, timesheets, availability and time-off history. Your labour-cost reports will change. This cannot be undone.",
     "removeBtn": "Remove"
   },
   "costs": {
@@ -167,7 +167,13 @@
     "langTitle": "Language",
     "langDesc": "Language for the app and for messages sent to your staff.",
     "langSaved": "Language updated",
-    "langError": "Couldn't update language"
+    "langError": "Couldn't update language",
+    "revokeTitle": "Remove manager access?",
+    "revokeDesc": "<strong>{email}</strong> will immediately lose access to schedules, employees and settings. You can invite them again later.",
+    "revokeConfirm": "Remove access",
+    "deleteRoleTitle": "Delete this role?",
+    "deleteRoleDesc": "<strong>{name}</strong> will be removed from the role list. Employees currently assigned to it keep their role — delete is blocked while anyone still uses it.",
+    "deleteRoleConfirm": "Delete role"
   },
   "demoBanner": {
     "text": "Demo restaurant — deleted after 48 hours. Everything you change here is private to you.",

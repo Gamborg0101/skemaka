@@ -25,7 +25,13 @@ export function InstallPrompt() {
     const sa =
       window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true
     setStandalone(sa)
-    setIsIOS(/iphone|ipad|ipod/i.test(nav.userAgent))
+    // iPadOS 13+ reports itself as "Macintosh", so a plain /ipad/ test misses
+    // every modern iPad — those users were shown the generic "install manually"
+    // copy instead of the Share-sheet steps that actually work on Safari. The
+    // touch-points check is the standard way to tell an iPad from a Mac, since
+    // desktop Safari reports maxTouchPoints 0.
+    const iPadOS = nav.platform === "MacIntel" && nav.maxTouchPoints > 1
+    setIsIOS(/iphone|ipad|ipod/i.test(nav.userAgent) || iPadOS)
   }, [])
 
   const installed = standalone || isInstalled || justInstalled
