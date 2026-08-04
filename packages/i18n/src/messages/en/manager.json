@@ -226,6 +226,7 @@
     "title": "Deactivate {name}?",
     "warning": "{name} will be hidden from the schedule and cannot be assigned new shifts.",
     "alsoDeleteShifts": "Also delete {count} upcoming {count, plural, one {shift} other {shifts}}",
+    "keepShiftsNote": "Shifts you don't delete stay assigned to {name} but won't appear on the schedule while they're inactive.",
     "confirm": "Deactivate"
   },
   "exportTimesheetDialog": {
