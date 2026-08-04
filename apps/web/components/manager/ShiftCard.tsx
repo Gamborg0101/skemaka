@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import type { Shift, Employee, JobRole } from "@/types"
 import { formatTime, calcNetHours } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useTranslations } from "next-intl"
 
 const COLOR_BG: Record<string, string> = {
   blue:   "bg-blue-100 dark:bg-blue-900/70",
@@ -58,6 +59,7 @@ export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps
     : undefined
 
   const tf = getOrgSettings().timeFormat
+  const t = useTranslations("manager.schedule")
   const isSick = shift.colorTag === "sick"
 
   if (isCancelled) {
@@ -155,7 +157,7 @@ export function ShiftCard({ shift, employee, jobRoles, onClick }: ShiftCardProps
         {" · "}{calcNetHours(shift.startTime, shift.endTime, shift.breakMinutes)}
       </p>
       {shift.breakMinutes > 0 && (
-        <p className={cn("leading-tight opacity-50", textClass)}>{shift.breakMinutes}m break</p>
+        <p className={cn("leading-tight opacity-50", textClass)}>{t("breakMinutes", { n: shift.breakMinutes })}</p>
       )}
     </div>
   )
