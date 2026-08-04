@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils"
 import { fetchAllPages } from "@/lib/pagination"
 import { getMondayOfWeek, addDays, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 type Tab = "PENDING" | "APPROVED" | "DENIED"
 
@@ -24,16 +26,20 @@ const STATUS_STYLE: Record<Tab, string> = {
   DENIED:   "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300",
 }
 
-function formatDateRange(start: string, end: string) {
+// The copy on this page is still English by design (deep manager screen, see
+// CLAUDE.md), but dates are not copy — a Danish org should read "3. aug." here
+// regardless, and hardcoding en-GB is the one thing the i18n rules call out
+// explicitly. The locale tag is threaded in from the component.
+function formatDateRange(start: string, end: string, localeTag: string) {
   const s = new Date(start + "T00:00:00Z")
   const e = new Date(end + "T00:00:00Z")
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }
-  if (start === end) return s.toLocaleDateString("en-GB", opts)
-  return `${s.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} – ${e.toLocaleDateString("en-GB", opts)}`
+  if (start === end) return s.toLocaleDateString(localeTag, opts)
+  return `${s.toLocaleDateString(localeTag, { day: "numeric", month: "short", timeZone: "UTC" })} – ${e.toLocaleDateString(localeTag, opts)}`
 }
 
-function formatDayHeading(iso: string) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {
+function formatDayHeading(iso: string, localeTag: string) {
+  return new Date(iso + "T12:00:00").toLocaleDateString(localeTag, {
     weekday: "long", day: "numeric", month: "long",
   })
 }
@@ -62,6 +68,8 @@ function getDaysInRange(startDate: string, endDate: string): string[] {
 
 export default function TimeOffPage() {
   const { orgId } = useOrg()
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const tt = useTranslations("manager.toasts")
   const tf = getOrgSettings().timeFormat
   const [tab, setTab] = useState<Tab>("PENDING")
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
@@ -101,12 +109,12 @@ export default function TimeOffPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Failed to load requests")
+          toast.error(tt("timeOffLoadFailed"))
           setFetchedOrgId(orgId)
         }
       })
     return () => { cancelled = true }
-  }, [orgId])
+  }, [orgId, tt])
 
   // Fetch shifts for a request's date range. Pure fetch — state updates happen
   // in the effect's promise callbacks below.
@@ -129,10 +137,10 @@ export default function TimeOffPage() {
     let cancelled = false
     fetchPreview(viewRequest)
       .then((shifts) => { if (!cancelled) setPreviewShifts(shifts) })
-      .catch(() => { if (!cancelled) toast.error("Failed to load schedule") })
+      .catch(() => { if (!cancelled) toast.error(tt("timeOffScheduleLoadFailed")) })
       .finally(() => { if (!cancelled) setPreviewLoading(false) })
     return () => { cancelled = true }
-  }, [viewRequest, fetchPreview])
+  }, [viewRequest, fetchPreview, tt])
 
   const tabs: Tab[] = ["PENDING", "APPROVED", "DENIED"]
   const filtered = requests.filter((r) => r.status === tab)
@@ -144,9 +152,9 @@ export default function TimeOffPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "APPROVED" }),
       })
-      if (!res.ok) { toast.error("Failed to approve"); throw new Error() }
+      if (!res.ok) { toast.error(tt("timeOffApproveFailed")); throw new Error() }
       const data = await res.json() as { data: TimeOffRequest }
-      toast.success("Request approved")
+      toast.success(tt("timeOffApproved"))
       return data.data
     })
   }
@@ -161,9 +169,9 @@ export default function TimeOffPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "DENIED", reviewNote: note }),
       })
-      if (!res.ok) { toast.error("Failed to deny"); throw new Error() }
+      if (!res.ok) { toast.error(tt("timeOffDenyFailed")); throw new Error() }
       const data = await res.json() as { data: TimeOffRequest }
-      toast.success("Request denied")
+      toast.success(tt("timeOffDenied"))
       return data.data
     })
   }
@@ -171,8 +179,8 @@ export default function TimeOffPage() {
   async function handleDelete(id: string) {
     await removeRequest(id, async () => {
       const res = await fetch(`/api/orgs/${orgId}/time-off/${id}`, { method: "DELETE" })
-      if (!res.ok) { toast.error("Failed to delete"); throw new Error() }
-      toast.success("Request deleted")
+      if (!res.ok) { toast.error(tt("timeOffDeleteFailed")); throw new Error() }
+      toast.success(tt("timeOffDeleted"))
     })
   }
 
@@ -248,7 +256,7 @@ export default function TimeOffPage() {
                     <span className="text-xs text-gray-400 dark:text-gray-600">·</span>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{r.employee?.jobRole}</p>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{formatDateRange(r.startDate, r.endDate)}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{formatDateRange(r.startDate, r.endDate, localeTag)}</p>
                   {r.reason && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{r.reason}</p>}
                   {r.reviewNote && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Note: {r.reviewNote}</p>}
                 </div>
@@ -333,7 +341,7 @@ export default function TimeOffPage() {
           <SheetHeader className="pb-2">
             <SheetTitle>{viewRequest?.employee?.name ?? "Schedule"}</SheetTitle>
             <SheetDescription>
-              {viewRequest ? formatDateRange(viewRequest.startDate, viewRequest.endDate) : ""}
+              {viewRequest ? formatDateRange(viewRequest.startDate, viewRequest.endDate, localeTag) : ""}
               {viewRequest?.reason ? ` · ${viewRequest.reason}` : ""}
             </SheetDescription>
           </SheetHeader>
@@ -357,7 +365,7 @@ export default function TimeOffPage() {
                 return (
                   <div key={day}>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                      {formatDayHeading(day)}
+                      {formatDayHeading(day, localeTag)}
                     </p>
                     {dayShifts.length === 0 ? (
                       <p className="text-sm text-gray-400 dark:text-gray-500 pl-1">No shifts scheduled</p>

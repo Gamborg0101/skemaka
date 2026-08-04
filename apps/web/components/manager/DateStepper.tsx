@@ -3,10 +3,13 @@
 import { useRef } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { addDays } from "@/lib/dateUtils"
+import { useLocale } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 export function DateStepper({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const label = new Date(value + "T12:00:00").toLocaleDateString("en-GB", {
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const label = new Date(value + "T12:00:00").toLocaleDateString(localeTag, {
     weekday: "short", day: "numeric", month: "short", year: "numeric",
   })
   return (

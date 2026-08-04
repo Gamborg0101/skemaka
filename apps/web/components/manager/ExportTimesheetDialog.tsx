@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import {
   Dialog,
   DialogContent,
@@ -60,16 +61,21 @@ function presetRange(preset: Preset): { from: string; to: string } {
   }
 }
 
-const PRESET_LABELS: Record<Preset, string> = {
-  thisWeek: "This week",
-  lastWeek: "Last week",
-  last2Weeks: "Last 2 weeks",
-  thisMonth: "This month",
-  lastMonth: "Last month",
-  custom: "Custom range",
+function presetLabels(t: ReturnType<typeof useTranslations<"manager.exportTimesheetDialog">>): Record<Preset, string> {
+  return {
+    thisWeek: t("presetThisWeek"),
+    lastWeek: t("presetLastWeek"),
+    last2Weeks: t("presetLast2Weeks"),
+    thisMonth: t("presetThisMonth"),
+    lastMonth: t("presetLastMonth"),
+    custom: t("presetCustom"),
+  }
 }
 
 export function ExportTimesheetDialog({ open, onOpenChange, orgId }: Props) {
+  const t = useTranslations("manager.exportTimesheetDialog")
+  const tCommon = useTranslations("common")
+  const PRESET_LABELS = presetLabels(t)
   const [preset, setPreset] = useState<Preset>("thisWeek")
   const [range, setRange] = useState(() => presetRange("thisWeek"))
   const [source, setSource] = useState<"scheduled" | "clocked">("scheduled")
@@ -101,15 +107,15 @@ export function ExportTimesheetDialog({ open, onOpenChange, orgId }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Export timesheet</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Download a payroll-ready CSV of hours for a pay period.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Pay period</Label>
+            <Label>{t("payPeriod")}</Label>
             <Select value={preset} onValueChange={(v) => applyPreset(v as Preset)}>
               <SelectTrigger className="w-full">
                 <SelectValue>{PRESET_LABELS[preset]}</SelectValue>
@@ -124,7 +130,7 @@ export function ExportTimesheetDialog({ open, onOpenChange, orgId }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="timesheet-from">From</Label>
+              <Label htmlFor="timesheet-from">{t("from")}</Label>
               <Input
                 id="timesheet-from"
                 type="date"
@@ -134,7 +140,7 @@ export function ExportTimesheetDialog({ open, onOpenChange, orgId }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="timesheet-to">To</Label>
+              <Label htmlFor="timesheet-to">{t("to")}</Label>
               <Input
                 id="timesheet-to"
                 type="date"
@@ -146,46 +152,44 @@ export function ExportTimesheetDialog({ open, onOpenChange, orgId }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>Hours source</Label>
+            <Label>{t("hoursSource")}</Label>
             <Select value={source} onValueChange={(v) => setSource(v as typeof source)}>
               <SelectTrigger className="w-full">
                 <SelectValue>
-                  {source === "scheduled" ? "Scheduled shifts (roster)" : "Clocked hours (time clock)"}
+                  {source === "scheduled" ? t("sourceScheduled") : t("sourceClocked")}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="scheduled">Scheduled shifts (roster)</SelectItem>
-                <SelectItem value="clocked">Clocked hours (time clock)</SelectItem>
+                <SelectItem value="scheduled">{t("sourceScheduled")}</SelectItem>
+                <SelectItem value="clocked">{t("sourceClocked")}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {source === "scheduled"
-                ? "Hours as planned on the schedule. Sick shifts are excluded."
-                : "Actual clock in/out times, net of breaks. Open entries are excluded."}
+              {source === "scheduled" ? t("sourceScheduledHint") : t("sourceClockedHint")}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Format</Label>
+            <Label>{t("format")}</Label>
             <Select value={view} onValueChange={(v) => setView(v as typeof view)}>
               <SelectTrigger className="w-full">
                 <SelectValue>
-                  {view === "summary" ? "Summary — one row per employee" : "Detailed — one row per shift"}
+                  {view === "summary" ? t("formatSummary") : t("formatDetail")}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="summary">Summary — one row per employee</SelectItem>
-                <SelectItem value="detail">Detailed — one row per shift</SelectItem>
+                <SelectItem value="summary">{t("formatSummary")}</SelectItem>
+                <SelectItem value="detail">{t("formatDetail")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{tCommon("cancel")}</Button>
           <Button onClick={handleDownload} disabled={invalid}>
             <Download className="size-4 mr-1.5" />
-            Download CSV
+            {t("download")}
           </Button>
         </DialogFooter>
       </DialogContent>

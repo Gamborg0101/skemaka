@@ -28,6 +28,8 @@ export type CoverFocus = {
  */
 export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | null) => void }) {
   const t = useTranslations("manager.coverRequests")
+  const tToasts = useTranslations("manager.toasts")
+  const tCommon = useTranslations("common")
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const { orgId } = useOrg()
   const [requests, setRequests] = useState<CoverRequest[]>([])
@@ -74,12 +76,12 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
     try {
       const r = await fetch(`/api/orgs/${orgId}/cover-requests/${id}/${action}`, { method: "POST" })
       const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? "Something went wrong")
-      toast.success(action === "approve" ? "Cover approved — shift reassigned" : "Cover request denied")
+      if (!r.ok) throw new Error(res.error ?? tCommon("somethingWentWrong"))
+      toast.success(action === "approve" ? tToasts("coverApproved") : tToasts("coverDenied"))
       setRequests((prev) => prev.filter((req) => req.id !== id))
       if (id === selectedId) clearSelection()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : tCommon("somethingWentWrong"))
     } finally {
       setBusyId(null)
     }

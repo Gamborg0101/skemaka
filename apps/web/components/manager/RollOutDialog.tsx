@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Send, Users, CalendarRange } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { formatWeekLabel } from "@/lib/dateUtils"
 
 interface PendingWeek {
@@ -38,6 +39,7 @@ interface Props {
  * months). Everyone with a shift in the range is notified once.
  */
 export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props) {
+  const t = useTranslations("manager.toasts")
   const [weeks, setWeeks] = useState<PendingWeek[] | null>(null)
   const [throughWeek, setThroughWeek] = useState<string>("")
   const [rolling, setRolling] = useState(false)
@@ -88,17 +90,15 @@ export function RollOutDialog({ open, onOpenChange, orgId, onRolledOut }: Props)
       })
       const d = await r.json() as { data?: { weeks: number; notified: number }; error?: string }
       if (!r.ok || !d.data) {
-        toast.error(d.error ?? "Failed to roll out")
+        toast.error(d.error ?? t("rollOutFailed"))
         return
       }
       const { weeks: n, notified } = d.data
-      toast.success(
-        `Rolled out ${n} ${n === 1 ? "week" : "weeks"} — ${notified} ${notified === 1 ? "person" : "people"} notified`,
-      )
+      toast.success(t("rollOutSuccess", { weeks: n, notified }))
       onRolledOut(fromWeek, throughWeek)
       onOpenChange(false)
     } catch {
-      toast.error("Failed to roll out")
+      toast.error(t("rollOutFailed"))
     } finally {
       setRolling(false)
     }

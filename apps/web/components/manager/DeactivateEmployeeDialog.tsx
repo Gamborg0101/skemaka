@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { AlertTriangle, Calendar, Clock } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import {
   Dialog,
   DialogContent,
@@ -29,8 +31,8 @@ interface DeactivateEmployeeDialogProps {
   onConfirm: (deleteShifts: boolean) => void
 }
 
-function fmtDate(date: string) {
-  return new Date(date + "T12:00:00").toLocaleDateString("en-GB", {
+function fmtDate(date: string, localeTag: string) {
+  return new Date(date + "T12:00:00").toLocaleDateString(localeTag, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -44,6 +46,9 @@ export function DeactivateEmployeeDialog({
   upcomingShifts,
   onConfirm,
 }: DeactivateEmployeeDialogProps) {
+  const t = useTranslations("manager.deactivateDialog")
+  const tCommon = useTranslations("common")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const [deleteShifts, setDeleteShifts] = useState(false)
 
   const handleConfirm = () => {
@@ -60,7 +65,7 @@ export function DeactivateEmployeeDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleCancel() }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Deactivate {employee.name}?</DialogTitle>
+          <DialogTitle>{t("title", { name: employee.name })}</DialogTitle>
         </DialogHeader>
 
         <div className="flex items-start gap-3 py-1">
@@ -68,7 +73,7 @@ export function DeactivateEmployeeDialog({
             <AlertTriangle className="size-4 text-amber-500" />
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {employee.name} will be hidden from the schedule and cannot be assigned new shifts.
+            {t("warning", { name: employee.name })}
           </p>
         </div>
 
@@ -82,7 +87,7 @@ export function DeactivateEmployeeDialog({
                 onChange={(e) => setDeleteShifts(e.target.checked)}
               />
               <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                Also delete {upcomingShifts.length} upcoming shift{upcomingShifts.length !== 1 ? "s" : ""}
+                {t("alsoDeleteShifts", { count: upcomingShifts.length })}
               </span>
             </label>
             <ul className="divide-y divide-gray-100 dark:divide-gray-700 bg-gray-50 dark:bg-gray-900/40">
@@ -96,7 +101,7 @@ export function DeactivateEmployeeDialog({
                 >
                   <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
                     <Calendar className="size-3 shrink-0 text-gray-400" />
-                    {fmtDate(shift.date)}
+                    {fmtDate(shift.date, localeTag)}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-gray-500">
                     <Clock className="size-3 text-gray-400" />
@@ -111,10 +116,10 @@ export function DeactivateEmployeeDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button variant="destructive" onClick={handleConfirm}>
-            Deactivate
+            {t("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

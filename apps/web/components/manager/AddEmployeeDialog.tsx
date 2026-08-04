@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import {
   Dialog,
   DialogContent,
@@ -26,10 +27,15 @@ import { isEmploymentType } from "@/types"
 import type { JobRole, EmploymentType } from "@/types"
 
 /** Human label for an employment type, using the org's configured full-time hours. */
-function employmentTypeLabel(type: EmploymentType, fullTimeHours: number, reducedHours: number): string {
-  if (type === "FULL_TIME") return `Full Time (${fullTimeHours}h/week)`
-  if (type === "REDUCED_FULL_TIME") return `Reduced Full Time (${reducedHours}h/week)`
-  return "Part Time"
+function employmentTypeLabel(
+  t: ReturnType<typeof useTranslations<"manager.employment">>,
+  type: EmploymentType,
+  fullTimeHours: number,
+  reducedHours: number,
+): string {
+  if (type === "FULL_TIME") return t("fullTime", { hours: fullTimeHours })
+  if (type === "REDUCED_FULL_TIME") return t("reducedFullTime", { hours: reducedHours })
+  return t("partTime")
 }
 import { parsePhoneNumberWithError, ParseError } from "libphonenumber-js"
 
@@ -73,6 +79,11 @@ export function AddEmployeeDialog({
   jobRoles,
   onEmployeeAdd,
 }: AddEmployeeDialogProps) {
+  const t = useTranslations("manager.addEmployeeDialog")
+  const tFields = useTranslations("manager.employeeFields")
+  const tEmployment = useTranslations("manager.employment")
+  const tEmployees = useTranslations("manager.employees")
+  const tCommon = useTranslations("common")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -108,8 +119,8 @@ export function AddEmployeeDialog({
     // The Select fields (Job Role, contracted hours) have no native browser
     // validation, so a silent early-return leaves the manager confused. Point
     // them at what's missing.
-    if (!jobRole) { toast.error("Pick a job role"); return }
-    if (!partTimeHoursOk) { toast.error("Set contracted hours for part-time staff"); return }
+    if (!jobRole) { toast.error(t("pickJobRole")); return }
+    if (!partTimeHoursOk) { toast.error(t("setContractedHours")); return }
     if (!name || !email || !phone || !hourlyWage) return
     if (submitting) return
 
@@ -149,17 +160,17 @@ export function AddEmployeeDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Employee</DialogTitle>
+          <DialogTitle>{tEmployees("addEmployee")}</DialogTitle>
           <DialogDescription>
-            The employee will receive an invite email with a magic link to access their portal.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="emp-name">Name <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="emp-name">{tFields("name")} <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-name"
-              placeholder="Full name"
+              placeholder={tFields("namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -167,11 +178,11 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-email">Email <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="emp-email">{tFields("email")} <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-email"
               type="email"
-              placeholder="employee@example.com"
+              placeholder={tFields("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -179,11 +190,11 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-phone">Phone <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="emp-phone">{tFields("phone")} <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-phone"
               type="tel"
-              placeholder="+45 12 34 56 78"
+              placeholder={tFields("phonePlaceholder")}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={(e) => setPhone(formatPhoneNumber(e.target.value))}
@@ -192,10 +203,10 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-role">Job Role <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="emp-role">{tFields("jobRole")} <span className="text-rose-500">*</span></Label>
             <Select value={jobRole} onValueChange={(val) => setJobRole(val ?? "")}>
               <SelectTrigger id="emp-role" className="w-full">
-                <SelectValue placeholder="Select a role" />
+                <SelectValue placeholder={tFields("jobRolePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {jobRoles.map((r) => (
@@ -208,13 +219,13 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-wage">Hourly Wage ({getCurrencySymbol()}) <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="emp-wage">{tFields("hourlyWage", { symbol: getCurrencySymbol() })} <span className="text-rose-500">*</span></Label>
             <Input
               id="emp-wage"
               type="number"
               min="0"
               step="0.01"
-              placeholder="15.00"
+              placeholder={tFields("hourlyWagePlaceholder")}
               value={hourlyWage}
               onChange={(e) => setHourlyWage(e.target.value)}
               required
@@ -222,28 +233,28 @@ export function AddEmployeeDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-employment-type">Employment Type</Label>
+            <Label htmlFor="emp-employment-type">{tFields("employmentType")}</Label>
             <Select value={employmentType} onValueChange={(val) => { if (val && isEmploymentType(val)) setEmploymentType(val) }}>
               <SelectTrigger id="emp-employment-type" className="w-full">
-                <SelectValue>{employmentTypeLabel(employmentType, fullTimeHours, reducedFullTimeHours)}</SelectValue>
+                <SelectValue>{employmentTypeLabel(tEmployment, employmentType, fullTimeHours, reducedFullTimeHours)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="FULL_TIME">{employmentTypeLabel("FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
-                <SelectItem value="REDUCED_FULL_TIME">{employmentTypeLabel("REDUCED_FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
-                <SelectItem value="PART_TIME">Part Time</SelectItem>
+                <SelectItem value="FULL_TIME">{employmentTypeLabel(tEmployment, "FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
+                <SelectItem value="REDUCED_FULL_TIME">{employmentTypeLabel(tEmployment, "REDUCED_FULL_TIME", fullTimeHours, reducedFullTimeHours)}</SelectItem>
+                <SelectItem value="PART_TIME">{tEmployment("partTime")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {employmentType === "PART_TIME" && (
             <div className="space-y-1.5">
-              <Label htmlFor="emp-contracted-hours">Contracted Hours / week</Label>
+              <Label htmlFor="emp-contracted-hours">{tFields("contractedHours")}</Label>
               <Input
                 id="emp-contracted-hours"
                 type="number"
                 min="1"
                 max="39"
-                placeholder="20"
+                placeholder={tFields("contractedHoursPlaceholder")}
                 value={contractedHours}
                 onChange={(e) => setContractedHours(e.target.value)}
                 required
@@ -252,10 +263,10 @@ export function AddEmployeeDialog({
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="emp-notes">Notes (optional)</Label>
+            <Label htmlFor="emp-notes">{tFields("notes")}</Label>
             <Textarea
               id="emp-notes"
-              placeholder="Any notes about this employee..."
+              placeholder={tFields("notesPlaceholder")}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-14"
@@ -268,10 +279,10 @@ export function AddEmployeeDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white">
-              {submitting ? "Adding…" : "Add & Send Invite"}
+              {submitting ? tCommon("adding") : t("submit")}
             </Button>
           </DialogFooter>
         </form>

@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/prisma"
 import { redirect } from "next/navigation"
+import { getLocale } from "next-intl/server"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { formatTime, calcNetHours, getMondayOfWeek, addDays } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
 import { CoworkerList } from "@/components/manager/CoworkerList"
@@ -13,11 +15,11 @@ import { pickShiftQuote } from "@/types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function formatDay(date: Date) {
-  return date.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })
+function formatDay(date: Date, localeTag: string) {
+  return date.toLocaleDateString(localeTag, { weekday: "long", timeZone: "UTC" })
 }
-function formatDate(date: Date) {
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
+function formatDate(date: Date, localeTag: string) {
+  return date.toLocaleDateString(localeTag, { day: "numeric", month: "long", timeZone: "UTC" })
 }
 
 type DbShift = {
@@ -45,6 +47,8 @@ export default async function MyShiftsPage({
 }) {
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
+
+  const localeTag = LOCALE_TAGS[(await getLocale()) as Locale]
 
   const { employee: employeeParam, week: weekParam } = await searchParams
 
@@ -260,10 +264,10 @@ export default async function MyShiftsPage({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide leading-none">
-                        {formatDay(shift.date)}
+                        {formatDay(shift.date, localeTag)}
                       </p>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-0.5">
-                        {formatDate(shift.date)}
+                        {formatDate(shift.date, localeTag)}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
