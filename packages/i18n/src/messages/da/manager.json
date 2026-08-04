@@ -171,6 +171,9 @@
   },
   "demoBanner": {
     "text": "Demo-restaurant — slettes efter 48 timer. Alt, hvad du ændrer her, er kun dit.",
-    "cta": "Start din gratis prøveperiode"
+    "cta": "Start din gratis prøveperiode",
+    "reset": "Nulstil demo",
+    "resetting": "Nulstiller…",
+    "scope": "Eksempeldata — e-mails og sms'er er slået fra."
   }
 }
