@@ -29,5 +29,8 @@
     "analyticsLabel": "Analytics",
     "analyticsDesc": "We don't use any analytics cookies today. If that ever changes, they stay off unless you allow them here.",
     "footerLink": "Cookie settings"
-  }
+  },
+  "notFoundTitle": "Page not found",
+  "notFoundBody": "The page you're looking for doesn't exist or has been moved.",
+  "notFoundHome": "Back to Skemaka"
 }

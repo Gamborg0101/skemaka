@@ -28,8 +28,9 @@ export default function PrivacyPage() {
         <p>We collect the following categories of personal data:</p>
         <ul>
           <li>
-            <strong>Account data</strong> — your name, email address, and profile picture, obtained
-            from Google when you sign in via Google OAuth.
+            <strong>Account data</strong> — your name and email address, and, if you sign in with
+            Google, your profile picture. This comes from Google when you use Google sign-in, or
+            from the email address you enter when you sign in with a one-time email link.
           </li>
           <li>
             <strong>Organisation data</strong> — your business name and the settings you configure
