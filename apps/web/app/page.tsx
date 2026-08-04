@@ -98,9 +98,13 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/85 via-slate-900/75 to-slate-900" />
         <div className="pointer-events-none absolute -top-40 left-1/4 size-[28rem] rounded-full bg-blue-600/10 blur-3xl" />
 
-        <nav className="relative max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+        {/* gap-4 on the nav itself, not just justify-between: at 390px the two
+            groups fill the row, and justify-between then leaves them touching —
+            the wordmark ran straight into the locale toggle ("SkemakaEN/DA") on
+            the first thing a mobile visitor sees. */}
+        <nav className="relative max-w-6xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between gap-4">
           <LogoLockup className="text-white [--logo-accent:#60a5fa]" wordClassName="text-lg" />
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3 sm:gap-5">
             <LocaleToggle variant="dark" />
             <Link href="/demo" className="text-sm font-medium text-white/60 hover:text-white transition-colors">{t("nav.demo")}</Link>
             <Link href="/login" className="text-sm font-medium text-white/60 hover:text-white transition-colors">{t("nav.signIn")}</Link>

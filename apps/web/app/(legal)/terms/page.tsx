@@ -31,7 +31,8 @@ export default function TermsPage() {
 
       <Section title="3. Accounts">
         <p>
-          You must sign in using a valid Google account. You are responsible for maintaining the
+          You sign in either with a Google account or with a one-time link sent to your email
+          address. You are responsible for maintaining the
           confidentiality of your account and for all activity that occurs under it. You must be at least
           18 years old and have the legal authority to enter into this agreement on behalf of your
           organisation.

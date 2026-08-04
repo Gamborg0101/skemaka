@@ -28,8 +28,9 @@ export default function PrivacyPage() {
         <p>We collect the following categories of personal data:</p>
         <ul>
           <li>
-            <strong>Account data</strong> — your name, email address, and profile picture, obtained
-            from Google when you sign in via Google OAuth.
+            <strong>Account data</strong> — your name and email address, and, if you sign in with
+            Google, your profile picture. This comes from Google when you use Google sign-in, or
+            from the email address you enter when you sign in with a one-time email link.
           </li>
           <li>
             <strong>Organisation data</strong> — your business name and the settings you configure
@@ -168,9 +169,14 @@ export default function PrivacyPage() {
 
       <Section title="9. Cookies">
         <p>
-          We use a single session cookie to keep you signed in. We do not use tracking, analytics, or
-          advertising cookies. No cookie banner is shown because we only set cookies that are strictly
-          necessary to operate the Service.
+          We use a session cookie to keep you signed in, and cookies that remember your preferences
+          such as language and your cookie choices. We do not use advertising cookies and we do not
+          sell or share your data with advertisers.
+        </p>
+        <p>
+          When you first visit, a consent banner lets you accept all cookies or only the strictly
+          necessary ones, with per-category controls under &ldquo;Settings&rdquo;. You can change your
+          choice at any time via the &ldquo;Cookie settings&rdquo; link in the footer.
         </p>
       </Section>
 

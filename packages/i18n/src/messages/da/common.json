@@ -29,5 +29,8 @@
     "analyticsLabel": "Analyse",
     "analyticsDesc": "Vi bruger ingen analyse-cookies i dag. Skulle det ændre sig, forbliver de slået fra, medmindre du tillader dem her.",
     "footerLink": "Cookieindstillinger"
-  }
+  },
+  "notFoundTitle": "Siden blev ikke fundet",
+  "notFoundBody": "Siden, du leder efter, findes ikke eller er blevet flyttet.",
+  "notFoundHome": "Tilbage til Skemaka"
 }
