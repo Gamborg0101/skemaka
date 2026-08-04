@@ -347,7 +347,7 @@ export default function SchedulePage() {
             onClick={goToToday}
             className={todayHidden ? "invisible" : ""}
           >
-            Today
+            {t("today")}
           </Button>
           {dayCountSelector}
           <div className="flex-1 flex items-center justify-end gap-1">
