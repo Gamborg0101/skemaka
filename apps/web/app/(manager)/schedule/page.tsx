@@ -358,7 +358,7 @@ export default function SchedulePage() {
 
       <div className="flex-1 overflow-auto pb-16 md:pb-0">
         {!loading && employees.length > 0 && (
-          <div className="px-4 pt-4">
+          <div className="px-3 pt-2 sm:px-4 sm:pt-4">
             <CoverRequestsPanel onFocus={focusCover} />
             <ShiftOffersPanel orgId={orgId} refreshToken={offersRefresh} />
           </div>
