@@ -48,6 +48,7 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
   const [availability, setAvailability] = useState<DayAvailability[]>([])
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/availability/${token}`)
@@ -87,16 +88,42 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setSubmitting(true)
     try {
+      // Map to the API's contract explicitly. The UI calls these "preferred"
+      // times, the API calls them startTime/endTime, and zod strips keys it
+      // doesn't recognise — so posting the raw state silently dropped every
+      // time an employee entered and stored null for all of them. Empty inputs
+      // become null (the field is optional), and an unavailable day carries no
+      // times at all, which is what the server's superRefine expects.
+      const days = availability.map((d) => ({
+        date: d.date,
+        isAvailable: d.isAvailable,
+        startTime: d.isAvailable && d.preferredStart ? d.preferredStart : null,
+        endTime: d.isAvailable && d.preferredEnd ? d.preferredEnd : null,
+      }))
+
       const r = await fetch(`/api/availability/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days: availability }),
+        body: JSON.stringify({ days }),
       })
       if (r.ok || r.status === 201) {
         setSubmitted(true)
+        return
       }
+      // Anything else used to fall through to nothing: the spinner stopped and
+      // the employee had no idea whether it had worked. A 409 in particular is
+      // routine — the manager can close the request while someone is filling
+      // it in — and deserves its own explanation.
+      setError(
+        r.status === 409 ? t("submitClosed")
+        : r.status === 429 ? t("submitTooMany")
+        : t("submitFailed"),
+      )
+    } catch {
+      setError(t("submitFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -264,6 +291,14 @@ export default function AvailabilityTokenPage({ params }: PageProps) {
         ))}
 
         <div className="pt-3">
+          {error && (
+            <p
+              role="alert"
+              className="mb-3 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+            >
+              {error}
+            </p>
+          )}
           <Button
             type="submit"
             disabled={submitting}
