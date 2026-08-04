@@ -125,7 +125,7 @@
     "resendInviteTooltip": "Send invitation igen",
     "removeTooltip": "Fjern medarbejder",
     "removeDialogTitle": "Fjern medarbejder?",
-    "removeDialogDesc": "Dette vil fjerne <strong>{name}</strong> permanent fra systemet. Handlingen kan ikke fortrydes.",
+    "removeDialogDesc": "Dette sletter <strong>{name}</strong> permanent sammen med alt, der er registreret: tidligere og planlagte vagter, timesedler, tilgængelighed og fridagshistorik. Dine lønrapporter ændrer sig. Det kan ikke fortrydes.",
     "removeBtn": "Fjern"
   },
   "costs": {
@@ -167,7 +167,13 @@
     "langTitle": "Sprog",
     "langDesc": "Sprog i appen og i beskeder til dine medarbejdere.",
     "langSaved": "Sprog opdateret",
-    "langError": "Sproget kunne ikke opdateres"
+    "langError": "Sproget kunne ikke opdateres",
+    "revokeTitle": "Fjern lederadgang?",
+    "revokeDesc": "<strong>{email}</strong> mister øjeblikkeligt adgang til vagtplaner, medarbejdere og indstillinger. Du kan invitere dem igen senere.",
+    "revokeConfirm": "Fjern adgang",
+    "deleteRoleTitle": "Slet denne rolle?",
+    "deleteRoleDesc": "<strong>{name}</strong> fjernes fra rollelisten. Medarbejdere, der er tilknyttet den, beholder deres rolle — sletning blokeres, så længe nogen bruger den.",
+    "deleteRoleConfirm": "Slet rolle"
   },
   "demoBanner": {
     "text": "Demo-restaurant — slettes efter 48 timer. Alt, hvad du ændrer her, er kun dit.",

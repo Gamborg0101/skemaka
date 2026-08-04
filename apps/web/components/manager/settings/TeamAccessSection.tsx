@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 type TeamMember = {
   userId: string
@@ -20,8 +21,14 @@ type TeamMember = {
 
 export function TeamAccessSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
   const { orgId } = useOrg()
   const [team, setTeam] = useState<TeamMember[]>([])
+  // Revoking a colleague's access was a single unconfirmed click with no undo
+  // path in the UI — inconsistent with Remove Employee and Delete Account, which
+  // both confirm. The backend guards are solid; the risk was purely a misclick.
+  const [revokeTarget, setRevokeTarget] = useState<TeamMember | null>(null)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviting, setInviting] = useState(false)
 
@@ -96,7 +103,7 @@ export function TeamAccessSection() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => handleRevoke(member)}
+                      onClick={() => setRevokeTarget(member)}
                       className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-950/40 shrink-0"
                     >
                       <X className="size-3.5" />
@@ -132,6 +139,37 @@ export function TeamAccessSection() {
           </p>
         </div>
       </div>
+
+      <Dialog open={!!revokeTarget} onOpenChange={(v) => { if (!v) setRevokeTarget(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{tSettings("revokeTitle")}</DialogTitle>
+            <DialogDescription>
+              {tSettings.rich("revokeDesc", {
+                email: revokeTarget?.email ?? "",
+                strong: (chunks) => (
+                  <span className="font-medium text-gray-900 dark:text-gray-50">{chunks}</span>
+                ),
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeTarget(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                const target = revokeTarget
+                setRevokeTarget(null)
+                if (target) handleRevoke(target)
+              }}
+            >
+              {tSettings("revokeConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SettingsSection>
   )
 }
