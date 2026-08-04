@@ -1,4 +1,5 @@
 import { getTimeFormat, type TimeFormat } from "./timeFormat"
+import { getLocaleTag } from "@/lib/localeTag"
 
 /**
  * Format a wall-clock "HH:MM" string per the org's clock setting.
@@ -20,7 +21,7 @@ export function formatTime(t: string, format: TimeFormat = getTimeFormat()): str
 /** "2025-05-18" → "Mon 18 May" */
 export function formatDate(iso: string): string {
   const d = new Date(iso + "T00:00:00Z")
-  return d.toLocaleDateString("en-GB", {
+  return d.toLocaleDateString(getLocaleTag(), {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -31,7 +32,7 @@ export function formatDate(iso: string): string {
 /** "2025-05-18" → "Monday, 18 May" */
 export function formatDateLong(iso: string): string {
   const d = new Date(iso + "T00:00:00Z")
-  return d.toLocaleDateString("en-GB", {
+  return d.toLocaleDateString(getLocaleTag(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -42,7 +43,7 @@ export function formatDateLong(iso: string): string {
 /** "2025-05-18" → "Mon" */
 export function formatWeekday(iso: string): string {
   const d = new Date(iso + "T00:00:00Z")
-  return d.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
+  return d.toLocaleDateString(getLocaleTag(), { weekday: "short", timeZone: "UTC" })
 }
 
 /** Compute shift duration label: "7h 30m". Handles overnight shifts (e.g. 22:00–06:00). */
@@ -69,7 +70,7 @@ export function elapsedSince(isoTimestamp: string): string {
 
 /** ISO timestamp → "9:03 AM" (12h) or "09:03" (24h), per the org's clock setting. */
 export function formatTimestamp(iso: string, format: TimeFormat = getTimeFormat()): string {
-  return new Date(iso).toLocaleTimeString("en-GB", {
+  return new Date(iso).toLocaleTimeString(getLocaleTag(), {
     hour: format === "24h" ? "2-digit" : "numeric",
     minute: "2-digit",
     hour12: format === "12h",

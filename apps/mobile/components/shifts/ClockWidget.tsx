@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card"
 import { useActiveEntry, useClockIn, useClockOut } from "@/hooks/useClock"
 import { elapsedSince, formatTime } from "@/lib/utils"
 import type { Shift } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 // Live indicator: color dot is decorative — the text label "Live" provides the signal
 
 type Props = {
@@ -21,6 +22,7 @@ function formatClockTime(iso: string): string {
 }
 
 export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
+  const t = useTranslations("mobile")
   const { data: entry } = useActiveEntry()
   const clockIn  = useClockIn()
   const clockOut = useClockOut()
@@ -54,7 +56,7 @@ export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
         <View className="absolute inset-0 bg-success/5" />
         <View className="gap-1">
           <Text className="text-xs font-medium text-ink-secondary uppercase tracking-wide">
-            Worked today
+            {t("clock.workedToday")}
           </Text>
           <Text className="text-xl font-bold text-ink tracking-tight">
             {formatClockTime(todayShift!.clockedInAt!)} – {formatClockTime(todayShift!.clockedOutAt!)}
@@ -87,7 +89,7 @@ export function ClockWidget({ todayShift, alwaysShow = false }: Props) {
             <View className="flex-row items-center gap-1.5">
               {/* Color dot is decorative — "Live" text provides the non-color signal */}
               <View className="w-2 h-2 rounded-full bg-success" importantForAccessibility="no" accessibilityElementsHidden />
-              <Text className="text-xs font-medium text-success">Live</Text>
+              <Text className="text-xs font-medium text-success">{t("clock.live")}</Text>
             </View>
           ) : null}
         </View>

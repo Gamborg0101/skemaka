@@ -96,10 +96,12 @@ export default function EmployeesPage() {
     setOffset(0)
   }
 
+  /** Resolves true only when the employee was created, so the dialog knows
+   *  whether it is safe to close and discard what the manager typed. */
   const handleAdd = async (data: {
     name: string; email: string; phone: string; jobRole: string
     hourlyWage: number; employmentType: EmploymentType; contractedHours: number; notes: string | null
-  }) => {
+  }): Promise<boolean> => {
     const r = await fetch(`/api/orgs/${orgId}/employees`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,9 +113,10 @@ export default function EmployeesPage() {
       // New employees are active; surface them on the active tab's first page.
       if (activeTab === "active" && offset === 0) reload()
       else changeTab("active")
-    } else {
-      toast.error(res.error ?? "Failed to add employee")
+      return true
     }
+    toast.error(res.error ?? "Failed to add employee")
+    return false
   }
 
   const handleDeactivateConfirm = async () => {

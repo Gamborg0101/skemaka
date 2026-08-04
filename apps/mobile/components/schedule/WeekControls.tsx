@@ -3,6 +3,8 @@ import { Ionicons } from "@expo/vector-icons"
 import * as Haptics from "expo-haptics"
 import { currentWeek, weekRangeLabel } from "@/lib/dates"
 import { isToday } from "@/lib/utils"
+import { useTranslations } from "@/lib/i18n"
+import { getLocaleTag } from "@/lib/localeTag"
 
 // ─── Week navigation ──────────────────────────────────────────────────────────
 // Padding-free — callers wrap with `px-4`.
@@ -18,6 +20,7 @@ export function WeekNav({
   onNext: () => void
   onReset: () => void
 }) {
+  const t = useTranslations("mobile")
   const isThisWeek = week === currentWeek()
 
   return (
@@ -26,7 +29,7 @@ export function WeekNav({
         onPress={onPrev}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Previous week"
+        accessibilityLabel={t("week.previous")}
         className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
       >
         <Ionicons name="chevron-back" size={18} color="#A1A1AE" />
@@ -40,7 +43,7 @@ export function WeekNav({
       >
         <Text className="text-sm font-semibold text-ink">{weekRangeLabel(week)}</Text>
         {!isThisWeek && (
-          <Text className="text-[11px] text-brand font-medium mt-0.5">Jump to today</Text>
+          <Text className="text-[11px] text-brand font-medium mt-0.5">{t("week.jumpToToday")}</Text>
         )}
       </Pressable>
 
@@ -48,7 +51,7 @@ export function WeekNav({
         onPress={onNext}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Next week"
+        accessibilityLabel={t("week.next")}
         className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
       >
         <Ionicons name="chevron-forward" size={18} color="#A1A1AE" />
@@ -78,12 +81,12 @@ export function DayStrip({
         const today = isToday(date)
         const d = new Date(date + "T00:00:00Z")
         const abbr = d
-          .toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })
+          .toLocaleDateString(getLocaleTag(), { weekday: "short", timeZone: "UTC" })
           .slice(0, 3)
           .toUpperCase()
         const num = d.getUTCDate()
 
-        const fullLabel = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+        const fullLabel = d.toLocaleDateString(getLocaleTag(), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
         return (
           <Pressable
             key={date}

@@ -9,7 +9,12 @@ import {
 
 vi.mock("@/lib/prisma", () => ({
   db: {
-    shiftOffer: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+    shiftOffer: {
+      findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(),
+      // cancelOffer resolves via compare-and-swap so a concurrent confirm — which
+      // creates a real Shift — cannot be overwritten after the fact.
+      updateMany: vi.fn(), findUniqueOrThrow: vi.fn(),
+    },
     shiftOfferRecipient: { update: vi.fn() },
     employee: { findFirst: vi.fn(), findMany: vi.fn() },
     organization: { findUnique: vi.fn() },
@@ -39,7 +44,8 @@ vi.mock("@/lib/messages", () => ({
 
 const soFindFirst = vi.mocked(db.shiftOffer.findFirst)
 const soCreate = vi.mocked(db.shiftOffer.create)
-const soUpdate = vi.mocked(db.shiftOffer.update)
+const soUpdateMany = vi.mocked(db.shiftOffer.updateMany)
+const soFindUniqueOrThrow = vi.mocked(db.shiftOffer.findUniqueOrThrow)
 const recUpdate = vi.mocked(db.shiftOfferRecipient.update)
 const empFindFirst = vi.mocked(db.employee.findFirst)
 const empFindMany = vi.mocked(db.employee.findMany)
@@ -176,7 +182,10 @@ describe("confirmOffer", () => {
     const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 1 })
     const offerTxUpdate = vi.fn().mockResolvedValue(offerRow({ status: "FILLED", filledEmployeeId: "emp_A" }))
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
-      cb({ shift: { create: shiftCreate }, shiftOffer: { updateMany: offerTxUpdateMany, update: offerTxUpdate } }),
+      cb({
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
+        shiftOffer: { updateMany: offerTxUpdateMany, update: offerTxUpdate },
+      }),
     )
 
     const result = await confirmOffer(ORG, "mgr_1", "off_1", "emp_A")
@@ -198,7 +207,26 @@ describe("confirmOffer", () => {
     // Another transaction filled the offer between our read and our claim.
     const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 0 })
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
-      cb({ shift: { create: shiftCreate }, shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() } }),
+      cb({
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
+        shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
+      }),
+    )
+
+    await expect(confirmOffer(ORG, "mgr_1", "off_1", "emp_A")).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(shiftCreate).not.toHaveBeenCalled()
+  })
+
+  it("refuses to double-book someone who picked up a shift after accepting", async () => {
+    const shiftCreate = vi.fn()
+    const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 1 })
+    txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({
+        // They already have a live shift that date — confirming would silently
+        // give them two overlapping shifts, which is what used to happen.
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue({ id: "shift_existing" }) },
+        shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
+      }),
     )
 
     await expect(confirmOffer(ORG, "mgr_1", "off_1", "emp_A")).rejects.toMatchObject({ code: "CONFLICT" })
@@ -214,11 +242,15 @@ describe("cancelOffer", () => {
 
   it("marks an open offer CANCELLED", async () => {
     soFindFirst.mockResolvedValue({ id: "off_1", status: "OPEN" } as never)
-    soUpdate.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
+    soUpdateMany.mockResolvedValue({ count: 1 } as never)
+    soFindUniqueOrThrow.mockResolvedValue(offerRow({ status: "CANCELLED" }) as never)
 
     const result = await cancelOffer(ORG, "off_1")
     expect(result.status).toBe("CANCELLED")
-    expect(soUpdate).toHaveBeenCalledWith(expect.objectContaining({
+    // `status: "OPEN"` in the WHERE is the guard: a confirm that already filled
+    // the offer must not be cancellable out from under the shift it created.
+    expect(soUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: "off_1", status: "OPEN" }),
       data: expect.objectContaining({ status: "CANCELLED" }),
     }))
   })

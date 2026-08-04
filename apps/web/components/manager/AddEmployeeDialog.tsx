@@ -64,7 +64,7 @@ interface AddEmployeeDialogProps {
     employmentType: EmploymentType
     contractedHours: number
     notes: string | null
-  }) => void
+  }) => Promise<boolean>
 }
 
 export function AddEmployeeDialog({
@@ -81,6 +81,7 @@ export function AddEmployeeDialog({
   const [employmentType, setEmploymentType] = useState<EmploymentType>("PART_TIME")
   const [contractedHours, setContractedHours] = useState("")
   const [notes, setNotes] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
   const reset = () => {
     setName("")
@@ -101,7 +102,7 @@ export function AddEmployeeDialog({
     return parseInt(contractedHours, 10) || 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const partTimeHoursOk = employmentType !== "PART_TIME" || !!contractedHours
     // The Select fields (Job Role, contracted hours) have no native browser
@@ -110,18 +111,30 @@ export function AddEmployeeDialog({
     if (!jobRole) { toast.error("Pick a job role"); return }
     if (!partTimeHoursOk) { toast.error("Set contracted hours for part-time staff"); return }
     if (!name || !email || !phone || !hourlyWage) return
+    if (submitting) return
 
-    onEmployeeAdd({
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      jobRole: jobRole.trim(),
-      hourlyWage: parseFloat(hourlyWage),
-      employmentType,
-      contractedHours: resolvedContractedHours(),
-      notes: notes.trim() || null,
-    })
+    setSubmitting(true)
+    let added = false
+    try {
+      added = await onEmployeeAdd({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        jobRole: jobRole.trim(),
+        hourlyWage: parseFloat(hourlyWage),
+        employmentType,
+        contractedHours: resolvedContractedHours(),
+        notes: notes.trim() || null,
+      })
+    } finally {
+      setSubmitting(false)
+    }
 
+    // Only clear and close once the employee actually exists. Closing
+    // unconditionally used to throw away everything the manager had typed on a
+    // rejected request, leaving a toast as the only trace and a roster that
+    // silently did not contain the person they just added.
+    if (!added) return
     reset()
     onOpenChange(false)
   }
@@ -257,8 +270,8 @@ export function AddEmployeeDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-              Add &amp; Send Invite
+            <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+              {submitting ? "Adding…" : "Add & Send Invite"}
             </Button>
           </DialogFooter>
         </form>

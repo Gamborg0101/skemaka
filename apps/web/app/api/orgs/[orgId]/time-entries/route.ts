@@ -14,7 +14,7 @@ interface RouteContext {
 const ClockInSchema = z.object({
   employeeId: z.string().optional(),
   shiftId:    z.string().optional(),
-  note:       z.string().max(500, "note must be at most 500 characters").optional(),
+  note:       z.string().max(500, "note must be at most 500 characters").nullable().optional(),
 })
 
 // GET /api/orgs/[orgId]/time-entries

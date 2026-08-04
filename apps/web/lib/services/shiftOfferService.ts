@@ -304,6 +304,19 @@ export async function confirmOffer(
     })
     if (claimed.count === 0) throw new ServiceError("This offer is already resolved", "CONFLICT")
 
+    // Same one-shift-per-employee-per-date rule createShift enforces. Confirming
+    // an offer used to write the shift directly, so if the accepting employee
+    // had picked up a shift on that date between offering and confirming, the
+    // manager silently double-booked them with no error and no warning. Checked
+    // inside the transaction, after the status claim, so two concurrent confirms
+    // still serialize on the offer row.
+    const clash = await tx.shift.findFirst({
+      where: { organizationId: orgId, employeeId, date: offer.date, cancelledAt: null },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    })
+    if (clash) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+
     const shift = await tx.shift.create({
       data: {
         scheduleId: schedule.id,
@@ -397,9 +410,20 @@ export async function cancelOffer(
   if (!offer) throw new ServiceError("Shift offer not found", "NOT_FOUND")
   if (offer.status !== "OPEN") throw new ServiceError("This offer is already resolved", "CONFLICT")
 
-  const updated = await db.shiftOffer.update({
-    where: { id: offerId },
+  // Guarded on status, exactly like confirmOffer above. confirmOffer creates a
+  // real Shift once it wins the swap; an unguarded cancel could then overwrite
+  // FILLED with CANCELLED after the fact, leaving a scheduled shift behind an
+  // offer that claims nobody took it.
+  const swap = await db.shiftOffer.updateMany({
+    where: { id: offerId, organizationId: orgId, status: "OPEN" },
     data: { status: "CANCELLED", resolvedAt: new Date() },
+  })
+  if (swap.count === 0) {
+    throw new ServiceError("This offer is already resolved", "CONFLICT")
+  }
+
+  const updated = await db.shiftOffer.findUniqueOrThrow({
+    where: { id: offerId },
     include: OFFER_INCLUDE,
   })
   return serOffer(updated as unknown as OfferRow)

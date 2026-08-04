@@ -17,6 +17,7 @@ import { EmployeeCardSkeleton } from "@/components/ui/Skeleton"
 import { EmptyState } from "@/components/feedback/EmptyState"
 import { useOrgEmployees } from "@/hooks/useManagerSchedule"
 import type { Employee } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -139,6 +140,7 @@ function EmployeeDetailSheet({
   employee: Employee | null
   onClose: () => void
 }) {
+  const t = useTranslations("mobile")
   const reduceMotion = useReducedMotion()
   if (!employee) return null
 
@@ -163,7 +165,7 @@ function EmployeeDetailSheet({
             onPress={onClose}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t("common.close")}
             className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
           >
             <Ionicons name="close" size={18} color="#A1A1AE" />
@@ -182,22 +184,22 @@ function EmployeeDetailSheet({
 
           {/* Contact */}
           <Text className="text-xs font-semibold text-ink-muted uppercase tracking-widest px-4 mb-2">
-            Contact
+            {t("team.contact")}
           </Text>
           <View className="mx-4 bg-surface border border-line/40 rounded-2xl overflow-hidden mb-5">
-            <DetailRow label="Email" value={employee.email} />
+            <DetailRow label={t("common.email")} value={employee.email} />
             <View className="h-px bg-line/30 mx-4" />
-            <DetailRow label="Phone" value={employee.phone ?? "Not set"} />
+            <DetailRow label={t("common.phone")} value={employee.phone ?? t("common.notSet")} />
           </View>
 
           {/* Employment */}
           <Text className="text-xs font-semibold text-ink-muted uppercase tracking-widest px-4 mb-2">
-            Employment
+            {t("team.employment")}
           </Text>
           <View className="mx-4 bg-surface border border-line/40 rounded-2xl overflow-hidden">
-            <DetailRow label="Type" value={label} />
+            <DetailRow label={t("team.type")} value={label} />
             <View className="h-px bg-line/30 mx-4" />
-            <DetailRow label="Contracted hours" value={`${employee.contractedHours}h/week`} />
+            <DetailRow label={t("team.contractedHours")} value={`${employee.contractedHours}h/week`} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -214,13 +216,14 @@ function SearchBar({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useTranslations("mobile")
   return (
     <View className="flex-row items-center bg-elevated border border-line/40 rounded-xl px-3 h-11 gap-2">
       <Ionicons name="search" size={16} color="#A1A1AE" importantForAccessibility="no" />
       <TextInput
         value={value}
         onChangeText={onChange}
-        placeholder="Name or role…"
+        placeholder={t("team.searchPlaceholder")}
         placeholderTextColor="#4A4A57"
         className="flex-1 text-sm text-ink"
         returnKeyType="search"
@@ -232,7 +235,7 @@ function SearchBar({
           onPress={() => onChange("")}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Clear search"
+          accessibilityLabel={t("common.clearSearch")}
         >
           <Ionicons name="close-circle" size={16} color="#6B6B7B" importantForAccessibility="no" />
         </Pressable>
@@ -244,6 +247,7 @@ function SearchBar({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function TeamScreen() {
+  const t = useTranslations("mobile")
   const { data: employees = [], isLoading, isFetching, refetch } = useOrgEmployees()
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<Employee | null>(null)
@@ -276,7 +280,7 @@ export default function TeamScreen() {
           <View className="pt-4 pb-3 gap-3">
             {/* Page title + count */}
             <View className="flex-row items-baseline justify-between">
-              <Text className="text-2xl font-bold text-ink">Team</Text>
+              <Text className="text-2xl font-bold text-ink">{t("team.title")}</Text>
               {!isLoading && (
                 <Text className="text-sm text-ink-muted">
                   {active.length} {active.length === 1 ? "member" : "members"}
@@ -297,13 +301,13 @@ export default function TeamScreen() {
           ) : query.trim() ? (
             <View className="flex-1 items-center justify-center py-16 gap-1">
               <Text className="text-sm text-ink-secondary">No results for &quot;{query}&quot;</Text>
-              <Text className="text-xs text-ink-muted">Try a different name or role</Text>
+              <Text className="text-xs text-ink-muted">{t("team.noMatch")}</Text>
             </View>
           ) : (
             <EmptyState
               icon="👥"
-              title="No team members yet"
-              description="Add employees from the web dashboard to see your team here."
+              title={t("team.empty")}
+              description={t("team.emptyHint")}
             />
           )
         }

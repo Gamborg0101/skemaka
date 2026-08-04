@@ -18,6 +18,7 @@ import type { Shift, Employee } from "@skemaka/types"
 import type { ShiftInput } from "@skemaka/api"
 import { formatTime } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/useReducedMotion"
+import { useTranslations } from "@/lib/i18n"
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ function SheetHeader({
   onBack?: () => void
   onClose: () => void
 }) {
+  const t = useTranslations("mobile")
   return (
     <View className="flex-row items-center px-4 py-3 border-b border-line/40">
       {onBack ? (
@@ -101,7 +103,7 @@ function SheetHeader({
           onPress={onBack}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t("common.back")}
           className="w-8 h-8 items-center justify-center active:opacity-60"
         >
           <Ionicons name="chevron-back" size={20} color="#7B6EF8" importantForAccessibility="no" />
@@ -114,7 +116,7 @@ function SheetHeader({
         onPress={onClose}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Close"
+        accessibilityLabel={t("common.close")}
         className="w-8 h-8 items-center justify-center active:opacity-60"
       >
         <Ionicons name="close" size={20} color="#A1A1AE" importantForAccessibility="no" />
@@ -204,6 +206,7 @@ function EmployeePickerView({
   onBack: () => void
   onClose: () => void
 }) {
+  const t = useTranslations("mobile")
   const [query, setQuery] = useState("")
 
   const filtered = query.trim()
@@ -216,14 +219,14 @@ function EmployeePickerView({
 
   return (
     <>
-      <SheetHeader title="Select Employee" onBack={onBack} onClose={onClose} />
+      <SheetHeader title={t("shiftForm.selectEmployee")} onBack={onBack} onClose={onClose} />
       <View className="px-4 py-3 border-b border-line/30">
         <View className="flex-row items-center bg-elevated rounded-xl px-3 h-10 gap-2">
           <Ionicons name="search" size={16} color="#A1A1AE" importantForAccessibility="no" />
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search employees…"
+            placeholder={t("shiftForm.searchEmployees")}
             placeholderTextColor="#4A4A57"
             className="flex-1 text-sm text-ink"
             autoFocus
@@ -234,7 +237,7 @@ function EmployeePickerView({
               onPress={() => setQuery("")}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel="Clear search"
+              accessibilityLabel={t("common.clearSearch")}
             >
               <Ionicons name="close-circle" size={16} color="#6B6B7B" importantForAccessibility="no" />
             </Pressable>
@@ -303,7 +306,7 @@ function EmployeePickerView({
         }}
         ListEmptyComponent={
           <View className="py-12 items-center">
-            <Text className="text-sm text-ink-muted">No employees found</Text>
+            <Text className="text-sm text-ink-muted">{t("shiftForm.noEmployees")}</Text>
           </View>
         }
       />
@@ -400,6 +403,7 @@ function FormView({
   isSavingTimeEntry?: boolean
   onSaveTimeEntry?: () => void
 }) {
+  const t = useTranslations("mobile")
   const selectedEmployee = employees.find((e) => e.id === formState.employeeId)
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
@@ -460,11 +464,11 @@ function FormView({
         </View>
 
         {/* Employee */}
-        <FieldRow label="Employee">
+        <FieldRow label={t("shiftForm.employee")}>
           <View>
             <SelectButton
               value={selectedEmployee?.name ?? ""}
-              placeholder="Select employee…"
+              placeholder={t("shiftForm.selectEmployeePlaceholder")}
               label={selectedEmployee ? `Employee: ${selectedEmployee.name}` : "Select employee"}
               onPress={() => onNavigate("employee")}
             />
@@ -475,11 +479,11 @@ function FormView({
         </FieldRow>
 
         {/* Start time */}
-        <FieldRow label="Start time">
+        <FieldRow label={t("shiftForm.startTime")}>
           <View>
             <SelectButton
               value={formState.startTime ? formatTime(formState.startTime) : ""}
-              placeholder="Pick a time…"
+              placeholder={t("shiftForm.pickTime")}
               label={formState.startTime ? `Start time: ${formatTime(formState.startTime)}` : "Select start time"}
               onPress={() => onNavigate("time-start")}
             />
@@ -490,11 +494,11 @@ function FormView({
         </FieldRow>
 
         {/* End time */}
-        <FieldRow label="End time">
+        <FieldRow label={t("shiftForm.endTime")}>
           <View>
             <SelectButton
               value={formState.endTime ? formatTime(formState.endTime) : ""}
-              placeholder="Pick a time…"
+              placeholder={t("shiftForm.pickTime")}
               label={formState.endTime ? `End time: ${formatTime(formState.endTime)}` : "Select end time"}
               onPress={() => onNavigate("time-end")}
             />
@@ -505,7 +509,7 @@ function FormView({
         </FieldRow>
 
         {/* Break */}
-        <FieldRow label="Break">
+        <FieldRow label={t("shiftDetail.break")}>
           <View className="flex-row items-center gap-4">
             <Pressable
               hitSlop={8}
@@ -513,7 +517,7 @@ function FormView({
                 setFormState((s) => ({ ...s, breakMinutes: Math.max(0, s.breakMinutes - 15) }))
               }
               accessibilityRole="button"
-              accessibilityLabel="Decrease break by 15 minutes"
+              accessibilityLabel={t("shiftForm.a11yDecreaseBreak")}
               accessibilityState={{ disabled: formState.breakMinutes === 0 }}
               disabled={formState.breakMinutes === 0}
               className="w-8 h-8 rounded-lg bg-elevated items-center justify-center active:opacity-60"
@@ -532,7 +536,7 @@ function FormView({
                 setFormState((s) => ({ ...s, breakMinutes: Math.min(120, s.breakMinutes + 15) }))
               }
               accessibilityRole="button"
-              accessibilityLabel="Increase break by 15 minutes"
+              accessibilityLabel={t("shiftForm.a11yIncreaseBreak")}
               accessibilityState={{ disabled: formState.breakMinutes >= 120 }}
               disabled={formState.breakMinutes >= 120}
               className="w-8 h-8 rounded-lg bg-elevated items-center justify-center active:opacity-60"
@@ -543,12 +547,12 @@ function FormView({
         </FieldRow>
 
         {/* Job role */}
-        <FieldRow label="Role">
+        <FieldRow label={t("common.role")}>
           <View>
             <TextInput
               value={formState.jobRole}
               onChangeText={(v) => setFormState((s) => ({ ...s, jobRole: v }))}
-              placeholder="e.g. Barista"
+              placeholder={t("shiftForm.rolePlaceholder")}
               placeholderTextColor="#4A4A57"
               className="text-sm text-ink py-1"
               returnKeyType="next"
@@ -560,11 +564,11 @@ function FormView({
         </FieldRow>
 
         {/* Notes */}
-        <FieldRow label="Notes">
+        <FieldRow label={t("shiftDetail.notes")}>
           <TextInput
             value={formState.notes}
             onChangeText={(v) => setFormState((s) => ({ ...s, notes: v }))}
-            placeholder="Optional notes…"
+            placeholder={t("shiftForm.notesPlaceholder")}
             placeholderTextColor="#4A4A57"
             className="text-sm text-ink py-1"
             multiline
@@ -599,11 +603,11 @@ function FormView({
             onPress={onDelete}
             disabled={isSaving}
             accessibilityRole="button"
-            accessibilityLabel="Delete shift"
+            accessibilityLabel={t("shiftForm.deleteShift")}
             accessibilityState={{ disabled: isSaving }}
             className="items-center mt-4 py-2 active:opacity-60"
           >
-            <Text className="text-sm font-medium text-danger">Delete Shift</Text>
+            <Text className="text-sm font-medium text-danger">{t("shiftForm.deleteShift")}</Text>
           </Pressable>
         )}
 
@@ -612,11 +616,11 @@ function FormView({
           <View className="mx-4 mt-6 mb-2 rounded-2xl border border-line/40 overflow-hidden">
             <View className="px-4 py-2 bg-elevated border-b border-line/30">
               <Text className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">
-                Actual hours
+                {t("shiftForm.actualHours")}
               </Text>
             </View>
 
-            <FieldRow label="Clocked in">
+            <FieldRow label={t("shiftForm.clockedIn")}>
               <SelectButton
                 value={clockInTime}
                 placeholder="—"
@@ -625,7 +629,7 @@ function FormView({
               />
             </FieldRow>
 
-            <FieldRow label="Clocked out">
+            <FieldRow label={t("shiftForm.clockedOut")}>
               <SelectButton
                 value={clockOutTime}
                 placeholder="—"
@@ -639,14 +643,14 @@ function FormView({
                 onPress={onSaveTimeEntry}
                 disabled={isSavingTimeEntry}
                 accessibilityRole="button"
-                accessibilityLabel="Save clock times"
+                accessibilityLabel={t("shiftForm.saveClockTimes")}
                 accessibilityState={{ disabled: !!isSavingTimeEntry }}
                 className="h-11 rounded-xl bg-ink/10 items-center justify-center active:opacity-70"
               >
                 {isSavingTimeEntry ? (
                   <ActivityIndicator size="small" color="#7B6EF8" />
                 ) : (
-                  <Text className="text-sm font-semibold text-ink">Save clock times</Text>
+                  <Text className="text-sm font-semibold text-ink">{t("shiftForm.saveClockTimes")}</Text>
                 )}
               </Pressable>
             </View>
@@ -709,6 +713,7 @@ export function ShiftFormSheet({
   isSavingTimeEntry,
   onSaveTimeEntry,
 }: ShiftFormSheetProps) {
+  const t = useTranslations("mobile")
   const reduceMotion = useReducedMotion()
   const [view, setView] = useState<SheetView>("form")
   const [formState, setFormState] = useState<FormState>(() => initialFormState(shift, defaultValues))
@@ -769,7 +774,7 @@ export function ShiftFormSheet({
 
         {view === "time-start" && (
           <TimePickerView
-            title="Start Time"
+            title={t("shiftForm.startTime")}
             slots={TIME_SLOTS}
             selected={formState.startTime}
             onSelect={(t) => handleSelectTime("startTime", t)}
@@ -780,7 +785,7 @@ export function ShiftFormSheet({
 
         {view === "time-end" && (
           <TimePickerView
-            title="End Time"
+            title={t("shiftForm.endTime")}
             slots={TIME_SLOTS}
             selected={formState.endTime}
             onSelect={(t) => handleSelectTime("endTime", t)}
@@ -791,7 +796,7 @@ export function ShiftFormSheet({
 
         {view === "clock-in" && (
           <TimePickerView
-            title="Clocked in"
+            title={t("shiftForm.clockedIn")}
             slots={CLOCK_TIME_SLOTS}
             selected={clockInTime}
             onSelect={(t) => { setClockInTime(t); setView("form") }}
@@ -802,7 +807,7 @@ export function ShiftFormSheet({
 
         {view === "clock-out" && (
           <TimePickerView
-            title="Clocked out"
+            title={t("shiftForm.clockedOut")}
             slots={CLOCK_TIME_SLOTS}
             selected={clockOutTime}
             onSelect={(t) => { setClockOutTime(t); setView("form") }}

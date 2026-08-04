@@ -1,0 +1,170 @@
+{
+  "app": {
+    "name": "Skemaka",
+    "tagline": "Dine vagter, altid med dig"
+  },
+  "auth": {
+    "continueWithGoogle": "Fortsæt med Google",
+    "continueWithApple": "Fortsæt med Apple",
+    "inviteHint": "Din leder sender dig et invitationslink, så du kan komme i gang."
+  },
+  "tabs": {
+    "shifts": "Vagter",
+    "availability": "Tilgæng.",
+    "timeOff": "Fridage",
+    "team": "Medarbejdere",
+    "settings": "Indstillinger",
+    "profile": "Profil"
+  },
+  "state": {
+    "error": "Fejl",
+    "somethingWentWrong": "Noget gik galt",
+    "tryAgain": "Prøv igen",
+    "refresh": "Opdatér",
+    "today": "I dag",
+    "noEmployeeProfileTitle": "Ingen medarbejderprofil",
+    "noEmployeeProfileBody": "Tilføj dig selv som medarbejder for at se dine vagter her.",
+    "noTeamYet": "Du er ikke på et team endnu",
+    "couldNotLoadProfile": "Din profil kunne ikke indlæses."
+  },
+  "cover": {
+    "poolTitle": "Vagter du kan tage",
+    "claim": "Jeg tager den"
+  },
+  "common": {
+    "email": "E-mail",
+    "name": "Navn",
+    "phone": "Telefon",
+    "role": "Rolle",
+    "close": "Luk",
+    "signOut": "Log ud",
+    "version": "Version",
+    "cancel": "Annullér",
+    "back": "Tilbage",
+    "total": "I alt",
+    "loading": "Indlæser…",
+    "clearSearch": "Ryd søgning",
+    "goBack": "Gå tilbage",
+    "notSet": "Ikke angivet"
+  },
+  "settings": {
+    "title": "Indstillinger",
+    "account": "Konto",
+    "accountRole": "Kontorolle",
+    "app": "App",
+    "security": "Sikkerhed",
+    "orgId": "Organisations-id",
+    "dangerZone": "Farezone",
+    "deleteAccount": "Slet konto",
+    "devPreview": "Udvikler — UI-forhåndsvisning"
+  },
+  "clock": {
+    "live": "Live",
+    "workedToday": "Arbejdet i dag"
+  },
+  "week": {
+    "previous": "Forrige uge",
+    "next": "Næste uge",
+    "jumpToToday": "Gå til i dag"
+  },
+  "schedule": {
+    "title": "Vagtplan",
+    "addShift": "Tilføj vagt",
+    "noShifts": "Ingen vagter planlagt",
+    "noShiftsHint": "Tryk på “Tilføj vagt” for at planlægge en vagt"
+  },
+  "team": {
+    "title": "Medarbejdere",
+    "searchPlaceholder": "Navn eller rolle…",
+    "contact": "Kontakt",
+    "employment": "Ansættelse",
+    "type": "Type",
+    "contractedHours": "Aftalte timer",
+    "empty": "Ingen medarbejdere endnu",
+    "emptyHint": "Tilføj medarbejdere i web-dashboardet for at se dit team her.",
+    "noMatch": "Prøv et andet navn eller en anden rolle"
+  },
+  "shiftDetail": {
+    "loading": "Indlæser vagt…",
+    "unavailable": "Vagtdetaljer er ikke tilgængelige.",
+    "backToShifts": "Tilbage til vagter",
+    "time": "Tidspunkt",
+    "duration": "Varighed",
+    "break": "Pause",
+    "notes": "Noter",
+    "cantMakeIt": "Kan du ikke møde?",
+    "offerHint": "Tilbyd vagten, så en kollega kan tage den (din leder godkender byttet)."
+  },
+  "myShifts": {
+    "title": "Mine vagter"
+  },
+  "timeOff": {
+    "title": "Fridage",
+    "yourRequests": "Dine anmodninger",
+    "newRequest": "Ny anmodning",
+    "startDate": "Startdato",
+    "endDate": "Slutdato",
+    "submit": "Send anmodning",
+    "reasonPlaceholder": "f.eks. ferie, læge, familie",
+    "approve": "Godkend",
+    "deny": "Afvis",
+    "loading": "Indlæser anmodninger…",
+    "empty": "Ingen anmodninger endnu",
+    "emptyHintManager": "Medarbejdere kan anmode om fri fra appen.",
+    "emptyHintEmployee": "Tryk på knappen ovenfor for at anmode om fri.",
+    "a11yRequest": "Anmod om fri",
+    "a11ySubmit": "Send anmodning om fri",
+    "a11yStartDate": "Startdato i formatet ÅÅÅÅ-MM-DD",
+    "a11yEndDate": "Slutdato i formatet ÅÅÅÅ-MM-DD",
+    "a11yReason": "Årsag til fri, valgfri"
+  },
+  "availability": {
+    "title": "Tilgængelighed",
+    "from": "Fra",
+    "until": "Til",
+    "pending": "Afventer",
+    "responded": "Besvaret",
+    "scheduled": "Planlagt ✓",
+    "assignShift": "Tildel vagt",
+    "update": "Opdatér tilgængelighed",
+    "noResponses": "Ingen svar endnu",
+    "nothingHere": "Ingenting her",
+    "noneThisWeek": "Ingen tilgængelighed registreret for denne uge.",
+    "noRequestThisWeek": "Ingen anmodning for denne uge",
+    "notSubmitted": "Medarbejderne har ikke svaret for denne uge",
+    "a11yCancelEdit": "Annullér redigering af tilgængelighed",
+    "statusAvailable": "Ledig",
+    "statusOff": "Ikke ledig",
+    "submitted": "Indsendt",
+    "countAvailable": "{n} ledige",
+    "countOff": "{n} ikke ledige",
+    "setForWeek": "Angiv din tilgængelighed for denne uge",
+    "updateForWeek": "Opdatér din tilgængelighed for denne uge",
+    "set": "Angiv",
+    "edit": "Rediger",
+    "a11ySetFor": "{action} tilgængelighed for {day}",
+    "a11yCloseEditor": "Luk editor for {day}"
+  },
+  "shiftForm": {
+    "selectEmployee": "Vælg medarbejder",
+    "selectEmployeePlaceholder": "Vælg medarbejder…",
+    "searchEmployees": "Søg medarbejdere…",
+    "noEmployees": "Ingen medarbejdere fundet",
+    "employee": "Medarbejder",
+    "role": "Rolle",
+    "rolePlaceholder": "f.eks. barista",
+    "startTime": "Starttid",
+    "endTime": "Sluttid",
+    "pickTime": "Vælg et tidspunkt…",
+    "break": "Pause",
+    "notes": "Noter",
+    "notesPlaceholder": "Valgfri noter…",
+    "deleteShift": "Slet vagt",
+    "clockedIn": "Stemplet ind",
+    "clockedOut": "Stemplet ud",
+    "actualHours": "Faktiske timer",
+    "saveClockTimes": "Gem stempeltider",
+    "a11yIncreaseBreak": "Forøg pause med 15 minutter",
+    "a11yDecreaseBreak": "Reducér pause med 15 minutter"
+  }
+}

@@ -53,6 +53,10 @@ coverage
 apps/web/.playwright-mcp/
 .gstack/
 
+# Playwright run artifacts (traces, failure screenshots, HTML report)
+test-results/
+playwright-report/
+
 # Ad-hoc QA / demo screenshots dropped at the repo root
 /demo-desktop.png
 /qa-*.png

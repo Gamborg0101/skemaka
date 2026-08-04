@@ -9,10 +9,13 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Button } from "@/components/ui/Button"
 import { useAuthStore } from "@/store/authStore"
 import { API_URL } from "@/lib/constants"
+import { DevLogin } from "@/components/DevLogin"
+import { useTranslations } from "@/lib/i18n"
 
 WebBrowser.maybeCompleteAuthSession()
 
 export default function LoginScreen() {
+  const t = useTranslations("mobile")
   const [loading, setLoading] = useState(false)
   const [appleLoading, setAppleLoading] = useState(false)
   const [appleAvailable, setAppleAvailable] = useState(false)
@@ -187,8 +190,8 @@ export default function LoginScreen() {
             <Text className="text-3xl">📅</Text>
           </View>
           <View className="items-center gap-1">
-            <Text className="text-3xl font-bold text-ink tracking-tight">Skemaka</Text>
-            <Text className="text-base text-ink-secondary">Your shifts, always with you</Text>
+            <Text className="text-3xl font-bold text-ink tracking-tight">{t("app.name")}</Text>
+            <Text className="text-base text-ink-secondary">{t("app.tagline")}</Text>
           </View>
         </View>
 
@@ -202,7 +205,7 @@ export default function LoginScreen() {
               loading={loading}
               onPress={() => void handleLogin()}
             >
-              Continue with Google
+              {t("auth.continueWithGoogle")}
             </Button>
 
             {appleAvailable && (
@@ -215,8 +218,11 @@ export default function LoginScreen() {
               />
             )}
 
+            {/* Returns null unless __DEV__ — never renders in a release build. */}
+            <DevLogin />
+
             <Text className="text-xs text-ink-muted text-center">
-              Your manager sends an invite link to get started.
+              {t("auth.inviteHint")}
             </Text>
           </View>
         </View>

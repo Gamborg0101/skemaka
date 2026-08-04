@@ -17,6 +17,7 @@ import { currentWeek, weekDays, offsetWeek } from "@/lib/dates"
 import { formatTime, formatDateLong, todayISO, isShiftDone } from "@/lib/utils"
 import type { Shift, Employee } from "@skemaka/types"
 import type { ShiftInput } from "@skemaka/api"
+import { useTranslations } from "@/lib/i18n"
 
 // ─── Shift item ───────────────────────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ type SheetState =
   | { open: true; date: string; scheduleId: string; shift: Shift | null }
 
 export function ManagerScheduleView() {
+  const t = useTranslations("mobile")
   const today = todayISO()
 
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
@@ -226,7 +228,7 @@ export function ManagerScheduleView() {
       {/* ── Fixed header — does not participate in scroll ── */}
       <View>
         <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
-          <Text className="text-2xl font-bold text-ink">Schedule</Text>
+          <Text className="text-2xl font-bold text-ink">{t("schedule.title")}</Text>
           <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
         </View>
 
@@ -278,11 +280,11 @@ export function ManagerScheduleView() {
                 onPress={() => void openAddShift(selectedDate)}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="Add shift"
+                accessibilityLabel={t("schedule.addShift")}
                 className="flex-row items-center gap-1.5 active:opacity-60"
               >
                 <Ionicons name="add-circle" size={22} color="#7B6EF8" importantForAccessibility="no" />
-                <Text className="text-sm font-semibold text-brand">Add Shift</Text>
+                <Text className="text-sm font-semibold text-brand">{t("schedule.addShift")}</Text>
               </Pressable>
             </View>
           </View>
@@ -296,8 +298,8 @@ export function ManagerScheduleView() {
             </View>
           ) : (
             <View className="flex-1 items-center justify-center py-16 gap-1">
-              <Text className="text-sm text-ink-secondary">No shifts scheduled</Text>
-              <Text className="text-xs text-ink-muted">Tap &quot;Add Shift&quot; to schedule someone</Text>
+              <Text className="text-sm text-ink-secondary">{t("schedule.noShifts")}</Text>
+              <Text className="text-xs text-ink-muted">{t("schedule.noShiftsHint")}</Text>
             </View>
           )
         }

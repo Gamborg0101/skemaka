@@ -52,6 +52,20 @@ jobs:
       - name: Test
         run: npm test
 
+      # The runner is UTC, so date bugs that only bite users east or west of it
+      # pass here and fail in production. The demo sandbox is dated relative to
+      # "now" and computes week boundaries locally while stamping clock times in
+      # UTC, which made it seed time entries for shifts that hadn't happened yet
+      # at UTC+14 — green on this runner, wrong for a real visitor in Auckland.
+      # Kiritimati (+14) and Midway (-11) are the extremes of the inhabited range.
+      - name: Test (timezone extremes)
+        run: |
+          for tz in Pacific/Kiritimati Pacific/Midway; do
+            echo "::group::TZ=$tz"
+            TZ=$tz npm test
+            echo "::endgroup::"
+          done
+
   # Service-layer tests against a REAL Postgres. The unit suite mocks Prisma, so
   # it asserts the shape of a query and can say nothing about what SQL does with
   # it — which is how `colorTag: { not: "sick" }` shipped: that compiles to
@@ -60,6 +74,31 @@ jobs:
   # the bugs it catches are the expensive kind.
   integration:
     runs-on: ubuntu-latest
+    # Run the suite under two session timezones.
+    #
+    #   UTC   — what Neon actually uses. This is the production-parity pass; if
+    #           it fails, production is broken.
+    #   UTC+14 — the largest real offset. Prisma stores DateTime as `timestamp
+    #           WITHOUT time zone`, so raw SQL comparing one against NOW() (a
+    #           timestamptz) is wrong by the session offset. Under UTC that
+    #           offset is zero and the bug is invisible — which is how
+    #           assertSeatAvailable shipped applying seat reductions early with
+    #           a green suite.
+    #
+    # Neither pass alone is enough: UTC proves production works but hides the
+    # bug class, UTC+14 exposes the bug class but tests a timezone production
+    # never uses.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - timezone: "UTC"
+            allow_utc: "1"
+            label: "production parity (Neon runs UTC)"
+          - timezone: "Pacific/Kiritimati"
+            allow_utc: "0"
+            label: "UTC+14 — exposes naive-vs-timestamptz bugs"
+    name: integration (${{ matrix.timezone }})
     services:
       postgres:
         image: postgres:16
@@ -105,8 +144,17 @@ jobs:
         working-directory: apps/web
         run: npx prisma migrate deploy
 
+      - name: Set the session timezone — ${{ matrix.label }}
+        run: |
+          PGPASSWORD=it psql -h localhost -U it -d it \
+            -c "ALTER DATABASE it SET TimeZone='${{ matrix.timezone }}';"
+
       - name: Integration tests
         working-directory: apps/web
+        env:
+          # Only the UTC pass may opt out of the non-UTC guard; the UTC+14 pass
+          # must keep it on, or it silently stops being the check it exists to be.
+          ALLOW_UTC_TEST_DB: ${{ matrix.allow_utc }}
         run: npm run test:integration
 
   # Browser E2E for the money path (access control, trial paywall, invite claim).

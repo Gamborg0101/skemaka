@@ -8,6 +8,7 @@ import { ClockWidget } from "@/components/shifts/ClockWidget"
 import { ShiftCardSkeleton, ClockWidgetSkeleton } from "@/components/ui/Skeleton"
 import { EmptyState } from "@/components/feedback/EmptyState"
 import { ErrorState } from "@/components/feedback/ErrorState"
+import { NoEmployeeProfile } from "@/components/feedback/NoEmployeeProfile"
 import { Divider } from "@/components/ui/Divider"
 import { ManagerScheduleView } from "@/components/schedule/ManagerScheduleView"
 import { CoverPool } from "@/components/cover/CoverPool"
@@ -18,6 +19,7 @@ import { useAuthStore } from "@/store/authStore"
 import { isToday, todayISO, formatWeekday, formatDate } from "@/lib/utils"
 import { currentWeek, weekDays, weekRangeLabel, offsetWeek, isPast } from "@/lib/dates"
 import type { Shift } from "@skemaka/types"
+import { useTranslations } from "@/lib/i18n"
 
 type DayRow = { date: string; shift: Shift }
 
@@ -32,6 +34,7 @@ function WeekNav({
   onNext: () => void
   onReset: () => void
 }) {
+  const t = useTranslations("mobile")
   const isThisWeek = week === currentWeek()
 
   return (
@@ -40,7 +43,7 @@ function WeekNav({
         onPress={onPrev}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Previous week"
+        accessibilityLabel={t("week.previous")}
         className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
       >
         <Ionicons name="chevron-back" size={18} color="#A1A1AE" />
@@ -54,7 +57,7 @@ function WeekNav({
       >
         <Text className="text-sm font-semibold text-ink">{weekRangeLabel(week)}</Text>
         {!isThisWeek && (
-          <Text className="text-[11px] text-brand font-medium mt-0.5">Jump to today</Text>
+          <Text className="text-[11px] text-brand font-medium mt-0.5">{t("week.jumpToToday")}</Text>
         )}
       </Pressable>
 
@@ -62,7 +65,7 @@ function WeekNav({
         onPress={onNext}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Next week"
+        accessibilityLabel={t("week.next")}
         className="w-9 h-9 rounded-xl bg-elevated items-center justify-center active:opacity-60"
       >
         <Ionicons name="chevron-forward" size={18} color="#A1A1AE" />
@@ -104,18 +107,34 @@ export default function ShiftsScreen() {
 }
 
 function EmployeeShiftsScreen() {
-  const { data: currentUser, isError: userError, refetch: refetchUser } = useCurrentUser()
+  const t = useTranslations("mobile")
+  const {
+    data: currentUser,
+    isError: userError,
+    refetch: refetchUser,
+    noEmployeeRecord,
+  } = useCurrentUser()
   const router = useRouter()
   const [selectedWeek, setSelectedWeek] = useState(currentWeek)
   const [tab, setTab] = useState<Tab>("upcoming")
 
   const { data: shifts, isLoading, isFetching, refetch } = useMyShifts(selectedWeek)
 
+  // Checked before userError: "you are not an employee" is an answer, not a
+  // failure, and offering a retry for it strands the user.
+  if (noEmployeeRecord) {
+    return (
+      <Screen>
+        <NoEmployeeProfile testID="no-employee-profile" />
+      </Screen>
+    )
+  }
+
   if (userError) {
     return (
       <Screen>
         <ErrorState
-          message="Could not load your profile."
+          message={t("state.couldNotLoadProfile")}
           onRetry={() => void refetchUser()}
         />
       </Screen>
@@ -143,7 +162,7 @@ function EmployeeShiftsScreen() {
   return (
     <Screen scroll={false} padded={false} edges={["top"]}>
       <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
-        <Text className="text-2xl font-bold text-ink">My Shifts</Text>
+        <Text className="text-2xl font-bold text-ink">{t("myShifts.title")}</Text>
         <RefreshButton onPress={() => void refetch()} isRefreshing={isFetching} />
       </View>
 

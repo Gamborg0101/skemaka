@@ -45,7 +45,9 @@
     "dismiss": "Afvis",
     "noEmployees": "Ingen medarbejdere endnu",
     "noEmployeesHint": "Tilføj din første medarbejder for at begynde på vagtplanen.",
-    "addFirstEmployee": "Tilføj din første medarbejder"
+    "addFirstEmployee": "Tilføj din første medarbejder",
+    "employee": "Medarbejder",
+    "closed": "Lukket"
   },
   "settings": {
     "title": "Organisationsindstillinger",
