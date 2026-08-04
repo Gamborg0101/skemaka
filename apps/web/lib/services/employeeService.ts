@@ -4,6 +4,7 @@ import { serEmployee, serShift } from "@/lib/serialize"
 import { isEmploymentType } from "@/types"
 import type { Employee, Shift } from "@/types"
 import type { PaginationParams } from "@/lib/validate"
+import { todayISO } from "@/lib/dateUtils"
 import { sendInviteEmail } from "@/lib/resend"
 import { resolveRecipientLocale } from "@/lib/messages"
 import { recordAudit } from "@/lib/audit"
@@ -144,6 +145,14 @@ export type UpdateEmployeeInput = Partial<{
   isActive:        boolean
   employmentType:  string
   contractedHours: number
+  /**
+   * Only acted on when this update also sets `isActive: false`. Deletes the
+   * employee's future (today or later), non-cancelled shifts in the same
+   * transaction as the deactivation, so the two never diverge — either both
+   * happen or neither does. Past shifts are wage/labour-cost history and are
+   * never deleted, regardless of this flag.
+   */
+  deleteFutureShifts: boolean
 }>
 
 export async function updateEmployee(
@@ -174,7 +183,7 @@ export async function updateEmployee(
   }
 
   try {
-    const employee = await db.$transaction(async (tx) => {
+    const { employee, deletedShiftsCount } = await db.$transaction(async (tx) => {
       // Reactivating consumes a seat exactly like hiring does. Only guard the
       // false → true transition; edits to an already-active employee, and
       // deactivations, must not be blocked by a full org.
@@ -199,10 +208,38 @@ export async function updateEmployee(
       if (input.name !== undefined && existing.userId) {
         await tx.user.update({ where: { id: existing.userId }, data: { name: input.name } })
       }
-      return updated
+
+      // Deactivation and the opt-in shift cleanup must land together: a partial
+      // result (deactivated but shifts left dangling, or shifts wiped but the
+      // employee still active) is worse than either outcome alone. Only ever
+      // touches future shifts — past shifts are wage/labour-cost history.
+      let deletedShiftsCount = 0
+      if (input.isActive === false && input.deleteFutureShifts) {
+        const result = await tx.shift.deleteMany({
+          where: {
+            organizationId: orgId,
+            employeeId,
+            cancelledAt: null,
+            date: { gte: new Date(todayISO() + "T00:00:00Z") },
+          },
+        })
+        deletedShiftsCount = result.count
+      }
+
+      return { employee: updated, deletedShiftsCount }
     })
 
     if (input.isActive !== undefined && input.isActive !== existing.isActive) {
+    }
+
+    if (deletedShiftsCount > 0) {
+      recordAudit({
+        orgId,
+        actorUserId,
+        action: "EMPLOYEE_FUTURE_SHIFTS_DELETED",
+        entity: `Employee:${employeeId}`,
+        after: { deletedShiftsCount },
+      })
     }
 
     // Audit wage changes — who changed an employee's pay, and from/to what.
@@ -322,6 +359,26 @@ export async function listSickDays(orgId: string, employeeId: string): Promise<S
   const shifts = await db.shift.findMany({
     where: { organizationId: orgId, employeeId, colorTag: "sick" },
     orderBy: { date: "desc" },
+  })
+  return shifts.map(serShift)
+}
+
+/**
+ * An employee's upcoming shifts: today or later, not cancelled, published or
+ * draft. Used by the deactivate-employee dialog to show a manager what's at
+ * stake before they hide someone from the schedule — deactivating alone
+ * leaves these shifts in place but invisible, which silently under-staffs
+ * the days they cover.
+ */
+export async function listUpcomingShifts(orgId: string, employeeId: string): Promise<Shift[]> {
+  const shifts = await db.shift.findMany({
+    where: {
+      organizationId: orgId,
+      employeeId,
+      cancelledAt: null,
+      date: { gte: new Date(todayISO() + "T00:00:00Z") },
+    },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
   })
   return shifts.map(serShift)
 }

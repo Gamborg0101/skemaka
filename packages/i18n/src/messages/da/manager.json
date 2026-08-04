@@ -226,6 +226,7 @@
     "title": "Deaktivér {name}?",
     "warning": "{name} skjules fra vagtplanen og kan ikke tildeles nye vagter.",
     "alsoDeleteShifts": "Slet også {count} kommende {count, plural, one {vagt} other {vagter}}",
+    "keepShiftsNote": "Vagter, du ikke sletter, forbliver tildelt {name}, men vises ikke på vagtplanen, så længe personen er inaktiv.",
     "confirm": "Deaktivér"
   },
   "exportTimesheetDialog": {

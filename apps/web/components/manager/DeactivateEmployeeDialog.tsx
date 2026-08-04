@@ -114,6 +114,12 @@ export function DeactivateEmployeeDialog({
           </div>
         )}
 
+        {upcomingShifts.length > 0 && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t("keepShiftsNote", { name: employee.name })}
+          </p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             {tCommon("cancel")}
