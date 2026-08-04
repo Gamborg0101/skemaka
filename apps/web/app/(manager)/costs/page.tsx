@@ -101,7 +101,20 @@ export default function CostsPage() {
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+          {/* Mobile: stacked-card skeleton, matches LaborCostTable's mobile layout */}
+          <div className="md:hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-4 py-3 flex items-center justify-between gap-3">
+                <div>
+                  <Skeleton className="h-4 w-28 mb-1.5" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-5 w-14" />
+              </div>
+            ))}
+          </div>
+          {/* Desktop: table skeleton */}
+          <div className="hidden md:block rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
             <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 grid grid-cols-5 gap-4">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-4 w-16" />
