@@ -113,6 +113,18 @@ describe("regressions this suite exists to prevent", () => {
     }
   })
 
+  it("localizes job roles — they are seeded data, so next-intl never sees them", () => {
+    const plan = planFor("da", "2026-08-03")
+    expect(plan.jobRoles.map((r) => r.name)).toEqual(["Køkken", "Servering", "Bar"])
+    // Every place a role name is copied has to agree, or the Danish sandbox
+    // shows "Kitchen" on the shift cards while the roles page says "Køkken".
+    const english = ["Kitchen", "Front of house"]
+    expect(plan.employees.filter((e) => english.includes(e.jobRole))).toEqual([])
+    expect(plan.shifts.filter((s) => english.includes(s.jobRole))).toEqual([])
+    expect(plan.shiftTemplates.filter((t) => english.includes(t.jobRole))).toEqual([])
+    expect(english).not.toContain(plan.shiftOffer.jobRole)
+  })
+
   it("never rosters someone during their own approved leave", () => {
     const plan = planFor("en", "2026-08-03")
     for (const off of plan.timeOff.filter((t) => t.status === "APPROVED")) {

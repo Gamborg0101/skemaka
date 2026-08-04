@@ -306,7 +306,7 @@ export default function SchedulePage() {
       className="shrink-0"
     >
       <Megaphone className="size-4" />
-      <span className="hidden sm:inline">Offer shift</span>
+      <span className="hidden sm:inline">{t("offerShift")}</span>
     </Button>
   )
 
@@ -347,7 +347,7 @@ export default function SchedulePage() {
             onClick={goToToday}
             className={todayHidden ? "invisible" : ""}
           >
-            Today
+            {t("today")}
           </Button>
           {dayCountSelector}
           <div className="flex-1 flex items-center justify-end gap-1">

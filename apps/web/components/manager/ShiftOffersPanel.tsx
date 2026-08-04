@@ -3,22 +3,32 @@
 import { useState, useEffect, useCallback } from "react"
 import { Megaphone, Check, X, ChevronDown, Clock } from "lucide-react"
 import { toast } from "sonner"
+import { useLocale, useTranslations } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { formatDayLabel, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
 import type { ShiftOffer, ShiftOfferResponse } from "@/types"
-
-const RESPONSE_STYLES: Record<ShiftOfferResponse, { label: string; className: string }> = {
-  ACCEPTED: { label: "Accepted", className: "text-green-700 dark:text-green-400" },
-  DECLINED: { label: "Declined", className: "text-gray-400 line-through" },
-  PENDING:  { label: "No reply yet", className: "text-gray-400" },
-}
 
 /**
  * Manager panel: open shift offers awaiting a decision. Shows who's accepted so
  * the manager can confirm a winner (creating the shift) or cancel the offer.
  * Renders nothing when there are no open offers, staying out of the way.
  */
+const RESPONSE_CLASSNAME: Record<ShiftOfferResponse, string> = {
+  ACCEPTED: "text-green-700 dark:text-green-400",
+  DECLINED: "text-gray-400 line-through",
+  PENDING:  "text-gray-400",
+}
+
 export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refreshToken: number }) {
+  const t = useTranslations("manager.shiftOffers")
+  const tCommon = useTranslations("common")
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const RESPONSE_STYLES: Record<ShiftOfferResponse, { label: string; className: string }> = {
+    ACCEPTED: { label: t("responseAccepted"), className: RESPONSE_CLASSNAME.ACCEPTED },
+    DECLINED: { label: t("responseDeclined"), className: RESPONSE_CLASSNAME.DECLINED },
+    PENDING:  { label: t("responsePending"), className: RESPONSE_CLASSNAME.PENDING },
+  }
   const [offers, setOffers] = useState<ShiftOffer[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -89,18 +99,18 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
       >
         <Megaphone className="size-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
         <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
-          Shift offers
+          {t("title")}
           <span className="ml-1.5 rounded-full bg-indigo-200 dark:bg-indigo-900/60 px-1.5 py-px text-xs tabular-nums">
             {offers.length}
           </span>
         </p>
         {!expanded && readyCount > 0 && (
           <span className="text-[11px] font-medium text-green-700 dark:text-green-400">
-            {readyCount} ready to confirm
+            {t("readyToConfirm", { n: readyCount })}
           </span>
         )}
         <span className="ml-auto hidden sm:inline text-[11px] text-indigo-700/80 dark:text-indigo-400/80">
-          {expanded ? "Confirm who gets each shift" : "Tap to review"}
+          {expanded ? t("confirmWhoGets") : t("tapToReview")}
         </span>
         <ChevronDown
           className={`size-4 shrink-0 text-indigo-600 dark:text-indigo-400 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -116,7 +126,7 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 text-sm">
                     <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {offer.jobRole} · {formatDayLabel(offer.date)}
+                      {offer.jobRole} · {formatDayLabel(offer.date, localeTag)}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
                       {formatTime(offer.startTime, tf)}–{formatTime(offer.endTime, tf)}
@@ -131,7 +141,7 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
                     onClick={() => cancel(offer.id)}
                     className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
                   >
-                    <X className="size-3.5" /> Cancel
+                    <X className="size-3.5" /> {tCommon("cancel")}
                   </button>
                 </div>
 
@@ -154,7 +164,7 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
                               onClick={() => confirm(offer.id, rec.employeeId)}
                               className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
                             >
-                              <Check className="size-3.5" /> Confirm
+                              <Check className="size-3.5" /> {t("confirmBtn")}
                             </button>
                           )}
                         </div>
@@ -165,7 +175,7 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
 
                 {accepted.length === 0 && (
                   <p className="mt-2 flex items-center gap-1 text-xs text-indigo-600/80 dark:text-indigo-400/80">
-                    <Clock className="size-3" /> Waiting for someone to accept
+                    <Clock className="size-3" /> {t("waitingForAccept")}
                   </p>
                 )}
               </li>

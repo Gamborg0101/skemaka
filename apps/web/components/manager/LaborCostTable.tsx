@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -25,6 +26,7 @@ function formatHours(hours: number) {
 }
 
 export function LaborCostTable({ costs }: LaborCostTableProps) {
+  const t = useTranslations("manager.costs")
   return (
     <div className="space-y-6">
       {/* Summary stat cards */}
@@ -32,7 +34,7 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
         <Card size="sm" className="border-l-4 border-l-blue-500">
           <CardHeader>
             <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Total Labour Cost
+              {t("totalLabourCost")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -44,7 +46,7 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
         <Card size="sm" className="border-l-4 border-l-gray-300 dark:border-l-gray-600">
           <CardHeader>
             <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Total Hours
+              {t("totalHours")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -56,7 +58,7 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
         <Card size="sm" className="col-span-2 sm:col-span-1 border-l-4 border-l-green-500">
           <CardHeader>
             <CardTitle className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Avg. Hourly Rate
+              {t("avgHourlyRate")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -73,18 +75,18 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
         {costs.entries.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No shifts scheduled this week</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Labour costs will appear once shifts are added.</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("noShiftsScheduled")}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("noShiftsHint")}</p>
           </div>
         ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="text-right">Hours</TableHead>
-              <TableHead className="text-right">Rate / hr</TableHead>
-              <TableHead className="text-right">Total Cost</TableHead>
+              <TableHead>{t("colEmployee")}</TableHead>
+              <TableHead>{t("colRole")}</TableHead>
+              <TableHead className="text-right">{t("colHours")}</TableHead>
+              <TableHead className="text-right">{t("colRatePerHr")}</TableHead>
+              <TableHead className="text-right">{t("colTotalCost")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,7 +109,7 @@ export function LaborCostTable({ costs }: LaborCostTableProps) {
           <TableFooter>
             <TableRow className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <TableCell colSpan={2} className="font-bold text-gray-900 dark:text-gray-50">
-                Totals
+                {t("totals")}
               </TableCell>
               <TableCell className="text-right tabular-nums font-bold text-gray-900 dark:text-gray-50">
                 {formatHours(costs.totalHours)}

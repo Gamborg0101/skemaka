@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { getMondayOfWeek, addDays, getISOWeek, formatWeekLabel, todayISO } from "@/lib/dateUtils"
 import { cn } from "@/lib/utils"
+import { useLocale } from "next-intl"
+import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 
 interface WeekPickerProps {
   weekStart: string
@@ -13,11 +15,21 @@ interface WeekPickerProps {
   selectedDay?: string
 }
 
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-]
-const DAY_HEADERS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+/**
+ * Month and weekday names come from Intl rather than a hardcoded English list —
+ * the calendar sits on the schedule screen, so in a Danish org it was showing
+ * "August 2026 / Mo Tu We" directly beside an otherwise fully Danish UI.
+ * Any Monday works as the seed for the weekday row; 2024-01-01 was one.
+ */
+function monthNames(localeTag: string): string[] {
+  const fmt = new Intl.DateTimeFormat(localeTag, { month: "long", timeZone: "UTC" })
+  return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(Date.UTC(2024, m, 1))))
+}
+
+function dayHeaders(localeTag: string): string[] {
+  const fmt = new Intl.DateTimeFormat(localeTag, { weekday: "short", timeZone: "UTC" })
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2024, 0, 1 + i))).slice(0, 2))
+}
 
 function getCalendarWeeks(year: number, month: number): string[][] {
   // First Monday on or before the 1st of the month
@@ -66,6 +78,9 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
   }, [open])
 
   const today = todayISO()
+  const localeTag = LOCALE_TAGS[useLocale() as Locale]
+  const months = useMemo(() => monthNames(localeTag), [localeTag])
+  const dayLabels = useMemo(() => dayHeaders(localeTag), [localeTag])
   const isoWeek = getISOWeek(weekStart)
   const weeks = getCalendarWeeks(viewYear, viewMonth)
 
@@ -94,7 +109,7 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
         )}
       >
         <span className="text-sm font-bold tabular-nums">W{isoWeek}</span>
-        <span className="text-sm text-gray-500 hidden sm:block">{formatWeekLabel(weekStart)}</span>
+        <span className="text-sm text-gray-500 hidden sm:block">{formatWeekLabel(weekStart, localeTag)}</span>
       </button>
 
       {/* Calendar dropdown */}
@@ -110,7 +125,7 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
               <ChevronLeft className="size-4 text-gray-500 dark:text-gray-400" />
             </button>
             <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-              {MONTH_NAMES[viewMonth]} {viewYear}
+              {months[viewMonth]} {viewYear}
             </span>
             <button
               onClick={nextMonth}
@@ -124,7 +139,7 @@ export function WeekPicker({ weekStart, onChange, dayMode, selectedDay }: WeekPi
           {/* Column headers */}
           <div className="grid grid-cols-[1.75rem_repeat(7,1fr)] mb-1">
             <div className="text-[10px] font-medium text-gray-300 dark:text-gray-600 text-center">Wk</div>
-            {DAY_HEADERS.map(d => (
+            {dayLabels.map(d => (
               <div key={d} className="text-[10px] font-medium text-gray-400 dark:text-gray-500 text-center">{d}</div>
             ))}
           </div>
