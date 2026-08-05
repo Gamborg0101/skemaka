@@ -128,6 +128,24 @@ export function checkDemoPlan(plan: DemoPlan): DemoViolation[] {
     warn("DEMO-008", `${plan.employees.length} employees exceeds ${plan.org.seats} seats`)
   }
 
+  // The visitor's own employee row. Without it the employee half of the product
+  // is unreachable in a sandbox — cover, shift offers and availability all
+  // resolve the caller's own record and answer 403 when there isn't one. With
+  // more than one, or with an address that doesn't match the manager account,
+  // the visitor is handed somebody else's identity instead.
+  const managerRows = plan.employees.filter((e) => e.isManager)
+  if (managerRows.length !== 1) {
+    err("DEMO-009", `expected exactly 1 manager employee row, found ${managerRows.length}`)
+  } else if (managerRows[0].email !== plan.manager.email) {
+    err("DEMO-009", `manager employee email ${managerRows[0].email} ≠ account ${plan.manager.email}`)
+  }
+  const managerShifts = plan.shifts.filter((s) => s.employeeId === managerRows[0]?.id && !s.cancelledAt)
+  if (managerRows.length === 1 && managerShifts.length === 0) {
+    // A rostered manager with no shifts is worse than none: "My shifts" opens
+    // empty and the sandbox looks broken rather than unconfigured.
+    err("DEMO-009", "the manager is on the roster but has no shifts")
+  }
+
   // ── Self-consistency ────────────────────────────────────────────────────────
   const byEmpDate = new Map<string, PlannedShift[]>()
   for (const s of live) {
