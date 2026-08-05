@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { ChevronDown } from "lucide-react"
 
 type Option = { id: string; name: string; jobRole: string }
@@ -9,11 +10,20 @@ export function EmployeePicker({
   employees,
   selectedId,
   selfId,
+  youId,
 }: {
   employees: Option[]
   selectedId: string
+  /** The default selection — omitted from the URL, so it isn't always `youId`. */
   selfId: string
+  /**
+   * Whose row gets the "(you)" label. Null in the sandbox staff preview, where
+   * `selfId` is a seeded employee standing in for a manager who has no employee
+   * record — labelling that person "you" claims their shifts are the visitor's.
+   */
+  youId?: string | null
 }) {
+  const t = useTranslations("portal.staffView")
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -37,7 +47,7 @@ export function EmployeePicker({
       >
         {employees.map((emp) => (
           <option key={emp.id} value={emp.id}>
-            {emp.id === selfId ? `${emp.name} (you)` : emp.name}
+            {emp.id === youId ? t("pickerYou", { name: emp.name }) : emp.name}
           </option>
         ))}
       </select>

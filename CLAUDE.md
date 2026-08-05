@@ -130,7 +130,8 @@ Current screenshots of the app live in `apps/web/screenshots/`. Use them to unde
 | `apps/web/screenshots/05-time-off.png` | Time-off requests |
 | `apps/web/screenshots/06-settings.png` | Settings page |
 | `apps/web/screenshots/07-schedule-timeline.png` | Schedule — timeline view |
-| `apps/web/screenshots/08-my-shifts.png` | My Shifts page |
+| `apps/web/screenshots/08-my-shifts.png` | My Shifts — manager's staff preview (sandbox) |
+| `apps/web/screenshots/09-portal-availability.png` | Employee portal — availability |
 | `apps/web/screenshots/landing-desktop-hero.png` | Landing page — desktop hero (unauthenticated `/`) |
 
 ---

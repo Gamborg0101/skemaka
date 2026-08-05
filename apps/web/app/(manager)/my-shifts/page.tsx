@@ -48,7 +48,8 @@ export default async function MyShiftsPage({
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
 
-  const localeTag = LOCALE_TAGS[(await getLocale()) as Locale]
+  const locale = (await getLocale()) as Locale
+  const localeTag = LOCALE_TAGS[locale]
   const t = await getTranslations("portal")
 
   const { employee: employeeParam, week: weekParam } = await searchParams
@@ -160,7 +161,15 @@ export default async function MyShiftsPage({
     ? employeeParam
     : selfEmployeeResolved.id
 
-  const viewingSelf = selectedId === selfEmployeeResolved.id
+  // "Viewing self" gates the panels that act on the signed-in user's behalf:
+  // offering a shift up for cover, claiming one, answering a shift offer. In a
+  // sandbox `selfEmployeeResolved` is a *seeded* employee standing in for a
+  // manager who has no employee record at all, so those calls resolved to no
+  // employee and came back 403 — three panels rendering "You don't have an
+  // employee profile in this workspace" on a page headed "My Shifts". The
+  // preview is a read-only look at what staff see; it must not claim the
+  // signed-in user owns these shifts.
+  const viewingSelf = !previewOf && selectedId === selfEmployeeResolved.id
 
   // Fetch the selected employee's profile + shifts for the selected week
   const employee = await db.employee.findUnique({
@@ -228,7 +237,7 @@ export default async function MyShiftsPage({
       <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
         <div>
           <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {viewingSelf ? "My Shifts" : `${employee.name}'s Shifts`}
+            {viewingSelf ? t("staffView.mine") : t("staffView.theirs", { name: employee.name })}
           </h1>
           <p className="text-xs text-gray-500">
             {employee.jobRole} · {employee.organization.name}
@@ -241,6 +250,7 @@ export default async function MyShiftsPage({
               employees={allEmployees}
               selectedId={selectedId}
               selfId={selfEmployeeResolved.id}
+              youId={previewOf ? null : selfEmployeeResolved.id}
             />
           )}
         </div>
@@ -257,7 +267,7 @@ export default async function MyShiftsPage({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {viewingSelf ? "My Shifts" : `${employee.name}'s Shifts`}
+              {viewingSelf ? t("staffView.mine") : t("staffView.theirs", { name: employee.name })}
             </h1>
             <p className="text-xs text-gray-500">
               {employee.jobRole} · {employee.organization.name}
@@ -270,6 +280,7 @@ export default async function MyShiftsPage({
                 employees={allEmployees}
                 selectedId={selectedId}
                 selfId={selfEmployeeResolved.id}
+                youId={previewOf ? null : selfEmployeeResolved.id}
               />
             )}
           </div>
@@ -281,11 +292,11 @@ export default async function MyShiftsPage({
       {viewingSelf && <CoverPoolPanel orgId={selfEmployeeResolved.organizationId} />}
       {shifts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          <p className="text-base font-medium">No shifts this week</p>
+          <p className="text-base font-medium">{t("staffView.noneTitle")}</p>
           <p className="text-sm mt-1">
             {viewingSelf
-              ? "No shifts are scheduled for this week."
-              : `${employee.name} has no shifts this week.`}
+              ? t("staffView.noneMine")
+              : t("staffView.noneTheirs", { name: employee.name })}
           </p>
         </div>
       ) : (
@@ -325,17 +336,17 @@ export default async function MyShiftsPage({
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       {isCancelled && (
                         <span className="text-[11px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
-                          Cancelled
+                          {t("cancelledBadge")}
                         </span>
                       )}
                       {isToday && (
                         <span className="text-[11px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                          Today
+                          {t("staffView.today")}
                         </span>
                       )}
                       {isNext && !isToday && (
                         <span className="text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
-                          Up next
+                          {t("staffView.upNext")}
                         </span>
                       )}
                       <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full", accent.badge)}>
@@ -356,8 +367,10 @@ export default async function MyShiftsPage({
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
                       {isCancelled
-                        ? "This shift was cancelled"
-                        : <>{hours}{shift.breakMinutes > 0 ? ` · ${shift.breakMinutes} min break` : " · No break"}</>}
+                        ? t("cancelledNote")
+                        : <>{hours} · {shift.breakMinutes > 0
+                            ? t("staffView.breakMinutes", { min: shift.breakMinutes })
+                            : t("staffView.noBreak")}</>}
                     </p>
                   </div>
 
@@ -369,7 +382,7 @@ export default async function MyShiftsPage({
                         ? "text-gray-500 bg-gray-50 dark:text-gray-400 dark:bg-gray-700/50"
                         : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40"
                     )}>
-                      &ldquo;{shift.notes ?? pickShiftQuote(shift.id, employee.organization.industry)}&rdquo;
+                      &ldquo;{shift.notes ?? pickShiftQuote(shift.id, employee.organization.industry, locale)}&rdquo;
                     </p>
                   )}
 

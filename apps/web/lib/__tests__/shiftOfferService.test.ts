@@ -19,6 +19,9 @@ vi.mock("@/lib/prisma", () => ({
       updateMany: vi.fn(), findUniqueOrThrow: vi.fn(),
     },
     shiftOfferRecipient: { update: vi.fn() },
+    // requireEmployee reads the caller's email so it can match an employee who
+    // was added by email and never claimed their invite (userId null).
+    user: { findUnique: vi.fn() },
     employee: { findFirst: vi.fn(), findMany: vi.fn() },
     organization: { findUnique: vi.fn() },
     shift: { create: vi.fn() },

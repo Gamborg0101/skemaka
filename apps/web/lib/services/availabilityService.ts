@@ -291,16 +291,69 @@ export async function getWeekUnavailability(
   return out
 }
 
+/**
+ * The caller's own employee record in this org.
+ *
+ * Matched on the linked account first, email second. `claimInvite` sets
+ * `employee.userId` without rewriting `employee.email`, and the reverse case
+ * exists too: a manager adds someone by email, that person signs in with the
+ * same address but never clicks the invite, so `userId` stays null. A
+ * userId-only filter locked out the second group — their shifts rendered on
+ * /portal while every availability call answered "Employee record not found".
+ *
+ * The organizationId filter is load-bearing: Employee is unique on
+ * [organizationId, email], not on email alone, so the OR must stay org-scoped
+ * or this resolves to another restaurant's staff member. See
+ * employeeIdentity.test.ts.
+ */
 export async function getEmployeeIdForUser(
   orgId: string,
   userId: string,
+  email?: string | null,
 ): Promise<string | null> {
   const emp = await db.employee.findFirst({
-    where: { organizationId: orgId, userId },
+    where: {
+      organizationId: orgId,
+      isActive: true,
+      OR: [{ userId }, ...(email ? [{ email }] : [])],
+    },
+    // A claimed record (userId set) wins over one matched only by email.
+    orderBy: [{ userId: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     select: { id: true },
-    orderBy: { createdAt: "asc" },
   })
   return emp?.id ?? null
+}
+
+/**
+ * Open availability requests this employee can still answer, newest first,
+ * each with their own submission if they already sent one.
+ *
+ * Every piece of this existed already — the list endpoint, the submit
+ * endpoint, the my-submission endpoint — with no page in front of them. The
+ * only way an employee ever reached the form was a tokenised link a manager
+ * mailed them, which expires. This is the standing route behind /portal.
+ */
+export async function listOpenForEmployee(
+  orgId: string,
+  employeeId: string,
+): Promise<{ request: AvailabilityRequest; submission: AvailabilitySubmission | null }[]> {
+  const requests = await db.availabilityRequest.findMany({
+    where: { organizationId: orgId, status: "OPEN" },
+    orderBy: [{ weekStart: "asc" }, { createdAt: "asc" }],
+    include: {
+      submissions: {
+        where: { employeeId },
+        orderBy: { submittedAt: "desc" },
+        take: 1,
+        include: { days: { orderBy: { date: "asc" } } },
+      },
+    },
+  })
+
+  return requests.map((r) => ({
+    request: serAvailabilityRequest(r),
+    submission: r.submissions[0] ? serAvailabilitySubmission(r.submissions[0]) : null,
+  }))
 }
 
 export class AvailabilityTokenError extends ServiceError {

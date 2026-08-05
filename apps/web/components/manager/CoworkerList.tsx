@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { cn, getInitials } from "@/lib/utils"
 
 type Coworker = { name: string; jobRole: string }
@@ -15,6 +16,7 @@ function avatarColor(name: string) {
 const PREVIEW = 4
 
 export function CoworkerList({ coworkers }: { coworkers: Coworker[] }) {
+  const t = useTranslations("portal.staffView")
   const [expanded, setExpanded] = useState(false)
 
   const visible = expanded ? coworkers : coworkers.slice(0, PREVIEW)
@@ -43,12 +45,12 @@ export function CoworkerList({ coworkers }: { coworkers: Coworker[] }) {
             onClick={() => setExpanded(true)}
             className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
           >
-            +{overflow} more
+            {t("andMore", { count: overflow })}
           </button>
         ) : (
           <p className="text-xs text-gray-400 truncate">
             {visible.slice(0, 2).map((cw) => cw.name.split(" ")[0]).join(", ")}
-            {visible.length > 2 && ` +${visible.length - 2} more`}
+            {visible.length > 2 && ` ${t("andMore", { count: visible.length - 2 })}`}
           </p>
         )}
       </div>
