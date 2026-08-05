@@ -5,10 +5,13 @@ import { Globe } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getOrgSettings, updateOrgSettings, SUPPORTED_CURRENCIES } from "@/lib/orgSettings"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
 export function CurrencySection() {
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
   const { orgId } = useOrg()
   const [currency, setCurrency] = useState<string>(() => getOrgSettings().currency)
   const [converting, setConverting] = useState(false)
@@ -27,20 +30,20 @@ export function CurrencySection() {
       })
       if (!r.ok) {
         const data = await r.json() as { error?: string }
-        throw new Error(data.error ?? "Failed")
+        throw new Error(data.error ?? tCommon("somethingWentWrong"))
       }
       updateOrgSettings({ currency: code })
-      toast.success(`Wages converted to ${name}`)
+      toast.success(tSettings("currency.converted", { name }))
     } catch (err) {
       setCurrency(prev)
-      toast.error(err instanceof Error ? err.message : "Currency conversion failed")
+      toast.error(err instanceof Error ? err.message : tSettings("currency.conversionFailed"))
     } finally {
       setConverting(false)
     }
   }
 
   return (
-    <SettingsSection icon={Globe} title="Currency" description="Currency shown on wages and labour costs.">
+    <SettingsSection icon={Globe} title={tSettings("currency.title")} description={tSettings("currency.description")}>
       <div className="mt-4 flex flex-wrap gap-2">
         {SUPPORTED_CURRENCIES.map((c) => (
           <button
@@ -65,7 +68,7 @@ export function CurrencySection() {
         ))}
       </div>
       {converting && (
-        <p className="mt-2 text-xs text-gray-500">Converting wages at today&apos;s exchange rate…</p>
+        <p className="mt-2 text-xs text-gray-500">{tSettings("currency.converting")}</p>
       )}
     </SettingsSection>
   )

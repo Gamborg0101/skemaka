@@ -1,9 +1,13 @@
 // Client-safe: no Prisma imports. Shared between lib/cleanup.ts and the settings page.
 
+// Cutoffs only. The labels that used to live here were rendered straight into
+// the settings UI, so they stayed English on a Danish page; the copy now lives
+// in the manager catalogue (settings.dataRetention.item*) with the number
+// interpolated from here, keeping one source for the actual retention period.
 export const RETENTION = {
-  schedules:    { months: 12, label: "Schedules & shifts older than 12 months" },
-  availability: { months:  6, label: "Availability requests older than 6 months" },
-  events:       { months:  3, label: "Scheduling events older than 3 months" },
+  schedules:    { months: 12 },
+  availability: { months:  6 },
+  events:       { months:  3 },
 } as const
 
 export type CleanupPreview = {
