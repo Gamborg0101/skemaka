@@ -11,15 +11,16 @@ import { SettingsSection } from "./SettingsSection"
 
 type TimeFormat = "12h" | "24h"
 
-const OPTIONS: { value: TimeFormat; label: string; example: string }[] = [
-  { value: "24h", label: "24-hour", example: "14:00" },
-  { value: "12h", label: "12-hour", example: "2:00 PM" },
-]
-
 export function TimeFormatSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
   const { orgId } = useOrg()
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => getOrgSettings().timeFormat)
+
+  const OPTIONS: { value: TimeFormat; label: string; example: string }[] = [
+    { value: "24h", label: tSettings("timeFormat.opt24"), example: "14:00" },
+    { value: "12h", label: tSettings("timeFormat.opt12"), example: "2:00 PM" },
+  ]
 
   async function handleSet(format: TimeFormat) {
     if (format === timeFormat) return
@@ -33,7 +34,9 @@ export function TimeFormatSection() {
         body: JSON.stringify({ timeFormat: format }),
       })
       if (!r.ok) throw new Error()
-      toast.success(`Times now shown in ${format === "24h" ? "24-hour" : "12-hour"} format`)
+      toast.success(tSettings("timeFormat.updated", {
+        format: format === "24h" ? tSettings("timeFormat.opt24") : tSettings("timeFormat.opt12"),
+      }))
     } catch {
       setTimeFormat(prev)
       updateOrgSettings({ timeFormat: prev })
@@ -42,7 +45,7 @@ export function TimeFormatSection() {
   }
 
   return (
-    <SettingsSection icon={Clock} title="Time Format" description="How shift times are displayed across the app.">
+    <SettingsSection icon={Clock} title={tSettings("timeFormat.title")} description={tSettings("timeFormat.description")}>
       <div className="mt-4 flex items-center gap-2">
         {OPTIONS.map((opt) => (
           <button
@@ -63,7 +66,7 @@ export function TimeFormatSection() {
         ))}
       </div>
       <p className="text-xs text-gray-400 mt-3">
-        24-hour is standard across Europe; 12-hour (AM/PM) is common in the US.
+        {tSettings("timeFormat.hint")}
       </p>
     </SettingsSection>
   )
