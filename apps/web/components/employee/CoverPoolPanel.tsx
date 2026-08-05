@@ -7,6 +7,8 @@ import { HandHelping } from "lucide-react"
 import { toast } from "sonner"
 import { formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { translateServiceError, type ServiceErrorBody } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 import type { CoverRequest } from "@/types"
 
 function formatDate(iso: string, localeTag: string) {
@@ -22,6 +24,7 @@ function formatDate(iso: string, localeTag: string) {
  */
 export function CoverPoolPanel({ orgId }: { orgId: string }) {
   const t = useTranslations("portal.coverPool")
+  const translate = useServiceErrorTranslate()
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const [pool, setPool] = useState<CoverRequest[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -47,8 +50,8 @@ export function CoverPoolPanel({ orgId }: { orgId: string }) {
     setBusyId(id)
     try {
       const r = await fetch(`/api/orgs/${orgId}/cover-requests/${id}/claim`, { method: "POST" })
-      const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? t("errClaim"))
+      const res = (await r.json()) as ServiceErrorBody
+      if (!r.ok) throw new Error(translateServiceError(translate, res, t("errClaim")))
       toast.success(t("claimed"))
       setPool((prev) => prev.filter((p) => p.id !== id))
     } catch (err) {

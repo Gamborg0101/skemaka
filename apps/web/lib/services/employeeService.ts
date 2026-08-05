@@ -87,7 +87,11 @@ export async function createEmployee(orgId: string, input: CreateEmployeeInput):
   const existing = await db.employee.findUnique({
     where: { organizationId_email: { organizationId: orgId, email } },
   })
-  if (existing) throw new ServiceError("An employee with this email already exists", "CONFLICT")
+  if (existing) {
+    throw new ServiceError("An employee with this email already exists", "CONFLICT", {
+      messageKey: "employeeDuplicateEmail",
+    })
+  }
 
   const resolvedType = input.employmentType && isEmploymentType(input.employmentType)
     ? input.employmentType
@@ -261,7 +265,9 @@ export async function updateEmployee(
     return serEmployee(employee)
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "P2002") {
-      throw new ServiceError("Email already in use", "CONFLICT")
+      throw new ServiceError("Email already in use", "CONFLICT", {
+        messageKey: "employeeDuplicateEmail",
+      })
     }
     throw err
   }
@@ -451,10 +457,14 @@ export async function getClaimableEmployee(
     orderBy: { createdAt: "asc" },
   })
   if (!employee) {
-    throw new ServiceError("Invalid or expired invite link", "NOT_FOUND")
+    throw new ServiceError("Invalid or expired invite link", "NOT_FOUND", {
+      messageKey: "inviteInvalidOrExpired",
+    })
   }
   if (employee.userId && employee.userId !== userId) {
-    throw new ServiceError("This invite has already been claimed", "CONFLICT")
+    throw new ServiceError("This invite has already been claimed", "CONFLICT", {
+      messageKey: "inviteAlreadyClaimed",
+    })
   }
   return {
     id:                  employee.id,
@@ -494,12 +504,16 @@ export async function claimInvite(
   })
 
   if (!employee) {
-    throw new ServiceError("Invalid or expired invite link", "NOT_FOUND")
+    throw new ServiceError("Invalid or expired invite link", "NOT_FOUND", {
+      messageKey: "inviteInvalidOrExpired",
+    })
   }
 
   // Already claimed by a different user
   if (employee.userId && employee.userId !== userId) {
-    throw new ServiceError("This invite has already been claimed", "CONFLICT")
+    throw new ServiceError("This invite has already been claimed", "CONFLICT", {
+      messageKey: "inviteAlreadyClaimed",
+    })
   }
 
   // A phone the user already verified on any of their employee rows. One person

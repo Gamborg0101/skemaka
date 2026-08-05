@@ -32,5 +32,15 @@
   },
   "notFoundTitle": "Page not found",
   "notFoundBody": "The page you're looking for doesn't exist or has been moved.",
-  "notFoundHome": "Back to Skemaka"
+  "notFoundHome": "Back to Skemaka",
+  "serviceErrors": {
+    "employeeDuplicateEmail": "An employee with this email already exists.",
+    "seatLimit": "Your plan covers {seats} employees and they are all active. Increase your plan to add another.",
+    "shiftConflict": "This employee already has a shift on this date.",
+    "inviteAlreadyClaimed": "This invite has already been claimed.",
+    "inviteInvalidOrExpired": "This invite link is invalid or has expired.",
+    "offerAlreadyResolved": "This offer is already resolved.",
+    "requestAlreadyResolved": "This request is already resolved.",
+    "noEmployeeProfile": "You don't have an employee profile in this workspace."
+  }
 }
