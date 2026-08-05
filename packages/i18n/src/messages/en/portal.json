@@ -107,5 +107,15 @@
     "noBreak": "No break",
     "pickerYou": "{name} (you)",
     "andMore": "+{count} more"
+  },
+  "offerCover": {
+    "offer": "Offer for cover",
+    "offering": "Offering…",
+    "offered": "Offered for cover",
+    "claimed": "Claimed — awaiting manager approval",
+    "withdraw": "Withdraw",
+    "errOffer": "Couldn't offer this shift",
+    "errWithdraw": "Couldn't withdraw the offer",
+    "errGeneric": "Something went wrong"
   }
 }

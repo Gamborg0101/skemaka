@@ -117,7 +117,11 @@ async function writeDemoPlan(plan: DemoPlan): Promise<DemoSeedResult> {
       name: e.name,
       email: e.email,
       phone: null,
-      userId: null,
+      // Linking the manager's own row to their account is what makes the
+      // employee half of the product work in a sandbox: cover, shift offers
+      // and availability all resolve the caller's employee record, and a
+      // visitor who wasn't on the roster had none to resolve.
+      userId: e.isManager ? user.id : null,
       jobRole: e.jobRole,
       hourlyWage: e.hourlyWage,
       contractedHours: e.contractedHours,

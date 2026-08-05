@@ -79,15 +79,35 @@ describe("seedDemoOrg", () => {
     )
   })
 
-  it("seeds 9 unreachable employees (demo domain, no phone, no user)", async () => {
+  it("seeds 10 unreachable employees (demo domain, no phone)", async () => {
     await seedDemoOrg("en")
     const employees = rows(vi.mocked(db.employee.createMany))
-    expect(employees).toHaveLength(9)
+    // Nine staff plus the manager, who is on the roster so the visitor's own
+    // "My shifts", cover and shift-offer views have something to resolve.
+    expect(employees).toHaveLength(10)
     for (const e of employees) {
+      // The load-bearing half: a sandbox must never be able to email or text a
+      // real person. This holds for the manager's row too.
       expect((e.email as string).endsWith(`@${DEMO_EMAIL_DOMAIN}`)).toBe(true)
       expect(e.phone).toBeNull()
-      expect(e.userId).toBeNull()
     }
+  })
+
+  it("links exactly one employee — the manager's own — to the manager account", async () => {
+    await seedDemoOrg("en")
+    const employees = rows(vi.mocked(db.employee.createMany))
+    const linked = employees.filter((e) => e.userId !== null)
+
+    // Every other row stays unclaimed: an unlinked employee cannot sign in, and
+    // linking a second one would hand the visitor someone else's identity.
+    expect(linked).toHaveLength(1)
+    expect(linked[0].userId).toBe("user_demo")
+
+    const managerEmail = (vi.mocked(db.user.create).mock.calls[0][0] as { data: AnyRow }).data.email
+    expect(
+      linked[0].email,
+      "the linked row must carry the manager's own address — that is what the identity lookups fall back to before the record is claimed",
+    ).toBe(managerEmail)
   })
 
   it("uses the Danish cast for da sandboxes", async () => {
