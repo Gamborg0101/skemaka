@@ -7,6 +7,8 @@ import { Megaphone, Check } from "lucide-react"
 import { toast } from "sonner"
 import { formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { translateServiceError, type ServiceErrorBody } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 import type { EmployeeShiftOffer, ShiftOfferResponse } from "@/types"
 
 function formatDate(iso: string, localeTag: string) {
@@ -26,6 +28,7 @@ function formatDeadline(iso: string, localeTag: string) {
  */
 export function MyShiftOffersPanel({ orgId }: { orgId: string }) {
   const t = useTranslations("portal.shiftOffers")
+  const translate = useServiceErrorTranslate()
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const [offers, setOffers] = useState<EmployeeShiftOffer[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -55,8 +58,8 @@ export function MyShiftOffersPanel({ orgId }: { orgId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ response }),
       })
-      const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? t("err"))
+      const res = (await r.json()) as ServiceErrorBody
+      if (!r.ok) throw new Error(translateServiceError(translate, res, t("err")))
       if (response === "DECLINED") {
         setOffers((prev) => prev.filter((o) => o.id !== id))
       } else {

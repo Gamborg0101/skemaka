@@ -7,6 +7,8 @@ import { useLocale, useTranslations } from "next-intl"
 import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { formatDayLabel, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { translateServiceError, type ServiceErrorBody } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 import type { ShiftOffer, ShiftOfferResponse } from "@/types"
 
 /**
@@ -24,6 +26,7 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
   const t = useTranslations("manager.shiftOffers")
   const tCommon = useTranslations("common")
   const tToasts = useTranslations("manager.toasts")
+  const translate = useServiceErrorTranslate()
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const RESPONSE_STYLES: Record<ShiftOfferResponse, { label: string; className: string }> = {
     ACCEPTED: { label: t("responseAccepted"), className: RESPONSE_CLASSNAME.ACCEPTED },
@@ -59,8 +62,8 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId }),
       })
-      const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? tCommon("somethingWentWrong"))
+      const res = (await r.json()) as ServiceErrorBody
+      if (!r.ok) throw new Error(translateServiceError(translate, res, tCommon("somethingWentWrong")))
       toast.success(tToasts("offerConfirmed"))
       setOffers((prev) => prev.filter((o) => o.id !== offerId))
     } catch (err) {
@@ -74,8 +77,8 @@ export function ShiftOffersPanel({ orgId, refreshToken }: { orgId: string; refre
     setBusyId(offerId)
     try {
       const r = await fetch(`/api/orgs/${orgId}/shift-offers/${offerId}/cancel`, { method: "POST" })
-      const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? tCommon("somethingWentWrong"))
+      const res = (await r.json()) as ServiceErrorBody
+      if (!r.ok) throw new Error(translateServiceError(translate, res, tCommon("somethingWentWrong")))
       toast.success(tToasts("offerCancelled"))
       setOffers((prev) => prev.filter((o) => o.id !== offerId))
     } catch (err) {

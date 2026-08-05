@@ -32,5 +32,15 @@
   },
   "notFoundTitle": "Siden blev ikke fundet",
   "notFoundBody": "Siden, du leder efter, findes ikke eller er blevet flyttet.",
-  "notFoundHome": "Tilbage til Skemaka"
+  "notFoundHome": "Tilbage til Skemaka",
+  "serviceErrors": {
+    "employeeDuplicateEmail": "Der findes allerede en medarbejder med denne e-mailadresse.",
+    "seatLimit": "Din plan dækker {seats} medarbejdere, og de er alle aktive. Opgrader din plan for at tilføje flere.",
+    "shiftConflict": "Denne medarbejder har allerede en vagt på denne dato.",
+    "inviteAlreadyClaimed": "Denne invitation er allerede blevet indløst.",
+    "inviteInvalidOrExpired": "Invitationslinket er ugyldigt eller udløbet.",
+    "offerAlreadyResolved": "Dette tilbud er allerede afgjort.",
+    "requestAlreadyResolved": "Denne anmodning er allerede afgjort.",
+    "noEmployeeProfile": "Du har ikke en medarbejderprofil i denne organisation."
+  }
 }

@@ -8,6 +8,8 @@ import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { useOrg } from "@/lib/orgContext"
 import { formatDayLabel, formatTime } from "@/lib/dateUtils"
 import { getOrgSettings } from "@/lib/orgSettings"
+import { translateServiceError, type ServiceErrorBody } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 import type { CoverRequest } from "@/types"
 
 /** What the schedule should highlight for a request the manager is reviewing. */
@@ -30,6 +32,7 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
   const t = useTranslations("manager.coverRequests")
   const tToasts = useTranslations("manager.toasts")
   const tCommon = useTranslations("common")
+  const translate = useServiceErrorTranslate()
   const localeTag = LOCALE_TAGS[useLocale() as Locale]
   const { orgId } = useOrg()
   const [requests, setRequests] = useState<CoverRequest[]>([])
@@ -75,8 +78,8 @@ export function CoverRequestsPanel({ onFocus }: { onFocus?: (f: CoverFocus | nul
     setBusyId(id)
     try {
       const r = await fetch(`/api/orgs/${orgId}/cover-requests/${id}/${action}`, { method: "POST" })
-      const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? tCommon("somethingWentWrong"))
+      const res = (await r.json()) as ServiceErrorBody
+      if (!r.ok) throw new Error(translateServiceError(translate, res, tCommon("somethingWentWrong")))
       toast.success(action === "approve" ? tToasts("coverApproved") : tToasts("coverDenied"))
       setRequests((prev) => prev.filter((req) => req.id !== id))
       if (id === selectedId) clearSelection()

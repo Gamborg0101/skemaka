@@ -41,7 +41,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ data: shift })
   } catch (err) {
     if (err instanceof ServiceError) {
-      return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          messageKey: err.messageKey,
+          ...(err.messageParams ? { messageParams: err.messageParams } : {}),
+        },
+        { status: serviceErrorStatus(err.code) },
+      )
     }
     throw err
   }
@@ -62,7 +70,15 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ data: { deleted: true } })
   } catch (err) {
     if (err instanceof ServiceError) {
-      return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          messageKey: err.messageKey,
+          ...(err.messageParams ? { messageParams: err.messageParams } : {}),
+        },
+        { status: serviceErrorStatus(err.code) },
+      )
     }
     throw err
   }
