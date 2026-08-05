@@ -11,6 +11,8 @@ import { SettingsSection } from "./SettingsSection"
 
 export function ScheduleViewSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
+  const tSchedule = useTranslations("manager.schedule")
   const { orgId } = useOrg()
   const [defaultScheduleView, setDefaultScheduleView] = useState<"week" | "timeline">(
     () => getOrgSettings().defaultScheduleView
@@ -27,7 +29,7 @@ export function ScheduleViewSection() {
         body: JSON.stringify({ defaultScheduleView: view }),
       })
       if (!r.ok) throw new Error()
-      toast.success(`Default schedule view set to ${view === "week" ? "Week" : "Timeline"}`)
+      toast.success(tSettings("scheduleView.updated", { view: view === "week" ? tSchedule("week") : tSchedule("timeline") }))
     } catch {
       setDefaultScheduleView(prev)
       updateOrgSettings({ defaultScheduleView: prev })
@@ -36,7 +38,7 @@ export function ScheduleViewSection() {
   }
 
   return (
-    <SettingsSection icon={CalendarDays} title="Schedule View" description="Default view when opening the schedule.">
+    <SettingsSection icon={CalendarDays} title={tSettings("scheduleView.title")} description={tSettings("scheduleView.description")}>
       <div className="mt-4 flex items-center gap-2">
         <button
           type="button"
@@ -49,7 +51,7 @@ export function ScheduleViewSection() {
           )}
         >
           <LayoutGrid className="size-4" />
-          Week
+          {tSchedule("week")}
         </button>
         <button
           type="button"
@@ -62,11 +64,11 @@ export function ScheduleViewSection() {
           )}
         >
           <AlignLeft className="size-4" />
-          Timeline
+          {tSchedule("timeline")}
         </button>
       </div>
       <p className="text-xs text-gray-400 mt-3">
-        You can still switch views on the schedule page at any time.
+        {tSettings("scheduleView.hint")}
       </p>
     </SettingsSection>
   )

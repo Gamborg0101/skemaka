@@ -13,6 +13,8 @@ import { SettingsSection } from "./SettingsSection"
 
 export function DataRetentionSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
   const { orgId } = useOrg()
   const [preview, setPreview] = useState<CleanupPreview | null>(null)
   const [previewing, setPreviewing] = useState(false)
@@ -48,38 +50,48 @@ export function DataRetentionSection() {
     }
   }
 
+  const deletedParts = done
+    ? [
+        done.schedules > 0 && tSettings("dataRetention.unitSchedules", { n: done.schedules }),
+        done.availability > 0 && tSettings("dataRetention.unitAvailability", { n: done.availability }),
+        done.events > 0 && tSettings("dataRetention.unitEvents", { n: done.events }),
+      ].filter(Boolean)
+    : []
+
   return (
-    <SettingsSection icon={Archive} title="Data Retention" description="Remove old schedules and availability data to keep the database lean.">
+    <SettingsSection icon={Archive} title={tSettings("dataRetention.title")} description={tSettings("dataRetention.description")}>
       <div className="mt-4 space-y-4">
         <ul className="space-y-1.5">
-          {Object.values(RETENTION).map((r) => (
-            <li key={r.label} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          {/* The cutoffs still come from RETENTION so the copy can never claim
+              a different number from the one cleanup actually uses; only the
+              sentence around them is translated. */}
+          {([
+            ["itemSchedules", RETENTION.schedules.months],
+            ["itemAvailability", RETENTION.availability.months],
+            ["itemEvents", RETENTION.events.months],
+          ] as const).map(([key, months]) => (
+            <li key={key} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <span className="size-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
-              {r.label}
+              {tSettings(`dataRetention.${key}`, { months })}
             </li>
           ))}
           <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
             <span className="size-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
-            Expired sessions (cleaned automatically)
+            {tSettings("dataRetention.expiredSessions")}
           </li>
         </ul>
 
         <p className="text-xs text-gray-400">
-          Cleanup also runs automatically every Sunday at 03:00 UTC.
+          {tSettings("dataRetention.autoCleanupNote")}
         </p>
 
         {done && (
           <div className="rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800/50 px-4 py-3 text-sm text-green-800 dark:text-green-300">
             {done.total === 0 ? (
-              "Nothing to clean — database is already tidy."
+              tSettings("dataRetention.nothingToCleanDone")
             ) : (
               <>
-                Deleted{" "}
-                {[
-                  done.schedules > 0 && `${done.schedules} schedule${done.schedules !== 1 ? "s" : ""}`,
-                  done.availability > 0 && `${done.availability} availability request${done.availability !== 1 ? "s" : ""}`,
-                  done.events > 0 && `${done.events} event${done.events !== 1 ? "s" : ""}`,
-                ].filter(Boolean).join(", ")}.
+                {tSettings("dataRetention.deletedPrefix")} {deletedParts.join(", ")}.
               </>
             )}
           </div>
@@ -93,18 +105,18 @@ export function DataRetentionSection() {
               : "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-300"
           )}>
             {preview.total === 0 ? (
-              "Nothing to clean — everything is within the retention window."
+              tSettings("dataRetention.nothingToCleanPreview")
             ) : (
               <div className="space-y-1">
-                <p className="font-medium">Ready to delete:</p>
+                <p className="font-medium">{tSettings("dataRetention.readyToDelete")}</p>
                 {preview.schedules > 0 && (
-                  <p>{preview.schedules} schedule{preview.schedules !== 1 ? "s" : ""} (+ all their shifts)</p>
+                  <p>{tSettings("dataRetention.previewSchedules", { n: preview.schedules })}</p>
                 )}
                 {preview.availability > 0 && (
-                  <p>{preview.availability} availability request{preview.availability !== 1 ? "s" : ""} (+ submissions)</p>
+                  <p>{tSettings("dataRetention.previewAvailability", { n: preview.availability })}</p>
                 )}
                 {preview.events > 0 && (
-                  <p>{preview.events} scheduling event{preview.events !== 1 ? "s" : ""}</p>
+                  <p>{tSettings("dataRetention.previewEvents", { n: preview.events })}</p>
                 )}
               </div>
             )}
@@ -114,7 +126,7 @@ export function DataRetentionSection() {
         <div className="flex items-center gap-2">
           {!preview && !done && (
             <Button variant="outline" size="sm" onClick={handlePreview} disabled={previewing}>
-              {previewing ? "Checking…" : "Preview cleanup"}
+              {previewing ? tSettings("dataRetention.checking") : tSettings("dataRetention.previewCleanup")}
             </Button>
           )}
           {preview && preview.total > 0 && !done && (
@@ -125,16 +137,16 @@ export function DataRetentionSection() {
                 disabled={running}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
-                {running ? "Running…" : `Delete ${preview.total} records`}
+                {running ? tSettings("dataRetention.running") : tSettings("dataRetention.deleteRecordsBtn", { n: preview.total })}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setPreview(null)} disabled={running}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
             </>
           )}
           {(preview?.total === 0 || done) && (
             <Button variant="outline" size="sm" onClick={() => { setPreview(null); setDone(null) }}>
-              Reset
+              {tSettings("dataRetention.reset")}
             </Button>
           )}
         </div>

@@ -12,10 +12,13 @@ import { useTranslations } from "next-intl"
 import { useOrg } from "@/lib/orgContext"
 import { SettingsSection } from "./SettingsSection"
 
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const
 
 export function StoreHoursSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
+  const tSchedule = useTranslations("manager.schedule")
   const { orgId } = useOrg()
   const [hours, setHours] = useState<DayHours[]>(() => getOrgSettings().hours)
   const [buffer, setBuffer] = useState<number>(() => getOrgSettings().timelineBufferHours)
@@ -58,13 +61,14 @@ export function StoreHoursSection() {
   }
 
   return (
-    <SettingsSection icon={Clock} title="Store Hours" description="Opening and closing times per day.">
+    <SettingsSection icon={Clock} title={tSettings("storeHours.title")} description={tSettings("storeHours.description")}>
       <div className="space-y-1 mt-4">
-        {DAY_NAMES.map((name, i) => {
+        {DAY_KEYS.map((dayKey, i) => {
           const day = hours[i]
+          const name = tSettings(`storeHours.days.${dayKey}`)
           return (
             <div
-              key={name}
+              key={dayKey}
               className={cn("flex items-center gap-3 rounded-lg px-3 py-2", !day.isOpen && "opacity-60")}
             >
               <span className="w-24 text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">{name}</span>
@@ -75,7 +79,7 @@ export function StoreHoursSection() {
                   <TimePicker value={day.closeTime} onChange={(v) => updateDay(i, { closeTime: v })} />
                 </div>
               ) : (
-                <span className="flex-1 text-sm text-gray-400 dark:text-gray-500">Closed</span>
+                <span className="flex-1 text-sm text-gray-400 dark:text-gray-500">{tSchedule("closed")}</span>
               )}
               <button
                 type="button"
@@ -87,7 +91,7 @@ export function StoreHoursSection() {
                     : "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-gray-700/50 dark:text-gray-300 dark:hover:bg-gray-700"
                 )}
               >
-                {day.isOpen ? "Set closed" : "Set open"}
+                {day.isOpen ? tSettings("storeHours.setClosed") : tSettings("storeHours.setOpen")}
               </button>
             </div>
           )
@@ -97,7 +101,7 @@ export function StoreHoursSection() {
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="timeline-buffer" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Timeline buffer
+            {tSettings("storeHours.timelineBuffer")}
           </label>
           <select
             id="timeline-buffer"
@@ -109,14 +113,14 @@ export function StoreHoursSection() {
               { length: MAX_TIMELINE_BUFFER_HOURS - MIN_TIMELINE_BUFFER_HOURS + 1 },
               (_, i) => MIN_TIMELINE_BUFFER_HOURS + i,
             ).map((n) => (
-              <option key={n} value={n}>{n} {n === 1 ? "hour" : "hours"}</option>
+              <option key={n} value={n}>{tSettings("storeHours.hoursOption", { n })}</option>
             ))}
           </select>
-          <span className="text-sm text-gray-500 dark:text-gray-400">before &amp; after opening times</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{tSettings("storeHours.beforeAfterOpening")}</span>
         </div>
         <div className="flex items-end justify-between gap-4">
           <p className="text-xs text-gray-400">
-            Padding shown around each day on the schedule timeline so shifts near opening or closing have room. Set 0 for an exact fit.
+            {tSettings("storeHours.bufferHint")}
           </p>
           <Button
             onClick={handleSave}
@@ -124,7 +128,7 @@ export function StoreHoursSection() {
             className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 shrink-0"
             size="sm"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? tCommon("saving") : tSettings("save")}
           </Button>
         </div>
       </div>
