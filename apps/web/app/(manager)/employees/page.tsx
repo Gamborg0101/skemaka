@@ -21,6 +21,8 @@ import { formatCurrency } from "@/lib/orgSettings"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination } from "@/components/ui/pagination"
 import { fetchPage } from "@/lib/pagination"
+import { translateServiceError, type ServiceErrorBody } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 
 const PAGE_SIZE = 25
 
@@ -28,6 +30,7 @@ export default function EmployeesPage() {
   const t = useTranslations("manager.employees")
   const tCommon = useTranslations("common")
   const tToasts = useTranslations("manager.toasts")
+  const translate = useServiceErrorTranslate()
   const { orgId, jobRoles, org } = useOrg()
 
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -112,7 +115,7 @@ export default function EmployeesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
-    const res = await r.json() as { data?: Employee; error?: string }
+    const res = await r.json() as { data?: Employee } & ServiceErrorBody
     if (res.data) {
       toast.success(tToasts("employeeAdded", { name: data.name }))
       // New employees are active; surface them on the active tab's first page.
@@ -120,7 +123,7 @@ export default function EmployeesPage() {
       else changeTab("active")
       return true
     }
-    toast.error(res.error ?? tToasts("employeeAddFailed"))
+    toast.error(translateServiceError(translate, res, tToasts("employeeAddFailed")))
     return false
   }
 
@@ -159,7 +162,13 @@ export default function EmployeesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: true }),
     })
-    if (!r.ok) { toast.error(tToasts("employeeReactivateFailed")); return }
+    if (!r.ok) {
+      // Reactivating consumes a seat, so this is the other common path to
+      // SEAT_LIMIT besides adding someone new.
+      const res = await r.json().catch(() => null) as ServiceErrorBody | null
+      toast.error(translateServiceError(translate, res, tToasts("employeeReactivateFailed")))
+      return
+    }
     toast.success(tToasts("employeeReactivated", { name: emp.name }))
     reload()
   }
@@ -178,13 +187,13 @@ export default function EmployeesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updated),
     })
-    const res = await r.json() as { data?: Employee; error?: string }
+    const res = await r.json() as { data?: Employee } & ServiceErrorBody
     if (res.data) {
       setEmployees((prev) => prev.map((e) => e.id === empId ? res.data! : e))
       setSelectedEmployee((prev) => prev?.id === empId ? res.data! : prev)
       toast.success(tToasts("employeeUpdated"))
     } else {
-      toast.error(res.error ?? tToasts("employeeUpdateFailed"))
+      toast.error(translateServiceError(translate, res, tToasts("employeeUpdateFailed")))
     }
   }
 

@@ -74,7 +74,11 @@ async function requireEmployee(orgId: string, userId: string): Promise<{ id: str
     select: { id: true, name: true },
     orderBy: { createdAt: "asc" },
   })
-  if (!emp) throw new ServiceError("You don't have an employee profile in this workspace", "FORBIDDEN")
+  if (!emp) {
+    throw new ServiceError("You don't have an employee profile in this workspace", "FORBIDDEN", {
+      messageKey: "noEmployeeProfile",
+    })
+  }
   return emp
 }
 
@@ -264,7 +268,9 @@ export async function approveCoverRequest(
       data: { status: "APPROVED", resolvedAt: new Date(), resolvedByUserId: managerUserId },
     })
     if (swap.count === 0) {
-      throw new ServiceError("This request has already been resolved", "CONFLICT")
+      throw new ServiceError("This request has already been resolved", "CONFLICT", {
+        messageKey: "requestAlreadyResolved",
+      })
     }
 
     await client.shift.update({ where: { id: req.shiftId }, data: { employeeId: claimedById } })
@@ -304,7 +310,9 @@ export async function denyCoverRequest(
   })
   if (!req) throw new ServiceError("Cover request not found", "NOT_FOUND")
   if (req.status !== "OPEN" && req.status !== "CLAIMED") {
-    throw new ServiceError("This request is already resolved", "CONFLICT")
+    throw new ServiceError("This request is already resolved", "CONFLICT", {
+      messageKey: "requestAlreadyResolved",
+    })
   }
 
   // Same compare-and-swap as approve, so the two cannot both win. Denying does
@@ -315,7 +323,9 @@ export async function denyCoverRequest(
     data: { status: "DENIED", resolvedAt: new Date(), resolvedByUserId: managerUserId },
   })
   if (swap.count === 0) {
-    throw new ServiceError("This request is already resolved", "CONFLICT")
+    throw new ServiceError("This request is already resolved", "CONFLICT", {
+      messageKey: "requestAlreadyResolved",
+    })
   }
 
   const updated = await db.shiftCoverRequest.findUniqueOrThrow({
@@ -353,7 +363,9 @@ export async function cancelCoverRequest(
     throw new ServiceError("You can only cancel your own cover requests", "FORBIDDEN")
   }
   if (req.status !== "OPEN" && req.status !== "CLAIMED") {
-    throw new ServiceError("This request is already resolved", "CONFLICT")
+    throw new ServiceError("This request is already resolved", "CONFLICT", {
+      messageKey: "requestAlreadyResolved",
+    })
   }
 
   // Guarded like the other transitions. A requester withdrawing at the same
@@ -365,7 +377,9 @@ export async function cancelCoverRequest(
     data: { status: "CANCELLED", resolvedAt: new Date() },
   })
   if (swap.count === 0) {
-    throw new ServiceError("This request is already resolved", "CONFLICT")
+    throw new ServiceError("This request is already resolved", "CONFLICT", {
+      messageKey: "requestAlreadyResolved",
+    })
   }
 
   const updated = await db.shiftCoverRequest.findUniqueOrThrow({
