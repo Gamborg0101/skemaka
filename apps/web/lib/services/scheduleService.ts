@@ -679,7 +679,11 @@ export async function createShift(
     db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC, cancelledAt: null }, select: { id: true }, orderBy: { createdAt: "asc" } }),
   ])
   if (!employeeInOrg) throw new ServiceError("Employee not found", "NOT_FOUND")
-  if (existing) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+  if (existing) {
+    throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+      messageKey: "shiftConflict",
+    })
+  }
 
   // Sick days are records of an absence, not plans — they are born published
   // (no roll-out needed) and never notified (the person knows they're sick).
@@ -799,7 +803,11 @@ export async function updateShift(
       select: { id: true },
       orderBy: { createdAt: "asc" },
     })
-    if (clash) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+    if (clash) {
+      throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+        messageKey: "shiftConflict",
+      })
+    }
   }
 
   const shift = await db.shift.update({

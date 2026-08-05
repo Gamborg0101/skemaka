@@ -62,7 +62,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ data: employee }, { status: 201 })
   } catch (err) {
     if (err instanceof ServiceError) {
-      return NextResponse.json({ error: err.message, code: err.code }, { status: serviceErrorStatus(err.code) })
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          messageKey: err.messageKey,
+          ...(err.messageParams ? { messageParams: err.messageParams } : {}),
+        },
+        { status: serviceErrorStatus(err.code) },
+      )
     }
     throw err
   }

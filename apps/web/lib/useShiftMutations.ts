@@ -3,6 +3,8 @@ import type { Dispatch, SetStateAction } from "react"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 import type { Schedule, Shift } from "@/types"
+import { translateServiceError, type ServiceErrorBody } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 
 export function useShiftMutations(
   schedule: Schedule | null,
@@ -12,6 +14,7 @@ export function useShiftMutations(
   ensureSchedule: () => Promise<Schedule>,
 ) {
   const t = useTranslations("manager.toasts")
+  const translate = useServiceErrorTranslate()
   const patchShift = useCallback((id: string, update: Partial<Shift>) => {
     setSchedule((s) => s ? { ...s, shifts: s.shifts?.map((sh) => sh.id === id ? { ...sh, ...update } : sh) } : s)
   }, [setSchedule])
@@ -48,11 +51,12 @@ export function useShiftMutations(
         body: JSON.stringify({ date: newDate, employeeId: newEmployeeId }),
       }).then(async (r) => {
         if (r.ok) { toast.success(t("shiftMoved")); return }
-        const msg = await r.json().then((b) => b.error).catch(() => null)
-        rollbackShift(shiftId, prev); toast.error(msg ?? t("shiftMoveFailed"))
+        const body = await r.json().catch(() => null) as ServiceErrorBody | null
+        rollbackShift(shiftId, prev)
+        toast.error(translateServiceError(translate, body, t("shiftMoveFailed")))
       }).catch(() => { rollbackShift(shiftId, prev); toast.error(t("shiftMoveFailed")) })
     },
-    [schedule, orgId, patchShift, rollbackShift, t]
+    [schedule, orgId, patchShift, rollbackShift, t, translate]
   )
 
   const handleShiftCreate = useCallback(
@@ -80,14 +84,16 @@ export function useShiftMutations(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         })
-        const res = (await r.json()) as { data?: Shift; error?: string }
+        const res = (await r.json()) as { data?: Shift } & ServiceErrorBody
         if (res.data) { replaceShift(tempId, res.data); toast.success(t("shiftAdded")); return true }
-        deleteShift(tempId); toast.error(res.error ?? t("shiftAddFailed")); return false
+        deleteShift(tempId)
+        toast.error(translateServiceError(translate, res, t("shiftAddFailed")))
+        return false
       } catch {
         deleteShift(tempId); toast.error(t("shiftAddFailed")); return false
       }
     },
-    [ensureSchedule, orgId, appendShift, replaceShift, deleteShift, t]
+    [ensureSchedule, orgId, appendShift, replaceShift, deleteShift, t, translate]
   )
 
   const handleShiftUpdate = useCallback(
@@ -101,11 +107,12 @@ export function useShiftMutations(
         body: JSON.stringify(data),
       }).then(async (r) => {
         if (r.ok) { toast.success(t("shiftUpdated")); return }
-        const msg = await r.json().then((b) => b.error).catch(() => null)
-        rollbackShift(data.id!, prev); toast.error(msg ?? t("shiftUpdateFailed"))
+        const body = await r.json().catch(() => null) as ServiceErrorBody | null
+        rollbackShift(data.id!, prev)
+        toast.error(translateServiceError(translate, body, t("shiftUpdateFailed")))
       }).catch(() => { rollbackShift(data.id!, prev); toast.error(t("shiftUpdateFailed")) })
     },
-    [schedule, orgId, patchShift, rollbackShift, t]
+    [schedule, orgId, patchShift, rollbackShift, t, translate]
   )
 
   const handleShiftDelete = useCallback(
@@ -169,18 +176,18 @@ export function useShiftMutations(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId, date, startTime, endTime, breakMinutes: 0, jobRole: "Sick Day", notes, colorTag: "sick" }),
-      }).then((r) => r.json()).then((res: { data?: Shift; error?: string }) => {
+      }).then((r) => r.json()).then((res: { data?: Shift } & ServiceErrorBody) => {
         if (res.data) {
           replaceShift(tempId, res.data)
           const emp = employees.find((e) => e.id === employeeId)
           toast.success(emp ? t("sickDayRegisteredFor", { name: emp.name }) : t("sickDayRegistered"))
         } else {
           deleteShift(tempId)
-          toast.error(res.error ?? t("sickDayRegisterFailed"))
+          toast.error(translateServiceError(translate, res, t("sickDayRegisterFailed")))
         }
       }).catch(() => { deleteShift(tempId); toast.error(t("sickDayRegisterFailed")) })
     },
-    [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift, t]
+    [ensureSchedule, orgId, employees, appendShift, replaceShift, deleteShift, t, translate]
   )
 
   return { handleShiftMove, handleShiftCreate, handleShiftUpdate, handleShiftDelete, handleShiftCancel, handleMarkSick }
