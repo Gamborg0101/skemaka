@@ -29,7 +29,19 @@ export default async function ManagerLayout({
       where: { userId: session.user.id, role: "MANAGER" },
       orderBy: { joinedAt: "asc" },
     })
-    if (!membership) redirect("/onboarding")
+    if (!membership) {
+      // An employee following an old /my-shifts link used to be dropped into
+      // the create-your-restaurant wizard, which is nonsense for someone whose
+      // manager already added them. Send them to their own portal instead —
+      // /onboarding stays the destination only for someone who is genuinely
+      // neither a manager nor staff anywhere.
+      const employee = await db.employee.findFirst({
+        where: { userId: session.user.id, isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })
+      redirect(employee ? "/portal" : "/onboarding")
+    }
     // else: they have a membership — JWT is stale, let OrgProvider handle the rest
   }
 

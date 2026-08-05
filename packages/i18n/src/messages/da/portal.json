@@ -69,5 +69,20 @@
     "submitTooMany": "For mange forsøg. Vent et øjeblik, og prøv igen."
   },
   "demoPreview": "Du ser {name}s uge — sådan ser dine medarbejdere det. Skift person ovenfor.",
-  "demoPreviewShort": "Medarbejdervisning"
+  "demoPreviewShort": "Medarbejdervisning",
+  "phoneBannerTitle": "Slå vagt-sms til",
+  "phoneBannerBody": "Bekræft dit telefonnummer for at få en sms, når din leder udruller eller ændrer dine vagter.",
+  "phoneBannerCta": "Bekræft nummer",
+  "phoneBannerDismiss": "Ikke nu",
+  "navShifts": "Mine vagter",
+  "navAvailability": "Tilgængelighed",
+  "navAccount": "Konto",
+  "accountTitle": "Konto",
+  "accountOrg": "Du arbejder hos",
+  "accountPhone": "Telefon",
+  "accountPhoneUnverified": "Ikke bekræftet",
+  "accountPhoneVerified": "Bekræftet",
+  "accountVerifyCta": "Bekræft nummer",
+  "accountLanguage": "Sprog",
+  "accountSignOut": "Log ud"
 }
