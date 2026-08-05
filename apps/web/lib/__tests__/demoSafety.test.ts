@@ -49,6 +49,55 @@ describe("demo email suppression", () => {
     await sendShiftAssignedEmail({ ...base, to: "emma@example.com" })
     expect(sendMock).toHaveBeenCalledOnce()
   })
+
+  /**
+   * Dropped mail is printed outside production so flows driven by something the
+   * recipient reads out of an email — the invite-claim one-time code above all,
+   * which is stored hashed and never returned by its endpoint — can be
+   * exercised locally at all. Both guards matter, so both are pinned.
+   */
+  describe("the development print-out of suppressed mail", () => {
+    // vitest makes process.env.NODE_ENV a non-configurable accessor, so it can
+    // only be written through, not redefined.
+    const withEnv = async (env: string, fn: () => Promise<void>) => {
+      const prev = process.env.NODE_ENV
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = env
+      try { await fn() } finally {
+        ;(process.env as Record<string, string | undefined>).NODE_ENV = prev
+      }
+    }
+
+    it("prints the dropped message in development", async () => {
+      const info = vi.spyOn(console, "info").mockImplementation(() => {})
+      await withEnv("development", async () => {
+        await sendShiftAssignedEmail({ ...base, to: `emma-abc123@${DEMO_EMAIL_DOMAIN}` })
+      })
+      expect(info).toHaveBeenCalledOnce()
+      expect(info.mock.calls[0][0]).toContain("mail:suppressed")
+      info.mockRestore()
+    })
+
+    it("prints nothing in production", async () => {
+      // The subject line of a claim-code mail contains the code itself. This
+      // must never reach a production log, however unroutable the address is.
+      const info = vi.spyOn(console, "info").mockImplementation(() => {})
+      await withEnv("production", async () => {
+        await sendShiftAssignedEmail({ ...base, to: `emma-abc123@${DEMO_EMAIL_DOMAIN}` })
+      })
+      expect(info).not.toHaveBeenCalled()
+      info.mockRestore()
+    })
+
+    it("never prints mail bound for a real recipient", async () => {
+      const info = vi.spyOn(console, "info").mockImplementation(() => {})
+      await withEnv("development", async () => {
+        await sendShiftAssignedEmail({ ...base, to: "emma@example.com" })
+      })
+      expect(info).not.toHaveBeenCalled()
+      expect(sendMock).toHaveBeenCalledOnce()
+      info.mockRestore()
+    })
+  })
 })
 
 describe("cleanupDemoSandboxes", () => {
