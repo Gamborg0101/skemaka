@@ -23,6 +23,7 @@ export function OfferCoverButton({
   initial?: Active | null
 }) {
   const tToast = useTranslations("manager.toasts")
+  const t = useTranslations("portal.offerCover")
   const [active, setActive] = useState<Active | null>(initial)
   const [busy, setBusy] = useState(false)
 
@@ -35,11 +36,11 @@ export function OfferCoverButton({
         body: JSON.stringify({ shiftId }),
       })
       const res = (await r.json()) as { data?: { id: string; status: string }; error?: string }
-      if (!r.ok || !res.data) throw new Error(res.error ?? "Couldn't offer this shift")
+      if (!r.ok || !res.data) throw new Error(res.error ?? t("errOffer"))
       setActive({ id: res.data.id, status: "OPEN" })
       toast.success(tToast("coverOffered"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : t("errGeneric"))
     } finally {
       setBusy(false)
     }
@@ -51,11 +52,11 @@ export function OfferCoverButton({
     try {
       const r = await fetch(`/api/orgs/${orgId}/cover-requests/${active.id}`, { method: "DELETE" })
       const res = (await r.json()) as { error?: string }
-      if (!r.ok) throw new Error(res.error ?? "Couldn't withdraw the offer")
+      if (!r.ok) throw new Error(res.error ?? t("errWithdraw"))
       setActive(null)
       toast.success(tToast("coverOfferWithdrawn"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong")
+      toast.error(err instanceof Error ? err.message : t("errGeneric"))
     } finally {
       setBusy(false)
     }
@@ -66,7 +67,7 @@ export function OfferCoverButton({
       <div className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs">
         <span className="inline-flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-300">
           <Clock className="size-3.5" />
-          {active.status === "CLAIMED" ? "Claimed — awaiting manager approval" : "Offered for cover"}
+          {active.status === "CLAIMED" ? t("claimed") : t("offered")}
         </span>
         <button
           type="button"
@@ -74,7 +75,7 @@ export function OfferCoverButton({
           disabled={busy}
           className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-40 transition-colors"
         >
-          <X className="size-3.5" /> Withdraw
+          <X className="size-3.5" /> {t("withdraw")}
         </button>
       </div>
     )
@@ -88,7 +89,7 @@ export function OfferCoverButton({
       className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
     >
       <ArrowLeftRight className="size-3.5" />
-      {busy ? "Offering…" : "Offer for cover"}
+      {busy ? t("offering") : t("offer")}
     </button>
   )
 }

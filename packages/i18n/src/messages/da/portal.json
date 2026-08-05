@@ -107,5 +107,15 @@
     "noBreak": "Ingen pause",
     "pickerYou": "{name} (dig)",
     "andMore": "+{count} mere"
+  },
+  "offerCover": {
+    "offer": "Tilbyd til dækning",
+    "offering": "Tilbyder…",
+    "offered": "Tilbudt til dækning",
+    "claimed": "Taget — afventer lederens godkendelse",
+    "withdraw": "Træk tilbage",
+    "errOffer": "Vagten kunne ikke tilbydes",
+    "errWithdraw": "Tilbuddet kunne ikke trækkes tilbage",
+    "errGeneric": "Noget gik galt"
   }
 }
