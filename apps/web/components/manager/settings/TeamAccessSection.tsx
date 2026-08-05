@@ -50,12 +50,12 @@ export function TeamAccessSection() {
         body: JSON.stringify({ email: inviteEmail.trim() }),
       })
       const data = await r.json() as { data?: TeamMember; error?: string }
-      if (!r.ok) throw new Error(data.error ?? "Failed to grant access")
+      if (!r.ok) throw new Error(data.error ?? tSettings("teamAccess.grantFailed"))
       setTeam((prev) => [...prev, data.data!])
       setInviteEmail("")
-      toast.success(`Manager access granted to ${data.data!.email}`)
+      toast.success(tSettings("teamAccess.granted", { email: data.data!.email ?? "" }))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to grant access")
+      toast.error(err instanceof Error ? err.message : tSettings("teamAccess.grantFailed"))
     } finally {
       setInviting(false)
     }
@@ -69,7 +69,7 @@ export function TeamAccessSection() {
         setTeam((prev) => [...prev, member])
         toast.error(tToast("accessRevokeFailed"))
       } else {
-        toast.success(`Manager access removed for ${member.email}`)
+        toast.success(tSettings("teamAccess.revoked", { email: member.email ?? "" }))
       }
     } catch {
       setTeam((prev) => [...prev, member])
@@ -78,7 +78,7 @@ export function TeamAccessSection() {
   }
 
   return (
-    <SettingsSection icon={ShieldCheck} title="Team Access" description="People who can manage schedules and employees.">
+    <SettingsSection icon={ShieldCheck} title={tSettings("teamAccess.title")} description={tSettings("teamAccess.description")}>
       <div className="mt-4 space-y-4">
         {team.length > 0 && (
           <div className="space-y-1">
@@ -96,10 +96,10 @@ export function TeamAccessSection() {
                     ? "bg-purple-50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
                     : "bg-blue-50 text-blue-700 dark:bg-gray-700/60 dark:text-gray-200"
                 )}>
-                  {member.role === "ADMIN" ? "Admin" : "Manager"}
+                  {member.role === "ADMIN" ? tSettings("teamAccess.roleAdmin") : tSettings("teamAccess.roleManager")}
                 </span>
                 {member.role !== "ADMIN" && (
-                  <Tooltip content="Remove manager access">
+                  <Tooltip content={tSettings("teamAccess.removeTooltip")}>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -119,7 +119,7 @@ export function TeamAccessSection() {
           <form onSubmit={handleInvite} className="flex gap-2">
             <Input
               type="email"
-              placeholder="colleague@email.com"
+              placeholder={tSettings("teamAccess.emailPlaceholder")}
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               className="h-8 text-sm flex-1"
@@ -131,11 +131,11 @@ export function TeamAccessSection() {
               className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
             >
               <Plus className="size-3.5 mr-1" />
-              {inviting ? "Adding…" : "Grant access"}
+              {inviting ? tCommon("adding") : tSettings("teamAccess.grantAccess")}
             </Button>
           </form>
           <p className="text-xs text-gray-400 mt-2">
-            They must already have an account. Access lets them view and edit the schedule.
+            {tSettings("teamAccess.inviteHint")}
           </p>
         </div>
       </div>

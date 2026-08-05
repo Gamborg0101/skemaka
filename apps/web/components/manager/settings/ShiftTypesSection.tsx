@@ -23,24 +23,21 @@ import { useOptimisticList } from "@/lib/useOptimisticList"
 import type { ShiftTemplate } from "@/types"
 import { SettingsSection } from "./SettingsSection"
 
-const BREAK_OPTIONS = [
-  { label: "No break", value: "0" },
-  { label: "15 min", value: "15" },
-  { label: "30 min", value: "30" },
-  { label: "45 min", value: "45" },
-  { label: "60 min", value: "60" },
-]
+const BREAK_VALUES = ["0", "15", "30", "45", "60"]
 
-function formatTemplateSummary(t: ShiftTemplate) {
+function formatTemplateSummary(t: ShiftTemplate, breakLabel: string) {
   const tf = getOrgSettings().timeFormat
   const times = `${formatTime(t.startTime, tf)}–${formatTime(t.endTime, tf)}`
-  const brk = t.breakMinutes > 0 ? ` · ${t.breakMinutes}m break` : ""
+  const brk = t.breakMinutes > 0 ? ` · ${breakLabel}` : ""
   const role = t.jobRole ? ` · ${t.jobRole}` : ""
   return `${times}${brk}${role}`
 }
 
 export function ShiftTypesSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
+  const tSchedule = useTranslations("manager.schedule")
   const { orgId, jobRoles, shiftTemplates, setShiftTemplates } = useOrg()
   const { remove: removeTemplate } = useOptimisticList(shiftTemplates, setShiftTemplates)
 
@@ -80,12 +77,12 @@ export function ShiftTypesSection() {
         }),
       })
       const data = await r.json() as { data?: ShiftTemplate; error?: string }
-      if (!r.ok) throw new Error(data.error ?? "Failed to save")
+      if (!r.ok) throw new Error(data.error ?? tSettings("shiftTypes.saveFailedGeneric"))
       setShiftTemplates((prev) => [...prev, data.data!])
       resetAddForm()
-      toast.success(`"${data.data!.name}" shift type added`)
+      toast.success(tSettings("shiftTypes.added", { name: data.data!.name }))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save shift type")
+      toast.error(err instanceof Error ? err.message : tSettings("shiftTypes.saveFailed"))
     } finally {
       setAddSaving(false)
     }
@@ -95,21 +92,28 @@ export function ShiftTypesSection() {
     await removeTemplate(tmpl.id, async () => {
       const r = await fetch(`/api/orgs/${orgId}/shift-templates/${tmpl.id}`, { method: "DELETE" })
       if (!r.ok) { toast.error(tToast("shiftTypeDeleteFailed")); throw new Error() }
-      toast.success(`"${tmpl.name}" deleted`)
+      toast.success(tSettings("shiftTypes.deleted", { name: tmpl.name }))
     })
   }
 
+  const breakOptions = BREAK_VALUES.map((value) => ({
+    value,
+    label: value === "0"
+      ? tSettings("shiftTypes.noBreak")
+      : tSettings("shiftTypes.breakMinutesOption", { n: parseInt(value, 10) }),
+  }))
+
   return (
-    <SettingsSection icon={BookOpen} title="Shift Types" description="Presets you can apply with one click when adding a shift.">
+    <SettingsSection icon={BookOpen} title={tSettings("shiftTypes.title")} description={tSettings("shiftTypes.description")}>
       <div className="mt-4">
         {showAddForm ? (
           <form onSubmit={handleAddTemplate} className="mb-3 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50 bg-blue-50/40 dark:bg-blue-950/30 space-y-3">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">New shift type</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{tSettings("shiftTypes.newHeading")}</p>
             <div className="space-y-1.5">
-              <Label htmlFor="tmpl-name" className="text-xs">Name</Label>
+              <Label htmlFor="tmpl-name" className="text-xs">{tSettings("shiftTypes.nameLabel")}</Label>
               <Input
                 id="tmpl-name"
-                placeholder="e.g. Morning Kitchen"
+                placeholder={tSettings("shiftTypes.namePlaceholder")}
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
                 className="h-8 text-sm"
@@ -119,36 +123,36 @@ export function ShiftTypesSection() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Start time</Label>
+                <Label className="text-xs">{tSettings("shiftTypes.startTimeLabel")}</Label>
                 <TimePicker value={addStart} onChange={setAddStart} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">End time</Label>
+                <Label className="text-xs">{tSettings("shiftTypes.endTimeLabel")}</Label>
                 <TimePicker value={addEnd} onChange={setAddEnd} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Break</Label>
+                <Label className="text-xs">{tSettings("shiftTypes.breakLabel")}</Label>
                 <Select value={addBreak} onValueChange={(v) => { if (v) setAddBreak(v) }}>
                   <SelectTrigger className="h-8 text-sm w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {BREAK_OPTIONS.map((o) => (
+                    {breakOptions.map((o) => (
                       <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Job role (optional)</Label>
+                <Label className="text-xs">{tSettings("shiftTypes.jobRoleLabel")}</Label>
                 <Select value={addRole} onValueChange={(v) => setAddRole(v ?? "")}>
                   <SelectTrigger className="h-8 text-sm w-full">
-                    <SelectValue placeholder="Any role" />
+                    <SelectValue placeholder={tSettings("shiftTypes.anyRole")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any role</SelectItem>
+                    <SelectItem value="">{tSettings("shiftTypes.anyRole")}</SelectItem>
                     {jobRoles.map((r) => (
                       <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
                     ))}
@@ -158,7 +162,7 @@ export function ShiftTypesSection() {
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" size="sm" onClick={resetAddForm}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -166,7 +170,7 @@ export function ShiftTypesSection() {
                 disabled={addSaving || !addName.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {addSaving ? "Saving…" : "Save shift type"}
+                {addSaving ? tCommon("saving") : tSettings("shiftTypes.saveShiftType")}
               </Button>
             </div>
           </form>
@@ -174,7 +178,7 @@ export function ShiftTypesSection() {
 
         {shiftTemplates.length === 0 && !showAddForm ? (
           <p className="text-sm text-gray-400 text-center py-4">
-            No shift types yet. Add one to speed up scheduling.
+            {tSettings("shiftTypes.empty")}
           </p>
         ) : shiftTemplates.length > 0 ? (
           <div className="space-y-1 mb-3">
@@ -182,9 +186,11 @@ export function ShiftTypesSection() {
               <div key={tmpl.id} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/40">
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{tmpl.name}</span>
-                  <span className="text-sm text-gray-400 ml-2">{formatTemplateSummary(tmpl)}</span>
+                  <span className="text-sm text-gray-400 ml-2">
+                    {formatTemplateSummary(tmpl, tSchedule("breakMinutes", { n: tmpl.breakMinutes }))}
+                  </span>
                 </div>
-                <Tooltip content="Delete shift type">
+                <Tooltip content={tSettings("shiftTypes.deleteTooltip")}>
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -202,7 +208,7 @@ export function ShiftTypesSection() {
         {!showAddForm && (
           <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
             <Plus className="size-3.5 mr-1" />
-            Add shift type
+            {tSettings("shiftTypes.addShiftType")}
           </Button>
         )}
       </div>

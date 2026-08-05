@@ -22,9 +22,13 @@ const DEFAULT_COLOR = ROLE_COLOR_TOKENS[0]
 function ColorPicker({
   value,
   onChange,
+  colorNames,
+  selectLabel,
 }: {
   value: string
   onChange: (color: string) => void
+  colorNames: Record<string, string>
+  selectLabel: (color: string) => string
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -41,7 +45,7 @@ function ColorPicker({
               borderColor: value === token ? "white" : "transparent",
               boxShadow: value === token ? `0 0 0 2px ${hex}` : "none",
             }}
-            aria-label={`Select ${token}`}
+            aria-label={selectLabel(colorNames[token] ?? token)}
           />
         )
       })}
@@ -52,6 +56,21 @@ function ColorPicker({
 export function JobRolesSection() {
   const tSettings = useTranslations("manager.settings")
   const tCommon = useTranslations("common")
+  const colorNames: Record<string, string> = {
+    blue: tSettings("jobRoles.colorNames.blue"),
+    green: tSettings("jobRoles.colorNames.green"),
+    orange: tSettings("jobRoles.colorNames.orange"),
+    purple: tSettings("jobRoles.colorNames.purple"),
+    yellow: tSettings("jobRoles.colorNames.yellow"),
+    rose: tSettings("jobRoles.colorNames.rose"),
+    red: tSettings("jobRoles.colorNames.red"),
+    pink: tSettings("jobRoles.colorNames.pink"),
+    indigo: tSettings("jobRoles.colorNames.indigo"),
+    teal: tSettings("jobRoles.colorNames.teal"),
+    cyan: tSettings("jobRoles.colorNames.cyan"),
+    gray: tSettings("jobRoles.colorNames.gray"),
+  }
+  const selectColorLabel = (color: string) => tSettings("jobRoles.selectColorAria", { color })
   const { orgId, jobRoles, setJobRoles } = useOrg()
   const { patch, remove, addOptimistic } = useOptimisticList(jobRoles, setJobRoles)
 
@@ -111,13 +130,13 @@ export function JobRolesSection() {
           body: JSON.stringify({ name: addName.trim(), color: addColor }),
         })
         const data = await r.json() as { data?: JobRole; error?: string }
-        if (!r.ok) throw new Error(data.error ?? "Failed to save")
-        toast.success(`"${data.data!.name}" role added`)
+        if (!r.ok) throw new Error(data.error ?? tSettings("jobRoles.saveFailedGeneric"))
+        toast.success(tSettings("jobRoles.roleAdded", { name: data.data!.name }))
         resetAddForm()
         return data.data!
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add role")
+      toast.error(err instanceof Error ? err.message : tSettings("jobRoles.addFailed"))
     } finally {
       setAddSaving(false)
     }
@@ -143,13 +162,13 @@ export function JobRolesSection() {
           body: JSON.stringify(body),
         })
         const data = await r.json() as { data?: JobRole; error?: string }
-        if (!r.ok) throw new Error(data.error ?? "Failed to update")
-        toast.success(`"${trimmed}" updated`)
+        if (!r.ok) throw new Error(data.error ?? tSettings("jobRoles.updateFailedGeneric"))
+        toast.success(tSettings("jobRoles.roleUpdated", { name: trimmed }))
         cancelEdit()
         return data.data ?? null
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update role")
+      toast.error(err instanceof Error ? err.message : tSettings("jobRoles.updateFailed"))
     } finally {
       setEditSaving(false)
     }
@@ -160,18 +179,18 @@ export function JobRolesSection() {
       const r = await fetch(`/api/orgs/${orgId}/roles/${role.id}`, { method: "DELETE" })
       const data = await r.json() as { error?: string }
       if (!r.ok) {
-        toast.error(data.error ?? "Failed to delete role")
+        toast.error(data.error ?? tSettings("jobRoles.deleteFailed"))
         throw new Error()
       }
-      toast.success(`"${role.name}" deleted`)
+      toast.success(tSettings("jobRoles.roleDeleted", { name: role.name }))
     })
   }
 
   return (
     <SettingsSection
       icon={Tag}
-      title="Job Roles"
-      description="Roles assigned to employees and shifts. Renaming a role updates it everywhere."
+      title={tSettings("jobRoles.title")}
+      description={tSettings("jobRoles.description")}
     >
       <div className="mt-4">
         {showAddForm ? (
@@ -179,12 +198,12 @@ export function JobRolesSection() {
             onSubmit={handleAddRole}
             className="mb-3 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50 bg-blue-50/40 dark:bg-blue-950/30 space-y-3"
           >
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">New job role</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{tSettings("jobRoles.newRoleHeading")}</p>
             <div className="space-y-1.5">
-              <Label htmlFor="role-name" className="text-xs">Name</Label>
+              <Label htmlFor="role-name" className="text-xs">{tSettings("jobRoles.nameLabel")}</Label>
               <Input
                 id="role-name"
-                placeholder="e.g. Kitchen, Server, Bartender"
+                placeholder={tSettings("jobRoles.namePlaceholder")}
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
                 className="h-8 text-sm"
@@ -194,12 +213,12 @@ export function JobRolesSection() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Colour</Label>
-              <ColorPicker value={addColor} onChange={setAddColor} />
+              <Label className="text-xs">{tSettings("jobRoles.colorLabel")}</Label>
+              <ColorPicker value={addColor} onChange={setAddColor} colorNames={colorNames} selectLabel={selectColorLabel} />
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" size="sm" onClick={resetAddForm}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -207,7 +226,7 @@ export function JobRolesSection() {
                 disabled={addSaving || !addName.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {addSaving ? "Saving…" : "Save role"}
+                {addSaving ? tCommon("saving") : tSettings("jobRoles.saveRole")}
               </Button>
             </div>
           </form>
@@ -215,7 +234,7 @@ export function JobRolesSection() {
 
         {jobRoles.length === 0 && !showAddForm ? (
           <p className="text-sm text-gray-400 text-center py-4">
-            No job roles yet. Add one to organise your schedule.
+            {tSettings("jobRoles.empty")}
           </p>
         ) : jobRoles.length > 0 ? (
           <div className="space-y-1 mb-3">
@@ -241,7 +260,7 @@ export function JobRolesSection() {
                         if (e.key === "Escape") cancelEdit()
                       }}
                     />
-                    <Tooltip content="Save">
+                    <Tooltip content={tSettings("jobRoles.saveTooltip")}>
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -252,7 +271,7 @@ export function JobRolesSection() {
                         <Check className="size-3.5" />
                       </Button>
                     </Tooltip>
-                    <Tooltip content="Cancel">
+                    <Tooltip content={tCommon("cancel")}>
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -263,7 +282,7 @@ export function JobRolesSection() {
                       </Button>
                     </Tooltip>
                   </div>
-                  <ColorPicker value={editColor} onChange={setEditColor} />
+                  <ColorPicker value={editColor} onChange={setEditColor} colorNames={colorNames} selectLabel={selectColorLabel} />
                 </div>
               ) : (
                 <div
@@ -277,7 +296,7 @@ export function JobRolesSection() {
                   <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100 min-w-0 truncate">
                     {role.name}
                   </span>
-                  <Tooltip content="Rename role">
+                  <Tooltip content={tSettings("jobRoles.renameTooltip")}>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -287,7 +306,7 @@ export function JobRolesSection() {
                       <Pencil className="size-3.5" />
                     </Button>
                   </Tooltip>
-                  <Tooltip content="Delete role">
+                  <Tooltip content={tSettings("jobRoles.deleteTooltip")}>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -306,7 +325,7 @@ export function JobRolesSection() {
         {!showAddForm && (
           <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
             <Plus className="size-3.5 mr-1" />
-            Add role
+            {tSettings("jobRoles.addRole")}
           </Button>
         )}
       </div>

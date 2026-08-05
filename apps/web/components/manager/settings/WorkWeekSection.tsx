@@ -18,6 +18,8 @@ import { SettingsSection } from "./SettingsSection"
 
 export function WorkWeekSection() {
   const tToast = useTranslations("manager.toasts")
+  const tSettings = useTranslations("manager.settings")
+  const tCommon = useTranslations("common")
   const { orgId } = useOrg()
   const [fullTime, setFullTime] = useState(() => String(getOrgSettings().fullTimeHours))
   const [reduced, setReduced] = useState(() => String(getOrgSettings().reducedFullTimeHours))
@@ -56,12 +58,12 @@ export function WorkWeekSection() {
   return (
     <SettingsSection
       icon={CalendarClock}
-      title="Full-time work week"
-      description="How many hours a week count as full-time. Used to set contracted hours for full-time staff."
+      title={tSettings("workWeek.title")}
+      description={tSettings("workWeek.description")}
     >
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="full-time-hours">Full-time</Label>
+          <Label htmlFor="full-time-hours">{tSettings("workWeek.fullTimeLabel")}</Label>
           <div className="flex items-center gap-2">
             <Input
               id="full-time-hours"
@@ -72,12 +74,12 @@ export function WorkWeekSection() {
               onChange={(e) => setFullTime(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">hours / week</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{tSettings("workWeek.hoursPerWeek")}</span>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="reduced-full-time-hours">Reduced full-time</Label>
+          <Label htmlFor="reduced-full-time-hours">{tSettings("workWeek.reducedLabel")}</Label>
           <div className="flex items-center gap-2">
             <Input
               id="reduced-full-time-hours"
@@ -88,30 +90,29 @@ export function WorkWeekSection() {
               onChange={(e) => setReduced(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-gray-500 dark:text-gray-400">hours / week</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{tSettings("workWeek.hoursPerWeek")}</span>
           </div>
         </div>
       </div>
 
       <p className="text-xs text-gray-400 mt-3">
-        In Denmark a standard full-time week is 37 hours; it&rsquo;s 40 in much of the world.
-        Part-time staff keep their own custom hours.
+        {tSettings("workWeek.hint")}
       </p>
 
       {valid && reducedNum >= fullTimeNum && (
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-          Reduced full-time is usually fewer hours than full-time.
+          {tSettings("workWeek.reducedWarning")}
         </p>
       )}
 
       {dirty && (
         <div className="mt-4 flex items-center gap-3">
           <Button size="sm" onClick={handleSave} disabled={!valid || saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? tCommon("saving") : tSettings("save")}
           </Button>
           {!valid && (
             <span className="text-xs text-red-500">
-              Enter whole numbers between {MIN_WORK_WEEK_HOURS} and {MAX_WORK_WEEK_HOURS}.
+              {tSettings("workWeek.rangeError", { min: MIN_WORK_WEEK_HOURS, max: MAX_WORK_WEEK_HOURS })}
             </span>
           )}
         </div>
