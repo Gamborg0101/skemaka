@@ -5,11 +5,15 @@ import Link from "next/link"
 import { getLocale, getTranslations } from "next-intl/server"
 import { LOCALE_TAGS, type Locale } from "@skemaka/i18n"
 import { Clock, MapPin, Users, ArrowLeft } from "lucide-react"
-import { getMondayOfWeek, formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
+import { getMondayOfWeek, addDays, formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
 import { getInitials } from "@/lib/utils"
 import { pickShiftQuote } from "@/types"
 import { TimeOffSection } from "./TimeOffSection"
 import { EnableNotificationsCard } from "@/components/pwa/EnableNotificationsCard"
+import { MyShiftsWeekNav } from "@/components/manager/MyShiftsWeekNav"
+import { CoverPoolPanel } from "@/components/employee/CoverPoolPanel"
+import { OfferCoverButton } from "@/components/employee/OfferCoverButton"
+import { MyShiftOffersPanel } from "@/components/employee/MyShiftOffersPanel"
 
 function formatShiftDate(date: Date, localeTag: string): string {
   return date.toLocaleDateString(localeTag, {
@@ -54,7 +58,11 @@ function avatarColor(name: string) {
   return colors[hash % colors.length]
 }
 
-export default async function EmployeePortalPage() {
+export default async function EmployeePortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>
+}) {
   const session = await auth()
   if (!session?.user?.email) redirect("/login")
 
@@ -67,11 +75,16 @@ export default async function EmployeePortalPage() {
   const today = new Date()
   today.setUTCHours(0, 0, 0, 0)
 
-  // Show from Monday of the current week so the full week is always visible
-  const dayOfWeek = today.getUTCDay()
-  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const currentWeekStart = new Date(today)
-  currentWeekStart.setUTCDate(today.getUTCDate() + daysToMonday)
+  // The page shows one week at a time, defaulting to the current one. It used
+  // to show "current week onward" with no navigation at all, which meant an
+  // employee could never look back — and checking what you worked last week is
+  // exactly what people do when a payslip looks wrong.
+  const { week: weekParam } = await searchParams
+  const weekStartISO = /^\d{4}-\d{2}-\d{2}$/.test(weekParam ?? "")
+    ? getMondayOfWeek(new Date(weekParam + "T12:00:00"))
+    : getMondayOfWeek(new Date())
+  const currentWeekStart = new Date(weekStartISO + "T00:00:00Z")
+  const weekEnd = new Date(addDays(weekStartISO, 7) + "T00:00:00Z")
 
   // Match on the linked account first, email second.
   //
@@ -100,7 +113,7 @@ export default async function EmployeePortalPage() {
       shifts: {
         // Draft shifts are the manager's private planning space — employees
         // only ever see shifts that have been rolled out to them.
-        where: { date: { gte: currentWeekStart }, publishedAt: { not: null } },
+        where: { date: { gte: currentWeekStart, lt: weekEnd }, publishedAt: { not: null } },
         orderBy: { date: "asc" },
         take: 60,
       },
@@ -176,6 +189,10 @@ export default async function EmployeePortalPage() {
           {t("hi", { name: employee.name.split(" ")[0] })}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{employee.jobRole}</p>
+        {/* Shared with the manager's employee view, pointed at this route. */}
+        <div className="mt-4">
+          <MyShiftsWeekNav weekStart={weekStartISO} basePath="/portal" />
+        </div>
       </div>
 
       {/* Shift list */}
@@ -302,6 +319,15 @@ export default async function EmployeePortalPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Ask a colleague to take this shift. Only for shifts
+                          still ahead — there is nothing to cover once the day
+                          has passed. */}
+                      {shift.date >= today && (
+                        <div className="pt-1">
+                          <OfferCoverButton orgId={employee.organizationId} shiftId={shift.id} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -309,6 +335,14 @@ export default async function EmployeePortalPage() {
             </div>
           </div>
         ))}
+        {/* Shift offers the manager sent this person, and shifts colleagues
+            have asked someone to cover. Both components were built for this
+            page — they take only orgId and read their copy from the
+            portal.shiftOffers / portal.coverPool namespaces — but were only
+            ever mounted on the manager's /my-shifts, which redirects anyone
+            without a manager membership. So no employee could reach either. */}
+        <MyShiftOffersPanel orgId={employee.organizationId} />
+        <CoverPoolPanel orgId={employee.organizationId} />
         {(employee.organization.settings as { timeOffEnabled?: boolean } | null)?.timeOffEnabled !== false && (
           <TimeOffSection orgId={employee.organizationId} />
         )}

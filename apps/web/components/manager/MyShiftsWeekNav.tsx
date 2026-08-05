@@ -9,16 +9,18 @@ import { addDays, getMondayOfWeek } from "@/lib/dateUtils"
 interface MyShiftsWeekNavProps {
   weekStart: string
   employeeParam?: string
+  /** Where the week links point. The employee portal reuses this component. */
+  basePath?: string
 }
 
-export function MyShiftsWeekNav({ weekStart, employeeParam }: MyShiftsWeekNavProps) {
+export function MyShiftsWeekNav({ weekStart, employeeParam, basePath = "/my-shifts" }: MyShiftsWeekNavProps) {
   const router = useRouter()
   const currentWeek = getMondayOfWeek(new Date())
 
   function navigate(week: string) {
     const params = new URLSearchParams({ week })
     if (employeeParam) params.set("employee", employeeParam)
-    router.push(`/my-shifts?${params}`)
+    router.push(`${basePath}?${params}`)
   }
 
   return (
