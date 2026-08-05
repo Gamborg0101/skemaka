@@ -85,11 +85,20 @@ export default async function MyShiftsPage({
   // the org filter this returns an indeterminate row, and the whole page then
   // renders another org's shifts and coworkers. orderBy keeps the no-org
   // fallback deterministic instead of letting Postgres choose.
+  // Match on the linked account first, email second — claimInvite sets
+  // employee.userId without rewriting employee.email, so someone invited at
+  // their work address who signs in with a personal one is only findable by
+  // userId. The organizationId filter below is load-bearing and unchanged:
+  // Employee is unique on [organizationId, email], so the OR must stay scoped
+  // to one org or this page can render another restaurant's roster.
   const selfEmployee = await db.employee.findFirst({
     where: {
-      email: session.user.email,
       isActive: true,
       ...(orgId ? { organizationId: orgId } : {}),
+      OR: [
+        ...(session.user.id ? [{ userId: session.user.id }] : []),
+        { email: session.user.email },
+      ],
     },
     orderBy: { createdAt: "asc" },
     select: { id: true, organizationId: true, jobRole: true, organization: { select: { name: true } } },
