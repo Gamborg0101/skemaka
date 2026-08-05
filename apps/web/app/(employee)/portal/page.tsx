@@ -73,8 +73,28 @@ export default async function EmployeePortalPage() {
   const currentWeekStart = new Date(today)
   currentWeekStart.setUTCDate(today.getUTCDate() + daysToMonday)
 
+  // Match on the linked account first, email second.
+  //
+  // claimInvite sets employee.userId and deliberately does NOT rewrite
+  // employee.email, so the two diverge the moment someone is invited at
+  // anna@restaurant.dk and signs in with a personal Google account. Looking up
+  // by email alone then failed to find a fully claimed employee, and this page
+  // told them "No employee profile — ask your manager to add you", forever.
+  //
+  // The layout beside this file already matched on userId, so such a person was
+  // recognised well enough to be forced through phone verification and then
+  // told they didn't exist. userId is the authoritative link; email remains as
+  // the fallback for an employee who has a session but has not claimed yet.
+  // orderBy keeps the choice deterministic if both happen to match.
   const employee = await db.employee.findFirst({
-    where: { email: session.user.email, isActive: true },
+    where: {
+      isActive: true,
+      OR: [
+        ...(session.user.id ? [{ userId: session.user.id }] : []),
+        { email: session.user.email },
+      ],
+    },
+    orderBy: { userId: { sort: "asc", nulls: "last" } },
     include: {
       organization: { select: { name: true, settings: true, industry: true } },
       shifts: {
