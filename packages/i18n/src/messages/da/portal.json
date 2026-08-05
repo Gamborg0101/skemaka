@@ -66,7 +66,17 @@
     "submitting": "Sender…",
     "submitFailed": "Din tilgængelighed kunne ikke sendes. Prøv igen.",
     "submitClosed": "Denne forespørgsel tager ikke imod flere svar — bed din leder om at åbne den igen.",
-    "submitTooMany": "For mange forsøg. Vent et øjeblik, og prøv igen."
+    "submitTooMany": "For mange forsøg. Vent et øjeblik, og prøv igen.",
+    "title": "Tilgængelighed",
+    "intro": "Fortæl din leder, hvilke dage du kan arbejde.",
+    "none": "Intet at udfylde",
+    "noneHint": "Når din leder spørger om din tilgængelighed, dukker det op her.",
+    "weekOf": "Uge fra {week}",
+    "deadlineLabel": "Svar senest {date}",
+    "answered": "Besvaret",
+    "notAnswered": "Ikke besvaret",
+    "saveChanges": "Gem ændringer",
+    "errEndBeforeStart": "På {day} skal sluttidspunktet være efter starttidspunktet."
   },
   "demoPreview": "Du ser {name}s uge — sådan ser dine medarbejdere det. Skift person ovenfor.",
   "demoPreviewShort": "Medarbejdervisning",
@@ -84,5 +94,18 @@
   "accountPhoneVerified": "Bekræftet",
   "accountVerifyCta": "Bekræft nummer",
   "accountLanguage": "Sprog",
-  "accountSignOut": "Log ud"
+  "accountSignOut": "Log ud",
+  "staffView": {
+    "mine": "Mine vagter",
+    "theirs": "{name}s vagter",
+    "noneTitle": "Ingen vagter denne uge",
+    "noneMine": "Der er ikke planlagt nogen vagter denne uge.",
+    "noneTheirs": "{name} har ingen vagter denne uge.",
+    "today": "I dag",
+    "upNext": "Næste vagt",
+    "breakMinutes": "{min} min pause",
+    "noBreak": "Ingen pause",
+    "pickerYou": "{name} (dig)",
+    "andMore": "+{count} mere"
+  }
 }

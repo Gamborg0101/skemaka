@@ -92,12 +92,29 @@ function serOffer(r: OfferRow): ShiftOffer {
   }
 }
 
-/** Resolve the caller's active employee record in this org, or throw. */
+/**
+ * Resolve the caller's active employee record in this org, or throw.
+ *
+ * Matched on the linked account first, email second — the same rule as
+ * coverService.requireEmployee and the portal pages. An employee a manager
+ * added by email who never clicked their invite has userId null, and a
+ * userId-only filter told them they had no employee profile while the product
+ * was showing them their own shifts. The organizationId filter is load-bearing:
+ * Employee is unique on [organizationId, email], not email alone. See
+ * employeeIdentity.test.ts.
+ */
 async function requireEmployee(orgId: string, userId: string): Promise<{ id: string; name: string }> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
+
   const emp = await db.employee.findFirst({
-    where: { organizationId: orgId, userId, isActive: true },
+    where: {
+      organizationId: orgId,
+      isActive: true,
+      OR: [{ userId }, ...(user?.email ? [{ email: user.email }] : [])],
+    },
+    // A claimed record (userId set) wins over one matched only by email.
+    orderBy: [{ userId: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     select: { id: true, name: true },
-    orderBy: { createdAt: "asc" },
   })
   if (!emp) {
     throw new ServiceError("You don't have an employee profile in this workspace", "FORBIDDEN", {

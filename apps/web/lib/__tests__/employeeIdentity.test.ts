@@ -22,7 +22,12 @@ import { join } from "node:path"
 
 const PORTAL_PAGE = join(process.cwd(), "app/(employee)/portal/page.tsx")
 const PORTAL_LAYOUT = join(process.cwd(), "app/(employee)/portal/layout.tsx")
+const PORTAL_ACCOUNT = join(process.cwd(), "app/(employee)/portal/account/page.tsx")
+const PORTAL_AVAILABILITY = join(process.cwd(), "app/(employee)/portal/availability/page.tsx")
 const MY_SHIFTS = join(process.cwd(), "app/(manager)/my-shifts/page.tsx")
+const AVAILABILITY_SERVICE = join(process.cwd(), "lib/services/availabilityService.ts")
+const COVER_SERVICE = join(process.cwd(), "lib/services/coverService.ts")
+const OFFER_SERVICE = join(process.cwd(), "lib/services/shiftOfferService.ts")
 
 /** The `where` of the first employee lookup in a file. */
 function employeeWhere(path: string, anchor = "db.employee.findFirst("): string {
@@ -67,5 +72,39 @@ describe("employee identity resolution", () => {
     // then told they had no profile.
     expect(employeeWhere(PORTAL_LAYOUT)).toContain("userId")
     expect(employeeWhere(PORTAL_PAGE)).toContain("userId")
+  })
+
+  it.each([
+    ["the account page", PORTAL_ACCOUNT],
+    ["the availability page", PORTAL_AVAILABILITY],
+  ])("%s resolves the employee the same way", (_name, path) => {
+    // Every tab in the portal shell must agree, or an employee gets a working
+    // roster and a broken account page — or vice versa.
+    const where = employeeWhere(path)
+    expect(where, `${path} must match on userId`).toContain("userId")
+    expect(where, `${path} must still accept email, for employees who haven't claimed`)
+      .toContain("email")
+  })
+
+  it("the services behind the employee pages match on more than userId", () => {
+    // The pages were fixed while the services they call were not: an employee
+    // added by email who never clicked their invite has userId null, so their
+    // shifts rendered fine while every cover, offer and availability call
+    // answered "You don't have an employee profile in this workspace".
+    for (const [label, path, anchor] of [
+      ["getEmployeeIdForUser", AVAILABILITY_SERVICE, "export async function getEmployeeIdForUser"],
+      // Anchored on the employee lookup itself: requireEmployee reads the
+      // caller's email first, so the function declaration would match that
+      // query's `where` instead.
+      ["coverService.requireEmployee", COVER_SERVICE, "const emp = await db.employee.findFirst("],
+      ["shiftOfferService.requireEmployee", OFFER_SERVICE, "const emp = await db.employee.findFirst("],
+    ] as const) {
+      const where = employeeWhere(path, anchor)
+      expect(where, `${label} must accept an email match, not userId alone`).toContain("email")
+      expect(where, `${label} must match on the linked account`).toContain("userId")
+      // Employee is unique on [organizationId, email], not email alone. An OR
+      // without the org scope resolves to another restaurant's staff member.
+      expect(where, `${label} must stay scoped to one organization`).toContain("organizationId")
+    }
   })
 })
