@@ -69,5 +69,20 @@
     "submitTooMany": "Too many attempts. Wait a moment and try again."
   },
   "demoPreview": "Previewing {name}'s week — this is what your staff see. Switch person above.",
-  "demoPreviewShort": "Staff preview"
+  "demoPreviewShort": "Staff preview",
+  "phoneBannerTitle": "Turn on shift texts",
+  "phoneBannerBody": "Verify your phone to get a text when your manager publishes or changes your shifts.",
+  "phoneBannerCta": "Verify number",
+  "phoneBannerDismiss": "Not now",
+  "navShifts": "My shifts",
+  "navAvailability": "Availability",
+  "navAccount": "Account",
+  "accountTitle": "Account",
+  "accountOrg": "You work at",
+  "accountPhone": "Phone",
+  "accountPhoneUnverified": "Not verified",
+  "accountPhoneVerified": "Verified",
+  "accountVerifyCta": "Verify number",
+  "accountLanguage": "Language",
+  "accountSignOut": "Sign out"
 }
