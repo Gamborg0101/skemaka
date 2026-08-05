@@ -67,12 +67,35 @@ function serCover(r: CoverRow): CoverRequest {
   }
 }
 
-/** Resolve the caller's active employee record in this org, or throw. */
+/**
+ * Resolve the caller's active employee record in this org, or throw.
+ *
+ * Matched on the linked account first, email second. A userId-only filter left
+ * two groups locked out of cover and offers while their shifts rendered
+ * normally on /portal: someone a manager added by email who never clicked the
+ * invite (userId still null), and — before the account link is made — anyone
+ * invited at one address who signs in with another. Both were told "You don't
+ * have an employee profile in this workspace" by a product that was, at that
+ * moment, showing them their own roster.
+ *
+ * The user's email is read first rather than taken from the session, because
+ * every caller here passes a userId from the JWT and nothing else. The
+ * organizationId filter is load-bearing: Employee is unique on
+ * [organizationId, email], so the OR must stay org-scoped or this resolves to
+ * another restaurant's staff member. See employeeIdentity.test.ts.
+ */
 async function requireEmployee(orgId: string, userId: string): Promise<{ id: string; name: string }> {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } })
+
   const emp = await db.employee.findFirst({
-    where: { organizationId: orgId, userId, isActive: true },
+    where: {
+      organizationId: orgId,
+      isActive: true,
+      OR: [{ userId }, ...(user?.email ? [{ email: user.email }] : [])],
+    },
+    // A claimed record (userId set) wins over one matched only by email.
+    orderBy: [{ userId: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     select: { id: true, name: true },
-    orderBy: { createdAt: "asc" },
   })
   if (!emp) {
     throw new ServiceError("You don't have an employee profile in this workspace", "FORBIDDEN", {

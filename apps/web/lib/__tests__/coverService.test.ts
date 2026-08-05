@@ -9,6 +9,9 @@ import { ServiceError } from "@/lib/services/errors"
 
 vi.mock("@/lib/prisma", () => ({
   db: {
+    // requireEmployee reads the caller's email so it can match an employee
+    // who was added by email and never claimed their invite (userId null).
+    user: { findUnique: vi.fn() },
     employee: { findFirst: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
     shift: { findFirst: vi.fn(), update: vi.fn() },
     organization: { findUnique: vi.fn() },

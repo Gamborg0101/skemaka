@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { CalendarDays, CircleUser } from "lucide-react"
+import { CalendarDays, CalendarCheck, CircleUser } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
@@ -12,11 +12,6 @@ import { cn } from "@/lib/utils"
  * Employees previously had no navigation at all: /portal was a single page
  * whose only link pointed at /schedule — a manager route they're redirected
  * away from — and there was no way to sign out from anywhere.
- *
- * Two destinations, both real. Availability is deliberately absent: it exists
- * only as a per-request token link the manager sends, with no standing
- * employee-scoped route behind it, and a tab leading nowhere is worse than no
- * tab. That route is worth building separately.
  */
 export function EmployeeNav() {
   const t = useTranslations("portal")
@@ -24,6 +19,7 @@ export function EmployeeNav() {
 
   const items = [
     { href: "/portal", labelKey: "navShifts" as const, Icon: CalendarDays },
+    { href: "/portal/availability", labelKey: "navAvailability" as const, Icon: CalendarCheck },
     { href: "/portal/account", labelKey: "navAccount" as const, Icon: CircleUser },
   ]
 
