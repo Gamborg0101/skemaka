@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { translateServiceError, type ServiceErrorBody, type Translate } from "@/lib/serviceErrorMessages"
 
 interface Props {
   token: string
@@ -23,6 +24,8 @@ interface RequestFallbacks {
   yourEmail: string
   somethingWentWrong: string
   networkError: string
+  /** `useTranslations("common")`, used to localise a known ServiceError messageKey. */
+  translate: Translate
 }
 
 // Step 1: ask the server to email a verification code to the employee's address.
@@ -37,8 +40,7 @@ async function requestVerificationCode(token: string, fb: RequestFallbacks): Pro
     })
     const body = (await res.json()) as {
       data?: { sent?: boolean; email?: string; alreadyLinked?: boolean; orgName?: string }
-      error?: string
-    }
+    } & ServiceErrorBody
 
     if (res.ok && body.data?.alreadyLinked) {
       return { status: "success", orgName: body.data.orgName ?? fb.yourOrganisation }
@@ -46,7 +48,7 @@ async function requestVerificationCode(token: string, fb: RequestFallbacks): Pro
     if (res.ok && body.data?.sent) {
       return { status: "enterCode", emailHint: body.data.email ?? fb.yourEmail }
     }
-    return { status: "error", message: body.error ?? fb.somethingWentWrong }
+    return { status: "error", message: translateServiceError(fb.translate, body, fb.somethingWentWrong) }
   } catch {
     return { status: "error", message: fb.networkError }
   }
@@ -64,15 +66,21 @@ export function ClaimInviteClient({ token }: Props) {
   const [code, setCode] = useState("")
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN)
 
+  // Plain-typed alias for tCommon — see Translate's doc comment for why the
+  // cast lives at this one call site rather than in the shared helper.
+  const translate = tCommon as unknown as Translate
+
   const fallbacks = useCallback(
     (): RequestFallbacks => ({
       yourOrganisation: t("yourOrganisation"),
       yourEmail: t("yourEmail"),
       somethingWentWrong: tCommon("somethingWentWrong"),
       networkError: tCommon("networkError"),
+      translate,
     }),
-    [t, tCommon],
+    [t, tCommon, translate],
   )
+
 
   // Resend (user-triggered): show the spinner immediately, then re-request.
   const requestCode = useCallback(() => {
@@ -112,14 +120,17 @@ export function ClaimInviteClient({ token }: Props) {
       })
       const body = (await res.json()) as {
         data?: { orgName: string; phoneVerified?: boolean }
-        error?: string
-      }
+      } & ServiceErrorBody
 
       if (res.ok && body.data) {
         setState({ status: "success", orgName: body.data.orgName, phoneVerified: body.data.phoneVerified })
         return
       }
-      setState({ status: "enterCode", emailHint, error: body.error ?? tCommon("incorrectCode") })
+      setState({
+        status: "enterCode",
+        emailHint,
+        error: translateServiceError(translate, body, tCommon("incorrectCode")),
+      })
       setCode("")
     } catch {
       setState({ status: "enterCode", emailHint, error: tCommon("networkError") })

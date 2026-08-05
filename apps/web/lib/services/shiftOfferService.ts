@@ -99,7 +99,11 @@ async function requireEmployee(orgId: string, userId: string): Promise<{ id: str
     select: { id: true, name: true },
     orderBy: { createdAt: "asc" },
   })
-  if (!emp) throw new ServiceError("You don't have an employee profile in this workspace", "FORBIDDEN")
+  if (!emp) {
+    throw new ServiceError("You don't have an employee profile in this workspace", "FORBIDDEN", {
+      messageKey: "noEmployeeProfile",
+    })
+  }
   return emp
 }
 
@@ -280,7 +284,11 @@ export async function confirmOffer(
     include: OFFER_INCLUDE,
   })
   if (!offer) throw new ServiceError("Shift offer not found", "NOT_FOUND")
-  if (offer.status !== "OPEN") throw new ServiceError("This offer is already resolved", "CONFLICT")
+  if (offer.status !== "OPEN") {
+    throw new ServiceError("This offer is already resolved", "CONFLICT", {
+      messageKey: "offerAlreadyResolved",
+    })
+  }
 
   const winner = offer.recipients.find((r) => r.employeeId === employeeId)
   if (!winner) throw new ServiceError("That employee wasn't offered this shift", "BAD_REQUEST")
@@ -302,7 +310,11 @@ export async function confirmOffer(
         resolvedAt: new Date(),
       },
     })
-    if (claimed.count === 0) throw new ServiceError("This offer is already resolved", "CONFLICT")
+    if (claimed.count === 0) {
+      throw new ServiceError("This offer is already resolved", "CONFLICT", {
+        messageKey: "offerAlreadyResolved",
+      })
+    }
 
     // Same one-shift-per-employee-per-date rule createShift enforces. Confirming
     // an offer used to write the shift directly, so if the accepting employee
@@ -315,7 +327,11 @@ export async function confirmOffer(
       select: { id: true },
       orderBy: { createdAt: "asc" },
     })
-    if (clash) throw new ServiceError("This employee already has a shift on this date", "CONFLICT")
+    if (clash) {
+      throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+        messageKey: "shiftConflict",
+      })
+    }
 
     const shift = await tx.shift.create({
       data: {
@@ -416,7 +432,11 @@ export async function cancelOffer(
     },
   })
   if (!offer) throw new ServiceError("Shift offer not found", "NOT_FOUND")
-  if (offer.status !== "OPEN") throw new ServiceError("This offer is already resolved", "CONFLICT")
+  if (offer.status !== "OPEN") {
+    throw new ServiceError("This offer is already resolved", "CONFLICT", {
+      messageKey: "offerAlreadyResolved",
+    })
+  }
 
   // Guarded on status, exactly like confirmOffer above. confirmOffer creates a
   // real Shift once it wins the swap; an unguarded cancel could then overwrite
@@ -427,7 +447,9 @@ export async function cancelOffer(
     data: { status: "CANCELLED", resolvedAt: new Date() },
   })
   if (swap.count === 0) {
-    throw new ServiceError("This offer is already resolved", "CONFLICT")
+    throw new ServiceError("This offer is already resolved", "CONFLICT", {
+      messageKey: "offerAlreadyResolved",
+    })
   }
 
   const updated = await db.shiftOffer.findUniqueOrThrow({
