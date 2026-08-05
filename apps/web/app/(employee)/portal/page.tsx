@@ -10,6 +10,9 @@ import { getInitials } from "@/lib/utils"
 import { pickShiftQuote } from "@/types"
 import { TimeOffSection } from "./TimeOffSection"
 import { EnableNotificationsCard } from "@/components/pwa/EnableNotificationsCard"
+import { CoverPoolPanel } from "@/components/employee/CoverPoolPanel"
+import { OfferCoverButton } from "@/components/employee/OfferCoverButton"
+import { MyShiftOffersPanel } from "@/components/employee/MyShiftOffersPanel"
 
 function formatShiftDate(date: Date, localeTag: string): string {
   return date.toLocaleDateString(localeTag, {
@@ -302,6 +305,15 @@ export default async function EmployeePortalPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Ask a colleague to take this shift. Only for shifts
+                          still ahead — there is nothing to cover once the day
+                          has passed. */}
+                      {shift.date >= today && (
+                        <div className="pt-1">
+                          <OfferCoverButton orgId={employee.organizationId} shiftId={shift.id} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -309,6 +321,14 @@ export default async function EmployeePortalPage() {
             </div>
           </div>
         ))}
+        {/* Shift offers the manager sent this person, and shifts colleagues
+            have asked someone to cover. Both components were built for this
+            page — they take only orgId and read their copy from the
+            portal.shiftOffers / portal.coverPool namespaces — but were only
+            ever mounted on the manager's /my-shifts, which redirects anyone
+            without a manager membership. So no employee could reach either. */}
+        <MyShiftOffersPanel orgId={employee.organizationId} />
+        <CoverPoolPanel orgId={employee.organizationId} />
         {(employee.organization.settings as { timeOffEnabled?: boolean } | null)?.timeOffEnabled !== false && (
           <TimeOffSection orgId={employee.organizationId} />
         )}
