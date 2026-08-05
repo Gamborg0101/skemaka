@@ -49,8 +49,35 @@ async function deliver(payload: CreateEmailOptions) {
   const demoOnly = to.every(
     (addr) => typeof addr === "string" && addr.toLowerCase().endsWith(`@${DEMO_EMAIL_DOMAIN}`),
   )
-  if (demoOnly) return null
+  if (demoOnly) {
+    logSuppressedMail(payload, to)
+    return null
+  }
   return getResend().emails.send(payload)
+}
+
+/**
+ * Outside production, print mail that was dropped for being demo-only.
+ *
+ * Some flows can *only* be driven by something the recipient reads out of an
+ * email — the invite-claim one-time code above all, which is stored hashed and
+ * never returned by its endpoint. Combined with the demo-domain drop, that made
+ * the claim flow impossible to exercise locally: the code went nowhere and
+ * there was no other way to learn it. This is the missing developer affordance,
+ * not a debugging leftover.
+ *
+ * Both conditions are load-bearing. NODE_ENV pins it out of production, and the
+ * demo-only check means the addresses involved are unroutable and belong to a
+ * sandbox that deletes itself. A real recipient's mail is never printed even in
+ * development. See resendDemoSuppression.test.ts.
+ */
+function logSuppressedMail(payload: CreateEmailOptions, to: unknown[]) {
+  if (process.env.NODE_ENV === "production") return
+  const body = "text" in payload && typeof payload.text === "string" ? payload.text : ""
+  console.info(
+    `[mail:suppressed] to=${to.join(",")} subject=${payload.subject}` +
+      (body ? `\n${body}` : ""),
+  )
 }
 
 interface InviteEmailOptions {
