@@ -69,6 +69,13 @@ export interface PlannedEmployee {
   hourlyWage: number
   contractedHours: number
   employmentType: "FULL_TIME" | "PART_TIME"
+  /**
+   * The visitor's own record. Seeded with `userId` pointing at the manager
+   * account, which is what makes the employee half of the product work in a
+   * sandbox: cover, shift offers and availability all resolve the caller's own
+   * employee row, and a manager who wasn't on the roster had none.
+   */
+  isManager?: boolean
 }
 
 export interface PlannedSchedule {
@@ -183,7 +190,11 @@ function rolesFor(locale: DemoLocale) {
     : { kitchen: "Kitchen", foh: "Front of house", bar: "Bar" }
 }
 
-/** Index layout: 0–3 Kitchen (0 = head chef), 4–6 Front of house, 7–8 Bar. */
+/**
+ * Index layout: 0–3 Kitchen (0 = head chef), 4–6 Front of house, 7–8 Bar.
+ * Index 9 is the manager, appended by buildDemoPlan and rostered front of
+ * house — see MANAGER_IDX and the FOH pool below.
+ */
 interface CastMember {
   name: string
   jobRole: string
@@ -218,8 +229,18 @@ function cast(locale: DemoLocale): CastMember[] {
   ]
 }
 
+/**
+ * The manager's own slot in the cast, appended after the nine staff.
+ *
+ * They are rostered like anyone else rather than being a passive owner: the
+ * sandbox visitor *is* this person, and a demo where "My shifts" is empty and
+ * every cover or offer action answers "you have no employee profile" shows off
+ * half a product. Front of house so they're on the floor on busy nights.
+ */
+const MANAGER_IDX = 9
+
 const KITCHEN = [0, 1, 2, 3]
-const FOH = [4, 5, 6]
+const FOH = [4, 5, 6, MANAGER_IDX]
 const BAR = [7, 8]
 
 /** Weeks seeded either side of the current one. */
@@ -327,9 +348,21 @@ function planWeek(weekIdx: number): RawShift[] {
 export function buildDemoPlan({ locale, now = new Date(), newId }: BuildDemoPlanOptions): DemoPlan {
   const nextId = newId ?? (() => crypto.randomUUID())
   const suffix = nextId().slice(0, 8)
-  const people = cast(locale)
   const isDa = locale === "da"
   const ROLES = rolesFor(locale)
+
+  const manager = {
+    name: isDa ? "Lars Petersen" : "Michael Carter",
+    email: `demo-${suffix}@${DEMO_EMAIL_DOMAIN}`,
+  }
+
+  // The manager joins the roster at MANAGER_IDX, so every downstream
+  // derivation — shifts, contracted hours, labour cost, seats, coverage — sees
+  // them as ordinary staff and stays internally consistent by construction.
+  const people: CastMember[] = [
+    ...cast(locale),
+    { name: manager.name, jobRole: ROLES.foh, wage: isDa ? 152 : 19.5 },
+  ]
 
   const monday0 = getMondayOfWeek(now)
 
@@ -363,14 +396,21 @@ export function buildDemoPlan({ locale, now = new Date(), newId }: BuildDemoPlan
   const contractOffset = (idx: number) => (idx === 3 ? 3 : idx === 6 ? -2 : 0)
   const employees: PlannedEmployee[] = people.map((p, i) => {
     const contracted = Math.round(weekHours(0, i)) + contractOffset(i)
+    const isManager = i === MANAGER_IDX
     return {
       id: employeeIds[i],
       name: p.name,
-      email: `${p.name.toLowerCase().replace(/[^a-z]+/g, ".")}-${suffix}@${DEMO_EMAIL_DOMAIN}`,
+      // The manager's employee row must carry the same address as their user
+      // account: that is what links the two, and what the identity lookups
+      // fall back to before the record is claimed.
+      email: isManager
+        ? manager.email
+        : `${p.name.toLowerCase().replace(/[^a-z]+/g, ".")}-${suffix}@${DEMO_EMAIL_DOMAIN}`,
       jobRole: p.jobRole,
       hourlyWage: p.wage,
       contractedHours: contracted,
       employmentType: contracted >= 37 ? "FULL_TIME" : "PART_TIME",
+      ...(isManager ? { isManager: true } : {}),
     }
   })
 
@@ -612,10 +652,7 @@ export function buildDemoPlan({ locale, now = new Date(), newId }: BuildDemoPlan
       locale,
       settings: { hours, defaultScheduleView: "week", timeOffEnabled: true, timeFormat: "24h" },
     },
-    manager: {
-      name: isDa ? "Lars Petersen" : "Michael Carter",
-      email: `demo-${suffix}@${DEMO_EMAIL_DOMAIN}`,
-    },
+    manager,
     jobRoles: [
       { name: ROLES.kitchen, color: "orange" },
       { name: ROLES.foh, color: "blue" },
