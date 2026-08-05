@@ -66,7 +66,17 @@
     "submitting": "Submitting...",
     "submitFailed": "Couldn't send your availability. Please try again.",
     "submitClosed": "This request is no longer accepting replies — ask your manager to reopen it.",
-    "submitTooMany": "Too many attempts. Wait a moment and try again."
+    "submitTooMany": "Too many attempts. Wait a moment and try again.",
+    "title": "Availability",
+    "intro": "Tell your manager which days you can work.",
+    "none": "Nothing to fill in",
+    "noneHint": "When your manager asks for your availability, it will show up here.",
+    "weekOf": "Week of {week}",
+    "deadlineLabel": "Reply by {date}",
+    "answered": "Answered",
+    "notAnswered": "Not answered",
+    "saveChanges": "Save changes",
+    "errEndBeforeStart": "On {day}, the end time must be after the start time."
   },
   "demoPreview": "Previewing {name}'s week — this is what your staff see. Switch person above.",
   "demoPreviewShort": "Staff preview",
@@ -84,5 +94,18 @@
   "accountPhoneVerified": "Verified",
   "accountVerifyCta": "Verify number",
   "accountLanguage": "Language",
-  "accountSignOut": "Sign out"
+  "accountSignOut": "Sign out",
+  "staffView": {
+    "mine": "My shifts",
+    "theirs": "{name}'s shifts",
+    "noneTitle": "No shifts this week",
+    "noneMine": "No shifts are scheduled for this week.",
+    "noneTheirs": "{name} has no shifts this week.",
+    "today": "Today",
+    "upNext": "Up next",
+    "breakMinutes": "{min} min break",
+    "noBreak": "No break",
+    "pickerYou": "{name} (you)",
+    "andMore": "+{count} more"
+  }
 }

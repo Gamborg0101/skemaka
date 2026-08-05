@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const guard = await requireOrgMember(orgId, req)
   if ("error" in guard) return guard.error
 
-  const employeeId = await availabilityService.getEmployeeIdForUser(orgId, guard.userId)
+  const employeeId = await availabilityService.getEmployeeIdForUser(orgId, guard.userId, guard.email)
   if (!employeeId) {
     return NextResponse.json({ error: "Employee record not found" }, { status: 404 })
   }
