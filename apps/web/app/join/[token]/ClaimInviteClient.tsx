@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { translateServiceError, type ServiceErrorBody, type Translate } from "@/lib/serviceErrorMessages"
+import { useServiceErrorTranslate } from "@/lib/useServiceErrorTranslate"
 
 interface Props {
   token: string
@@ -66,9 +67,7 @@ export function ClaimInviteClient({ token }: Props) {
   const [code, setCode] = useState("")
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN)
 
-  // Plain-typed alias for tCommon — see Translate's doc comment for why the
-  // cast lives at this one call site rather than in the shared helper.
-  const translate = tCommon as unknown as Translate
+  const translate = useServiceErrorTranslate()
 
   const fallbacks = useCallback(
     (): RequestFallbacks => ({
@@ -80,7 +79,6 @@ export function ClaimInviteClient({ token }: Props) {
     }),
     [t, tCommon, translate],
   )
-
 
   // Resend (user-triggered): show the spinner immediately, then re-request.
   const requestCode = useCallback(() => {
