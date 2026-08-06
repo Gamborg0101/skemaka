@@ -75,11 +75,51 @@ describe("requireAuth", () => {
 })
 
 describe("requireOrgMember — JWT fast path", () => {
-  it("rejects access to a different org with 403 and no DB lookup", async () => {
+  /**
+   * A token naming a different org used to be an immediate 403, on the theory
+   * that one user belongs to one org. They don't: `claimInvite` upserts an
+   * EMPLOYEE membership, so somebody who works at two restaurants that both use
+   * Skemaka has one pinned in their token and was refused everything scoped to
+   * the other — their shifts rendered on /portal while every panel 403'd.
+   *
+   * The mismatch now falls through to the slow path, which is the authoritative
+   * check. What must not change is the answer for a caller with no access to
+   * the requested org, so both halves are pinned below.
+   */
+  it("falls through to the DB when the token names a different org", async () => {
     mockGetToken.mockResolvedValue({
       sub: "u1", role: "MANAGER", orgId: "org-OTHER", subscriptionStatus: "ACTIVE",
     })
+    mockMembershipFindFirst.mockResolvedValue(null)
+    mockEmployeeFindFirst.mockResolvedValue({
+      organization: { subscriptionStatus: "ACTIVE", trialEndsAt: null, pastDueSince: null },
+    } as never)
+
+    const guard = await requireOrgMember("org1", req())
+    expect(guard).toMatchObject({ userId: "u1", role: "EMPLOYEE", orgId: "org1" })
+    // Authorised for the org that was *asked for*, never the one in the token.
+    expect(mockEmployeeFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: "u1", organizationId: "org1", isActive: true }),
+      }),
+    )
+  })
+
+  it("still rejects a different org when the DB confirms no access", async () => {
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org-OTHER", subscriptionStatus: "ACTIVE",
+    })
+    mockMembershipFindFirst.mockResolvedValue(null)
+    mockEmployeeFindFirst.mockResolvedValue(null)
     expect(await status(await requireOrgMember("org1", req()))).toBe(403)
+  })
+
+  it("takes no DB lookup when the token names the org being requested", async () => {
+    // The fast path is still a fast path — that was the point of caching orgId.
+    mockGetToken.mockResolvedValue({
+      sub: "u1", role: "MANAGER", orgId: "org1", subscriptionStatus: "ACTIVE",
+    })
+    await requireOrgMember("org1", req())
     expect(mockMembershipFindFirst).not.toHaveBeenCalled()
     expect(mockEmployeeFindFirst).not.toHaveBeenCalled()
   })
@@ -272,14 +312,36 @@ describe("requireOrgMember — super-admin cross-restaurant bypass", () => {
     expect(await status(await requireOrgMember("own-org", req()))).toBe(402)
   })
 
+  // Both of these now state outright that the DB grants no access to the target
+  // org. A token naming a different org is no longer refused on its own — it
+  // falls through to the membership/employee check — so without these the tests
+  // would be asserting 403 on whatever a previous test happened to leave in the
+  // mocks (vi.clearAllMocks resets calls, not return values).
   it("does NOT bypass when SUPERADMIN_EMAIL is unset", async () => {
     delete process.env.SUPERADMIN_EMAIL
     mockGetToken.mockResolvedValue({ sub: "sa", role: "ADMIN", orgId: "own-org", email: "boss@example.com" })
+    mockMembershipFindFirst.mockResolvedValue(null)
+    mockEmployeeFindFirst.mockResolvedValue(null)
     expect(await status(await requireOrgMember("other-org", req()))).toBe(403)
   })
 
   it("does NOT bypass for a non-super-admin — a different org is still 403", async () => {
     mockGetToken.mockResolvedValue({ sub: "u1", role: "MANAGER", orgId: "own-org", email: "regular@example.com", subscriptionStatus: "ACTIVE" })
+    mockMembershipFindFirst.mockResolvedValue(null)
+    mockEmployeeFindFirst.mockResolvedValue(null)
     expect(await status(await requireOrgMember("other-org", req()))).toBe(403)
+  })
+
+  it("a non-super-admin reaching another org they DO belong to is let in as an employee", async () => {
+    // The case the old fast-path 403 made impossible: two restaurants, one
+    // token. Still authorised against the requested org, never the cached one.
+    mockGetToken.mockResolvedValue({ sub: "u1", role: "MANAGER", orgId: "own-org", email: "regular@example.com", subscriptionStatus: "ACTIVE" })
+    mockMembershipFindFirst.mockResolvedValue(null)
+    mockEmployeeFindFirst.mockResolvedValue({
+      organization: { subscriptionStatus: "ACTIVE", trialEndsAt: null, pastDueSince: null },
+    } as never)
+    expect(await requireOrgMember("other-org", req())).toMatchObject({
+      userId: "u1", role: "EMPLOYEE", orgId: "other-org",
+    })
   })
 })

@@ -189,11 +189,19 @@ export async function requireOrgMember(
     return { userId, role: "ADMIN", orgId, subscriptionStatus: undefined, email, name }
   }
 
-  // Fast path: orgId is cached in the JWT — no DB roundtrip on the happy path.
-  if (tokenOrgId) {
-    if (tokenOrgId !== orgId) {
-      return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
-    }
+  // Fast path: the JWT already names the org being requested — no DB roundtrip.
+  //
+  // A *mismatch* deliberately falls through to the slow path rather than
+  // answering 403. The token caches a single org (lib/auth.ts picks the first
+  // MANAGER membership, else the first membership by joinedAt), so someone who
+  // works at two restaurants that both use Skemaka has one of them pinned and
+  // was being refused everything scoped to the other — their shifts rendered on
+  // /portal while every panel on the page 403'd. The slow path below verifies
+  // membership or an active employee record in the *requested* org, which is
+  // the authoritative check; this one is only a cache in front of it. Denial is
+  // therefore unchanged for a caller with no access at all, at the cost of one
+  // indexed lookup for the caller who has it.
+  if (tokenOrgId === orgId) {
     if (!allowSuspended) {
       // Prefer the JWT billing claims; fall back to the DB for legacy tokens
       // issued before the billing fields were embedded.
