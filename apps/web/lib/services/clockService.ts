@@ -4,6 +4,7 @@ import { recordAudit } from "@/lib/audit"
 import type { TimeEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
+import { lockEmployee } from "./locks"
 
 const ENTRY_EMPLOYEE_SELECT = {
   id: true, name: true, jobRole: true,
@@ -23,6 +24,14 @@ export async function clockIn(
       select: { id: true },
     })
     if (!employee) throw new ServiceError("Employee not found", "NOT_FOUND")
+
+    // Lock this employee's row before looking for an open entry. Without it the
+    // check below is check-then-act under READ COMMITTED: two clock-ins arriving
+    // together (a double-tap on the phone, or the tab and the app at once) both
+    // found nothing open and both inserted, leaving the person clocked in twice
+    // and their paid hours counted twice. The lock makes the second request wait
+    // for the first to commit, so it sees the entry and gets CONFLICT.
+    await lockEmployee(tx, orgId, employeeId)
 
     // Prevent duplicate clock-ins — one open entry per employee at a time.
     const open = await tx.timeEntry.findFirst({

@@ -193,7 +193,9 @@ describe("confirmOffer", () => {
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
       cb({
         shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
-        shiftOffer: { updateMany: offerTxUpdateMany, update: offerTxUpdate },
+        // The winner's row is locked before the clash check (SELECT … FOR UPDATE).
+        $queryRaw: vi.fn().mockResolvedValue([{ id: "emp_A" }]),
+        shiftOffer: { updateMany: offerTxUpdateMany, update:offerTxUpdate },
       }),
     )
 
@@ -218,7 +220,9 @@ describe("confirmOffer", () => {
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
       cb({
         shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
-        shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
+        // The winner's row is locked before the clash check (SELECT … FOR UPDATE).
+        $queryRaw: vi.fn().mockResolvedValue([{ id: "emp_A" }]),
+        shiftOffer: { updateMany: offerTxUpdateMany, update:vi.fn() },
       }),
     )
 
@@ -234,6 +238,7 @@ describe("confirmOffer", () => {
         // They already have a live shift that date — confirming would silently
         // give them two overlapping shifts, which is what used to happen.
         shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue({ id: "shift_existing" }) },
+        $queryRaw: vi.fn().mockResolvedValue([{ id: "emp_A" }]),
         shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
       }),
     )

@@ -9,6 +9,7 @@ import {
   sendShiftUpdatedSms,
 } from "@/lib/sms"
 import { formatWeekLabel, formatTime, calcHours } from "@/lib/dateUtils"
+import { toCsv } from "@/lib/csv"
 import { sendShiftAssignedEmail, sendShiftCancelledEmail, sendShiftsRolledOutEmail } from "@/lib/resend"
 import { sendPushToUsers } from "@/lib/push"
 import { getMessageTranslator, recipientLocaleTag, resolveRecipientLocale } from "@/lib/messages"
@@ -17,6 +18,7 @@ import type { Schedule, Shift, WeeklyLaborCost, LaborCostEntry } from "@/types"
 import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
 import { NOT_SICK } from "./shiftFilters"
+import { lockEmployee, lockSchedule } from "./locks"
 
 // Full select — only used in manager-only contexts (cost calculations, SMS notifications).
 const SHIFT_EMPLOYEE_SELECT = {
@@ -199,42 +201,60 @@ export async function duplicateSchedule(
 
   const weekDiff = new Date(weekStart + "T00:00:00Z").getTime() - source.weekStart.getTime()
 
-  const newSchedule = await db.schedule.create({
-    data: {
-      organizationId: orgId,
-      weekStart: new Date(weekStart + "T00:00:00Z"),
-      isDuplicate: true,
-      sourceScheduleId: scheduleId,
-    },
-  })
+  // One schedule per week per org, and one shift per employee per date.
+  //
+  // This used to `schedule.create` a SECOND schedule row for the target week and
+  // copy the shifts into it. Duplicating onto a week that already had a rota
+  // therefore double-booked everyone on it — no error, no warning — and left the
+  // week with two schedules, which is the duplicate-schedule shape that has
+  // already cost this app a "missing" rota once (see the Neon notes in
+  // CLAUDE.md). Reuse the week's canonical schedule and refuse a non-empty
+  // target, exactly as copyPreviousWeek and the starter week do.
+  const { schedule: target } = await getOrCreateSchedule(orgId, weekStart)
 
-  if (source.shifts.length > 0) {
-    await db.shift.createMany({
-      data: source.shifts.map((shift) => ({
-        scheduleId: newSchedule.id,
-        organizationId: orgId,
-        employeeId: shift.employeeId,
-        date: new Date(shift.date.getTime() + weekDiff),
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        breakMinutes: shift.breakMinutes,
-        jobRole: shift.jobRole,
-        notes: shift.notes,
-        colorTag: shift.colorTag,
-      })),
+  // Lock the target week, then check it is empty and fill it in one step — two
+  // copies arriving together would otherwise both find it empty and both write,
+  // duplicating the whole rota rather than one shift.
+  await db.$transaction(async (tx) => {
+    await lockSchedule(tx, orgId, target.id)
+
+    const existingCount = await tx.shift.count({ where: { scheduleId: target.id } })
+    if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
+
+    if (source.shifts.length > 0) {
+      await tx.shift.createMany({
+        data: source.shifts.map((shift) => ({
+          scheduleId: target.id,
+          organizationId: orgId,
+          employeeId: shift.employeeId,
+          date: new Date(shift.date.getTime() + weekDiff),
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          breakMinutes: shift.breakMinutes,
+          jobRole: shift.jobRole,
+          notes: shift.notes,
+          colorTag: shift.colorTag,
+        })),
+      })
+    }
+
+    // Keep the provenance the old path recorded on its throwaway schedule row.
+    await tx.schedule.update({
+      where: { id: target.id },
+      data: { isDuplicate: true, sourceScheduleId: scheduleId },
     })
-  }
+  })
 
   void db.schedulingEvent.create({
     data: {
       organizationId: orgId,
       eventType: "SCHEDULE_DUPLICATED",
-      payload: { sourceScheduleId: scheduleId, newScheduleId: newSchedule.id, weekStart },
+      payload: { sourceScheduleId: scheduleId, newScheduleId: target.id, weekStart },
     },
   }).catch((err) => console.error("[SchedulingEvent] Failed to write audit event:", err))
 
   const result = await db.schedule.findUnique({
-    where: { id: newSchedule.id },
+    where: { id: target.id },
     include: { shifts: { orderBy: [{ date: "asc" }, { startTime: "asc" }] } },
   })
   return serSchedule(result!)
@@ -288,28 +308,32 @@ export function buildStarterShifts(
 export async function generateStarterWeek(orgId: string, weekStart: string): Promise<Schedule> {
   const { schedule } = await getOrCreateSchedule(orgId, weekStart)
 
-  const [existingCount, employees] = await Promise.all([
-    db.shift.count({ where: { scheduleId: schedule.id } }),
-    db.employee.findMany({
-      where: { organizationId: orgId, isActive: true },
-      select: { id: true, jobRole: true },
-      orderBy: { createdAt: "asc" },
-    }),
-  ])
-  if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
+  const employees = await db.employee.findMany({
+    where: { organizationId: orgId, isActive: true },
+    select: { id: true, jobRole: true },
+    orderBy: { createdAt: "asc" },
+  })
   if (employees.length === 0) throw new ServiceError("Add an employee first", "CONFLICT")
 
-  await db.shift.createMany({
-    data: buildStarterShifts(employees, weekStart).map((s) => ({
-      scheduleId:     schedule.id,
-      organizationId: orgId,
-      employeeId:     s.employeeId,
-      date:           new Date(s.date + "T00:00:00Z"),
-      startTime:      s.startTime,
-      endTime:        s.endTime,
-      breakMinutes:   s.breakMinutes ?? 0,
-      jobRole:        s.jobRole,
-    })),
+  // Empty-check and fill under a lock on the week — see duplicateSchedule.
+  await db.$transaction(async (tx) => {
+    await lockSchedule(tx, orgId, schedule.id)
+
+    const existingCount = await tx.shift.count({ where: { scheduleId: schedule.id } })
+    if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
+
+    await tx.shift.createMany({
+      data: buildStarterShifts(employees, weekStart).map((s) => ({
+        scheduleId:     schedule.id,
+        organizationId: orgId,
+        employeeId:     s.employeeId,
+        date:           new Date(s.date + "T00:00:00Z"),
+        startTime:      s.startTime,
+        endTime:        s.endTime,
+        breakMinutes:   s.breakMinutes ?? 0,
+        jobRole:        s.jobRole,
+      })),
+    })
   })
 
   void db.schedulingEvent.create({
@@ -339,8 +363,6 @@ export async function copyPreviousWeek(orgId: string, weekStart: string): Promis
   if (!prior) throw new ServiceError("No previous week with shifts to copy", "NOT_FOUND")
 
   const { schedule } = await getOrCreateSchedule(orgId, weekStart)
-  const existingCount = await db.shift.count({ where: { scheduleId: schedule.id } })
-  if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
 
   const activeIds = new Set(
     (await db.employee.findMany({
@@ -366,7 +388,17 @@ export async function copyPreviousWeek(orgId: string, weekStart: string): Promis
     }))
   if (data.length === 0) throw new ServiceError("Nothing to copy from the previous week", "CONFLICT")
 
-  await db.shift.createMany({ data })
+  // Empty-check and fill under a lock on the week — see duplicateSchedule. This
+  // is the path a manager is most likely to double-click ("Copy last week"), and
+  // an unguarded second copy doubles every shift in the rota.
+  await db.$transaction(async (tx) => {
+    await lockSchedule(tx, orgId, schedule.id)
+
+    const existingCount = await tx.shift.count({ where: { scheduleId: schedule.id } })
+    if (existingCount > 0) throw new ServiceError("This week already has shifts", "CONFLICT")
+
+    await tx.shift.createMany({ data })
+  })
 
   void db.schedulingEvent.create({
     data: { organizationId: orgId, eventType: "WEEK_COPIED", payload: { scheduleId: schedule.id, sourceScheduleId: prior.id, weekStart, shiftCount: data.length } },
@@ -671,39 +703,53 @@ export async function createShift(
   const { employeeId, date, startTime, endTime, breakMinutes, jobRole, notes, colorTag, notifyNow } = input
 
   const dateUTC = new Date(date + "T00:00:00Z")
-  const [employeeInOrg, existing] = await Promise.all([
-    db.employee.findFirst({
-      where: { id: employeeId, organizationId: orgId },
-      select: { id: true, name: true, email: true, phone: true, locale: true, organization: { select: { name: true, locale: true } } },
-    }),
-    db.shift.findFirst({ where: { organizationId: orgId, employeeId, date: dateUTC, cancelledAt: null }, select: { id: true }, orderBy: { createdAt: "asc" } }),
-  ])
+  const employeeInOrg = await db.employee.findFirst({
+    where: { id: employeeId, organizationId: orgId },
+    select: { id: true, name: true, email: true, phone: true, locale: true, organization: { select: { name: true, locale: true } } },
+  })
   if (!employeeInOrg) throw new ServiceError("Employee not found", "NOT_FOUND")
-  if (existing) {
-    throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
-      messageKey: "shiftConflict",
-    })
-  }
 
   // Sick days are records of an absence, not plans — they are born published
   // (no roll-out needed) and never notified (the person knows they're sick).
   const isSick = colorTag === "sick"
 
-  const shift = await db.shift.create({
-    data: {
-      scheduleId,
-      organizationId: orgId,
-      employeeId,
-      date: dateUTC,
-      startTime,
-      endTime,
-      breakMinutes: breakMinutes ?? 0,
-      jobRole,
-      notes: notes ?? null,
-      colorTag: colorTag ?? null,
-      // Draft by default: a private placeholder committed by Roll out.
-      publishedAt: isSick || notifyNow ? new Date() : null,
-    },
+  // The clash check and the insert must be one atomic step, with this employee's
+  // row locked. They used to be a `Promise.all` read followed by an unprotected
+  // create, so two requests landing together — a double-clicked Add shift, or two
+  // managers on the same cell — both saw no clash and both wrote, and the person
+  // was rostered twice for one day with no error shown to anyone. Costs one extra
+  // round trip (the employee lookup above no longer runs in parallel with it),
+  // which is the right trade for a rota that can't silently double-book.
+  const shift = await db.$transaction(async (tx) => {
+    await lockEmployee(tx, orgId, employeeId)
+
+    const existing = await tx.shift.findFirst({
+      where: { organizationId: orgId, employeeId, date: dateUTC, cancelledAt: null },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+    })
+    if (existing) {
+      throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+        messageKey: "shiftConflict",
+      })
+    }
+
+    return tx.shift.create({
+      data: {
+        scheduleId,
+        organizationId: orgId,
+        employeeId,
+        date: dateUTC,
+        startTime,
+        endTime,
+        breakMinutes: breakMinutes ?? 0,
+        jobRole,
+        notes: notes ?? null,
+        colorTag: colorTag ?? null,
+        // Draft by default: a private placeholder committed by Roll out.
+        publishedAt: isSick || notifyNow ? new Date() : null,
+      },
+    })
   })
 
   void db.schedulingEvent.create({
@@ -791,38 +837,47 @@ export async function updateShift(
   // re-check whenever the employee or date changes (excluding this shift itself).
   const employeeChanges = input.employeeId !== undefined && input.employeeId !== existing.employeeId
   const dateChanges     = input.date !== undefined && input.date !== existing.date.toISOString().split("T")[0]
-  if (employeeChanges || dateChanges) {
-    const clash = await db.shift.findFirst({
-      where: {
-        organizationId: orgId,
-        employeeId: input.employeeId ?? existing.employeeId,
-        date: input.date ? new Date(input.date + "T00:00:00Z") : existing.date,
-        id: { not: shiftId },
-        cancelledAt: null,
-      },
-      select: { id: true },
-      orderBy: { createdAt: "asc" },
-    })
-    if (clash) {
-      throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
-        messageKey: "shiftConflict",
-      })
-    }
+
+  const updateData = {
+    ...(input.employeeId  !== undefined && { employeeId: input.employeeId }),
+    ...(input.date        !== undefined && { date: new Date(input.date + "T00:00:00Z") }),
+    ...(input.startTime   !== undefined && { startTime: input.startTime }),
+    ...(input.endTime     !== undefined && { endTime: input.endTime }),
+    ...(input.breakMinutes !== undefined && { breakMinutes: input.breakMinutes }),
+    ...(input.jobRole     !== undefined && { jobRole: input.jobRole }),
+    ...(input.notes       !== undefined && { notes: input.notes }),
+    ...(input.colorTag    !== undefined && { colorTag: input.colorTag }),
   }
 
-  const shift = await db.shift.update({
-    where: { id: shiftId },
-    data: {
-      ...(input.employeeId  !== undefined && { employeeId: input.employeeId }),
-      ...(input.date        !== undefined && { date: new Date(input.date + "T00:00:00Z") }),
-      ...(input.startTime   !== undefined && { startTime: input.startTime }),
-      ...(input.endTime     !== undefined && { endTime: input.endTime }),
-      ...(input.breakMinutes !== undefined && { breakMinutes: input.breakMinutes }),
-      ...(input.jobRole     !== undefined && { jobRole: input.jobRole }),
-      ...(input.notes       !== undefined && { notes: input.notes }),
-      ...(input.colorTag    !== undefined && { colorTag: input.colorTag }),
-    },
-  })
+  // A move or reassign runs the clash check and the write under a lock on the
+  // employee who ends up holding the shift — same reason as createShift: dragging
+  // two shifts onto one person's day at once would otherwise pass both checks.
+  // Edits that touch neither employee nor date cannot clash, so they skip it.
+  const shift = (employeeChanges || dateChanges)
+    ? await db.$transaction(async (tx) => {
+        const targetEmployeeId = input.employeeId ?? existing.employeeId
+        await lockEmployee(tx, orgId, targetEmployeeId)
+
+        const clash = await tx.shift.findFirst({
+          where: {
+            organizationId: orgId,
+            employeeId: targetEmployeeId,
+            date: input.date ? new Date(input.date + "T00:00:00Z") : existing.date,
+            id: { not: shiftId },
+            cancelledAt: null,
+          },
+          select: { id: true },
+          orderBy: { createdAt: "asc" },
+        })
+        if (clash) {
+          throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+            messageKey: "shiftConflict",
+          })
+        }
+
+        return tx.shift.update({ where: { id: shiftId }, data: updateData })
+      })
+    : await db.shift.update({ where: { id: shiftId }, data: updateData })
 
   // Draft shifts are private placeholders — editing one is silent. Editing an
   // already-rolled-out shift is live news for the person on it, so they (and,
@@ -1059,7 +1114,6 @@ export async function getLaborCostsCsv(orgId: string, weekStart: string): Promis
     db.organization.findUnique({ where: { id: orgId }, select: { currency: true } }),
   ])
   const currency = org?.currency ?? "EUR"
-  const q = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`
   const rows = [
     ["Employee", "Job Role", "Employment Type", "Contracted Hours", "Scheduled Hours", "Days Worked", `Hourly Wage (${currency})`, `Total Pay (${currency})`],
     ...result.entries.map((e) => [
@@ -1073,5 +1127,5 @@ export async function getLaborCostsCsv(orgId: string, weekStart: string): Promis
       e.totalCost,
     ]),
   ]
-  return rows.map((r) => r.map(q).join(",")).join("\n")
+  return toCsv(rows)
 }

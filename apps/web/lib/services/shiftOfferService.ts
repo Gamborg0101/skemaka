@@ -10,6 +10,7 @@ import { getMessageTranslator } from "@/lib/messages"
 import type { Locale } from "@skemaka/i18n"
 import type { ShiftOffer, EmployeeShiftOffer } from "@/types"
 import { ServiceError } from "./errors"
+import { lockEmployee } from "./locks"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -339,6 +340,12 @@ export async function confirmOffer(
     // manager silently double-booked them with no error and no warning. Checked
     // inside the transaction, after the status claim, so two concurrent confirms
     // still serialize on the offer row.
+    // Lock the winner's row so this check cannot race a shift being added for
+    // them on the same date from anywhere else (Add shift, a move, another
+    // offer being confirmed) — the offer-row claim above only serializes
+    // confirms of THIS offer.
+    await lockEmployee(tx, orgId, employeeId)
+
     const clash = await tx.shift.findFirst({
       where: { organizationId: orgId, employeeId, date: offer.date, cancelledAt: null },
       select: { id: true },
