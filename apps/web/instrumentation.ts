@@ -45,20 +45,26 @@ export async function register() {
     )
   }
 
-  // The E2E test-login provider (lib/auth.ts) is full account-takeover-by-email
-  // gated only by a shared password. It must NEVER exist in production. If either
-  // var leaks into a prod deploy, crash the boot loudly rather than silently
-  // exposing the backdoor.
-  const FORBIDDEN_ENV_VARS = ["E2E_TEST_LOGIN", "E2E_TEST_PASSWORD"] as const
+  // Variables that must NEVER exist in production:
+  //
+  // - E2E_TEST_LOGIN / E2E_TEST_PASSWORD — the test-login provider (lib/auth.ts)
+  //   is full account-takeover-by-email gated only by a shared password.
+  // - TWILIO_TO_OVERRIDE — a dev convenience that redirects EVERY outbound SMS to
+  //   one number. In production it would send the whole company's rota alerts to
+  //   a single phone and nothing to the staff, and because sends are logged but
+  //   never thrown (lib/sms.ts), it would look like everything was working.
+  //
+  // Crash the boot loudly rather than fail silently.
+  const FORBIDDEN_ENV_VARS = ["E2E_TEST_LOGIN", "E2E_TEST_PASSWORD", "TWILIO_TO_OVERRIDE"] as const
   const present = FORBIDDEN_ENV_VARS.filter(
     (key) => process.env[key] && process.env[key]!.trim() !== "",
   )
 
   if (present.length > 0) {
     throw new Error(
-      `[startup] Refusing to boot: test-only environment variables are set in production:\n${present
+      `[startup] Refusing to boot: development-only environment variables are set in production:\n${present
         .map((k) => `  • ${k}`)
-        .join("\n")}\n\nThese enable the E2E credentials backdoor and must never be present in a production environment.`,
+        .join("\n")}\n\nE2E_TEST_LOGIN / E2E_TEST_PASSWORD enable the credentials backdoor; TWILIO_TO_OVERRIDE redirects every SMS away from your staff. Remove them from this environment.`,
     )
   }
 }
