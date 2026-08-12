@@ -2,6 +2,7 @@
 
 import React from "react"
 import { BugReportDialog } from "@/components/manager/BugReportDialog"
+import { reportCrash } from "@/lib/reportCrash"
 import { Button } from "@/components/ui/button"
 import { Bug } from "lucide-react"
 
@@ -26,8 +27,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return { hasError: true, error }
   }
 
-  componentDidCatch(): void {
-    // Error is reported via BugReportDialog when user chooses to submit
+  componentDidCatch(error: Error): void {
+    // Send the crash immediately rather than only when the user opts in: most
+    // people close the tab instead of filling in a form, and those are exactly
+    // the crashes worth knowing about. The dialog below still exists so they can
+    // add what they were doing, which is the part we cannot infer.
+    reportCrash(error, "ErrorBoundary")
   }
 
   render() {

@@ -120,6 +120,8 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 
 Current screenshots of the app live in `apps/web/screenshots/`. Use them to understand the UI before making changes. **Always retake the relevant screenshot after UI work and verify it looks correct — never leave a stale screenshot behind.**
 
+Retake with `npm run screenshots` — but **start a dev server on :3000 first and run `BASE_URL=http://localhost:3000 npm run screenshots`**. Left to spawn its own server on :3210, the run fails at the demo sign-in with `ERR_CONNECTION_REFUSED`: `NEXTAUTH_URL` in `.env.local` pins the post-sign-in redirect to port 3000. Then *look at* the regenerated PNGs — the run exits 0 whether or not a dialog is sitting on top of the thing the shot exists to show.
+
 | File | What it shows |
 |---|---|
 | `apps/web/screenshots/00-login.png` | Login / marketing page |
@@ -171,7 +173,7 @@ npm run db:seed
 - **Locale resolution (UI)**: `NEXT_LOCALE` cookie → `?lang=` (landing, via `LangQuerySync`) → `Accept-Language` (da→da) → `en`. See `lib/locale.ts`. No URL-prefix routing — don't add `/da/...` paths without revisiting `proxy.ts`.
 - **Emails/SMS/push** render server-side via `getMessageTranslator(locale, "emails" | "sms")` in `lib/messages.ts`; recipient language = `resolveRecipientLocale(employee.locale, org.locale)` (falls back to English). Any new notification must resolve + pass `locale`.
 - **Dates**: pass `LOCALE_TAGS[locale]` to `toLocaleDateString`/`formatWeekLabel`/`formatDayLabel` — never hardcode `"en-GB"` in user-facing output.
-- **Still English (deliberate)**: legal pages, `/platform` superadmin pages, the deep manager components (grids/dialogs — follow-up), and the mobile app.
+- **Still English (deliberate)**: legal pages, `/platform` superadmin pages, the error boundaries (`app/error.tsx`, `app/global-error.tsx` — they must render even when the intl provider is what broke), and the mobile app. The manager grids and dialogs are **done** — verified in the running app on 2026-08-12: the week grid, week/timeline switch, coverage-request and shift-offer cards, weekday headers and contract-hour badges all render in Danish.
 
 ---
 

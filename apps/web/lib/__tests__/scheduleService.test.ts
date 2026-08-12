@@ -13,14 +13,22 @@ import { sendShiftAssignedEmail } from "@/lib/resend"
 import { Prisma } from "@/app/generated/prisma/client"
 import { createShift, updateShift, getOrCreateSchedule } from "@/lib/services/scheduleService"
 
-vi.mock("@/lib/prisma", () => ({
-  db: {
+// createShift and a move/reassign in updateShift run their clash check and their
+// write inside ONE transaction, with the employee's row locked, so the check
+// cannot race a concurrent add. `$transaction` hands the same mock client to the
+// callback, which keeps every db.shift.* assertion below unchanged, and
+// `$queryRaw` stands in for the `SELECT … FOR UPDATE` the lock issues.
+vi.mock("@/lib/prisma", () => {
+  const client = {
     employee: { findFirst: vi.fn(), findUnique: vi.fn() },
     shift: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     schedule: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     schedulingEvent: { create: vi.fn() },
-  },
-}))
+    $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(client)),
+    $queryRaw: vi.fn(async () => [{ id: "emp_1" }]),
+  }
+  return { db: client }
+})
 
 // scheduleService imports these at module load; stub them so no real Resend /
 // Twilio client is constructed and no notification actually fires.

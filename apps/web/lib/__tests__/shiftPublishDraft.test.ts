@@ -18,8 +18,11 @@ import {
 import { sendShiftAssignedEmail } from "@/lib/resend"
 import { createShift, updateShift, deleteShift } from "@/lib/services/scheduleService"
 
-vi.mock("@/lib/prisma", () => ({
-  db: {
+// `$transaction` hands the same client to the callback (createShift and a
+// move/reassign now wrap their clash check plus write in one locked
+// transaction); `$queryRaw` stands in for that lock's SELECT … FOR UPDATE.
+vi.mock("@/lib/prisma", () => {
+  const client = {
     shift: {
       findFirst: vi.fn(),
       create: vi.fn(),
@@ -38,8 +41,11 @@ vi.mock("@/lib/prisma", () => ({
     schedulingEvent: {
       create: vi.fn().mockReturnValue({ catch: vi.fn() }),
     },
-  },
-}))
+    $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(client)),
+    $queryRaw: vi.fn(async () => [{ id: "emp_1" }]),
+  }
+  return { db: client }
+})
 
 vi.mock("@/lib/sms", () => ({
   sendShiftUpdatedSms: vi.fn(),

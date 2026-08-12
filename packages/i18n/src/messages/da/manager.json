@@ -365,6 +365,16 @@
     "resetting": "Nulstiller…",
     "scope": "Eksempeldata — e-mails og sms'er er slået fra."
   },
+  "bugReport": {
+    "trigger": "Rapportér en fejl",
+    "title": "Rapportér en fejl",
+    "errorDetected": "Fejl registreret",
+    "placeholder": "Beskriv hvad der skete, og hvordan man genskaber det…",
+    "placeholderWithError": "Valgfrit: beskriv hvad du var i gang med, da det skete…",
+    "cancel": "Annullér",
+    "send": "Send rapport",
+    "sending": "Sender…"
+  },
   "employment": {
     "fullTime": "Fuld tid ({hours} t/uge)",
     "reducedFullTime": "Reduceret fuld tid ({hours} t/uge)",
