@@ -365,6 +365,16 @@
     "resetting": "Resetting…",
     "scope": "Sample data — emails and texts are switched off."
   },
+  "bugReport": {
+    "trigger": "Report a bug",
+    "title": "Report a bug",
+    "errorDetected": "Error detected",
+    "placeholder": "Describe what happened and how to reproduce it…",
+    "placeholderWithError": "Optional: describe what you were doing when this happened…",
+    "cancel": "Cancel",
+    "send": "Send report",
+    "sending": "Sending…"
+  },
   "employment": {
     "fullTime": "Full Time ({hours}h/week)",
     "reducedFullTime": "Reduced Full Time ({hours}h/week)",
