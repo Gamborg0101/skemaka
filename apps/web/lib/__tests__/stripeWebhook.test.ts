@@ -13,8 +13,13 @@ vi.mock("@/lib/stripe", () => ({
   stripe: { webhooks: { constructEvent: vi.fn() } },
 }))
 
-vi.mock("@/lib/prisma", () => ({
-  db: {
+// `$transaction` runs the callback against the same mock client, so the
+// assertions below still see db.organization.* calls. Rollback itself is not
+// simulated — a mock cannot undo a write — so what these tests pin is the HTTP
+// answer, which is what actually decides whether Stripe retries, plus the fact
+// that the handler groups its writes in a transaction at all.
+vi.mock("@/lib/prisma", () => {
+  const client = {
     organization: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -23,8 +28,18 @@ vi.mock("@/lib/prisma", () => ({
     processedStripeEvent: {
       create: vi.fn(),
     },
-  },
-}))
+    $transaction: vi.fn(),
+  }
+  client.$transaction.mockImplementation(async (fn: (tx: typeof client) => unknown) => fn(client))
+  return { db: client }
+})
+
+/** A Prisma unique-constraint violation, as the client actually surfaces it. */
+function uniqueViolation() {
+  return Object.assign(new Error("Unique constraint failed on the fields: (`id`)"), {
+    code: "P2002",
+  })
+}
 
 const mockConstructEvent = vi.mocked(stripe.webhooks.constructEvent)
 const mockFindUnique = vi.mocked(db.organization.findUnique)
@@ -88,15 +103,63 @@ describe("idempotency", () => {
       expect.objectContaining({ data: expect.objectContaining({ type: "invoice.payment_failed" }) }),
     )
     expect(mockUpdateMany).toHaveBeenCalled()
+    // The ledger insert and the state change must share one transaction.
+    expect(vi.mocked(db.$transaction)).toHaveBeenCalled()
   })
 
   it("skips a duplicate delivery without touching org state", async () => {
     stubEvent("invoice.payment_failed", { customer: "cus_123" })
     // Primary-key violation → already processed.
-    mockEventCreate.mockRejectedValue(new Error("unique constraint"))
+    mockEventCreate.mockRejectedValue(uniqueViolation())
     const res = await POST(webhookRequest())
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ duplicate: true })
+    expect(mockUpdateMany).not.toHaveBeenCalled()
+  })
+
+  // The regression this handler was rewritten for: recording the event id and
+  // then failing used to answer 200-duplicate on Stripe's retry, so the status
+  // change was dropped for good. A failure must surface as 5xx and stay
+  // retryable, and the retry must actually apply the change.
+  it("answers 5xx when processing fails, so Stripe retries", async () => {
+    stubEvent("invoice.payment_failed", { customer: "cus_123" })
+    mockUpdateMany.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"))
+
+    const res = await POST(webhookRequest())
+    expect(res.status).toBe(500)
+    expect(await res.json()).not.toMatchObject({ duplicate: true })
+  })
+
+  it("applies the status when a failed delivery is retried", async () => {
+    // Same event id twice: the ledger insert is rolled back with the failure, so
+    // the retry is NOT seen as a duplicate.
+    mockConstructEvent.mockReturnValue({
+      id: "evt_retry",
+      type: "invoice.payment_failed",
+      created: EVENT_CREATED,
+      data: { object: { customer: "cus_123" } },
+    } as never)
+
+    mockUpdateMany.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"))
+    expect((await POST(webhookRequest())).status).toBe(500)
+
+    mockUpdateMany.mockResolvedValue({ count: 1 } as never)
+    const retry = await POST(webhookRequest())
+    expect(retry.status).toBe(200)
+    expect(await retry.json()).toMatchObject({ received: true })
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subscriptionStatus: "PAST_DUE" }) }),
+    )
+  })
+
+  // A connection failure on the ledger insert is not evidence the event was
+  // already handled; calling it a duplicate would lose the event exactly as before.
+  it("does not treat a non-unique insert error as a duplicate", async () => {
+    stubEvent("invoice.payment_failed", { customer: "cus_123" })
+    mockEventCreate.mockRejectedValue(new Error("Connection terminated unexpectedly"))
+
+    const res = await POST(webhookRequest())
+    expect(res.status).toBe(500)
     expect(mockUpdateMany).not.toHaveBeenCalled()
   })
 })
