@@ -29,6 +29,20 @@ const securityHeaders = [
   { key: "X-XSS-Protection", value: "1; mode=block" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // HSTS: prod only. On http://localhost this would pin the browser to HTTPS for
+  // the whole origin — including every other project on port 3000 — and the only
+  // cure is clearing the browser's HSTS store by hand.
+  //
+  // Two years, subdomains included, and `preload` so the very first request is
+  // never plaintext. Vercel serves HTTPS for skemaka.com regardless; what this
+  // adds is the browser refusing to try HTTP at all, which is what protects a
+  // session cookie from a hostile network on the way to the redirect.
+  ...(isProd
+    ? [{
+        key: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains; preload",
+      }]
+    : []),
 ]
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { logError } from "@/lib/log"
+import { reportCrash } from "@/lib/reportCrash"
 
 // Renders when the root layout itself throws. It replaces <html>/<body>, so it
 // must provide them and cannot rely on app CSS — inline styles only.
@@ -14,6 +15,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     logError("app/global-error", error, { digest: error.digest })
+    reportCrash(error, "app/global-error")
   }, [error])
 
   return (

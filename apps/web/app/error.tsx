@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { logError } from "@/lib/log"
+import { reportCrash } from "@/lib/reportCrash"
 
 export default function GlobalError({
   error,
@@ -11,7 +12,10 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
+    // logError only reaches the browser console from here, so the page said "the
+    // team has been notified" while nobody was. Actually send it.
     logError("app/error", error, { digest: error.digest })
+    reportCrash(error, "app/error")
   }, [error])
 
   return (

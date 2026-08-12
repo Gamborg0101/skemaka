@@ -148,7 +148,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt", maxAge: 30 * 60, updateAge: 0 },
   providers: [
-    Google({ checks: ["state"] }),
+    // PKCE + state — see the note in auth.config.ts, which must stay in step
+    // with this: the middleware builds its client from that file, this one
+    // serves the route handlers, and a mismatch would check one and not the other.
+    Google({ checks: ["pkce", "state"] }),
     Resend({
       apiKey: process.env.RESEND_API_KEY ?? "",
       from: emailFrom(),
