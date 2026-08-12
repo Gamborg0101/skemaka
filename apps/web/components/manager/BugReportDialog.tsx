@@ -22,6 +22,7 @@ interface BugReportDialogProps {
 
 export function BugReportDialog({ prefillError, defaultOpen = false, onClose }: BugReportDialogProps) {
   const tToast = useTranslations("manager.toasts")
+  const t = useTranslations("manager.bugReport")
   const [open, setOpen] = useState(defaultOpen)
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
@@ -78,30 +79,30 @@ export function BugReportDialog({ prefillError, defaultOpen = false, onClose }: 
         <button
           onClick={() => setOpen(true)}
           className="flex w-full items-center gap-2.5 rounded-lg px-2 lg:px-3 py-2 text-sm text-gray-500 hover:bg-white/8 hover:text-gray-300 transition-colors justify-center lg:justify-start"
-          title="Report a bug"
+          title={t("trigger")}
         >
           <Bug className="size-4 shrink-0" />
-          <span className="hidden lg:block">Report a bug</span>
+          <span className="hidden lg:block">{t("trigger")}</span>
         </button>
       )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Report a bug</DialogTitle>
+            <DialogTitle>{t("title")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             {prefillError && (
               <div className="rounded-md bg-red-50 border border-red-200 p-3">
-                <p className="text-xs font-medium text-red-700 mb-1">Error detected</p>
+                <p className="text-xs font-medium text-red-700 mb-1">{t("errorDetected")}</p>
                 <p className="text-sm text-red-800 font-mono break-all">{prefillError.message}</p>
               </div>
             )}
             <Textarea
               placeholder={
                 prefillError
-                  ? "Optional: describe what you were doing when this happened…"
-                  : "Describe what happened and how to reproduce it…"
+                  ? t("placeholderWithError")
+                  : t("placeholder")
               }
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -116,13 +117,13 @@ export function BugReportDialog({ prefillError, defaultOpen = false, onClose }: 
                 onClick={() => handleOpenChange(false)}
                 disabled={sending}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={sending || !canSubmit}
               >
-                {sending ? "Sending…" : "Send report"}
+                {sending ? t("sending") : t("send")}
               </Button>
             </DialogFooter>
           </form>
