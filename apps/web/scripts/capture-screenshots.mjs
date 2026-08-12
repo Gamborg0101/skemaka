@@ -123,6 +123,19 @@ async function captureManagerShots(browser) {
     { name: "skemaka_cookie_consent", value: consent, url: BASE_URL },
   ])
 
+  // Mark the demo tour as seen before the first paint. It is a first-visit
+  // coach-mark, and every run signs into a brand-new sandbox, so without this it
+  // opens over the schedule header and hides the very thing the reference shot
+  // exists to show — the week grid and the Week/Timeline toggle. Key must match
+  // STORAGE_KEY in components/manager/DemoTour.tsx.
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem("skemaka.demoTourSeen", "1")
+    } catch {
+      /* storage blocked — the tour reappears, which the shot will show */
+    }
+  })
+
   const page = await context.newPage()
   await page.goto(BASE_URL + "/demo", { waitUntil: "networkidle" })
   await page.getByRole("button", { name: /try the live demo/i }).click()
