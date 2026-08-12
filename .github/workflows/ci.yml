@@ -157,11 +157,46 @@ jobs:
           ALLOW_UTC_TEST_DB: ${{ matrix.allow_utc }}
         run: npm run test:integration
 
+  # Which paths make the E2E suite worth its minutes on a PR. Server-side auth,
+  # billing and rota logic are what the specs actually cover; a CSS change is not.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      critical: ${{ steps.filter.outputs.critical }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # No PR context (a bare push, or the nightly): nothing to diff against.
+          # Say "not critical" and let the job's own `if` decide — the nightly and
+          # workflow_dispatch run E2E regardless, and this repo merges via PRs, so
+          # gating on the PR diff is what keeps browser minutes off every push.
+          if [ -z "$BASE" ]; then echo "critical=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "$BASE" "$HEAD" | grep -qE \
+            '^apps/web/(app/api/|lib/services/|lib/(auth|auth\.config|apiGuard|billing|prisma)\.ts|proxy\.ts|prisma/)|^apps/web/e2e/|^\.github/workflows/'; then
+            echo "critical=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "critical=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # Browser E2E for the money path (access control, trial paywall, invite claim).
-  # Nightly + manual only. Runs the Neon serverless driver against a plain Postgres
-  # via the Neon wsproxy (see lib/prisma.ts NEON_WS_PROXY).
+  #
+  # Nightly, on demand, AND on any PR that touches the API routes, the service
+  # layer, the auth/billing modules or the schema — nightly-only meant a broken
+  # checkout or a 403 on the whole app could sit on main for a day, and onboarding
+  # had in fact been broken for every new signup for some time before an e2e spec
+  # existed to notice. Everything else (styling, copy, components) still waits for
+  # the nightly, so the browser minutes stay off routine PRs.
   e2e:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: changes
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.critical == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
