@@ -1,5 +1,6 @@
 import { db } from "@/lib/prisma"
 import { calcHours } from "@/lib/dateUtils"
+import { toCsv } from "@/lib/csv"
 import { ServiceError } from "./errors"
 import { NOT_SICK } from "./shiftFilters"
 
@@ -126,9 +127,6 @@ async function clockedRows(
     }
   })
 }
-
-const q = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`
-const toCsv = (rows: unknown[][]) => rows.map((r) => r.map(q).join(",")).join("\n")
 
 function summaryCsv(rows: TimesheetRow[], currency: string): string {
   const byEmployee = new Map<string, { row: TimesheetRow; hours: number; pay: number; days: Set<string> }>()
