@@ -6,7 +6,20 @@ import Google from "next-auth/providers/google"
 // lib/auth.ts extends this with the Prisma adapter and Resend provider.
 // Route-level auth logic lives in proxy.ts; the authorized callback is not used.
 export const authConfig = {
-  providers: [Google({ checks: ["state"] })],
+  // PKCE + state, which is Auth.js's default for Google.
+  //
+  // `checks: ["state"]` alone shipped in May 2026 while the mobile OAuth flow was
+  // being built (7c6b214), dropping PKCE from every sign-in, web included. State
+  // covers CSRF, so this was not a hole — but PKCE is what stops an intercepted
+  // authorization code being redeemed by anyone but us, and there is no reason
+  // for the web app to go without it.
+  //
+  // If mobile Google sign-in regresses, that flow is the reason the check was
+  // removed: it leaves the app for the system browser and comes back through
+  // /api/auth/mobile/complete, and the code_verifier cookie has to survive the
+  // round trip. Fix it there (cookie sameSite/partitioning) rather than by
+  // weakening every browser sign-in again.
+  providers: [Google({ checks: ["pkce", "state"] })],
   pages: {
     signIn: "/login",
     // Without this, provider-level failures (expired magic link, OAuth error)
