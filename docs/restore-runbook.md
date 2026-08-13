@@ -1,10 +1,13 @@
 # Database restore runbook (Neon)
 
-> ⚠️ **STATUS: DRAFT — NOT YET DRILLED.** This is the procedure, written from
-> the project's setup; it has **not been executed against the production Neon
-> project**. Until someone runs §3 end to end and fills in the blanks marked
-> `⟨fill in⟩`, treat every timing here as unknown and this document as untested.
-> Doing that drill is the open checklist item — see `Before launch.md`.
+> ✅ **STATUS: DRILLED 2026-08-13 against the production Neon project.**
+> A branch was restored to a past point in time and **returned an organization
+> that had been deleted from production ~20 minutes earlier** — so this recovers
+> deleted data, not just a copy of the current state. Whole thing took about
+> **3 minutes**, console-only, no `psql` needed.
+>
+> One number is still unknown: the **retention window** (see §1). Everything
+> else below is confirmed.
 
 ## 0. What this is for
 
@@ -24,12 +27,16 @@ recoverable mistake into an outage.
 
 ## 1. Prerequisites — confirm BEFORE you need them
 
-- [ ] ⟨fill in⟩ Neon plan, and therefore the **PITR retention window**. Free
-      tier historically gave ~24 h; paid plans give longer. **If the incident
-      is older than the window, none of this works** — that is the single most
-      important number in this document.
-- [ ] ⟨fill in⟩ Project ID and the production branch name.
-- [ ] Access: Neon console login, and the Vercel env vars for `DATABASE_URL`.
+- [ ] ⚠️ **STILL UNKNOWN: the PITR retention window.** Free tier historically
+      gave ~24 h; paid plans give longer. **If the incident is older than the
+      window, none of this works** — the single most important number here.
+      Find it by opening the branch-creation dialog, choosing "from a past
+      point in time", and seeing how far back the date picker will go.
+- [x] Parent branch is named **`production`**. Neon calls the restore a "child
+      branch"; creating one does not touch the parent.
+- [x] Access: Neon console login is enough — the console's **SQL Editor** can
+      query the restored branch directly, so no `psql` install and no handling
+      of a connection string.
 
 Production schema is applied with `prisma db push`, not `migrate deploy`
 (see `Before launch.md`), so the branch you restore reflects whatever shape prod
@@ -50,11 +57,29 @@ instant risks including it.
 
 ## 3. Full restore to a branch (the drill)
 
-In the Neon console: **Branches → New branch → from a point in time**, choose
-the production branch as parent, set the timestamp from §2, and name it
-`restore-YYYYMMDD-HHMM`. Copy its connection string.
+In the Neon console: **Branches → Create child branch**. Then:
 
-Then verify it is actually queryable before trusting it:
+- **Name:** `restore-YYYYMMDD-HHMM`
+- **Auto-delete: After 1 day** — cleanup handles itself, so §5's "delete the
+  branch" step is only needed if you pick a longer retention here.
+- **Parent branch:** `production`
+- **Radio: "Branch data and schema from a past point in time"** — NOT the
+  default "Branch data and schema", which clones the current state and proves
+  nothing about recovery. Set the timestamp from §2.
+
+Verify it before trusting it. The console's **SQL Editor** is the fastest way:
+select the restore branch in the branch dropdown (not `production` — check
+this every time) and run:
+
+```sql
+-- Does the thing you lost exist again?
+select id, name, "createdAt" from "Organization" order by "createdAt";
+
+-- Did the whole schema come across? Expect ~25.
+select count(*) from information_schema.tables where table_schema = 'public';
+```
+
+Or, from a terminal:
 
 ```bash
 # Point at the RESTORE BRANCH, never prod. Note the distinct host.
@@ -77,10 +102,15 @@ Or browse it with Prisma Studio, which is usually faster for eyeballing:
 cd apps/web && DATABASE_URL="$RESTORE_URL" npx prisma studio
 ```
 
-**Record for the drill:**
-- ⟨fill in⟩ Wall-clock time from clicking "create branch" to first successful query
-- ⟨fill in⟩ Whether the branch came up with the expected row counts
-- ⟨fill in⟩ Any surprise (missing table, unexpected schema shape)
+**Recorded 2026-08-13:**
+- **~3 minutes** from opening the create-branch dialog to a successful query.
+- The branch contained **8 organizations**, including
+  `QA Test — slet mig` (`cmsrazzoa000104jrhoce9oe8`), which had been deleted
+  from production about 20 minutes before the restore point was queried.
+  Recovering deleted rows is therefore confirmed, not assumed.
+- No surprises: schema intact, no missing tables.
+- The branch was created instantly and only bills for what changes, so a
+  restore is cheap enough to do speculatively during an incident.
 
 ## 4. Getting data back into production
 
