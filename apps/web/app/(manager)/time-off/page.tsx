@@ -33,10 +33,11 @@ const STATUS_STYLE: Record<Tab, string> = {
   DENIED:   "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300",
 }
 
-// The copy on this page is still English by design (deep manager screen, see
-// CLAUDE.md), but dates are not copy — a Danish org should read "3. aug." here
-// regardless, and hardcoding en-GB is the one thing the i18n rules call out
-// explicitly. The locale tag is threaded in from the component.
+// This page IS translated — tabs, empty states and actions all go through
+// `manager.timeOff`. (An older comment here claimed the copy was deliberately
+// English; that stopped being true and left the status badges as the one bit
+// nobody re-checked.) Dates take the locale tag threaded in from the component:
+// hardcoding en-GB is the one thing the i18n rules call out explicitly.
 function formatDateRange(start: string, end: string, localeTag: string) {
   const s = new Date(start + "T00:00:00Z")
   const e = new Date(end + "T00:00:00Z")
@@ -269,7 +270,10 @@ export default function TimeOffPage() {
                   {r.reviewNote && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 italic">Note: {r.reviewNote}</p>}
                 </div>
                 <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[r.status as Tab]}`}>
-                  {r.status.charAt(0) + r.status.slice(1).toLowerCase()}
+                  {/* Title-casing the raw enum rendered "Pending"/"Approved" in
+                      English, directly beside the Danish tabs. Same key the
+                      tabs use, so the two can never drift apart again. */}
+                  {t(TAB_KEY[r.status as Tab])}
                 </span>
               </div>
 
