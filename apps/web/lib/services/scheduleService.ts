@@ -19,6 +19,15 @@ import type { PaginationParams, Paginated } from "@/lib/validate"
 import { ServiceError } from "./errors"
 import { NOT_SICK } from "./shiftFilters"
 import { lockEmployee, lockSchedule } from "./locks"
+import { findOverlappingShift } from "@/lib/dateUtils"
+
+/** Shift `date` columns are midnight-UTC DateTimes; these keep that convention. */
+function addDaysUTC(d: Date, days: number): Date {
+  return new Date(d.getTime() + days * 86_400_000)
+}
+function isoDateUTC(d: Date): string {
+  return d.toISOString().split("T")[0]
+}
 
 // Full select — only used in manager-only contexts (cost calculations, SMS notifications).
 const SHIFT_EMPLOYEE_SELECT = {
@@ -723,13 +732,28 @@ export async function createShift(
   const shift = await db.$transaction(async (tx) => {
     await lockEmployee(tx, orgId, employeeId)
 
-    const existing = await tx.shift.findFirst({
-      where: { organizationId: orgId, employeeId, date: dateUTC, cancelledAt: null },
-      select: { id: true },
+    // Overlap, not same-day. Split shifts — lunch 11:00–14:00 and dinner
+    // 18:00–23:00 for the same chef — are normal in hospitality, and the old
+    // "one shift per date" rule made them impossible. The window spans the
+    // neighbouring days because a shift whose end time is earlier than its
+    // start crosses midnight, so Monday 22:00–02:00 really can clash with
+    // Tuesday 00:00–06:00.
+    const neighbours = await tx.shift.findMany({
+      where: {
+        organizationId: orgId,
+        employeeId,
+        cancelledAt: null,
+        date: { gte: addDaysUTC(dateUTC, -1), lte: addDaysUTC(dateUTC, 1) },
+      },
+      select: { id: true, date: true, startTime: true, endTime: true },
       orderBy: { createdAt: "asc" },
     })
-    if (existing) {
-      throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+    const clash = findOverlappingShift(
+      { date, startTime, endTime },
+      neighbours.map((s) => ({ ...s, date: isoDateUTC(s.date) })),
+    )
+    if (clash) {
+      throw new ServiceError("This shift overlaps another shift for this employee", "CONFLICT", {
         messageKey: "shiftConflict",
       })
     }
@@ -837,6 +861,12 @@ export async function updateShift(
   // re-check whenever the employee or date changes (excluding this shift itself).
   const employeeChanges = input.employeeId !== undefined && input.employeeId !== existing.employeeId
   const dateChanges     = input.date !== undefined && input.date !== existing.date.toISOString().split("T")[0]
+  // Times matter now that the rule is overlap rather than one-per-day: dragging
+  // the dinner shift earlier can run it into the lunch one without the employee
+  // or the date changing at all. Under the old rule that was impossible, so this
+  // case was skipped entirely.
+  const timeChanges     = (input.startTime !== undefined && input.startTime !== existing.startTime)
+                       || (input.endTime   !== undefined && input.endTime   !== existing.endTime)
 
   const updateData = {
     ...(input.employeeId  !== undefined && { employeeId: input.employeeId }),
@@ -853,24 +883,33 @@ export async function updateShift(
   // employee who ends up holding the shift — same reason as createShift: dragging
   // two shifts onto one person's day at once would otherwise pass both checks.
   // Edits that touch neither employee nor date cannot clash, so they skip it.
-  const shift = (employeeChanges || dateChanges)
+  const shift = (employeeChanges || dateChanges || timeChanges)
     ? await db.$transaction(async (tx) => {
         const targetEmployeeId = input.employeeId ?? existing.employeeId
         await lockEmployee(tx, orgId, targetEmployeeId)
 
-        const clash = await tx.shift.findFirst({
+        const targetDateUTC = input.date ? new Date(input.date + "T00:00:00Z") : existing.date
+        const neighbours = await tx.shift.findMany({
           where: {
             organizationId: orgId,
             employeeId: targetEmployeeId,
-            date: input.date ? new Date(input.date + "T00:00:00Z") : existing.date,
             id: { not: shiftId },
             cancelledAt: null,
+            date: { gte: addDaysUTC(targetDateUTC, -1), lte: addDaysUTC(targetDateUTC, 1) },
           },
-          select: { id: true },
+          select: { id: true, date: true, startTime: true, endTime: true },
           orderBy: { createdAt: "asc" },
         })
+        const clash = findOverlappingShift(
+          {
+            date: isoDateUTC(targetDateUTC),
+            startTime: input.startTime ?? existing.startTime,
+            endTime: input.endTime ?? existing.endTime,
+          },
+          neighbours.map((s) => ({ ...s, date: isoDateUTC(s.date) })),
+        )
         if (clash) {
-          throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+          throw new ServiceError("This shift overlaps another shift for this employee", "CONFLICT", {
             messageKey: "shiftConflict",
           })
         }

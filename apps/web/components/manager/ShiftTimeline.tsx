@@ -777,10 +777,11 @@ export function ShiftTimeline({
     if (drag?.type === "chip" && drop?.type === "row") {
       const targetDate = drop.date as string
       if (closedDates.has(targetDate)) return  // store closed that day — no booking
-      const alreadyScheduled = shifts.some(
-        (s) => s.employeeId === drag.employee.id && s.date === targetDate && !s.cancelledAt
-      )
-      if (alreadyScheduled) return
+      // No longer refuses a second shift on the same day: split shifts (lunch
+      // and again for dinner) are normal, so dropping onto an already-worked
+      // day opens the dialog pre-filled at the drop time like any other. The
+      // server rejects a genuine OVERLAP, which is a range check the drop
+      // point alone cannot decide — the manager picks the end time next.
       const activatorX = (event.activatorEvent as PointerEvent).clientX
       const currentX = activatorX + event.delta.x
       const { time: defaultStartTime } = snapTimeFromPointer(currentX, over.rect)
