@@ -88,7 +88,8 @@
     "addLater": "Add later",
     "wageError": "Enter an hourly wage greater than 0.",
     "errAddEmployee": "Failed to add employee",
-    "errAddRole": "Failed to add role"
+    "errAddRole": "Failed to add role",
+    "incompleteError": "Fill in name, email and hourly wage — or clear the fields to continue without adding anyone."
   },
   "step3": {
     "title": "Get the app",

@@ -28,6 +28,11 @@ export const authConfig = {
     // it at /login reuses the branded, localized message there; NextAuth
     // appends ?error=<code>, which the page now reads.
     error: "/login",
+    // Same reasoning as `error` above: the stock verify-request page is an
+    // unstyled English "Check your email", shown mid-flow to someone who has
+    // just read a Danish login screen. /check-email is the branded, localized
+    // equivalent.
+    verifyRequest: "/check-email",
   },
   session: {
     // 30-minute inactivity timeout. The Edge middleware re-signs the JWT on every

@@ -88,7 +88,8 @@
     "addLater": "Tilføj senere",
     "wageError": "Angiv en timeløn større end 0.",
     "errAddEmployee": "Medarbejderen kunne ikke tilføjes",
-    "errAddRole": "Rollen kunne ikke tilføjes"
+    "errAddRole": "Rollen kunne ikke tilføjes",
+    "incompleteError": "Udfyld navn, e-mail og timeløn — eller ryd felterne for at fortsætte uden at tilføje nogen."
   },
   "step3": {
     "title": "Hent appen",

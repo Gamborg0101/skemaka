@@ -344,12 +344,36 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleAddEmployee() {
-    if (!orgId || !empName.trim() || !empEmail.trim()) return
+  /** True when the row has been typed into but not yet committed with "Add employee". */
+  const hasPendingEmployee = Boolean(empName.trim() || empEmail.trim() || empWage.trim())
+
+  /**
+   * Leaving step 2 used to throw away whatever was typed into the row.
+   *
+   * "Add employee" is the commit action, but it is a secondary outlined button
+   * while this one is the blue primary — so filling the form and pressing the
+   * obvious button silently discarded the first employee, with no warning and
+   * nothing in Employees afterwards. Commit the row first when there is one.
+   */
+  async function handleContinueFromTeam() {
+    if (hasPendingEmployee) {
+      const added = await handleAddEmployee()
+      // Incomplete or rejected: stay put, the inline error explains why.
+      if (!added) return
+    }
+    setStep(3)
+  }
+
+  /** Returns true when the employee was persisted. */
+  async function handleAddEmployee(): Promise<boolean> {
+    if (!orgId || !empName.trim() || !empEmail.trim()) {
+      setEmpError(t("step2.incompleteError"))
+      return false
+    }
     const wage = parseFloat(empWage)
     if (!(wage > 0)) {
       setEmpError(t("step2.wageError"))
-      return
+      return false
     }
     setAddingEmp(true)
     setEmpError(null)
@@ -377,8 +401,10 @@ export default function OnboardingPage() {
       setEmpName("")
       setEmpEmail("")
       setEmpWage("")
+      return true
     } catch (err) {
       setEmpError(err instanceof Error ? err.message : t("step2.errAddEmployee"))
+      return false
     } finally {
       setAddingEmp(false)
     }
@@ -719,10 +745,13 @@ export default function OnboardingPage() {
                   <ChevronLeft className="size-4" /> {tCommon("back")}
                 </button>
                 <button
-                  onClick={() => setStep(3)}
-                  className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={handleContinueFromTeam}
+                  disabled={addingEmp}
+                  className="flex flex-1 items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {addedEmployees.length > 0 ? tCommon("continue") : t("step2.addLater")}
+                  {hasPendingEmployee
+                    ? tCommon("continue")
+                    : addedEmployees.length > 0 ? tCommon("continue") : t("step2.addLater")}
                   <ChevronRight className="size-4" />
                 </button>
               </div>
