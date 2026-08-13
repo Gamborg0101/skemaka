@@ -223,15 +223,18 @@ are set.
 
 ### 🟡 Next, once someone is paying
 
-- [ ] **Neon PITR restore drill** — still never done, and outstanding in every
-      version of this doc since June. `docs/restore-runbook.md` now exists as a
-      **written but undrilled** procedure: branch-not-in-place restore, the
-      FK/duplicate-schedule/Stripe-field traps, and the cleanup steps. What it
-      cannot supply is the part that needs your console — **confirm the Neon
-      plan's PITR retention window** (the single most important number: an
-      incident older than the window is unrecoverable), then restore once to a
-      scratch branch, confirm it is queryable, and fill in the `⟨fill in⟩`
-      blanks. Until then there is no tested answer to "I dropped the wrong org".
+- [x] ~~**Neon PITR restore drill**~~ — **done 2026-08-13, and it passed.**
+      Restored a child branch of `production` to a past point in time and it
+      returned `QA Test — slet mig`, an org deleted from production ~20 minutes
+      earlier — so this recovers **deleted data**, not just a copy of current
+      state. ~3 minutes end to end, entirely in the Neon console (the SQL
+      Editor queries the restored branch directly — no `psql`, no connection
+      string to handle). `docs/restore-runbook.md` is updated with the exact
+      clicks and the two verification queries.
+      **One thing still open:** the retention window is unknown. Open the
+      create-branch dialog, pick "from a past point in time", and see how far
+      back the date picker allows. If that is 24 h, an org deleted on Friday is
+      unrecoverable by Monday — worth knowing before you have customer data.
 - [ ] **Uptime check + alerting.** Client crashes now POST to `/api/bug-report`
       (persisted, emailed, visible on `/platform/errors`), but the digest is
       daily and nothing watches whether the site is up. Today's monitoring is
