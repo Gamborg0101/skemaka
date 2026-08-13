@@ -34,6 +34,16 @@ lapsed-trial paywall (PR #44, live on prod)** · **Resend domain verified and
 proven by a real send** · **live Stripe price confirmed Graduated** · **web
 Google sign-in verified against production**.
 
+### 🎯 The day someone subscribes — do these in order
+
+1. **Upgrade Twilio off trial** — before the manager invites any staff (see below).
+2. **Watch the Stripe webhook delivery log.** checkout → `checkout.session.completed`
+   → `ACTIVE` → unlock has never run for real. A wrong `STRIPE_WEBHOOK_SECRET`
+   returns 400 and Stripe retries for ~3 days while the customer stays locked out.
+3. **Register for VAT** (Stripe → Settings → Tax → Registrations → Denmark).
+   Prices are tax-exclusive, so until this exists you collect no VAT and may owe
+   it out of the €19.
+
 ### ⏭️ What is actually left
 
 1. ~~**Subscribe** at skemaka.com~~ — **deferred by owner until the first
@@ -128,16 +138,17 @@ Google sign-in verified against production**.
       (needs the CVR). **Deferred by owner to the first paying customer**; the
       risk of deferring is that the first sale collects no VAT while you may
       still owe it out of the €19.
-- [ ] **🔺 Twilio trial → paid — MOVED UP 2026-08-13, do this BEFORE the first
-      customer, not after.** Originally deferred, which was wrong. Claiming an
-      invite sends the employee to phone verification, and a Twilio trial only
-      texts numbers pre-verified in the console — so **every one of your first
-      customer's staff hits "We couldn't send a code" on their first
-      interaction with the product**, and it is the manager who hears about it.
-      Confirmed live during the signup walk with a real number.
-      PR #49 softened it (there is now a "Skip for now" out of `/verify-phone`,
-      and the portal never gated on a verified number), so it is no longer a
-      dead end — but it is still a red error in front of every new employee.
+- [ ] **Twilio trial → paid — do it the moment someone subscribes, before the
+      manager invites their staff.** Owner's call 2026-08-13: deferred to the
+      first paying customer, which works because payment and staff invites are
+      separate steps with a natural gap between them.
+      Why the timing matters: claiming an invite sends the employee to phone
+      verification, and a Twilio trial only texts numbers pre-verified in its
+      console — so if staff are invited while still on the trial, **every one of
+      them meets "We couldn't send a code" on first contact with the product**,
+      and the manager is who hears about it. Confirmed live during the signup
+      walk with a real number. PR #49 added a "Skip for now" exit so it is not a
+      dead end, but it is still a red error in front of every new employee.
       On a trial, messages also arrive prefixed "Sent from a Twilio trial
       account", and sends are logged rather than thrown, so it fails silently.
 - [ ] **Check the live Stripe delivery log right after the first real
