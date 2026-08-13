@@ -294,7 +294,21 @@ are set.
 
 ---
 
-### 📱 Mobile / App Store — deferred by owner to the first paying customer
+### 📱 Mobile / App Store — deferred by owner until the first customer is onboarded
+
+Costs, for when this comes back around: **Google Play is $25 one-time**, Apple is
+**$99/year**. New *personal* Play accounts must also run a closed test with 12+
+testers for 14 continuous days before production access — a two-week calendar
+delay, not a fee; organisation accounts (needs a D-U-N-S number) are exempt, which
+may be worth it since a Danish company is being registered anyway. Verify both at
+the consoles — these policies change.
+
+**Android is closer to shippable than iOS:** `app.json` already has
+`android.package` (`com.skemaka.app`) and an adaptive icon, and there is no
+empty-credential blocker. `eas.json` has **no `submit.production.android` block
+at all** — it needs one with a service-account key. So Android could ship first,
+for $25 rather than $99/year. Do `expo@57` before either, since it clears the 20
+outstanding npm advisories in the build tooling.
 
 `eas.json` already points at `https://skemaka.com`. Detail in
 `apps/mobile/APP_STORE_SUBMISSION.md`.
