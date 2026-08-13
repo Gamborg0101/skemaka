@@ -25,6 +25,7 @@ vi.mock("@/lib/prisma", () => {
   const client = {
     shift: {
       findFirst: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -196,7 +197,9 @@ describe("updateShift — notify-immediately for rolled-out shifts", () => {
   it("reassigning a rolled-out shift tells the old assignee and the new one", async () => {
     vi.mocked(db.shift.findFirst)
       .mockResolvedValueOnce(shiftRow({ publishedAt: new Date("2026-06-15T10:00:00Z") }) as never)
-      .mockResolvedValueOnce(null as never) // clash check
+      // No second findFirst any more: the clash check is a findMany overlap
+      // scan, defaulted to [] in the mock above. Leaving a queued Once here
+      // leaked into the next test, which then saw a null shift.
     vi.mocked(db.employee.findFirst).mockResolvedValue({ id: "emp_2" } as never)
     vi.mocked(db.employee.findUnique).mockResolvedValue({ name: "Bob", phone: "+15559876543", locale: null } as never)
     vi.mocked(db.shift.update).mockResolvedValue(shiftRow({ employeeId: "emp_2" }) as never)

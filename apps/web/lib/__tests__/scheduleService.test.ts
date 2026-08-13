@@ -21,7 +21,7 @@ import { createShift, updateShift, getOrCreateSchedule } from "@/lib/services/sc
 vi.mock("@/lib/prisma", () => {
   const client = {
     employee: { findFirst: vi.fn(), findUnique: vi.fn() },
-    shift: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    shift: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
     schedule: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     schedulingEvent: { create: vi.fn() },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn(client)),
@@ -45,6 +45,7 @@ vi.mock("@/lib/push", () => ({ sendPushToUsers: vi.fn().mockResolvedValue(0) }))
 
 const mockEmpFindFirst = vi.mocked(db.employee.findFirst)
 const mockShiftFindFirst = vi.mocked(db.shift.findFirst)
+const mockShiftFindMany = vi.mocked(db.shift.findMany)
 const mockShiftCreate = vi.mocked(db.shift.create)
 const mockShiftUpdate = vi.mocked(db.shift.update)
 const mockSchedFindFirst = vi.mocked(db.schedule.findFirst)
@@ -83,6 +84,8 @@ beforeEach(() => {
   // Defaults for the happy path; individual tests override as needed.
   mockEmpFindFirst.mockResolvedValue(EMPLOYEE as never)
   mockShiftFindFirst.mockResolvedValue(null as never)
+  // No neighbouring shifts by default — the clash check is an overlap scan now.
+  mockShiftFindMany.mockResolvedValue([] as never)
   mockSchedFindFirst.mockResolvedValue({ publishedAt: null } as never)
   mockShiftCreate.mockResolvedValue(shiftRow() as never)
   mockUpdateMany.mockResolvedValue({ count: 0 } as never)
@@ -99,26 +102,53 @@ const INPUT = {
 }
 
 describe("createShift — overlap/block rule", () => {
-  it("blocks with CONFLICT when the employee already has a shift on that date", async () => {
-    mockShiftFindFirst.mockResolvedValue({ id: "shift_existing" } as never)
+  it("blocks with CONFLICT when the new shift OVERLAPS an existing one", async () => {
+    // INPUT is 09:00–17:00; this one runs into it.
+    mockShiftFindMany.mockResolvedValue([
+      { id: "shift_existing", date: new Date(DATE + "T00:00:00Z"), startTime: "16:00", endTime: "20:00" },
+    ] as never)
 
     await expect(createShift(ORG, "sched_1", INPUT)).rejects.toMatchObject({
       code: "CONFLICT",
-      message: "This employee already has a shift on this date",
+      message: "This shift overlaps another shift for this employee",
     })
     expect(mockShiftCreate).not.toHaveBeenCalled()
   })
 
-  it("queries the block by the given employee + date (guards the double-book check)", async () => {
+  it("ALLOWS a split shift — same employee, same day, no overlap", async () => {
+    // The whole point of the rule change: a chef on lunch and again on dinner.
+    mockShiftFindMany.mockResolvedValue([
+      { id: "lunch", date: new Date(DATE + "T00:00:00Z"), startTime: "06:00", endTime: "08:00" },
+    ] as never)
+
     await createShift(ORG, "sched_1", INPUT)
 
-    expect(mockShiftFindFirst).toHaveBeenCalledWith(
+    expect(mockShiftCreate).toHaveBeenCalled()
+  })
+
+  it("catches an overnight shift on the PREVIOUS day running into this one", async () => {
+    // Filed under the day before, 22:00–10:00, so it covers this 09:00 start.
+    const prev = new Date(new Date(DATE + "T00:00:00Z").getTime() - 86_400_000)
+    mockShiftFindMany.mockResolvedValue([
+      { id: "overnight", date: prev, startTime: "22:00", endTime: "10:00" },
+    ] as never)
+
+    await expect(createShift(ORG, "sched_1", INPUT)).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(mockShiftCreate).not.toHaveBeenCalled()
+  })
+
+  it("scans the neighbouring days, not just the target date", async () => {
+    // A shift can end on the following day, so the clash window is ±1 day.
+    await createShift(ORG, "sched_1", INPUT)
+
+    const day = new Date(DATE + "T00:00:00Z").getTime()
+    expect(mockShiftFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           organizationId: ORG,
           employeeId: "emp_1",
-          date: new Date(DATE + "T00:00:00Z"),
           cancelledAt: null,
+          date: { gte: new Date(day - 86_400_000), lte: new Date(day + 86_400_000) },
         },
       }),
     )
@@ -250,24 +280,38 @@ describe("updateShift — overlap/block rule on move & reassign", () => {
     }
   }
 
-  it("blocks with CONFLICT when moving the shift onto a day the employee already works", async () => {
-    mockShiftFindFirst
-      .mockResolvedValueOnce(existingShift() as never) // the shift being edited
-      .mockResolvedValueOnce({ id: "shift_other" } as never) // the clashing shift
+  it("blocks with CONFLICT when a move lands on top of another shift", async () => {
+    mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
+    mockShiftFindMany.mockResolvedValue([
+      { id: "shift_other", date: new Date("2026-06-16T00:00:00Z"), startTime: "08:00", endTime: "12:00" },
+    ] as never)
     mockShiftUpdate.mockResolvedValue(shiftRow() as never)
 
     await expect(updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })).rejects.toMatchObject({
       code: "CONFLICT",
-      message: "This employee already has a shift on this date",
+      message: "This shift overlaps another shift for this employee",
     })
     expect(mockShiftUpdate).not.toHaveBeenCalled()
   })
 
+  it("ALLOWS a move onto a day the employee already works, if the times do not overlap", async () => {
+    mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
+    mockShiftFindMany.mockResolvedValue([
+      { id: "shift_other", date: new Date("2026-06-16T00:00:00Z"), startTime: "18:00", endTime: "23:00" },
+    ] as never)
+    mockShiftUpdate.mockResolvedValue(shiftRow({ date: new Date("2026-06-16T00:00:00Z") }) as never)
+
+    await updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })
+
+    expect(mockShiftUpdate).toHaveBeenCalledOnce()
+  })
+
   it("blocks with CONFLICT when reassigning to an employee who already works that date", async () => {
     mockEmpFindFirst.mockResolvedValue({ id: "emp_2" } as never) // target employee exists
-    mockShiftFindFirst
-      .mockResolvedValueOnce(existingShift() as never)
-      .mockResolvedValueOnce({ id: "shift_other" } as never)
+    mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
+    mockShiftFindMany.mockResolvedValue([
+      { id: "shift_other", date: new Date(DATE + "T00:00:00Z"), startTime: "08:00", endTime: "18:00" },
+    ] as never)
     mockShiftUpdate.mockResolvedValue(shiftRow() as never)
 
     await expect(updateShift(ORG, "sched_1", "shift_1", { employeeId: "emp_2" })).rejects.toMatchObject({
@@ -276,31 +320,28 @@ describe("updateShift — overlap/block rule on move & reassign", () => {
     expect(mockShiftUpdate).not.toHaveBeenCalled()
   })
 
-  it("excludes the shift itself from the clash query (queries id: { not })", async () => {
-    mockShiftFindFirst
-      .mockResolvedValueOnce(existingShift() as never)
-      .mockResolvedValueOnce(null as never)
+  it("excludes the shift itself from the clash scan (queries id: { not })", async () => {
+    mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
     mockShiftUpdate.mockResolvedValue(shiftRow() as never)
 
     await updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })
 
-    expect(mockShiftFindFirst).toHaveBeenLastCalledWith(
+    const day = new Date("2026-06-16T00:00:00Z").getTime()
+    expect(mockShiftFindMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: {
           organizationId: ORG,
           employeeId: "emp_1",
-          date: new Date("2026-06-16T00:00:00Z"),
           id: { not: "shift_1" },
           cancelledAt: null,
+          date: { gte: new Date(day - 86_400_000), lte: new Date(day + 86_400_000) },
         },
       }),
     )
   })
 
   it("allows a move to a free day (no clashing shift)", async () => {
-    mockShiftFindFirst
-      .mockResolvedValueOnce(existingShift() as never)
-      .mockResolvedValueOnce(null as never)
+    mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
     mockShiftUpdate.mockResolvedValue(shiftRow({ date: new Date("2026-06-16T00:00:00Z") }) as never)
 
     const result = await updateShift(ORG, "sched_1", "shift_1", { date: "2026-06-16" })
@@ -309,14 +350,19 @@ describe("updateShift — overlap/block rule on move & reassign", () => {
     expect(result.date).toBe("2026-06-16")
   })
 
-  it("skips the clash query entirely for a timing-only edit", async () => {
+  it("NOW checks a timing-only edit, which the one-per-day rule could skip", async () => {
+    // Dragging dinner earlier can run it into lunch without the employee or the
+    // date changing. Under the old rule that was impossible, so it was skipped.
     mockShiftFindFirst.mockResolvedValueOnce(existingShift() as never)
-    mockShiftUpdate.mockResolvedValue(shiftRow() as never)
+    mockShiftFindMany.mockResolvedValue([
+      { id: "lunch", date: new Date(DATE + "T00:00:00Z"), startTime: "09:00", endTime: "11:00" },
+    ] as never)
 
-    await updateShift(ORG, "sched_1", "shift_1", { startTime: "10:00" })
+    await expect(
+      updateShift(ORG, "sched_1", "shift_1", { startTime: "10:00" }),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
 
-    // Only the initial "load the shift" lookup — no second clash query.
-    expect(mockShiftFindFirst).toHaveBeenCalledOnce()
-    expect(mockShiftUpdate).toHaveBeenCalledOnce()
+    expect(mockShiftFindMany).toHaveBeenCalled()
+    expect(mockShiftUpdate).not.toHaveBeenCalled()
   })
 })

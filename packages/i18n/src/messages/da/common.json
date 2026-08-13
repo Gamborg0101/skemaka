@@ -36,7 +36,7 @@
   "serviceErrors": {
     "employeeDuplicateEmail": "Der findes allerede en medarbejder med denne e-mailadresse.",
     "seatLimit": "Din plan dækker {seats} medarbejdere, og de er alle aktive. Opgrader din plan for at tilføje flere.",
-    "shiftConflict": "Denne medarbejder har allerede en vagt på denne dato.",
+    "shiftConflict": "Denne vagt overlapper en anden vagt for denne medarbejder.",
     "inviteAlreadyClaimed": "Denne invitation er allerede blevet indløst.",
     "inviteInvalidOrExpired": "Invitationslinket er ugyldigt eller udløbet.",
     "offerAlreadyResolved": "Dette tilbud er allerede afgjort.",

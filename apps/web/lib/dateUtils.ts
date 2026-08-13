@@ -134,3 +134,53 @@ export function calcNetHours(startTime: string, endTime: string, breakMinutes: n
   const m = net % 60
   return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
+
+/**
+ * A shift placed on an absolute minute timeline, so two shifts can be compared
+ * regardless of which calendar date each is filed under.
+ *
+ * Needed because a shift's real end can fall on the following day: `endTime`
+ * earlier than `startTime` means it crosses midnight (see
+ * {@link grossShiftMinutes}). A bar shift filed as Monday 22:00–02:00 actually
+ * runs into Tuesday, so comparing only the times, or only shifts sharing a
+ * `date`, would miss a genuine clash with Tuesday 00:00–06:00.
+ *
+ * Half-open `[start, end)`: a shift ending at 14:00 and one starting at 14:00
+ * are back-to-back, not overlapping.
+ */
+export function shiftInterval(
+  date: string,
+  startTime: string,
+  endTime: string,
+): { start: number; end: number } {
+  const dayIndex = Math.round(Date.parse(`${date}T00:00:00Z`) / 86_400_000)
+  const [h, m] = startTime.split(":").map(Number)
+  const start = dayIndex * 1440 + h * 60 + m
+  return { start, end: start + grossShiftMinutes(startTime, endTime) }
+}
+
+/** True when two shift intervals cover any of the same minute. */
+export function shiftsOverlap(
+  a: { start: number; end: number },
+  b: { start: number; end: number },
+): boolean {
+  return a.start < b.end && b.start < a.end
+}
+
+/**
+ * Does `candidate` clash with any of `existing`?
+ *
+ * The rota rule is "no OVERLAPPING shifts", not "one shift per day": split
+ * shifts — lunch 11:00–14:00 and dinner 18:00–23:00 for the same chef — are
+ * normal in hospitality and must be allowed.
+ */
+export function findOverlappingShift<T extends { date: string; startTime: string; endTime: string }>(
+  candidate: { date: string; startTime: string; endTime: string },
+  existing: T[],
+): T | null {
+  const a = shiftInterval(candidate.date, candidate.startTime, candidate.endTime)
+  for (const s of existing) {
+    if (shiftsOverlap(a, shiftInterval(s.date, s.startTime, s.endTime))) return s
+  }
+  return null
+}

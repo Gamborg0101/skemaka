@@ -11,6 +11,7 @@ import type { Locale } from "@skemaka/i18n"
 import type { ShiftOffer, EmployeeShiftOffer } from "@/types"
 import { ServiceError } from "./errors"
 import { lockEmployee } from "./locks"
+import { findOverlappingShift } from "@/lib/dateUtils"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -346,13 +347,30 @@ export async function confirmOffer(
     // confirms of THIS offer.
     await lockEmployee(tx, orgId, employeeId)
 
-    const clash = await tx.shift.findFirst({
-      where: { organizationId: orgId, employeeId, date: offer.date, cancelledAt: null },
-      select: { id: true },
+    // Overlap, not same-day — the winner may already be working a split shift.
+    // Neighbouring dates are included because an overnight shift (end time
+    // earlier than start) really runs into the next day.
+    const dayMs = 86_400_000
+    const isoUTC = (d: Date) => d.toISOString().split("T")[0]
+    const neighbours = await tx.shift.findMany({
+      where: {
+        organizationId: orgId,
+        employeeId,
+        cancelledAt: null,
+        date: {
+          gte: new Date(offer.date.getTime() - dayMs),
+          lte: new Date(offer.date.getTime() + dayMs),
+        },
+      },
+      select: { id: true, date: true, startTime: true, endTime: true },
       orderBy: { createdAt: "asc" },
     })
+    const clash = findOverlappingShift(
+      { date: isoUTC(offer.date), startTime: offer.startTime, endTime: offer.endTime },
+      neighbours.map((s) => ({ ...s, date: isoUTC(s.date) })),
+    )
     if (clash) {
-      throw new ServiceError("This employee already has a shift on this date", "CONFLICT", {
+      throw new ServiceError("This shift overlaps another shift for this employee", "CONFLICT", {
         messageKey: "shiftConflict",
       })
     }

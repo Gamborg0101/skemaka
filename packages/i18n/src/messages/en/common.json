@@ -36,7 +36,7 @@
   "serviceErrors": {
     "employeeDuplicateEmail": "An employee with this email already exists.",
     "seatLimit": "Your plan covers {seats} employees and they are all active. Increase your plan to add another.",
-    "shiftConflict": "This employee already has a shift on this date.",
+    "shiftConflict": "This shift overlaps another shift for this employee.",
     "inviteAlreadyClaimed": "This invite has already been claimed.",
     "inviteInvalidOrExpired": "This invite link is invalid or has expired.",
     "offerAlreadyResolved": "This offer is already resolved.",
