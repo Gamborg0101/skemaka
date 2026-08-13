@@ -525,14 +525,25 @@ export async function claimCoverRequest(
   return res.data
 }
 
-/** Withdraw my own cover request. */
+/**
+ * Withdraw my own cover request.
+ *
+ * The DELETE route answers `200 { data: CoverRequest }`, not `204`, so the
+ * envelope has to be unwrapped like every other call here. This previously
+ * did `client.del(...) as unknown as CoverRequest`, which type-checked but
+ * handed callers the `{ data }` wrapper — every field read off it was
+ * `undefined`. Latent only because the sole caller (`useCancelCover` in the
+ * mobile app) ignores the return value and just invalidates.
+ */
 export async function cancelCoverRequest(
   client: ApiClient,
   orgId: string,
   requestId: string,
 ): Promise<CoverRequest> {
-  const res = await client.del(`/api/orgs/${orgId}/cover-requests/${requestId}`)
-  return res as unknown as CoverRequest
+  const res = await client.del<Wrapped<CoverRequest>>(
+    `/api/orgs/${orgId}/cover-requests/${requestId}`,
+  )
+  return res.data
 }
 
 /** Manager: approve a claimed request (reassigns the shift). */

@@ -99,5 +99,8 @@ export class ApiClient {
   post<T>(path: string, body?: unknown)    { return this.request<T>(path, { method: "POST", body }) }
   patch<T>(path: string, body?: unknown)   { return this.request<T>(path, { method: "PATCH", body }) }
   put<T>(path: string, body?: unknown)     { return this.request<T>(path, { method: "PUT", body }) }
-  del(path: string)                        { return this.request<void>(path, { method: "DELETE" }) }
+  // Generic because not every DELETE answers 204 — some return `{ data }`
+  // (e.g. cover-request withdrawal). Defaults to void so existing callers
+  // that ignore the body are unaffected.
+  del<T = void>(path: string)              { return this.request<T>(path, { method: "DELETE" }) }
 }
