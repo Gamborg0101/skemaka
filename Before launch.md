@@ -49,12 +49,14 @@ Google sign-in verified against production**.
    webhook is the piece most likely to be misconfigured, and the first person
    to exercise it will be a real customer. Watch the Stripe delivery log the
    moment that happens.
-2. **Walk the new-signup path on prod, end to end** — signup → onboarding →
-   add employee → invite email → schedule → roll out. This is the exact path
-   your first customer takes, and it now runs through an email domain verified
-   only today that has never carried a real invite. Nothing else on this list
-   affects whether a stranger can actually get started. Use `/demo` or a real
-   throwaway signup; demo orgs auto-delete after 48h.
+2. ~~**Walk the new-signup path on prod**~~ — **done 2026-08-13.** Real signup
+   via magic link → onboarding → employee → **invite email delivered** → claim
+   → active account. It works. Four rough edges found and fixed in **PR #49**
+   (onboarding discarding the first employee, `/verify-phone` having no exit,
+   English starter job roles, untranslated "Check your email"). All eight
+   manager routes also load clean with zero failed requests. **Cleanup owed:**
+   delete org `QA Test — slet mig` (`cmsrazzoa000104jrhoce9oe8`) and the
+   `gamborgc+trial@` / `gamborgc+staff@` users.
 3. **Mobile Google sign-in** — the only untested piece of the PKCE change.
 4. Owner-deferred to the first paying customer: **Stripe Tax**, **Twilio**,
    **App Store submission**.
@@ -126,10 +128,18 @@ Google sign-in verified against production**.
       (needs the CVR). **Deferred by owner to the first paying customer**; the
       risk of deferring is that the first sale collects no VAT while you may
       still owe it out of the €19.
-- [ ] **Twilio trial → paid**, before staff are expected to receive rotas. On a
-      trial, messages only reach console-verified numbers and arrive prefixed
-      "Sent from a Twilio trial account". Sends are logged, never thrown, so this
-      fails silently. **Deferred by owner to the first paying customer.**
+- [ ] **🔺 Twilio trial → paid — MOVED UP 2026-08-13, do this BEFORE the first
+      customer, not after.** Originally deferred, which was wrong. Claiming an
+      invite sends the employee to phone verification, and a Twilio trial only
+      texts numbers pre-verified in the console — so **every one of your first
+      customer's staff hits "We couldn't send a code" on their first
+      interaction with the product**, and it is the manager who hears about it.
+      Confirmed live during the signup walk with a real number.
+      PR #49 softened it (there is now a "Skip for now" out of `/verify-phone`,
+      and the portal never gated on a verified number), so it is no longer a
+      dead end — but it is still a red error in front of every new employee.
+      On a trial, messages also arrive prefixed "Sent from a Twilio trial
+      account", and sends are logged rather than thrown, so it fails silently.
 - [ ] **Check the live Stripe delivery log right after the first real
       subscription.** A wrong `STRIPE_WEBHOOK_SECRET` returns 400 and Stripe
       retries for ~3 days. Note the webhook now returns **500 and stays
