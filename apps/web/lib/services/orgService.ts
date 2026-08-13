@@ -109,7 +109,9 @@ export async function createOrg(
       data: { userId, organizationId: newOrg.id, role: "MANAGER" },
     })
 
-    await seedDefaultRoles(newOrg.id, client, industry)
+    // Pass the org's locale so the starter roles are seeded in its language —
+    // these names are persisted data, so getting it wrong here is permanent.
+    await seedDefaultRoles(newOrg.id, client, industry, newOrg.locale)
     await seedDefaultShiftTemplates(newOrg.id, client)
 
     return newOrg

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { Loader2, Phone } from "lucide-react"
@@ -118,6 +119,20 @@ export function VerifyPhoneClient({ orgName, defaultDialCode }: Props) {
             >
               {state.status === "sending" ? <Loader2 className="size-4 animate-spin" /> : t("sendCode")}
             </button>
+            {/* The way out. A verified number is what SMS notifications need,
+                not what reading your own roster needs — the portal layout says
+                as much and deliberately stopped gating on it. This page never
+                got the matching exit, so anyone whose code fails to arrive
+                (wrong country code, carrier delay, an SMS provider still on a
+                trial that only texts pre-verified numbers) was left staring at
+                a red error with nowhere to go. The banner in the portal keeps
+                asking, so nothing is lost by letting them through. */}
+            <Link
+              href="/portal"
+              className="mt-4 block text-sm text-gray-500 underline underline-offset-2 hover:text-gray-700"
+            >
+              {t("skipForNow")}
+            </Link>
           </>
         )}
 
