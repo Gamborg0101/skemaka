@@ -555,5 +555,20 @@
     "back": "Back",
     "skip": "Skip",
     "done": "Got it"
+  },
+  "paywall": {
+    "trialExpired": {
+      "title": "Your free trial has ended",
+      "body": "Subscribe to get back to your schedules and employees. Your data is safe."
+    },
+    "pastDueExpired": {
+      "title": "Payment is overdue",
+      "body": "Your last payment didn't go through. Update your payment method to unlock your account. Your data is safe."
+    },
+    "canceled": {
+      "title": "Your subscription has ended",
+      "body": "Resubscribe to get back to your schedules and employees. Your data is safe."
+    },
+    "cta": "Go to billing"
   }
 }

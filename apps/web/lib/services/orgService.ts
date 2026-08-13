@@ -3,7 +3,8 @@ import { PrismaClient, Prisma } from "@/app/generated/prisma/client"
 import { serOrg, serJobRole, serShiftTemplate } from "@/lib/serialize"
 import { seedDefaultRoles, seedDefaultShiftTemplates } from "@/lib/seedDefaultRoles"
 import { recordAudit } from "@/lib/audit"
-import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings } from "@/types"
+import type { Organization, JobRole, ShiftTemplate, OrgScheduleSettings, SubscriptionStatus } from "@/types"
+import { canAccessOrg, type BillingBlock } from "@/lib/billing"
 import { ServiceError } from "./errors"
 import { assertSeatAvailable } from "./seats"
 
@@ -403,6 +404,31 @@ export type OrgContext = {
   org:            Organization
   jobRoles:       JobRole[]
   shiftTemplates: ShiftTemplate[]
+  /**
+   * Non-null when the org is locked out of paid features, mirroring the 402 the
+   * API guard returns. Computed here — rather than left for the client to infer
+   * from a failed request — because the failure it describes is otherwise
+   * invisible: every data fetch just returns nothing, and the UI renders an
+   * empty roster that reads as data loss.
+   *
+   * `/api/me/context` is deliberately NOT billing-gated, so this endpoint keeps
+   * answering 200 for a blocked org and remains the one reliable way to learn
+   * that billing is why the rest of the app is empty.
+   */
+  billing:        BillingBlock | null
+}
+
+/** Read the billing block straight off a loaded org row. */
+function billingBlockFor(o: {
+  subscriptionStatus: string
+  trialEndsAt: Date | null
+  pastDueSince: Date | null
+}): BillingBlock | null {
+  return canAccessOrg({
+    status: o.subscriptionStatus as SubscriptionStatus,
+    trialEndsAt: o.trialEndsAt,
+    pastDueSince: o.pastDueSince,
+  })
 }
 
 export async function getOrgContext(userId: string): Promise<OrgContext | null> {
@@ -425,6 +451,7 @@ export async function getOrgContext(userId: string): Promise<OrgContext | null> 
     org:            serOrg(o),
     jobRoles:       o.jobRoles.map(serJobRole),
     shiftTemplates: o.shiftTemplates.map(serShiftTemplate),
+    billing:        billingBlockFor(o),
   }
 }
 
@@ -446,6 +473,7 @@ export async function getOrgContextById(orgId: string): Promise<OrgContext | nul
     org:            serOrg(o),
     jobRoles:       o.jobRoles.map(serJobRole),
     shiftTemplates: o.shiftTemplates.map(serShiftTemplate),
+    billing:        billingBlockFor(o),
   }
 }
 

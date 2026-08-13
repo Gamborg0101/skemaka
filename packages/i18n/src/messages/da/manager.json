@@ -555,5 +555,20 @@
     "back": "Tilbage",
     "skip": "Spring over",
     "done": "Forstået"
+  },
+  "paywall": {
+    "trialExpired": {
+      "title": "Din prøveperiode er udløbet",
+      "body": "Abonnér for at få adgang til dine vagtplaner og medarbejdere igen. Dine data er gemt."
+    },
+    "pastDueExpired": {
+      "title": "Betalingen er forfalden",
+      "body": "Din seneste betaling gik ikke igennem. Opdatér din betalingsmetode for at låse din konto op. Dine data er gemt."
+    },
+    "canceled": {
+      "title": "Dit abonnement er ophørt",
+      "body": "Genabonnér for at få adgang til dine vagtplaner og medarbejdere igen. Dine data er gemt."
+    },
+    "cta": "Se abonnement"
   }
 }
