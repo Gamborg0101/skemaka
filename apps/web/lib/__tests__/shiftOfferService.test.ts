@@ -192,7 +192,7 @@ describe("confirmOffer", () => {
     const offerTxUpdate = vi.fn().mockResolvedValue(offerRow({ status: "FILLED", filledEmployeeId: "emp_A" }))
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
       cb({
-        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]) },
         // The winner's row is locked before the clash check (SELECT … FOR UPDATE).
         $queryRaw: vi.fn().mockResolvedValue([{ id: "emp_A" }]),
         shiftOffer: { updateMany: offerTxUpdateMany, update:offerTxUpdate },
@@ -219,7 +219,7 @@ describe("confirmOffer", () => {
     const offerTxUpdateMany = vi.fn().mockResolvedValue({ count: 0 })
     txMock.mockImplementation(async (cb: (tx: unknown) => unknown) =>
       cb({
-        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null) },
+        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue(null), findMany: vi.fn().mockResolvedValue([]) },
         // The winner's row is locked before the clash check (SELECT … FOR UPDATE).
         $queryRaw: vi.fn().mockResolvedValue([{ id: "emp_A" }]),
         shiftOffer: { updateMany: offerTxUpdateMany, update:vi.fn() },
@@ -237,7 +237,15 @@ describe("confirmOffer", () => {
       cb({
         // They already have a live shift that date — confirming would silently
         // give them two overlapping shifts, which is what used to happen.
-        shift: { create: shiftCreate, findFirst: vi.fn().mockResolvedValue({ id: "shift_existing" }) },
+        shift: {
+          create: shiftCreate,
+          findFirst: vi.fn().mockResolvedValue(null),
+          // Overlaps the offer's own hours, so it is a genuine clash rather
+          // than merely the same calendar day (split shifts are allowed now).
+          findMany: vi.fn().mockResolvedValue([
+            { id: "shift_existing", date: new Date("2026-07-20T00:00:00Z"), startTime: "00:00", endTime: "23:59" },
+          ]),
+        },
         $queryRaw: vi.fn().mockResolvedValue([{ id: "emp_A" }]),
         shiftOffer: { updateMany: offerTxUpdateMany, update: vi.fn() },
       }),
