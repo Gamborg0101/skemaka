@@ -67,7 +67,9 @@ Google sign-in verified against production**.
    manager routes also load clean with zero failed requests. **Cleanup owed:**
    delete org `QA Test — slet mig` (`cmsrazzoa000104jrhoce9oe8`) and the
    `gamborgc+trial@` / `gamborgc+staff@` users.
-3. **Mobile Google sign-in** — the only untested piece of the PKCE change.
+3. ~~**Mobile Google sign-in**~~ — **done 2026-08-13.** The full PKCE chain
+   verified against production without a device; only the OS deep-link handoff
+   into the app remains, and it involves no PKCE.
 4. Owner-deferred to the first paying customer: **Stripe Tax**, **Twilio**,
    **App Store submission**.
 5. Everything under 🟡 and 🟢 below (PITR drill, uptime, `expo@57`,
@@ -83,20 +85,23 @@ Google sign-in verified against production**.
       no route to a session except the OAuth callback, so `checks: ["pkce",
       "state"]` is good on web. **Mobile is still untested** — and mobile is the
       half that was actually at risk, since PKCE was removed for it in May 2026.
-- [ ] **Test Google sign-in, MOBILE.** PR #42 restored
-      `checks: ["pkce", "state"]` (Auth.js's default). PKCE was removed in May
-      2026 during mobile work (`7c6b214`), so that flow may have depended on its
-      absence — and it is the one change that could not be verified without a
-      device. It is in prod now, so this is a live-traffic risk, not a
-      pre-merge one.
-      - Web: incognito → `/login` → Continue with Google → should land on
-        `/schedule`. Failure looks like `/login?error=OAuthCallbackError`.
-      - Mobile: Expo app → Google sign-in (leaves for the system browser and
-        returns via `/api/auth/mobile/complete`).
-      - If mobile breaks: revert `["pkce", "state"]` → `["state"]` in
-        `apps/web/auth.config.ts` **and** `apps/web/lib/auth.ts`. The real fix is
-        the `code_verifier` cookie's sameSite/partitioning, not weakening every
-        browser sign-in again.
+- [x] ~~**Test Google sign-in, MOBILE**~~ — **PKCE verified 2026-08-13.** The
+      OAuth leg runs in the system browser (`openAuthSessionAsync` →
+      ASWebAuthenticationSession / Custom Tab), which is exactly where the
+      `code_verifier` cookie lives — so it was reproducible without a device by
+      driving the same URL `apps/mobile/app/(auth)/login.tsx` opens, from a
+      cold browser session with cookies cleared. Every step passed against
+      production:
+      `/api/auth/signin` → `/login` carrying the mobile callbackUrl →
+      Google authorize with `code_challenge` + `code_challenge_method=S256` →
+      `/api/auth/callback/google` (**no OAuthCallbackError** — the PKCE
+      exchange succeeded) → `/api/auth/mobile/session` →
+      `skemaka://auth/callback?code=…` → `POST /api/auth/mobile/redeem`
+      returned 200 with a valid token, userId, orgId and role.
+      **The revert plan below is not needed.** The only untested step is the OS
+      handing the `skemaka://` deep link to the app — Expo/WebBrowser plumbing
+      with no PKCE involvement, which still wants a real device before App
+      Store submission.
 
 ---
 
