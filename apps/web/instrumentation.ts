@@ -7,6 +7,9 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation
  */
 
+/** https anywhere real, or plain http against a local host. */
+const LOCAL_OR_HTTPS = /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)([:/]|$))/
+
 export async function register() {
   // Only validate in production — dev/test may intentionally omit some vars.
   if (process.env.NODE_ENV !== "production") return
@@ -65,6 +68,33 @@ export async function register() {
       `[startup] Refusing to boot: development-only environment variables are set in production:\n${present
         .map((k) => `  • ${k}`)
         .join("\n")}\n\nE2E_TEST_LOGIN / E2E_TEST_PASSWORD enable the credentials backdoor; TWILIO_TO_OVERRIDE redirects every SMS away from your staff. Remove them from this environment.`,
+    )
+  }
+
+  // Present-but-wrong is the failure mode the checks above cannot catch. These
+  // values are opaque strings pasted between two dashboards and a settings page,
+  // and the neighbouring rows look alike: `STRIPE_PRICE_ID` and
+  // `STRIPE_SECRET_KEY` sit next to each other in Vercel's alphabetical list.
+  // A swap boots perfectly happily and then fails at the worst possible moment —
+  // the first customer trying to pay. Each prefix below is Stripe's/Resend's own
+  // documented, stable identifier prefix.
+  const malformed = ([
+    ["DATABASE_URL",          /^postgres(ql)?:\/\//, "a postgres:// connection string"],
+    ["STRIPE_SECRET_KEY",     /^sk_(live|test)_/,    "a Stripe secret key (sk_live_… / sk_test_…)"],
+    ["STRIPE_PRICE_ID",       /^price_/,             "a Stripe price id (price_…) — NOT a secret key"],
+    ["STRIPE_WEBHOOK_SECRET", /^whsec_/,             "a Stripe webhook signing secret (whsec_…)"],
+    ["RESEND_API_KEY",        /^re_/,                "a Resend API key (re_…)"],
+    // localhost is allowed: `next build && next start` runs with
+    // NODE_ENV=production locally, and crashing that would be a false alarm.
+    ["NEXT_PUBLIC_APP_URL",   LOCAL_OR_HTTPS,        "an https:// URL"],
+    ["NEXTAUTH_URL",          LOCAL_OR_HTTPS,        "an https:// URL"],
+  ] as const).filter(([key, pattern]) => !pattern.test(process.env[key]!.trim()))
+
+  if (malformed.length > 0) {
+    throw new Error(
+      `[startup] Environment variables are set but malformed:\n${malformed
+        .map(([key, , expected]) => `  • ${key} — expected ${expected}`)
+        .join("\n")}\n\nA value pasted into the wrong variable boots fine and fails later; this check exists so it fails here instead.`,
     )
   }
 }

@@ -49,10 +49,16 @@ Google sign-in verified against production**.
    webhook is the piece most likely to be misconfigured, and the first person
    to exercise it will be a real customer. Watch the Stripe delivery log the
    moment that happens.
-2. **Mobile Google sign-in** — the only untested piece of the PKCE change.
-3. Owner-deferred to the first paying customer: **Stripe Tax**, **Twilio**,
+2. **Walk the new-signup path on prod, end to end** — signup → onboarding →
+   add employee → invite email → schedule → roll out. This is the exact path
+   your first customer takes, and it now runs through an email domain verified
+   only today that has never carried a real invite. Nothing else on this list
+   affects whether a stranger can actually get started. Use `/demo` or a real
+   throwaway signup; demo orgs auto-delete after 48h.
+3. **Mobile Google sign-in** — the only untested piece of the PKCE change.
+4. Owner-deferred to the first paying customer: **Stripe Tax**, **Twilio**,
    **App Store submission**.
-4. Everything under 🟡 and 🟢 below (PITR drill, uptime, `expo@57`,
+5. Everything under 🟡 and 🟢 below (PITR drill, uptime, `expo@57`,
    `migrate deploy`, lint warnings).
 
 ---
@@ -218,16 +224,20 @@ are set.
       unwrapping, and every hook's query key, `enabled` gate and cache
       invalidation. Found and fixed one real bug (below); `packages/api` was
       also pinned to React 18 while both apps run 19.1.0 — now aligned.
-- [ ] **⚠️ New finding: the list hooks silently truncate.** `useEmployees` and
-      `useTimeOff` call the list endpoints directly and read `res.data`, taking
-      **only the first page** — while `api.ts`'s `listEmployees` / `getAllTimeOff`
-      page through properly with `getAllPages`. Server defaults are **100** for
-      employees and **50** for time-off, so a mobile user sees at most that
-      many, with no indication more exist. Not launch-blocking (mobile trails,
-      and no org is near 100 staff), but it will bite on time-off first, since
-      those accumulate. Fix is either to route the hooks through the paging
-      helpers or to make the truncation visible. Left unchanged deliberately —
-      it changes mobile fetch behaviour, which wants a device to verify.
+- [x] ~~**The list hooks silently truncate**~~ — **fixed 2026-08-13.**
+      `useEmployees` now goes through `listEmployees`, and `useTimeOff` through a
+      new `listTimeOff(client, orgId, filters)`; both page in full via
+      `getAllPages`, carrying the filters onto every page. Previously they read
+      `res.data` off a single request and stopped at the server default — 100
+      for employees, **50 for time-off**, which accumulates and so would have
+      bitten first. Covered by two new hook tests.
+- [x] ~~**Malformed env vars boot happily**~~ — **fixed 2026-08-13.**
+      `instrumentation.ts` checked only that the required vars were *present*.
+      `STRIPE_PRICE_ID` and `STRIPE_SECRET_KEY` are adjacent in Vercel's
+      alphabetical list, so a swap deploys green and fails at the first attempt
+      to pay. It now also validates the documented prefixes (`price_`, `sk_`,
+      `whsec_`, `re_`, `postgres://`, https URLs — localhost allowed so a local
+      production build still starts).
 - [ ] **Move production to `migrate deploy`.** It uses `db push` today, which
       makes the DB match `schema.prisma` and therefore silently drops anything
       Prisma cannot express — which is why the two rota/clock invariants are
