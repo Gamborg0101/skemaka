@@ -6,7 +6,26 @@ import { useOrg } from "@/lib/orgContext"
 import { SeatManager } from "@/components/manager/SeatManager"
 import type { SubscriptionStatus } from "@/types"
 
-function StatusBanner({ status }: { status: SubscriptionStatus }) {
+function StatusBanner({ status, blocked }: { status: SubscriptionStatus; blocked: boolean }) {
+  // `subscriptionStatus` stays "TRIALING" after the trial lapses — expiry is a
+  // function of `trialEndsAt`, not the status column. Reading the status alone
+  // told a locked-out org "Full access during your trial", which is the exact
+  // opposite of what every one of its API calls was returning.
+  if (blocked && status === "TRIALING") {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/40 px-5 py-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center shrink-0">
+            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Free trial ended</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">Your trial has run out and your account is locked. Subscribe below to get back in — your data is safe.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (status === "TRIALING") {
     return (
       <div className="rounded-xl border border-blue-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-800/60 px-5 py-4 mb-6">
@@ -68,11 +87,12 @@ function StatusBanner({ status }: { status: SubscriptionStatus }) {
 }
 
 export default function BillingPage() {
-  const { org } = useOrg()
+  const { org, billingBlock } = useOrg()
   const [loading, setLoading] = useState<"portal" | "checkout" | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const status = org.subscriptionStatus
+  const blocked = billingBlock !== null
   const usesPortal = status === "ACTIVE" || status === "PAST_DUE"
 
   async function openPortal() {
@@ -125,7 +145,7 @@ export default function BillingPage() {
         </p>
       </div>
 
-      <StatusBanner status={status} />
+      <StatusBanner status={status} blocked={blocked} />
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 px-4 py-3 text-sm text-red-700 dark:text-red-300">
