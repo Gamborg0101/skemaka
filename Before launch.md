@@ -231,10 +231,14 @@ are set.
       Editor queries the restored branch directly — no `psql`, no connection
       string to handle). `docs/restore-runbook.md` is updated with the exact
       clicks and the two verification queries.
-      **One thing still open:** the retention window is unknown. Open the
-      create-branch dialog, pick "from a past point in time", and see how far
-      back the date picker allows. If that is 24 h, an org deleted on Friday is
-      unrecoverable by Monday — worth knowing before you have customer data.
+- [ ] 🔴 **Upgrade the Neon plan — the recovery window is 6 HOURS.** Confirmed
+      2026-08-13 (Settings → History window, maxed at the free plan's 6h
+      ceiling). The restore procedure works, but only inside that window:
+      anything not noticed within the same working day is **permanently
+      unrecoverable**. A manager who deletes the wrong employee on Friday
+      evening and reports it Monday cannot be helped. Paid plans go up to 30
+      days from the same panel. Do this before taking on customer data —
+      bundle it with the Twilio upgrade at the first subscription.
 - [ ] **Uptime check + alerting.** Client crashes now POST to `/api/bug-report`
       (persisted, emailed, visible on `/platform/errors`), but the digest is
       daily and nothing watches whether the site is up. Today's monitoring is
