@@ -72,3 +72,31 @@ export function canAccessOrg(
       return { code: "SUBSCRIPTION_CANCELED", message: "Subscription inactive" }
   }
 }
+
+/** Route prefix that must stay reachable while the paywall is up. */
+const BILLING_PATH = "/billing"
+
+/**
+ * Should the manager UI be replaced by the paywall screen?
+ *
+ * Pure so the two exemptions — the ones that make the difference between a
+ * paywall and a lockout — are unit-testable rather than buried in a component:
+ *
+ * 1. **`/billing` is always reachable.** The paywall's only call to action
+ *    points there; blocking it would leave a blocked customer with no way to
+ *    pay, which is the exact dead end this screen exists to remove. The
+ *    checkout API already allows suspended orgs (`allowSuspended: true`).
+ * 2. **Super-admin "acting-as" is exempt.** `requireOrgMember` lets the super
+ *    admin through the 402, so their requests succeed; showing them a paywall
+ *    would block platform support on precisely the orgs most likely to need it.
+ */
+export function shouldShowPaywall(
+  block: BillingBlock | null,
+  pathname: string,
+  acting = false,
+): boolean {
+  if (!block) return false
+  if (acting) return false
+  if (pathname === BILLING_PATH || pathname.startsWith(`${BILLING_PATH}/`)) return false
+  return true
+}
