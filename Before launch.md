@@ -62,6 +62,18 @@ the drill itself is still owed) · one real bug found and fixed in
 
 ### 🔴 Blocking a first paying customer — yours, not the code's
 
+- [x] ~~**The lapsed-trial dead end**~~ — **fixed 2026-08-13 (PR #44).** Found by
+      looking at prod: **skemaka.com has been returning 402 on every API call
+      since ~2026-07-16** (org created 2026-07-02 + 14-day trial). No client
+      code handled 402 at all, so `/schedule` rendered *"Ingen medarbejdere
+      endnu — tilføj din første medarbejder"*: a lapsed customer was shown what
+      reads as **deleted data**, with no route to pay. There is now a paywall
+      that says what happened, promises the data is safe, and links to
+      `/billing`; `/billing` itself stays reachable and its banner no longer
+      claims "Full access during your trial" while the account is locked.
+      **Your org is still locked** — subscribing is what unlocks it, which is
+      gated on the Stripe price below.
+
 - [ ] **Stripe Tax registration** (needs the Danish company registered). Prices
       are tax-exclusive and no VAT is being collected on any sale today.
 - [ ] **Create the live tiered price + set `STRIPE_PRICE_ID`.** PR #10 was
