@@ -6,8 +6,10 @@
 > deleted data, not just a copy of the current state. Whole thing took about
 > **3 minutes**, console-only, no `psql` needed.
 >
-> One number is still unknown: the **retention window** (see §1). Everything
-> else below is confirmed.
+> ⚠️ **The retention window is 6 HOURS** (free-plan maximum, confirmed
+> 2026-08-13 in Project Settings → History window). Everything in this document
+> only works inside that window. Past 6 hours there is nothing to restore from
+> — see §1.
 
 ## 0. What this is for
 
@@ -27,11 +29,24 @@ recoverable mistake into an outage.
 
 ## 1. Prerequisites — confirm BEFORE you need them
 
-- [ ] ⚠️ **STILL UNKNOWN: the PITR retention window.** Free tier historically
-      gave ~24 h; paid plans give longer. **If the incident is older than the
-      window, none of this works** — the single most important number here.
-      Find it by opening the branch-creation dialog, choosing "from a past
-      point in time", and seeing how far back the date picker will go.
+- [ ] 🔴 **Retention window: 6 HOURS.** Confirmed 2026-08-13 — Project
+      Settings → **History window**, slider maxed at 6h, which is the free
+      plan's ceiling. **Nothing older than 6 hours can be recovered by any
+      procedure in this document.**
+
+      What that costs, concretely: a manager deletes the wrong employee at
+      17:00 Friday and notices Monday → gone. A bad migration at 09:00 found
+      at 16:00 → gone. Anything not caught within the same working day → gone.
+      Customers do not check a rota hourly; 6 hours is shorter than one
+      service.
+
+      **Fix: upgrade the Neon plan** (the same settings panel offers up to 30
+      days). Do it before there is customer data — the cost is trivial next to
+      losing a paying customer's roster.
+
+      Note the branch-creation date picker does **not** validate against this:
+      it will happily accept a date weeks in the past and only fail on Create.
+      Trust this setting, not the picker.
 - [x] Parent branch is named **`production`**. Neon calls the restore a "child
       branch"; creating one does not touch the parent.
 - [x] Access: Neon console login is enough — the console's **SQL Editor** can
@@ -154,7 +169,9 @@ Watch out, in this schema specifically:
 
 ## 6. Known gaps
 
-- No automated backup *export* — this relies entirely on Neon's PITR window.
-  Nothing here survives losing the Neon account itself. A periodic `pg_dump` to
-  object storage is the fix if that risk matters.
+- **No automated backup export, and only a 6-hour history window.** These
+  compound: there is no copy of the data outside Neon, and inside Neon there is
+  no copy older than 6 hours. Losing the Neon account, or noticing a deletion a
+  day late, are both unrecoverable today. A periodic `pg_dump` to object storage
+  plus a longer history window are the two fixes.
 - No alerting on data loss. Discovery today is a user noticing and reporting it.
