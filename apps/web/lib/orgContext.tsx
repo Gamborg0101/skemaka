@@ -1,9 +1,11 @@
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import type { Organization, JobRole, ShiftTemplate } from "@/types"
 import { updateOrgSettings, type DayHours } from "@/lib/orgSettings"
+import { shouldShowPaywall, type BillingBlock } from "@/lib/billing"
+import { BillingPaywall } from "@/components/manager/BillingPaywall"
 
 interface OrgContextValue {
   orgId: string
@@ -18,6 +20,13 @@ interface OrgContextValue {
   setAvailabilityWindowWeeks: React.Dispatch<React.SetStateAction<number>>
   /** True when a super admin is viewing/editing this org via "acting-as". */
   acting: boolean
+  /**
+   * Non-null when the org is locked out of paid features (the same condition
+   * behind the API's 402). Consumers mostly don't need this — OrgProvider swaps
+   * the whole UI for the paywall — but `/billing` stays reachable and uses it
+   * to describe the real state instead of the raw subscription status.
+   */
+  billingBlock: BillingBlock | null
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null)
@@ -47,6 +56,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [timeOffEnabled, setTimeOffEnabled] = useState(true)
   const [availabilityWindowWeeks, setAvailabilityWindowWeeks] = useState(1)
   const [acting, setActing] = useState(false)
+  const [billingBlock, setBillingBlock] = useState<BillingBlock | null>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
     let cancelled = false
@@ -61,13 +72,14 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             else if (!cancelled) setState("error")
             continue
           }
-          const data = await r.json() as { data?: { org: Organization; jobRoles: JobRole[]; shiftTemplates: ShiftTemplate[]; acting?: boolean } }
+          const data = await r.json() as { data?: { org: Organization; jobRoles: JobRole[]; shiftTemplates: ShiftTemplate[]; acting?: boolean; billing?: BillingBlock | null } }
           if (cancelled) return
           if (data.data) {
             setOrg(data.data.org)
             setJobRoles(data.data.jobRoles)
             setShiftTemplates(data.data.shiftTemplates)
             setActing(data.data.acting === true)
+            setBillingBlock(data.data.billing ?? null)
             const { org } = data.data
             const enabled = org.settings?.timeOffEnabled !== false
             setTimeOffEnabled(enabled)
@@ -108,8 +120,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   // Must be called unconditionally before any early returns — Rules of Hooks.
   const ctxValue = useMemo(
-    () => org ? { orgId: org.id, org, jobRoles, setJobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks, acting } : null,
-    [org, jobRoles, shiftTemplates, timeOffEnabled, availabilityWindowWeeks, acting]
+    () => org ? { orgId: org.id, org, jobRoles, setJobRoles, shiftTemplates, setShiftTemplates, timeOffEnabled, setTimeOffEnabled, availabilityWindowWeeks, setAvailabilityWindowWeeks, acting, billingBlock } : null,
+    [org, jobRoles, shiftTemplates, timeOffEnabled, availabilityWindowWeeks, acting, billingBlock]
   )
 
   if (state === "loading") {
@@ -149,9 +161,14 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   if (!ctxValue) return null
 
+  // Swap the entire manager shell for the paywall when billing is blocked —
+  // /billing itself stays reachable so the call to action leads somewhere.
+  // Still inside the provider: /billing reads `billingBlock` from context.
   return (
     <OrgContext.Provider value={ctxValue}>
-      {children}
+      {shouldShowPaywall(billingBlock, pathname ?? "", acting)
+        ? <BillingPaywall code={billingBlock!.code} />
+        : children}
     </OrgContext.Provider>
   )
 }

@@ -4,7 +4,7 @@
  * full state matrix is exercised here.
  */
 import { describe, it, expect } from "vitest"
-import { canAccessOrg, PAST_DUE_GRACE_DAYS, type BillingSnapshot } from "@/lib/billing"
+import { canAccessOrg, shouldShowPaywall, PAST_DUE_GRACE_DAYS, type BillingSnapshot } from "@/lib/billing"
 
 const NOW = new Date("2026-06-13T12:00:00.000Z")
 const DAY = 24 * 60 * 60 * 1000
@@ -112,5 +112,48 @@ describe("canAccessOrg — CANCELED / unknown", () => {
     expect(canAccessOrg(snap({ status: "BOGUS" as never }), NOW)).toMatchObject({
       code: "SUBSCRIPTION_CANCELED",
     })
+  })
+})
+
+describe("shouldShowPaywall", () => {
+  const block = { code: "TRIAL_EXPIRED", message: "Your free trial has ended" } as const
+
+  it("shows nothing when billing is fine", () => {
+    expect(shouldShowPaywall(null, "/schedule")).toBe(false)
+  })
+
+  it("blocks a normal manager page when billing is blocked", () => {
+    expect(shouldShowPaywall(block, "/schedule")).toBe(true)
+    expect(shouldShowPaywall(block, "/employees")).toBe(true)
+  })
+
+  it("never blocks /billing — it is the only way out", () => {
+    // Blocking it would leave a locked-out customer with no route to pay,
+    // which is the dead end the paywall exists to remove.
+    expect(shouldShowPaywall(block, "/billing")).toBe(false)
+  })
+
+  it("never blocks a nested route under /billing", () => {
+    expect(shouldShowPaywall(block, "/billing/invoices")).toBe(false)
+  })
+
+  it("does not treat a lookalike prefix as /billing", () => {
+    expect(shouldShowPaywall(block, "/billing-history")).toBe(true)
+  })
+
+  it("exempts a super admin acting as the org", () => {
+    // requireOrgMember lets the super admin past the 402, so their requests
+    // succeed; a paywall would block support on exactly the blocked orgs.
+    expect(shouldShowPaywall(block, "/schedule", true)).toBe(false)
+  })
+
+  it("blocks every code, not just an expired trial", () => {
+    for (const code of ["TRIAL_EXPIRED", "PAST_DUE_EXPIRED", "SUBSCRIPTION_CANCELED"] as const) {
+      expect(shouldShowPaywall({ code, message: "" }, "/costs")).toBe(true)
+    }
+  })
+
+  it("tolerates an empty pathname", () => {
+    expect(shouldShowPaywall(block, "")).toBe(true)
   })
 })
