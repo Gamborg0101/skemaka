@@ -36,8 +36,19 @@ Google sign-in verified against production**.
 
 ### ⏭️ What is actually left
 
-1. **Subscribe** at skemaka.com — prod has been 402-locked since ~2026-07-16 and
-   nothing else unlocks it.
+1. ~~**Subscribe** at skemaka.com~~ — **deferred by owner until the first
+   paying customer** (2026-08-13). It costs ~€0.55 net (you pay your own Stripe
+   account; only the fee is lost), but the owner would rather land a customer
+   first. Consequence: **your own org stays 402-locked**, so you cannot use the
+   real app day to day — use `/demo` for demos, which creates a fresh
+   throwaway org that is not locked. New customers are unaffected: they get a
+   clean 14-day trial on signup.
+
+   Note what stays untested until someone pays: the **full money path**
+   (checkout → `checkout.session.completed` webhook → `ACTIVE` → unlock). The
+   webhook is the piece most likely to be misconfigured, and the first person
+   to exercise it will be a real customer. Watch the Stripe delivery log the
+   moment that happens.
 2. **Mobile Google sign-in** — the only untested piece of the PKCE change.
 3. Owner-deferred to the first paying customer: **Stripe Tax**, **Twilio**,
    **App Store submission**.
