@@ -33,7 +33,7 @@ function urls(): string[] {
 }
 
 beforeEach(() => {
-  fetchMock = vi.fn().mockResolvedValue(ok({ data: [] }))
+  fetchMock = vi.fn().mockResolvedValue(ok({ data: [], meta: { total: 0, limit: 200, offset: 0 } }))
   vi.stubGlobal("fetch", fetchMock)
   client = new ApiClient("https://api.test", () => "tok")
   qc = new QueryClient({
@@ -140,11 +140,27 @@ describe("query functions", () => {
   })
 
   it("useEmployees falls back to [] when the server sends no data key", async () => {
-    fetchMock.mockResolvedValue(ok({}))
+    fetchMock.mockResolvedValue(ok({ meta: { total: 0, limit: 200, offset: 0 } }))
     const { result } = renderHook(() => useEmployees("o1"), { wrapper })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual([])
+  })
+
+  it("useEmployees pages in the whole roster, not just the first page", async () => {
+    // The server caps this endpoint at 100 by default. Reading one response
+    // used to truncate the roster silently, with nothing to signal more staff.
+    const first = Array.from({ length: 200 }, (_, i) => ({ id: `e${i}` }))
+    const second = [{ id: "e200" }]
+    fetchMock
+      .mockResolvedValueOnce(ok({ data: first, meta: { total: 201, limit: 200, offset: 0 } }))
+      .mockResolvedValueOnce(ok({ data: second, meta: { total: 201, limit: 200, offset: 200 } }))
+
+    const { result } = renderHook(() => useEmployees("o1"), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toHaveLength(201)
+    expect(urls()[1]).toContain("offset=200")
   })
 
   it("useTimeOff builds the query string only from the filters given", async () => {
@@ -158,11 +174,36 @@ describe("query functions", () => {
     expect(urls()[0]).not.toContain("status=")
   })
 
-  it("useTimeOff sends no query string when unfiltered", async () => {
+  it("useTimeOff keeps paging while filtered", async () => {
+    // Server default here is 50/page and time-off rows accumulate, so this
+    // truncates far sooner than the roster does.
+    const page1 = Array.from({ length: 200 }, (_, i) => ({ id: `t${i}` }))
+    fetchMock
+      .mockResolvedValueOnce(ok({ data: page1, meta: { total: 202, limit: 200, offset: 0 } }))
+      .mockResolvedValueOnce(ok({
+        data: [{ id: "t200" }, { id: "t201" }],
+        meta: { total: 202, limit: 200, offset: 200 },
+      }))
+
+    const { result } = renderHook(
+      () => useTimeOff("o1", { status: "PENDING" }),
+      { wrapper },
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toHaveLength(202)
+    // The filter must survive onto every page, not just the first.
+    expect(urls()[1]).toContain("status=PENDING")
+    expect(urls()[1]).toContain("offset=200")
+  })
+
+  it("useTimeOff sends no filter params when unfiltered", async () => {
     const { result } = renderHook(() => useTimeOff("o1"), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(urls()[0]).toMatch(/\/time-off$/)
+    expect(urls()[0]).toContain("/time-off?limit=")
+    expect(urls()[0]).not.toContain("status=")
+    expect(urls()[0]).not.toContain("employeeId=")
   })
 
   it("useActiveEntry surfaces an ApiError instead of swallowing it", async () => {

@@ -25,6 +25,7 @@ export {
   updateManagedShift,
   deleteManagedShift,
   listEmployees,
+  listTimeOff,
   getAllTimeOff,
   reviewTimeOff,
   getAllAvailabilitySubmissions,
@@ -38,6 +39,7 @@ export {
   denyCoverRequest,
 } from "./api"
 export type {
+  TimeOffFilters,
   MobileSession,
   RefreshResult,
   CurrentUser,

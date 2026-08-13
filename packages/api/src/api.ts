@@ -293,6 +293,31 @@ export async function submitAvailability(
 
 // ─── Time off ─────────────────────────────────────────────────────────────────
 
+export type TimeOffFilters = { status?: string; employeeId?: string }
+
+/**
+ * Every time-off request in the org matching the given filters, paged in full.
+ *
+ * The server defaults this endpoint to 50 per page (max 200), so reading
+ * `res.data` from a single unpaginated request silently drops everything past
+ * the first page — and time-off rows accumulate, so an org reaches 50 well
+ * before it reaches 50 staff.
+ */
+export async function listTimeOff(
+  client: ApiClient,
+  orgId: string,
+  filters: TimeOffFilters = {},
+): Promise<TimeOffRequest[]> {
+  const params = new URLSearchParams()
+  if (filters.status) params.set("status", filters.status)
+  if (filters.employeeId) params.set("employeeId", filters.employeeId)
+  const qs = params.toString()
+  return getAllPages<TimeOffRequest>(
+    client,
+    `/api/orgs/${orgId}/time-off${qs ? `?${qs}` : ""}`,
+  )
+}
+
 /**
  * Returns all time-off requests submitted by the given employee.
  */

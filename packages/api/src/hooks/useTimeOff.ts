@@ -1,20 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { TimeOffRequest } from "@skemaka/types"
 import { useApiClient } from "../context"
+import { listTimeOff, type TimeOffFilters } from "../api"
 
-export function useTimeOff(orgId: string, filters?: { status?: string; employeeId?: string }) {
+export function useTimeOff(orgId: string, filters?: TimeOffFilters) {
   const client = useApiClient()
-  const params = new URLSearchParams()
-  if (filters?.status)     params.set("status", filters.status)
-  if (filters?.employeeId) params.set("employeeId", filters.employeeId)
-  const qs = params.toString() ? `?${params.toString()}` : ""
 
   return useQuery({
     queryKey: ["time-off", orgId, filters],
-    queryFn: async () => {
-      const res = await client.get<{ data: TimeOffRequest[] }>(`/api/orgs/${orgId}/time-off${qs}`)
-      return res.data ?? []
-    },
+    // Paged in full: the server defaults this endpoint to 50 per page, and
+    // time-off rows accumulate, so a single request quietly truncated the list
+    // long before an org grew to 50 staff.
+    queryFn: () => listTimeOff(client, orgId, filters ?? {}),
     enabled: Boolean(orgId),
     staleTime: 30_000,
   })
