@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/migrate-on-deploy.mjs && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -13,6 +13,8 @@
     "test:e2e": "playwright test",
     "seed:e2e": "tsx prisma/seed-e2e.ts",
     "db:push": "prisma db push",
+    "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
