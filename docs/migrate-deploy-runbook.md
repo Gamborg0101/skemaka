@@ -1,10 +1,20 @@
 # Moving production to `prisma migrate deploy`
 
-> ⚠️ **STATUS: PREPARED, NOT YET EXECUTED.** The code is merged and inert: the
-> build runs `scripts/migrate-on-deploy.mjs`, which skips unless
-> `VERCEL_ENV=production`. §2 (baselining) is a **one-time manual step that has
-> not been done**. Until it is, production still gets its schema from
-> `prisma db push`.
+> ⚠️ **STATUS: PREPARED, NOT YET EXECUTED.** Migrations are applied by hand
+> (§2). §3 (baselining) is a **one-time manual step that has not been done**.
+> Until it is, production still gets its schema from `prisma db push`.
+>
+> **There is no automatic migration on deploy, and cannot be one as configured.**
+> It was tried on 2026-08-14 and the production build failed instantly:
+> `DATABASE_URL` is marked **Sensitive** in Vercel, and sensitive variables are
+> runtime-only — the build container never sees them. A step that skipped when
+> the variable was missing would always skip while appearing to migrate on every
+> deploy, which is worse than not having it. Production was unaffected (Vercel
+> keeps serving the last good deployment when a build fails).
+>
+> If automatic migration is wanted later, the workable route is a GitHub Actions
+> job on push to `main` holding the connection string as a repository secret —
+> not the Vercel build.
 
 ## 0. Why bother
 
@@ -25,11 +35,23 @@ hand-written SQL (partial indexes, constraints, triggers) survivable.
 |---|---|
 | 21 migration files in `apps/web/prisma/migrations/` | ✅ replay from empty with no drift (CI proves this on every PR) |
 | CI runs `prisma migrate deploy` | ✅ already — see `.github/workflows/ci.yml` |
-| `scripts/migrate-on-deploy.mjs` | ✅ merged, and skips everything except a production deploy |
+| `scripts/migrate-on-deploy.mjs` | ✅ merged — run by hand, prints the target host before acting |
 | `npm run db:status` / `db:deploy` | ✅ added |
 | Production database baselined | ❌ **this is the step below** |
 
-## 2. Baseline production — the one-time step
+## 2. Applying a migration
+
+There is no automatic step. From `apps/web`, naming the database explicitly:
+
+```bash
+DATABASE_URL='<connection string>' npm run db:status   # read-only, look first
+DATABASE_URL='<connection string>' npm run db:deploy   # then apply
+```
+
+`db:deploy` prints the target **host** before doing anything — check it is the
+one you meant. Against production this will fail until §3 has been done.
+
+## 3. Baseline production — the one-time step
 
 Production's tables were created by `db push`, so its
 `_prisma_migrations` table is empty or missing. Running `migrate deploy` against
@@ -116,10 +138,10 @@ npx prisma migrate deploy
 **Take a restore branch first** (`docs/restore-runbook.md`). It costs a minute
 and the history window is only 6 hours.
 
-## 3. After baselining
+## 4. After baselining
 
-Nothing further is required — the next production deploy runs
-`migrate deploy` automatically via the build command, and finds nothing pending.
+Migrations are applied with `npm run db:deploy` (§2) whenever a new one lands.
+Nothing happens automatically.
 
 - [ ] Remove `db push` from any habit or note that still recommends it for
       production. `npm run db:push` stays for local/dev use.
@@ -129,11 +151,11 @@ Nothing further is required — the next production deploy runs
       which is a range predicate. An EXCLUDE constraint with `btree_gist` could
       express it; `lockEmployee` covers it today.
 
-## 4. When it goes wrong
+## 5. When it goes wrong
 
-**`migrate deploy` fails during a deploy.** The deploy stops — deliberately.
-Shipping code against a schema it does not match is worse than not shipping.
-Read the error: it names the migration and the failing statement.
+**`migrate deploy` fails.** Nothing has been applied — Postgres runs DDL
+transactionally. Read the error: it names the migration and the failing
+statement.
 
 **"Drift detected".** The database has something the migrations do not describe —
 usually a `db push` that happened after the last migration was written. Either
