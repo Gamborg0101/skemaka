@@ -67,8 +67,18 @@ is required for Prisma migrations.
 
 1. Go to https://dashboard.stripe.com and create a product:
    - **Name:** Skemaka Subscription
-   - **Pricing model:** Recurring, per unit
-   - **Price:** €3.00 / active employee / month
+   - **Pricing model:** Recurring, **Graduated tiers**, billed per unit (seat)
+   - **Tier 1** — up to 5 units: **€19.00 flat**, €0.00 per unit
+   - **Tier 2** — 6 units and above: **€3.50 per unit**
+   - **Free trial:** 14 days
+
+   > ⚠️ The tiering mode matters. **Graduated** charges each tier separately,
+   > giving `19 + max(0, seats - 5) × 3.50`. **Volume** would re-rate *every*
+   > unit at the matched tier — a different, cheaper model. These numbers are
+   > mirrored as constants in `apps/web/lib/pricing.ts`; if you change the
+   > Stripe price, change them in the same commit. `pricing.test.ts` pins the
+   > arithmetic to catch drift.
+
 2. Copy the **Price ID** (starts with `price_`) → `STRIPE_PRICE_ID`.
 3. From **Developers → API keys**, copy:
    - **Secret key** → `STRIPE_SECRET_KEY`
