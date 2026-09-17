@@ -1,252 +1,164 @@
 # Skemaka
 
-Staff scheduling SaaS for restaurants, cafés, and other small hospitality businesses. Managers build weekly rosters, assign shifts, track labour costs, and handle time-off and availability. Employees view their shifts, clock in and out, and submit availability and time-off — from the web portal or the native mobile app.
+**Staff scheduling SaaS for restaurants and cafés.** Managers build weekly rotas by drag-and-drop, track labour cost against contracted hours, and handle time-off, availability and shift swaps. Employees see their shifts, clock in and out, and request cover — from the web portal or a native mobile app.
 
-One organization per business. Each member has a role: `MANAGER` (or `ADMIN`) or `EMPLOYEE`. Billed at **€3 per active employee per month** via Stripe.
+Built and shipped solo: product, design, full-stack engineering, infrastructure, billing and compliance.
 
----
+**[▶ Try the live demo](https://skemaka.com/demo)** — no signup, no email. Spins up a throwaway restaurant with a week of realistic data and drops you in as the manager.
 
-## Features
+<sub>Production: [skemaka.com](https://skemaka.com) · ~55k lines of TypeScript · 745 automated tests · 75 API routes · 25 data models · 2 locales</sub>
 
-### Scheduling
-- **Schedule builder** — drag-and-drop weekly timeline + grid view, with a 1/3/5/7-day range selector. 15-minute snap when dropping shifts.
-- **Draft / published state** — publishing a roster notifies staff by SMS. Editing, adding, or deleting a shift on a published roster returns it to draft, so changes are deliberately re-published (and re-notified) rather than going out silently.
-- **Auto-generate** — seed a week from submitted availability and shift templates.
-- **Shift templates & job roles** — reusable shift presets and per-org roles to speed up roster building.
-
-### Team & time
-- **Employee management** — profiles, hourly wages, contracted hours, employment type, job roles, and invite links.
-- **Time tracking** — employees clock in/out; managers review and edit time entries. Feeds the labour cost report and payroll export.
-- **Time-off requests** — employees request leave; managers approve/deny with SMS notifications; approved days grey out in the schedule grid.
-- **Availability collection** — token-based forms sent by email; responses aggregated in a weekly grid for scheduling.
-- **Labour cost report** — scheduled hours × wages, with overnight shifts counted correctly; CSV payroll export.
-
-### Accounts & access
-- **Onboarding wizard** — 3-step flow: workspace → team → done.
-- **Manager sign-in** — Google OAuth.
-- **Employee invites** — managers invite by email; employees claim an invite with an emailed OTP code.
-- **Native mobile app** — Expo / React Native app for employees (and managers on the go) with email and Apple Sign-In, sharing types and API hooks with the web app.
-- **Mobile-responsive web** — bottom nav + per-day card view on phones; icon sidebar on tablets.
-- **Platform admin panel** — owner-only view of all orgs, subscriptions, and surfaced errors (gated by `SUPERADMIN_EMAIL`).
-
-### Billing & compliance
-- **Stripe subscriptions** — checkout + customer portal; webhook-driven, with idempotent event processing.
-- **SMS compliance** — inbound STOP/START/HELP handling via a Twilio webhook, with a per-number opt-out list.
-- **Rate limiting** — Upstash Redis on sensitive endpoints.
-- **Bug reports** — in-app reporting with a daily email digest.
-- **Legal pages** — privacy policy, terms, and subprocessors.
+![The weekly schedule grid](apps/web/screenshots/01-schedule.png)
 
 ---
 
-## Tech stack
+## Why this repo is worth a look
 
-| Layer | Technology |
+Most portfolio SaaS projects stop at CRUD. The interesting parts of this one are the places where correctness is genuinely hard — money, concurrency, time zones and multi-tenancy — and where I chose to solve the problem properly rather than route around it.
+
+### Concurrency is handled at the database, not in JavaScript
+
+Two managers on the same rota, or an employee double-tapping "clock in" on bad restaurant Wi-Fi, are ordinary events here — not edge cases. Check-then-act in application code loses those races.
+
+- `SELECT … FOR UPDATE` row locks serialise the critical sections ([`lib/services/locks.ts`](apps/web/lib/services/locks.ts)), covering seat purchases, clock-in, cover requests and shift offers.
+- A **partial unique index** enforces "one open time entry per employee" in the database itself, so the invariant holds even from a path that never read `locks.ts` ([migration](apps/web/prisma/migrations/20260813140000_add_partial_unique_indexes/migration.sql)).
+- Dedicated race tests hammer the real thing concurrently: [`clockAndShiftRace`](apps/web/lib/__integration__/clockAndShiftRace.test.ts), [`coverRace`](apps/web/lib/__integration__/coverRace.test.ts), [`offerRace`](apps/web/lib/__integration__/offerRace.test.ts).
+
+That migration also documents the constraint I deliberately *didn't* add — one shift per employee per day — because split shifts (lunch 11:00–14:00, dinner 18:00–23:00 for the same chef) are normal in hospitality, and a unique index cannot express a range predicate.
+
+### CI hunts the bug classes that a green suite hides
+
+The unit suite mocks Prisma, so it can assert the *shape* of a query but says nothing about what SQL does with it. Both of these shipped green and were caught by adding a layer, not by adding assertions:
+
+- `colorTag: { not: "sick" }` compiles to `colorTag <> 'sick'`, which is `NULL` for uncoloured rows — silently dropping them from roll-out **and from payroll export**. Now there is an [integration suite against real Postgres](apps/web/lib/__integration__/), run through Neon's `wsproxy` so it exercises the same serverless driver production uses.
+- Prisma stores `DateTime` as `timestamp WITHOUT time zone`; raw SQL comparing one against `NOW()` is wrong by the session offset. On a UTC runner that offset is zero and the bug is invisible. CI now runs the suite under **UTC and UTC+14**, and the unit suite under **Kiritimati (+14) and Midway (−11)** — the extremes of the inhabited range.
+
+Neither pass alone is enough: UTC proves production works but hides the bug class; UTC+14 exposes the bug class but tests a timezone production never uses. [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+### Billing that fails safe
+
+Per-seat Stripe subscriptions with graduated tiers, webhook-driven and idempotent ([`ProcessedStripeEvent`](apps/web/prisma/schema.prisma) dedupes redeliveries).
+
+The guard never denies on a possibly-stale JWT: if the token's billing snapshot *would* block, it re-reads the authoritative row from the database before returning `402`, so a customer who just paid is never locked out by their own cached token ([`lib/apiGuard.ts`](apps/web/lib/apiGuard.ts)). Seat changes take a row lock and are validated against real usage before Stripe is told anything.
+
+### Multi-tenancy enforced in depth
+
+`orgId` and `role` ride in the JWT, so the common path is zero database queries — with a membership-table fallback for the window between org creation and the next sign-in. Tenant isolation has [its own test suite](apps/web/lib/__tests__/tenantIsolation.test.ts). Super-admin "act as org" is a separate, audited capability writing to a `SuperAdminAudit` log rather than a boolean bypass.
+
+### Product decisions, not just features
+
+- **Publishing is per shift, not per week.** A rota is private until rolled out; editing a published shift returns it to draft so changes are re-published deliberately rather than going out silently. Drafts are filtered server-side, so an employee's API response never contains one.
+- **Three distinct staffing flows** that are easy to conflate and shouldn't be: *availability* (employee states when they can work), *cover* (employee asks to be relieved of a shift they have), *shift offer* (manager pushes an unassigned shift to a group).
+- **SMS compliance is built in** — inbound STOP/START/HELP via a Twilio webhook, with an opt-out list maintained on top of carrier-level handling.
+
+---
+
+## Screens
+
+| | |
+|---|---|
+| ![Timeline view](apps/web/screenshots/07-schedule-timeline.png) <br> **Timeline** — drag a name onto a row to create a shift; 15-minute snap, live "hours met / under / over contract" badges. | ![Labour cost](apps/web/screenshots/04-costs.png) <br> **Labour cost** — scheduled hours × wage, overnight shifts counted correctly, CSV payroll export. |
+| ![Employees](apps/web/screenshots/02-employees.png) <br> **Team** — wages, contracted hours, employment type, job roles, invite links. | ![Availability](apps/web/screenshots/03-availability.png) <br> **Availability** — token-based forms collected into a weekly grid that feeds auto-generate. |
+
+---
+
+## Architecture
+
+```
+apps/
+  web/        Next.js 16 App Router — manager UI, employee portal, platform admin, API
+  mobile/     Expo / React Native — employee app (shifts, clock, availability, cover)
+packages/
+  types/      @skemaka/types  — canonical shared interfaces
+  api/        @skemaka/api    — ApiClient + TanStack Query hooks (consumed by mobile)
+  ui/         @skemaka/ui     — shared design tokens
+  i18n/       @skemaka/i18n   — message catalogues (en, da)
+```
+
+Requests flow **route handler → service → Prisma**. Route handlers do auth, rate limiting and Zod validation, then delegate; all domain logic lives in [`lib/services/`](apps/web/lib/services/) where it is testable without HTTP. Prisma objects never reach a response directly — [`lib/serialize.ts`](apps/web/lib/serialize.ts) converts `Decimal → number` and `Date → ISO string` at the boundary.
+
+Web and mobile share types and API hooks through the workspace, so a change to a response shape is a compile error in both apps rather than a runtime surprise in one.
+
+**Security posture:** full CSP (with `unsafe-eval` stripped in production), HSTS with `preload`, frame-deny, Upstash rate limiting on 49 of 55 mutating endpoints, Zod validation on every request body, signature verification on both Stripe and Twilio webhooks, and parameterised SQL only — the handful of raw queries are tagged template literals.
+
+| Layer | Choice |
 |---|---|
 | Monorepo | Turborepo + npm workspaces |
-| Web framework | Next.js 16 (App Router) |
-| Mobile | Expo 54 / React Native + NativeWind + expo-router |
-| Language | TypeScript |
-| Database | Neon PostgreSQL (serverless) |
-| ORM | Prisma 7 (Neon adapter) |
-| Auth | NextAuth 5 beta — JWT strategy (Google OAuth + mobile bearer tokens) |
-| Styling | Tailwind CSS 4 + shadcn/ui |
-| Drag-and-drop | dnd-kit |
-| Data fetching (mobile) | TanStack Query |
-| Email | Resend |
-| SMS | Twilio |
-| Billing | Stripe |
-| Rate limiting | Upstash Redis |
-| Tests | Vitest (unit) + Playwright (e2e) |
-| Deployment | Vercel (web, incl. cron) + Expo/EAS (mobile) |
+| Web | Next.js 16 (App Router), React 19, Tailwind 4, shadcn/ui, dnd-kit |
+| Mobile | Expo 54, expo-router, NativeWind, TanStack Query, Zustand |
+| Database | Neon serverless Postgres + Prisma 7 (Neon adapter) |
+| Auth | NextAuth 5 — JWT strategy, Google OAuth (web), bearer tokens + Apple Sign-In (mobile) |
+| Billing / comms | Stripe · Resend · Twilio · Upstash Redis · web push |
+| Tests | Vitest (unit + integration) · Playwright (e2e) |
+| Hosting | Vercel (incl. cron) · EAS (mobile) |
 
 ---
 
-## Getting started
+## Testing
 
-### Prerequisites
+745 automated tests across three layers, each chosen for what the layer below cannot see.
 
-- Node.js 20.19+ (enforced via `engines`; Next 16 and React Native set the floor)
-- npm 10+ (ships with Node — this repo is an npm workspace)
-- A Neon database (or any Postgres instance)
-- Accounts for: Google Cloud (OAuth), Resend, Twilio, Stripe, Upstash Redis
+| Layer | Count | What it covers | Gate |
+|---|---:|---|---|
+| **Unit** (Vitest, Prisma mocked) | 699 | Services, guards, billing arithmetic, serialisation, date handling, i18n key parity | Every push — plus two timezone extremes |
+| **Integration** (Vitest, real Postgres) | 29 | SQL three-valued logic, constraints, transaction isolation, row locking, concurrent races | Every push — under UTC and UTC+14 |
+| **E2E** (Playwright) | 17 | Access control, trial paywall, invite claim, onboarding, roll-out, timesheet export | Nightly, and on any PR touching API, services, auth, billing or schema |
 
-> **Use npm, not pnpm/yarn.** The root `packageManager` field pins npm, so
-> running `pnpm …` fails fast with _"This project is configured to use npm"_
-> rather than silently creating a second lockfile. All scripts run from the repo
-> root — you never need to `cd` into a workspace.
+```bash
+npm test                  # 699 unit tests — fast, hermetic, no database
+npm run test:integration  # 29 tests against a real Postgres (see SETUP.md)
+npm run test:e2e          # 17 Playwright specs
+npm run typecheck         # tsc --noEmit across all 6 packages
+```
 
-See [SETUP.md](./SETUP.md) for step-by-step provider setup.
+A parity test fails CI if any locale's keys or ICU placeholders drift from English — the `en` and `da` catalogues are held at 1,315 keys each.
 
-### Local setup
+---
+
+## Running it locally
+
+Needs Node 20.19+, npm, and a Postgres database (Neon or local). Everything runs from the repo root.
 
 ```bash
 git clone https://github.com/Gamborg0101/skemaka.git
 cd skemaka
 npm install
 
-# Copy and fill in env vars (the web app reads from apps/web/.env.local)
-cp apps/web/.env.example apps/web/.env.local
-
-# Push schema + seed demo data (from the repo root)
+cp apps/web/.env.example apps/web/.env.local   # fill in DATABASE_URL + AUTH_SECRET at minimum
 npm run db:push
 npm run db:seed
 
-# Start the web dev server (Next.js)
-npm run dev:web
-
-# …or the mobile dev server (Expo)
-npm run dev:mobile
+npm run dev:web     # http://localhost:3000
+npm run dev:mobile  # Expo
 ```
 
-The web app runs at [http://localhost:3000](http://localhost:3000). `npm run dev` starts every app via Turborepo.
+The seed creates one manager account plus a week of realistic roster data. Set `SEED_ADMIN_EMAIL` in `.env.local` to your own address so the seeded admin matches the account you sign in with.
 
-### Environment variables
+[**SETUP.md**](./SETUP.md) walks through the third-party providers (Google OAuth, Stripe, Resend, Twilio, Upstash) and the full environment variable reference.
 
-All web env vars live in `apps/web/.env.local` (see `apps/web/.env.example`).
+---
 
-| Variable | Description |
+## Repo map
+
+| Path | |
 |---|---|
-| `DATABASE_URL` | Pooled Neon / Postgres connection string (used at runtime) |
-| `DIRECT_URL` | Direct (non-pooled) connection string — required for Prisma migrations |
-| `AUTH_SECRET` | Random secret for signing session tokens (`openssl rand -base64 32`) |
-| `AUTH_GOOGLE_ID` | Google OAuth client ID |
-| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
-| `NEXTAUTH_URL` | Canonical URL used for Auth.js callbacks (e.g. `http://localhost:3000`) |
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `STRIPE_PRICE_ID` | Stripe price ID for the €3/employee/month plan |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token |
-| `RESEND_API_KEY` | Resend API key for email |
-| `RESEND_FROM_EMAIL` | Verified sender address (e.g. `noreply@skemaka.com`) |
-| `TWILIO_ACCOUNT_SID` | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | Twilio auth token (also verifies the inbound SMS webhook) |
-| `TWILIO_FROM_NUMBER` | Twilio sending number (E.164 format) |
-| `NEXT_PUBLIC_APP_URL` | Public-facing URL used for links in emails |
-| `SUPERADMIN_EMAIL` | Owner email — grants ADMIN role, gates `/platform`, receives bug reports |
-| `MOBILE_TOKEN_MAX_AGE` | Mobile session token lifetime in seconds (default `1800`) |
-| `CRON_SECRET` | Bearer token required by the scheduled cron endpoints |
+| [`apps/web/lib/services/`](apps/web/lib/services/) | Domain logic — the part worth reading first |
+| [`apps/web/lib/apiGuard.ts`](apps/web/lib/apiGuard.ts) | Auth, billing enforcement, body validation |
+| [`apps/web/components/manager/ShiftTimeline.tsx`](apps/web/components/manager/ShiftTimeline.tsx) | Drag-and-drop rota builder |
+| [`apps/web/prisma/schema.prisma`](apps/web/prisma/schema.prisma) | 25 models, 10 enums, 21 migrations |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | The timezone matrix and path-filtered E2E |
+| [`docs/`](docs/) | Restore runbook, migration runbook, internal launch notes |
 
 ---
 
-## Project structure
+## Status
 
-This is a Turborepo + npm-workspaces monorepo:
+Deployed to production on Vercel + Neon, with CI and the nightly E2E suite green. The mobile app is built and running against the same API; app-store submission is queued behind the remaining operational setup (tax and SMS sender registration). The full go-live checklist is in [`docs/internal/before-launch.md`](docs/internal/before-launch.md).
 
-```
-apps/
-  web/                # Next.js 16 web app (managers + employee portal + platform admin)
-  mobile/             # Expo / React Native app
-
-packages/
-  types/              # @skemaka/types — shared TypeScript interfaces
-  api/                # @skemaka/api   — ApiClient + TanStack Query hooks
-  ui/                 # @skemaka/ui    — shared design tokens + cn()
-```
-
-Inside `apps/web/`:
-
-```
-app/
-  (auth)/             # Login
-  (onboarding)/       # 3-step onboarding wizard
-  (manager)/          # Manager pages: schedule, employees, costs, time-off,
-                      #   availability, billing, settings, my-shifts
-  (employee)/         # Employee portal + token-based availability pages
-  (platform)/         # Owner-only admin panel (orgs, errors)
-  (legal)/            # Privacy, terms, subprocessors
-  api/
-    orgs/[orgId]/     # Org-scoped endpoints (schedules, shifts, employees,
-                      #   time-off, time-entries, costs, roles, templates, billing…)
-    me/               # Current-user context, account, invite claim
-    auth/             # NextAuth + mobile bearer-token + Apple-native auth
-    availability/     # Token-based availability (public)
-    platform/         # Admin endpoints (orgs, errors)
-    webhooks/         # Stripe + Twilio inbound SMS
-    cron/             # cleanup, bug-report-digest (Vercel Cron)
-
-components/
-  manager/            # Manager UI (incl. ShiftTimeline drag-and-drop)
-  ui/                 # shadcn/ui primitives
-
-lib/
-  auth.ts             # NextAuth config + JWT callback (id, role, orgId)
-  apiGuard.ts         # requireOrgMember() — fast JWT check + DB fallback
-  serialize.ts        # Prisma → plain-object helpers (Decimal → number, Date → ISO)
-  services/           # Domain logic (schedule, employee, availability, clock,
-                      #   timeOff, billing, org)
-  orgContext.tsx      # OrgProvider + useOrg() hook
-  prisma.ts           # Prisma client (Neon adapter, 30 s timeout)
-  sms.ts / resend.ts  # Twilio + Resend wrappers
-  stripe.ts / billing.ts / pricing.ts
-  dateUtils.ts        # getMondayOfWeek, addDays, getISOWeek, …
-
-prisma/
-  schema.prisma       # Database schema
-  seed.ts             # Demo seed data
-```
-
-Inside `apps/mobile/` (expo-router):
-
-```
-app/
-  (auth)/login        # Email + Apple Sign-In
-  (tabs)/             # shifts, availability, requests, team, profile, settings
-store/                # Zustand auth store (expo-secure-store)
-lib/, hooks/, components/
-```
-
----
-
-## Scripts
-
-Run from the repo root — Turborepo fans these out across the workspace:
-
-```bash
-npm run dev           # Start all dev servers
-npm run dev:web       # Web only (Next.js)
-npm run dev:mobile    # Mobile only (Expo)
-npm run build         # Production build (all apps)
-npm run lint          # ESLint
-npm run typecheck     # tsc --noEmit across every package
-npm test              # Vitest (run once)
-```
-
-These also run from the repo root (they delegate to `apps/web`):
-
-```bash
-npm start                 # Start the production Next.js server
-npm run test:e2e          # Playwright end-to-end tests
-npm run seed:e2e          # Seed the e2e test fixtures
-npm run screenshots       # Regenerate UI screenshots
-npm run db:push           # prisma db push
-npm run db:generate       # prisma generate
-npm run db:migrate        # prisma migrate dev
-npm run db:studio         # prisma studio
-```
-
-(`test:watch` still lives in `apps/web` — run it with `npm run test:watch --workspace=web`.)
-
----
-
-## Deployment
-
-The **web app** runs on Vercel + Neon. Point the Vercel project at `apps/web`, set all env vars in the dashboard, and deploy:
-
-```bash
-vercel deploy --prod
-```
-
-- The build runs `prisma generate && next build`. Run `prisma migrate deploy` (or `prisma db push`) against the production database as part of release.
-- Two cron jobs are configured in `apps/web/vercel.json`: weekly `cleanup` and a daily `bug-report-digest`. Both require the `CRON_SECRET` bearer token.
-
-The **mobile app** is built and released separately through Expo / EAS — see [apps/mobile/APP_STORE_SUBMISSION.md](./apps/mobile/APP_STORE_SUBMISSION.md).
-
-See [LAUNCH.md](./LAUNCH.md) before taking paying customers.
+Known gaps I'd close next, in order: component-level UI tests (the service layer is well covered, rendering is not), error aggregation (Sentry rather than the current homegrown digest), and an automated accessibility pass in CI.
 
 ---
 
 ## Licence
 
-Private — all rights reserved.
+Source-available for review. © Casper Gamborg — all rights reserved; not licensed for reuse or redistribution.

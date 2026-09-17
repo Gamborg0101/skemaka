@@ -54,7 +54,7 @@ recoverable mistake into an outage.
       of a connection string.
 
 Production schema is applied with `prisma db push`, not `migrate deploy`
-(see `Before launch.md`), so the branch you restore reflects whatever shape prod
+(see `docs/internal/before-launch.md`), so the branch you restore reflects whatever shape prod
 was in at that timestamp — not necessarily any migration in `prisma/migrations/`.
 
 ## 2. Decide the target timestamp first

@@ -78,7 +78,7 @@ Staff scheduling SaaS for restaurants. One org per manager. Managers schedule em
 | `packages/types/src/index.ts` | Canonical shared TypeScript interfaces |
 | `packages/api/src/client.ts` | ApiClient — fetch wrapper with Bearer auth |
 | `packages/api/src/hooks/` | TanStack Query hooks (used by mobile app) |
-| `apps/mobile/src/store/authStore.ts` | Zustand auth store + expo-secure-store |
+| `apps/mobile/store/authStore.ts` | Zustand auth store + expo-secure-store |
 | `apps/mobile/metro.config.js` | Metro monorepo config (watchFolders, nodeModulesPaths) |
 
 ---
