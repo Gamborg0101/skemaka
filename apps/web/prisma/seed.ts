@@ -246,12 +246,19 @@ async function main() {
   // ── 5. Employees + user accounts ──────────────────────────────────────────
   console.log("5/10 Seeding employees + user accounts…")
 
-  // Casper is the real admin — keep every field literal and stable
+  // The owner/admin account — keep every field literal and stable so the seeded
+  // manager login is the same on every machine.
+  //
+  // The phone is a deliberately non-routable placeholder. Seed data lives in a
+  // public repo, and this row is the one the SMS code paths exercise in dev; a
+  // real number here would be both scraped and, worse, actually texted the first
+  // time someone ran the roster-publish flow locally. Override with SEED_ADMIN_*
+  // if you want the seeded admin to match your own sign-in.
   const CASPER = {
     id:              IDS.empCasper,
-    name:            "Casper Gamborg",
-    email:           "gamborgc@gmail.com",
-    phone:           "+4500000000",
+    name:            process.env.SEED_ADMIN_NAME  ?? "Casper Gamborg",
+    email:           process.env.SEED_ADMIN_EMAIL ?? "owner@example.com",
+    phone:           process.env.SEED_ADMIN_PHONE ?? "+4500000000",
     jobRole:         "Shift Supervisor",
     hourlyWage:      22.00,
     employmentType:  "FULL_TIME"          as EmploymentType,
